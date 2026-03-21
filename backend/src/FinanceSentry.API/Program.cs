@@ -1,7 +1,8 @@
 using Serilog;
 using FinanceSentry.Modules.BankSync;
+using FinanceSentry.Infrastructure;
 
-var builder = WebApplicationBuilder.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(args);
 
 // Add Serilog
 builder.Host.UseSerilog((context, loggerConfig) =>
