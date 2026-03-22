@@ -10,5 +10,51 @@
 		".specify/scripts/bash/": true,
 		".specify/scripts/powershell/": true
 	},
-	"chat.mcp.serverSampling": {}
+	"chat.mcp.serverSampling": {},
+	"dotnet.defaultSolutionOrFolder": "backend/FinanceSentry.sln",
+	"[csharp]": {
+		"editor.defaultFormatter": "ms-dotnettools.csharp",
+		"editor.formatOnSave": true,
+		"editor.codeActionsOnSave": {
+			"source.fixAll.csharp": true
+		}
+	},
+	"[typescript]": {
+		"editor.defaultFormatter": "esbenp.prettier-vscode",
+		"editor.formatOnSave": true
+	},
+	"[html]": {
+		"editor.defaultFormatter": "esbenp.prettier-vscode",
+		"editor.formatOnSave": true
+	},
+	"[scss]": {
+		"editor.defaultFormatter": "esbenp.prettier-vscode",
+		"editor.formatOnSave": true
+	},
+	"editor.codeActionsOnSave": {
+		"source.fixAll.eslint": true
+	},
+	"eslint.validate": [
+		"javascript",
+		"typescript",
+		"angular"
+	],
+	"search.exclude": {
+		"**/node_modules": true,
+		"**/bin": true,
+		"**/obj": true,
+		"**/.git": true
+	},
+	"files.exclude": {
+		"**/node_modules": true,
+		"**/bin": true,
+		"**/obj": true,
+		"**/.git": true
+	},
+	"files.watcherExclude": {
+		"**/node_modules": true,
+		"**/bin": true,
+		"**/obj": true,
+		"**/.git": true
+	}
 }
