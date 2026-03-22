@@ -16,7 +16,7 @@
 		"editor.defaultFormatter": "ms-dotnettools.csharp",
 		"editor.formatOnSave": true,
 		"editor.codeActionsOnSave": {
-			"source.fixAll.csharp": true
+			"source.fixAll.csharp": "explicit"
 		}
 	},
 	"[typescript]": {
@@ -32,7 +32,7 @@
 		"editor.formatOnSave": true
 	},
 	"editor.codeActionsOnSave": {
-		"source.fixAll.eslint": true
+		"source.fixAll.eslint": "explicit"
 	},
 	"eslint.validate": ["javascript", "typescript", "angular"],
 	"search.exclude": {
