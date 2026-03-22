@@ -1,7 +1,9 @@
 import { Component } from '@angular/core';
+import { RouterOutlet } from '@angular/router';
 
 @Component({
   selector: 'app-root',
+  imports: [RouterOutlet],
   template: `
     <div class="app-container">
       <header class="app-header">
@@ -12,22 +14,24 @@ import { Component } from '@angular/core';
       </main>
     </div>
   `,
-  styles: [`
-    .app-container {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-    .app-header {
-      background-color: #1976d2;
-      color: white;
-      padding: 1rem;
-    }
-    .app-main {
-      flex: 1;
-      padding: 1rem;
-    }
-  `]
+  styles: [
+    `
+      .app-container {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      .app-header {
+        background-color: #1976d2;
+        color: white;
+        padding: 1rem;
+      }
+      .app-main {
+        flex: 1;
+        padding: 1rem;
+      }
+    `,
+  ],
 })
 export class AppComponent {
   public title: string = 'Finance Sentry';
