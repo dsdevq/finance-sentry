@@ -34,11 +34,7 @@
 	"editor.codeActionsOnSave": {
 		"source.fixAll.eslint": true
 	},
-	"eslint.validate": [
-		"javascript",
-		"typescript",
-		"angular"
-	],
+	"eslint.validate": ["javascript", "typescript", "angular"],
 	"search.exclude": {
 		"**/node_modules": true,
 		"**/bin": true,
