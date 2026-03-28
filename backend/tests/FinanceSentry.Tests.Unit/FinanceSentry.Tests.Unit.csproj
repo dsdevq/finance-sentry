@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\FinanceSentry.Core\FinanceSentry.Core.csproj" />
+    <ProjectReference Include="..\..\src\FinanceSentry.Infrastructure\FinanceSentry.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\FinanceSentry.Modules.BankSync\FinanceSentry.Modules.BankSync.csproj" />
   </ItemGroup>
 

@@ -115,6 +115,27 @@ public class BankSyncDbContext : DbContext
         transactionBuilder.Property(t => t.MerchantName)
             .HasMaxLength(255);
 
+        transactionBuilder.Property(t => t.MerchantCategory)
+            .HasMaxLength(100)
+            .IsRequired(false);
+
+        // Soft-delete support (T202/T309-A): IsActive=false hides deleted transactions from all user queries.
+        // Use IgnoreQueryFilters() in audit/admin contexts only.
+        transactionBuilder.Property(t => t.IsActive)
+            .HasDefaultValue(true);
+
+        transactionBuilder.Property(t => t.DeletedAt)
+            .IsRequired(false);
+
+        transactionBuilder.Property(t => t.ArchivedReason)
+            .HasMaxLength(50)
+            .IsRequired(false);
+
+        transactionBuilder.HasQueryFilter(t => t.IsActive);
+
+        transactionBuilder.HasIndex(t => new { t.AccountId, t.IsActive })
+            .HasDatabaseName("idx_transaction_account_active");
+
         transactionBuilder.Property(t => t.CreatedAt)
             .HasDefaultValueSql("CURRENT_TIMESTAMP");
 

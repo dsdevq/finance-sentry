@@ -39,12 +39,12 @@ Phase 6 (Polish & Cross-Cutting Concerns)
 
 ### Phase 1 Tasks
 
-- [ ] T001 [P] Create .NET 9 ASP.NET Core backend project structure per plan.md
+- [x] T001 [P] Create .NET 9 ASP.NET Core backend project structure per plan.md
   - **File Paths**: `backend/` folder, `backend/src/Modules/BankSync/`, `backend/src/Startup/`
   - **Details**: Create solution, project files, folder structure for modular monolith. Include Program.cs with DependencyInjection.cs
   - **Success Criteria**: `dotnet build` succeeds, no compiler warnings
 
-- [ ] T002 [P] Create Angular frontend SPA project structure per plan.md
+- [x] T002 [P] Create Angular frontend SPA project structure per plan.md
   - **File Paths**: `frontend/src/app/modules/bank-sync/`, `frontend/src/app/core/`, `frontend/src/app/shared/`
   - **Details**: Initialize Angular 20+ project with strict mode enabled, create folder structure for bank-sync module. Install core dependencies:
     - `npm install @plaid/link-web` (Plaid Link SDK - required for account linking in T217)
@@ -53,17 +53,17 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Create: folder structure per plan.md (modules/, core/, shared/)
   - **Success Criteria**: `npm install && ng build` succeeds, no linting errors, Plaid and ngx-charts packages available in package.json
 
-- [ ] T003 [P] Set up PostgreSQL Docker container with initialization scripts
+- [x] T003 [P] Set up PostgreSQL Docker container with initialization scripts
   - **File Paths**: `docker/docker-compose.yml`, `docker/init-db.sql`
   - **Details**: Create docker-compose with PostgreSQL 14+, volume persistence. Include init script that creates database and runs migrations
   - **Success Criteria**: Container starts, database accessible from app, can connect via psql
 
-- [ ] T004 Create Entity Framework Core DbContext for bank-sync module
+- [x] T004 Create Entity Framework Core DbContext for bank-sync module
   - **File Paths**: `backend/src/Modules/BankSync/Infrastructure/Persistence/BankSyncDbContext.cs`
   - **Details**: DbContext with DbSets for BankAccount, Transaction, SyncJob, EncryptedCredential. Include OnModelCreating with indexes from data-model.md
   - **Success Criteria**: Context compiles, migration generation succeeds
 
-- [ ] T005 Create EF Core migration for initial schema (all 4 entities)
+- [x] T005 Create EF Core migration for initial schema (all 4 entities)
   - **File Paths**: `backend/src/Migrations/M001_BankSyncSchema_Initial.cs`
   - **Details**: Migration that creates all tables with columns, constraints, indexes per data-model.md. Include test migration rollback.
     - **IMPORTANT**: The `transactions` table MUST include two soft-delete columns: `is_active BOOLEAN NOT NULL DEFAULT true` and `deleted_at TIMESTAMPTZ NULL`. These are required by T309-A (DELETE /accounts/{id} soft-deletes all associated transactions). Without these columns T309-A will fail at runtime.
@@ -71,7 +71,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Add partial index: `CREATE INDEX idx_transactions_active ON transactions(account_id) WHERE is_active = true;`
   - **Success Criteria**: Migration applies cleanly to PostgreSQL, rollback succeeds, `transactions` table has `is_active` and `deleted_at` columns, schema matches data-model.md + soft-delete additions
 
-- [ ] T006 Set up CI/CD pipeline configuration
+- [x] T006 Set up CI/CD pipeline configuration
   - **File Paths**: `.github/workflows/ci-build.yml`, `.github/workflows/test.yml`
   - **Details**: GitHub Actions workflow for: build, linting (C# StyleCop + Angular ESLint), test execution, coverage reporting, and coverage gate enforcement.
     - **IMPORTANT (Constitution §II — NON-NEGOTIABLE)**: Pipeline MUST enforce 80% minimum line coverage. Add `--coverage-minimum-line-rate 0.8` to the dotnet test command. Angular coverage gate: add `"statements": 80, "branches": 80, "functions": 80, "lines": 80` to the `coverageThresholds` section in `karma.conf.js`. Pipeline MUST fail if coverage drops below 80% — not just report it.
@@ -79,22 +79,22 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Angular: configure `karma.conf.js` with `thresholds` block rejecting builds below 80%
   - **Success Criteria**: Workflow runs on PR, fails on compiler warnings (strict), fails if coverage < 80% (backend and frontend), coverage report published as CI artifact
 
-- [ ] T007 Create .NET build task and run configurations in VS Code
+- [x] T007 Create .NET build task and run configurations in VS Code
   - **File Paths**: `.vscode/tasks.json`, `.vscode/launch.json`
   - **Details**: Task for `dotnet build`, `dotnet test`, `dotnet watch`. Launch config for backend debugging
   - **Success Criteria**: Build task works, debug breakpoints hit
 
-- [ ] T008 Create Docker multi-stage build for backend container
+- [x] T008 Create Docker multi-stage build for backend container
   - **File Paths**: `docker/Dockerfile`
   - **Details**: Multi-stage build (build → runtime). Publish as release build, expose port 5000
   - **Success Criteria**: Image builds, container runs, health endpoint responds
 
-- [ ] T009 Create Docker network configuration for backend + PostgreSQL coordination
+- [x] T009 Create Docker network configuration for backend + PostgreSQL coordination
   - **File Paths**: `docker/docker-compose.override.dev.yml`
   - **Details**: Docker Compose override for development with environment variables (Plaid keys, JWT secret, DB connection string)
   - **Success Criteria**: `docker-compose up` starts both services, they can communicate
 
-- [ ] T010 Add Plaid SDK and MediatR NuGet packages to backend project
+- [x] T010 Add Plaid SDK and MediatR NuGet packages to backend project
   - **File Paths**: `backend/finance-sentry.csproj`
   - **Details**: Add packages: PlaidNet, MediatR, EntityFrameworkCore, Hangfire (for Phase 4)
   - **Success Criteria**: `dotnet restore` succeeds, no package conflicts
@@ -112,7 +112,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
 
 ### Phase 2 Tasks
 
-- [ ] T101 [P] Implement AES-256 credential encryption service
+- [x] T101 [P] Implement AES-256 credential encryption service
   - **File Paths**: `backend/src/Modules/Shared/Encryption/CredentialEncryptionService.cs`, `backend/src/Modules/Shared/Encryption/EncryptionKeyManager.cs`
   - **Details**: Service to encrypt/decrypt Plaid access tokens using AES-256-GCM. Include IV generation, auth tag validation, key versioning (for rotation). Encrypt on creation, decrypt on use only
   - **Key Features**:
@@ -243,7 +243,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
   - **Details**: Entity with: account_id, user_id, plaid_item_id, bank_name, account_type, account_number_last4, currency, current_balance, available_balance, sync_status, timestamps. Include state machine: pending → syncing → active/failed/reauth_required
   - **Success Criteria**: T211 tests pass, constructor validates invariants, state transitions work
 
-- [ ] T202 [P] [US1] Create Transaction domain entity in `backend/src/Modules/BankSync/Domain/Aggregates/Transaction.cs`
+- [x] T202 [P] [US1] Create Transaction domain entity in `backend/src/Modules/BankSync/Domain/Aggregates/Transaction.cs`
   - **Details**: Entity with: transaction_id, account_id, amount, date, description, unique_hash, is_pending, transaction_type (debit/credit/transfer), merchant_category. Immutable after creation.
     - **IMPORTANT (soft-delete support, required by T309-A)**: Include two additional fields: `is_active BOOLEAN` (default true) and `deleted_at DateTime?` (nullable). These are set by DELETE /accounts/{id} to soft-delete all transactions for an account. Without these fields, T309-A will fail at runtime.
     - All queries that return transactions to the user MUST filter `WHERE is_active = true` to exclude soft-deleted records.

@@ -98,7 +98,26 @@
             "styles": [
               "src/styles.scss"
             ],
-            "scripts": []
+            "scripts": [],
+            "codeCoverage": true,
+            "codeCoverageExclude": [
+              "src/environments/**",
+              "src/main.ts",
+              "src/main-aot.ts"
+            ]
+          },
+          "configurations": {
+            "ci": {
+              "watch": false,
+              "browsers": "ChromeHeadless",
+              "codeCoverage": true,
+              "codeCoverageExclude": [
+                "src/environments/**",
+                "src/main.ts",
+                "src/main-aot.ts"
+              ],
+              "karmaConfig": "karma.conf.ci.js"
+            }
           }
         }
       }

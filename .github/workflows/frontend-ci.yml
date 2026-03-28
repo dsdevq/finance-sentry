@@ -42,7 +42,10 @@ jobs:
       run: npm run build
       working-directory: frontend
 
-    - name: Run unit tests
+    # Constitution §II (NON-NEGOTIABLE): test:ci must be configured with coverage thresholds
+    # in angular.json (statements/branches/functions/lines all ≥ 80%).
+    # Karma will exit non-zero if any threshold is breached, failing the pipeline.
+    - name: Run unit tests with coverage gate (Constitution §II)
       run: npm run test:ci
       working-directory: frontend
 
@@ -53,3 +56,10 @@ jobs:
         files: './frontend/coverage/lcov.info'
         flags: frontend
         verbose: true
+
+    - name: Upload coverage artifact
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report-frontend
+        path: frontend/coverage/

@@ -2,7 +2,12 @@
   "permissions": {
     "allow": [
       "Bash(bash .specify/scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks)",
-      "Bash(bash .specify/scripts/bash/check-prerequisites.sh --json)"
+      "Bash(bash .specify/scripts/bash/check-prerequisites.sh --json)",
+      "Bash(python3 -c \"import json,sys; p=json.load\\(sys.stdin\\); print\\(''''Angular:'''', p.get\\(''''dependencies'''',{}\\).get\\(''''@angular/core'''',''''?''''\\)\\); print\\(''''Plaid:'''', p.get\\(''''dependencies'''',{}\\).get\\(''''@plaid/link-web'''',''''NOT INSTALLED''''\\)\\); print\\(''''ngx-charts:'''', p.get\\(''''dependencies'''',{}\\).get\\(''''@swimlane/ngx-charts'''',''''NOT INSTALLED''''\\)\\)\")",
+      "Bash(python3 -c \"import json,sys; cfg=json.load\\(sys.stdin\\); test=cfg.get\\(''''projects'''',{}\\).get\\(''''finance-sentry'''',{}\\).get\\(''''architect'''',{}\\).get\\(''''test'''',{}\\); print\\(json.dumps\\(test.get\\(''''options'''',{}\\), indent=2\\)\\)\")",
+      "Bash(python3 -c \":*)",
+      "Bash(grep -v \"^bin$\\\\|^obj$\")",
+      "Bash(dotnet build:*)"
     ]
   }
 }

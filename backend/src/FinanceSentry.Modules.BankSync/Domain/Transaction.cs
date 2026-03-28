@@ -58,6 +58,35 @@ public class Transaction : Entity
     public string? MerchantName { get; set; }
 
     /// <summary>
+    /// Merchant category as returned by Plaid (e.g., "Groceries", "Transport").
+    /// Used for spending statistics in Phase 5.
+    /// </summary>
+    public string? MerchantCategory { get; set; }
+
+    /// <summary>
+    /// Denormalized user FK for efficient user-scoped queries without joining BankAccount.
+    /// </summary>
+    public Guid UserId { get; set; }
+
+    /// <summary>
+    /// Soft-delete flag. Set to false by DELETE /accounts/{id} to preserve audit trail.
+    /// All user-facing queries MUST filter WHERE IsActive = true.
+    /// </summary>
+    public bool IsActive { get; set; } = true;
+
+    /// <summary>
+    /// Timestamp when this transaction was soft-deleted. Null if not deleted.
+    /// Set once on soft-delete; never cleared.
+    /// </summary>
+    public DateTime? DeletedAt { get; set; }
+
+    /// <summary>
+    /// Reason for archival. Set to 'retention_policy_24m' by DataRetentionJob (T527).
+    /// Null for user-initiated soft-deletes.
+    /// </summary>
+    public string? ArchivedReason { get; set; }
+
+    /// <summary>
     /// Navigation property to parent account.
     /// </summary>
     public BankAccount? Account { get; set; }
@@ -72,15 +101,25 @@ public class Transaction : Entity
     /// <summary>
     /// Constructor for creating new transaction.
     /// </summary>
-    public Transaction(Guid accountId, decimal amount, DateTime transactionDate,
+    public Transaction(Guid accountId, Guid userId, decimal amount, DateTime transactionDate,
         string description, string uniqueHash, bool isPending = false)
     {
         AccountId = accountId;
+        UserId = userId;
         Amount = amount;
         TransactionDate = transactionDate;
         Description = description;
         UniqueHash = uniqueHash;
         IsPending = isPending;
+    }
+
+    /// <summary>
+    /// Soft-deletes this transaction. Financial data fields remain unchanged (immutable).
+    /// </summary>
+    public void SoftDelete()
+    {
+        IsActive = false;
+        DeletedAt = DateTime.UtcNow;
     }
 
     /// <summary>
