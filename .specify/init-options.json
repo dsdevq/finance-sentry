@@ -1,9 +1,9 @@
 {
-  "ai": "copilot",
+  "ai": "claude",
   "ai_commands_dir": null,
   "ai_skills": false,
   "branch_numbering": "sequential",
-  "here": false,
+  "here": true,
   "offline": false,
   "preset": null,
   "script": "sh",
