@@ -19,6 +19,7 @@
     <PackageReference Include="Testcontainers" Version="3.9.0" />
     <PackageReference Include="Testcontainers.PostgreSql" Version="3.9.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.0" />
   </ItemGroup>
 
   <ItemGroup>

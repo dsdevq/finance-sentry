@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="MediatR" Version="12.1.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0" />
@@ -23,6 +27,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\FinanceSentry.Core\FinanceSentry.Core.csproj" />
+    <ProjectReference Include="..\FinanceSentry.Infrastructure\FinanceSentry.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

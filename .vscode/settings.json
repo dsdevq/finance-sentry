@@ -10,7 +10,16 @@
 		".specify/scripts/bash/": true,
 		".specify/scripts/powershell/": true
 	},
-	"chat.mcp.serverSampling": {},
+	"chat.mcp.serverSampling": {
+		"finance-sentry/.vscode/mcp.json: github": {
+			"allowedModels": [
+				"copilot/auto",
+				"copilotcli/claude-haiku-4.5",
+				"claude-code/claude-opus-4.6",
+				"claude-code/claude-opus-4.6-fast"
+			]
+		}
+	},
 	"dotnet.defaultSolutionOrFolder": "backend/FinanceSentry.sln",
 	"[csharp]": {
 		"editor.defaultFormatter": "ms-dotnettools.csharp",

@@ -122,7 +122,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Never log plaintext tokens or keys
   - **Success Criteria**: Unit tests verify encrypt↔decrypt roundtrip, auth_tag validation rejects tampered data, no plaintext in logs. **SC-007 performance assertion**: add a benchmark test that calls Encrypt() + Decrypt() in a loop 1000 times and asserts the average duration is < 50ms per cycle (use `Stopwatch` or `BenchmarkDotNet`). This validates the ≤50ms encryption latency SLA from SC-007.
 
-- [ ] T102 [P] Implement exponential backoff retry policy for Plaid API calls
+- [x] T102 [P] Implement exponential backoff retry policy for Plaid API calls
   - **File Paths**: `backend/src/Modules/Shared/Retry/ExponentialBackoffPolicy.cs`, `backend/src/Modules/Shared/Retry/RetryPolicyFactory.cs`
   - **Details**: Polly-based retry policy: max 3 attempts (per FR-005), delays = [5 min, 15 min, 1 hour]. Retry on timeout, rate limit (429), service unavailable (5xx). Do NOT retry on auth failures (401, 403) or validation errors (400)
   - **Key Features**:
@@ -131,7 +131,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Correlation ID tracking for retry chains
   - **Success Criteria**: Unit tests verify delays are correct (5m/15m/1h), permanent errors fail immediately without retry, transient errors retry exactly 3 times
 
-- [ ] T103 [P] Implement structured logging service with correlation IDs
+- [x] T103 [P] Implement structured logging service with correlation IDs
   - **File Paths**: `backend/src/Modules/Shared/Logging/LoggingService.cs`, `backend/src/Modules/Shared/Logging/CorrelationIdMiddleware.cs`
   - **Details**: Wrapper around ILogger that includes: correlation ID (unique per sync attempt), timestamp, user ID (never plaintext passwords). Middleware to capture correlation ID from request headers
   - **Key Features**:
@@ -140,7 +140,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Log levels: Info (sync start/end), Warn (retry), Error (failure with error code)
   - **Success Criteria**: Log output shows correlation ID consistently, Plaid errors logged with code + message (no sensitive data)
 
-- [ ] T104 [P] Create transaction deduplication service (using unique_hash)
+- [x] T104 [P] Create transaction deduplication service (using unique_hash)
   - **File Paths**: `backend/src/Modules/BankSync/Application/Services/TransactionDeduplicationService.cs`
   - **Details**: Service to detect duplicate transactions. Hash calculation: HMAC-SHA256(account_id|amount|date|description, master_key). Compare incoming transaction hashes against existing hashes in database
   - **Key Features**:
@@ -149,7 +149,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Handles pending→posted transition: treat pending + posted as different (different dates)
   - **Success Criteria**: Unit tests verify: same transaction gets same hash, different amounts get different hashes, deduplication filters out 95%+ of test duplicates
 
-- [ ] T105 [P] Create domain models for DDD (Value Objects, Aggregates)
+- [x] T105 [P] Create domain models for DDD (Value Objects, Aggregates)
   - **File Paths**: `backend/src/Modules/BankSync/Domain/ValueObjects/Money.cs`, `backend/src/Modules/BankSync/Domain/ValueObjects/AccountNumber.cs`, `backend/src/Modules/BankSync/Domain/Aggregates/BankAccountAggregate.cs`
   - **Details**: Value objects (Money with currency, AccountNumber with validation), Aggregates (BankAccount as root aggregate). Include business logic for state transitions
   - **Key Domain Rules**:
@@ -158,27 +158,27 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - BankAccount: enforces state machine (pending → syncing → active/failed)
   - **Success Criteria**: Value object equality works by value (not reference), aggregate methods enforce invariants
 
-- [ ] T106 Create repository interface for BankAccount (generic repository pattern)
+- [x] T106 Create repository interface for BankAccount (generic repository pattern)
   - **File Paths**: `backend/src/Modules/Shared/Repository/IRepository.cs`, `backend/src/Modules/BankSync/Infrastructure/Persistence/BankAccountRepository.cs`
   - **Details**: Generic IRepository<T> with methods: GetById, GetAll, Add, Update, Delete, SaveChangesAsync. Implement for BankAccount with user-scoped queries
   - **Success Criteria**: Repository compiles, unit tests mock IRepository successfully
 
-- [ ] T107 Create MediatR handlers for basic bank sync queries
+- [x] T107 Create MediatR handlers for basic bank sync queries
   - **File Paths**: `backend/src/Modules/BankSync/Application/Queries/GetAccountsQuery.cs`, `backend/src/Modules/BankSync/Application/Queries/GetAccountsQueryHandler.cs`
   - **Details**: Query handler for GetAccountsQuery (returns list of accounts for authenticated user). Include filtering by status/currency
   - **Success Criteria**: Handler compiles, unit tests verify query execution with mock repository
 
-- [ ] T108 Set up dependency injection container with all Phase 2 services
+- [x] T108 Set up dependency injection container with all Phase 2 services
   - **File Paths**: `backend/src/Startup/DependencyInjection.cs`
   - **Details**: Register: EncryptionService, RetryPolicy, LoggingService, Repositories, MediatR handlers. Separate modules so Phase 3 can add new registrations without conflicts
   - **Success Criteria**: Application starts, all registered services resolve without errors
 
-- [ ] T109 Create integration tests for credential encryption + decryption
+- [x] T109 Create integration tests for credential encryption + decryption
   - **File Paths**: `backend/tests/Integration/Shared/CredentialEncryptionTests.cs`
   - **Details**: Tests: encrypt token, store to DB, retrieve, decrypt, verify matches original. Use testcontainers PostgreSQL
   - **Success Criteria**: Tests pass, no plaintext tokens in database, encrypted data > plaintext length
 
-- [ ] T110 Create unit tests for deduplication logic (100+ transactions)
+- [x] T110 Create unit tests for deduplication logic (100+ transactions)
   - **File Paths**: `backend/tests/Unit/BankSync/TransactionDeduplicationTests.cs`
   - **Details**: Test data: 100 transactions (50 duplicates, 50 unique). Verify deduplication filters exactly 50. Test hash consistency
   - **Success Criteria**: Tests pass, deduplication accuracy > 95%
@@ -205,7 +205,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
 
 <!-- TDD: Write unit + contract tests FIRST, then implement to make them pass -->
 
-- [ ] T211 [P] [US1] Create unit tests for BankAccount entity in `backend/tests/Unit/BankSync/Domain/BankAccountTests.cs`
+- [x] T211 [P] [US1] Create unit tests for BankAccount entity in `backend/tests/Unit/BankSync/Domain/BankAccountTests.cs`
   - **Details**: Tests:
     - Constructor validates required fields
     - State transitions (pending → syncing → active) work
@@ -213,7 +213,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Equality based on account_id
   - **Success Criteria**: All tests compile (may fail until T201 implemented), 90%+ code coverage target
 
-- [ ] T212 [P] [US1] Create unit tests for Transaction entity in `backend/tests/Unit/BankSync/Domain/TransactionTests.cs`
+- [x] T212 [P] [US1] Create unit tests for Transaction entity in `backend/tests/Unit/BankSync/Domain/TransactionTests.cs`
   - **Details**: Tests:
     - Constructor validates amount > 0
     - Immutability after creation
@@ -221,7 +221,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - transaction_type and merchant_category fields present and validated
   - **Success Criteria**: All tests compile, ready to pass once T202 implemented
 
-- [ ] T213 [P] [US1] Create unit tests for Plaid adapter in `backend/tests/Unit/BankSync/Infrastructure/PlaidAdapterTests.cs`
+- [x] T213 [P] [US1] Create unit tests for Plaid adapter in `backend/tests/Unit/BankSync/Infrastructure/PlaidAdapterTests.cs`
   - **Details**: Mock PlaidNet SDK. Tests:
     - CreateLinkToken() returns valid token
     - ExchangePublicToken() converts public to access token
@@ -229,7 +229,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Error handling: 4xx and 5xx responses thrown correctly
   - **Success Criteria**: All tests compile, ready to pass once T204 implemented
 
-- [ ] T215 [P] [US1] Create REST API contract tests in `backend/tests/Contract/BankSyncAPIContractTests.cs`
+- [x] T215 [P] [US1] Create REST API contract tests in `backend/tests/Contract/BankSyncAPIContractTests.cs`
   - **Details**: Contract tests validate:
     - POST /accounts/connect returns { linkToken, expiresIn, ... }
     - POST /accounts/link returns { accountId, bankName, ... }
@@ -239,7 +239,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
 
 <!-- Implementation: Make the tests above pass -->
 
-- [ ] T201 [P] [US1] Create BankAccount domain entity (full implementation) in `backend/src/Modules/BankSync/Domain/Aggregates/BankAccount.cs`
+- [x] T201 [P] [US1] Create BankAccount domain entity (full implementation) in `backend/src/Modules/BankSync/Domain/Aggregates/BankAccount.cs`
   - **Details**: Entity with: account_id, user_id, plaid_item_id, bank_name, account_type, account_number_last4, currency, current_balance, available_balance, sync_status, timestamps. Include state machine: pending → syncing → active/failed/reauth_required
   - **Success Criteria**: T211 tests pass, constructor validates invariants, state transitions work
 
@@ -250,11 +250,11 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - The entity remains immutable for financial data fields (amount, date, description). Only `is_active` and `deleted_at` are mutable (set once on deletion, never changed again).
   - **Success Criteria**: T212 tests pass, equality based on transaction_id, financial fields immutable after creation, `is_active`/`deleted_at` fields present and settable, soft-deleted transactions excluded from queries
 
-- [ ] T203 [US1] Create EncryptedCredential domain entity in `backend/src/Modules/BankSync/Domain/Aggregates/EncryptedCredential.cs`
+- [x] T203 [US1] Create EncryptedCredential domain entity in `backend/src/Modules/BankSync/Domain/Aggregates/EncryptedCredential.cs`
   - **Details**: Entity with: credential_id, account_id, encrypted_data, iv, auth_tag, key_version, created_at, last_used_at
   - **Success Criteria**: Entity compiles, stores encrypted data (never decrypts in entity itself)
 
-- [ ] T204 [P] [US1] Create Plaid adapter service in `backend/src/Modules/BankSync/Infrastructure/PlaidAdapter.cs`
+- [x] T204 [P] [US1] Create Plaid adapter service in `backend/src/Modules/BankSync/Infrastructure/PlaidAdapter.cs`
   - **Details**: Service methods:
     - CreateLinkToken(): generates Plaid Link token for frontend
     - ExchangePublicToken(publicToken): exchanges public token for access token (plaid_item_id)
@@ -267,11 +267,11 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Response mapped to domain models (including transaction_type, merchant_category)
   - **Success Criteria**: T213 tests pass, adapter compiles, methods return expected types
 
-- [ ] T205 [P] [US1] Create REST endpoint: POST /accounts/connect (get link token) in `backend/src/Modules/BankSync/API/Controllers/BankSyncController.cs`
+- [x] T205 [P] [US1] Create REST endpoint: POST /accounts/connect (get link token) in `backend/src/Modules/BankSync/API/Controllers/BankSyncController.cs`
   - **Details**: Endpoint that calls PlaidAdapter.CreateLinkToken(), returns { linkToken, expiresIn, expiresAt, requestId }. Authenticate with JWT
   - **Success Criteria**: T215 contract test passes, endpoint callable via HTTP, returns 200 with link token, 401 if no JWT
 
-- [ ] T206 [P] [US1] Create REST endpoint: POST /accounts/link (exchange public token) in `backend/src/Modules/BankSync/API/Controllers/BankSyncController.cs`
+- [x] T206 [P] [US1] Create REST endpoint: POST /accounts/link (exchange public token) in `backend/src/Modules/BankSync/API/Controllers/BankSyncController.cs`
   - **Details**: Endpoint that:
     1. Calls PlaidAdapter.ExchangePublicToken(publicToken)
     2. Get plaid_item_id from response
@@ -282,7 +282,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     7. Return response with account details + "syncing" message
   - **Success Criteria**: T215 contract test passes, endpoint saves account to DB, stores encrypted token, returns 200 OK
 
-- [ ] T207 [P] [US1] Create REST endpoint: GET /accounts (list all accounts) in `backend/src/Modules/BankSync/API/Controllers/BankSyncController.cs`
+- [x] T207 [P] [US1] Create REST endpoint: GET /accounts (list all accounts) in `backend/src/Modules/BankSync/API/Controllers/BankSyncController.cs`
   - **Details**: Endpoint that:
     1. Gets authenticated user ID from JWT
     2. Queries database for all BankAccounts where user_id = authenticated user
@@ -291,7 +291,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     5. Include aggregated currency_totals
   - **Success Criteria**: T215 contract test passes, returns accounts for authenticated user, respects filters
 
-- [ ] T208 [P] [US1] Create REST endpoint: GET /accounts/{accountId}/transactions in `backend/src/Modules/BankSync/API/Controllers/BankSyncController.cs`
+- [x] T208 [P] [US1] Create REST endpoint: GET /accounts/{accountId}/transactions in `backend/src/Modules/BankSync/API/Controllers/BankSyncController.cs`
   - **Details**: Endpoint that:
     1. Verify authenticated user owns the account (user_id match)
     2. Query transactions with filters: start_date, end_date, offset, limit (pagination)
@@ -300,7 +300,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     5. Include: totalCount, hasMore
   - **Success Criteria**: T215 contract test passes, returns paginated transactions, returns 404 if account not owned by user
 
-- [ ] T209 [US1] Create command: ConnectBankAccountCommand + handler in `backend/src/Modules/BankSync/Application/Commands/ConnectBankAccountCommand.cs` and `ConnectBankAccountCommandHandler.cs`
+- [x] T209 [US1] Create command: ConnectBankAccountCommand + handler in `backend/src/Modules/BankSync/Application/Commands/ConnectBankAccountCommand.cs` and `ConnectBankAccountCommandHandler.cs`
   - **Details**: MediatR command for linking account. Handler:
     1. Validates publicToken is not expired
     2. Calls PlaidAdapter.ExchangePublicToken()
@@ -310,7 +310,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     6. Publishes event: BankAccountConnectedEvent
   - **Success Criteria**: Command compiles, handler saves account, event published
 
-- [ ] T210 [US1] Create event handler: Initial sync on BankAccountConnectedEvent in `backend/src/Modules/BankSync/Application/EventHandlers/BankAccountConnectedEventHandler.cs`
+- [x] T210 [US1] Create event handler: Initial sync on BankAccountConnectedEvent in `backend/src/Modules/BankSync/Application/EventHandlers/BankAccountConnectedEventHandler.cs`
   - **Details**: When BankAccountConnectedEvent published:
     1. Create SyncJob entity with status=pending
     2. Call PlaidAdapter.GetTransactions() for last 12 months
@@ -322,7 +322,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
 
 <!-- Integration tests: validate end-to-end after implementation -->
 
-- [ ] T214 [P] [US1] Create integration tests: PlaidAdapter + Database in `backend/tests/Integration/BankSync/PlaidAdapterIntegrationTests.cs`
+- [x] T214 [P] [US1] Create integration tests: PlaidAdapter + Database in `backend/tests/Integration/BankSync/PlaidAdapterIntegrationTests.cs`
   - **Details**: Use testcontainers. Tests:
     - Link account: save BankAccount + EncryptedCredential to DB
     - Encrypted token stored correctly, plaintext never in DB

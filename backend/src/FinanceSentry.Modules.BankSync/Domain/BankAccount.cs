@@ -57,6 +57,11 @@ public class BankAccount : Entity
     public string SyncStatus { get; set; } = "pending";
 
     /// <summary>
+    /// Last sync error code (e.g., "INSTITUTION_NOT_RESPONDING"). Cleared on successful sync.
+    /// </summary>
+    public string? LastSyncError { get; set; }
+
+    /// <summary>
     /// Soft delete flag for audit trail preservation.
     /// </summary>
     public bool IsActive { get; set; } = true;
@@ -72,8 +77,8 @@ public class BankAccount : Entity
     public Guid? UpdatedBy { get; set; }
 
     // Navigation properties
-    public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
-    public ICollection<SyncJob> SyncJobs { get; set; } = new List<SyncJob>();
+    public ICollection<Transaction> Transactions { get; set; } = [];
+    public ICollection<SyncJob> SyncJobs { get; set; } = [];
     public EncryptedCredential? EncryptedCredential { get; set; }
 
     /// <summary>
@@ -84,23 +89,78 @@ public class BankAccount : Entity
     }
 
     /// <summary>
-    /// Constructor for creating new account.
+    /// Constructor for creating new account. Validates all required invariants eagerly.
     /// </summary>
     public BankAccount(Guid userId, string plaidItemId, string bankName, string accountType,
         string accountNumberLast4, string ownerName, string currency, Guid createdBy)
     {
+        if (string.IsNullOrWhiteSpace(plaidItemId))
+            throw new ArgumentException("PlaidItemId cannot be empty.", nameof(plaidItemId));
+        if (string.IsNullOrWhiteSpace(bankName))
+            throw new ArgumentException("BankName cannot be empty.", nameof(bankName));
+        if (string.IsNullOrWhiteSpace(accountType))
+            throw new ArgumentException("AccountType cannot be empty.", nameof(accountType));
+        if (accountNumberLast4.Length != 4 || !accountNumberLast4.All(char.IsDigit))
+            throw new ArgumentException("AccountNumberLast4 must be exactly 4 digits.", nameof(accountNumberLast4));
+
         UserId = userId;
         PlaidItemId = plaidItemId;
         BankName = bankName;
         AccountType = accountType;
         AccountNumberLast4 = accountNumberLast4;
         OwnerName = ownerName;
-        Currency = currency;
+        Currency = currency.ToUpperInvariant();
         CreatedBy = createdBy;
+        SyncStatus = "pending";
+    }
+
+    // ── State machine ────────────────────────────────────────────────────────
+
+    /// <summary>Transitions pending → syncing. Throws if already syncing/active/failed.</summary>
+    public void StartSync()
+    {
+        if (SyncStatus != "pending" && SyncStatus != "reauth_required")
+            throw new InvalidOperationException(
+                $"Cannot start sync from status '{SyncStatus}'. Only 'pending' or 'reauth_required' accounts can begin syncing.");
+
+        SyncStatus = "syncing";
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>Transitions syncing → active, updates balance.</summary>
+    public void MarkActive(decimal balance)
+    {
+        if (SyncStatus != "syncing")
+            throw new InvalidOperationException(
+                $"Cannot mark account active from status '{SyncStatus}'. Account must be syncing first.");
+
+        SyncStatus = "active";
+        CurrentBalance = balance;
+        LastSyncError = null;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>Transitions syncing → failed.</summary>
+    public void MarkFailed(string? errorCode = null)
+    {
+        if (SyncStatus != "syncing")
+            throw new InvalidOperationException(
+                $"Cannot mark account failed from status '{SyncStatus}'. Account must be syncing first.");
+
+        SyncStatus = "failed";
+        LastSyncError = errorCode;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>Transitions any status → reauth_required (Plaid item expired).</summary>
+    public void MarkReauthRequired()
+    {
+        SyncStatus = "reauth_required";
+        UpdatedAt = DateTime.UtcNow;
     }
 
     /// <summary>
-    /// Validates invariants required for account integrity.
+    /// Validates invariants. Kept for backward compatibility; constructor now validates eagerly.
     /// </summary>
     public void ValidateInvariants()
     {

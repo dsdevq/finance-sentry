@@ -44,6 +44,8 @@ ENV/
 env/
 .venv
 
+.claude/mcp.json
+
 # .NET / C#
 appsettings.local.json
 appsettings.*.json
