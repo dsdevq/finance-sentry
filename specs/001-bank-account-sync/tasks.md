@@ -3,7 +3,7 @@
 **Feature**: Bank Account Aggregation & Sync
 **Component**: Finance Sentry Backend + Frontend
 **Status**: Ready for execution
-**Last Updated**: 2026-03-28
+**Last Updated**: 2026-03-28 (remediation: I1, U1, E1, E2 resolved)
 **MVP Target**: Complete Phase 1 → Phase 2 → Phase 3 (US1 only), then deploy
 
 ---
@@ -65,13 +65,19 @@ Phase 6 (Polish & Cross-Cutting Concerns)
 
 - [ ] T005 Create EF Core migration for initial schema (all 4 entities)
   - **File Paths**: `backend/src/Migrations/M001_BankSyncSchema_Initial.cs`
-  - **Details**: Migration that creates all tables with columns, constraints, indexes per data-model.md. Include test migration rollback
-  - **Success Criteria**: Migration applies cleanly to PostgreSQL, rollback succeeds, schema matches data-model.md exactly
+  - **Details**: Migration that creates all tables with columns, constraints, indexes per data-model.md. Include test migration rollback.
+    - **IMPORTANT**: The `transactions` table MUST include two soft-delete columns: `is_active BOOLEAN NOT NULL DEFAULT true` and `deleted_at TIMESTAMPTZ NULL`. These are required by T309-A (DELETE /accounts/{id} soft-deletes all associated transactions). Without these columns T309-A will fail at runtime.
+    - Full column list for transactions (additions over data-model.md): all existing columns + `is_active` + `deleted_at`
+    - Add partial index: `CREATE INDEX idx_transactions_active ON transactions(account_id) WHERE is_active = true;`
+  - **Success Criteria**: Migration applies cleanly to PostgreSQL, rollback succeeds, `transactions` table has `is_active` and `deleted_at` columns, schema matches data-model.md + soft-delete additions
 
 - [ ] T006 Set up CI/CD pipeline configuration
   - **File Paths**: `.github/workflows/ci-build.yml`, `.github/workflows/test.yml`
-  - **Details**: GitHub Actions workflow for: build, linting (C# StyleCop + Angular ESLint), test execution, coverage reporting
-  - **Success Criteria**: Workflow runs on PR, fails on warnings (strict), reports coverage
+  - **Details**: GitHub Actions workflow for: build, linting (C# StyleCop + Angular ESLint), test execution, coverage reporting, and coverage gate enforcement.
+    - **IMPORTANT (Constitution §II — NON-NEGOTIABLE)**: Pipeline MUST enforce 80% minimum line coverage. Add `--coverage-minimum-line-rate 0.8` to the dotnet test command. Angular coverage gate: add `"statements": 80, "branches": 80, "functions": 80, "lines": 80` to the `coverageThresholds` section in `karma.conf.js`. Pipeline MUST fail if coverage drops below 80% — not just report it.
+    - Backend dotnet test command: `dotnet test --collect:"XPlat Code Coverage" /p:CoverageMinimumLineRate=0.80`
+    - Angular: configure `karma.conf.js` with `thresholds` block rejecting builds below 80%
+  - **Success Criteria**: Workflow runs on PR, fails on compiler warnings (strict), fails if coverage < 80% (backend and frontend), coverage report published as CI artifact
 
 - [ ] T007 Create .NET build task and run configurations in VS Code
   - **File Paths**: `.vscode/tasks.json`, `.vscode/launch.json`
@@ -114,7 +120,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Decrypt method: takes ciphertext + iv + auth_tag, validates auth tag, returns plaintext
     - Key derivation from master key (from environment)
     - Never log plaintext tokens or keys
-  - **Success Criteria**: Unit tests verify encrypt↔decrypt roundtrip, auth_tag validation rejects tampered data, no plaintext in logs
+  - **Success Criteria**: Unit tests verify encrypt↔decrypt roundtrip, auth_tag validation rejects tampered data, no plaintext in logs. **SC-007 performance assertion**: add a benchmark test that calls Encrypt() + Decrypt() in a loop 1000 times and asserts the average duration is < 50ms per cycle (use `Stopwatch` or `BenchmarkDotNet`). This validates the ≤50ms encryption latency SLA from SC-007.
 
 - [ ] T102 [P] Implement exponential backoff retry policy for Plaid API calls
   - **File Paths**: `backend/src/Modules/Shared/Retry/ExponentialBackoffPolicy.cs`, `backend/src/Modules/Shared/Retry/RetryPolicyFactory.cs`
@@ -238,8 +244,11 @@ Phase 6 (Polish & Cross-Cutting Concerns)
   - **Success Criteria**: T211 tests pass, constructor validates invariants, state transitions work
 
 - [ ] T202 [P] [US1] Create Transaction domain entity in `backend/src/Modules/BankSync/Domain/Aggregates/Transaction.cs`
-  - **Details**: Entity with: transaction_id, account_id, amount, date, description, unique_hash, is_pending, transaction_type (debit/credit/transfer), merchant_category. Immutable after creation
-  - **Success Criteria**: T212 tests pass, equality based on transaction_id, created_at cannot be modified
+  - **Details**: Entity with: transaction_id, account_id, amount, date, description, unique_hash, is_pending, transaction_type (debit/credit/transfer), merchant_category. Immutable after creation.
+    - **IMPORTANT (soft-delete support, required by T309-A)**: Include two additional fields: `is_active BOOLEAN` (default true) and `deleted_at DateTime?` (nullable). These are set by DELETE /accounts/{id} to soft-delete all transactions for an account. Without these fields, T309-A will fail at runtime.
+    - All queries that return transactions to the user MUST filter `WHERE is_active = true` to exclude soft-deleted records.
+    - The entity remains immutable for financial data fields (amount, date, description). Only `is_active` and `deleted_at` are mutable (set once on deletion, never changed again).
+  - **Success Criteria**: T212 tests pass, equality based on transaction_id, financial fields immutable after creation, `is_active`/`deleted_at` fields present and settable, soft-deleted transactions excluded from queries
 
 - [ ] T203 [US1] Create EncryptedCredential domain entity in `backend/src/Modules/BankSync/Domain/Aggregates/EncryptedCredential.cs`
   - **Details**: Entity with: credential_id, account_id, encrypted_data, iv, auth_tag, key_version, created_at, last_used_at
@@ -529,7 +538,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
   - **Details**: Endpoint implementation:
     1. Verify authenticated user owns account (match user_id from JWT)
     2. Fetch BankAccount by accountId
-    3. Soft-delete: set is_active = false, deleted_at = now, deleted_by_user_id = userId
+    3. Soft-delete: set is_active = false, deleted_at = now (do NOT add a deleted_by_user_id column — who deleted the account is captured by AuditLogService T525 which writes a DELETE_ACCOUNT row with user_id to audit_logs)
     4. Soft-delete all Transactions for this account (set is_active = false, same timestamp)
     5. Leave EncryptedCredential intact (for audit/recovery if needed)
     6. Return 204 No Content on success
@@ -1024,11 +1033,28 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Test: Audit log write failure does not break the main request (graceful degradation)
   - **Success Criteria**: All tests pass, audit rows present in DB, sensitive data absent from audit_logs
 
+<!-- FR-008 COMPLIANCE: Data retention enforcement — "store transaction history for at least 24 months" -->
+
+- [ ] T527 [P] Implement data retention enforcement job (24-month archival) in `backend/src/Modules/BankSync/Infrastructure/Jobs/DataRetentionJob.cs` and `backend/src/Modules/Shared/Jobs/RetentionPolicy.cs`
+  - **Details**: Background job (runs monthly via Hangfire recurring job) that enforces FR-008: 24-month transaction retention policy.
+    - **Archival logic**: Identify transactions where `posted_date < NOW() - INTERVAL '24 months'` AND `is_active = true`
+    - **Soft-archive** (not hard delete): Set `is_active = false`, `deleted_at = NOW()`, add note: `archived_reason = 'retention_policy_24m'` (requires adding `archived_reason VARCHAR(50)` nullable column to transactions — add to migration T005 or new migration)
+    - Register recurring Hangfire job: `RecurringJob.AddOrUpdate("data-retention", () => job.RunAsync(), Cron.Monthly)`
+    - Log: number of transactions archived, date range archived, never log transaction amounts or descriptions
+    - **GDPR note**: Archived transactions remain in DB with `is_active = false` so they satisfy compliance queries but don't appear in user-facing views
+  - **Key Features**:
+    - Dry-run mode: `DataRetentionJob.RunAsync(dryRun: true)` logs count without archiving (for ops validation)
+    - Never hard-deletes (soft-archive only, preserves audit trail)
+    - Idempotent: running twice for same month archives same set (no double-archiving)
+  - **Success Criteria**: Job archives transactions older than 24 months, does not touch recent transactions, is idempotent, logs completion count, dry-run mode works
+
 **Phase 6 Checkpoint**:
 - ✅ Error handling comprehensive, user-friendly
 - ✅ Security hardened (rate limiting, JWT, CORS, CSP)
 - ✅ **Audit logging implemented** (Constitution V compliant — all data access recorded)
-- ✅ Performance validated (50-account load test passing)
+- ✅ **Data retention enforced** (FR-008 compliant — 24-month archival job running monthly)
+- ✅ Performance validated (50-account load test passing, encryption < 50ms per SC-007)
+- ✅ CI/CD enforces 80% coverage gate (Constitution §II compliant)
 - ✅ Monitoring configured (Application Insights / CloudWatch)
 - ✅ API documented (Swagger + Postman)
 - ✅ Operations runbook complete
