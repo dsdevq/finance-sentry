@@ -1,0 +1,92 @@
+# Build outputs
+bin/
+obj/
+dist/
+build/
+*.dll
+*.exe
+*.o
+*.so
+*.a
+*.lib
+
+# IDE and Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+*.user
+*.suo
+*.sln.iml
+*.iml
+.DS_Store
+Thumbs.db
+
+# Node.js/npm
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+ENV/
+env/
+.venv
+
+.claude/mcp.json
+
+# .NET / C#
+appsettings.local.json
+appsettings.*.json
+*.db
+*.mdf
+*.ldf
+.vs/
+.vscode/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+*.logs
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+
+# Coverage and Testing
+coverage/
+.nyc_output/
+lcov.info
+*.trx
+TestResults/
+
+# Docker
+docker-compose.override*.yml
+
+# Frontend
+frontend/dist/
+frontend/.angular/
+frontend/**/*.spec.ts
+
+# Backend
+backend/bin/
+backend/obj/
+backend/packages/

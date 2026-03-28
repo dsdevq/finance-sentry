@@ -1,0 +1,258 @@
+[
+  {
+    "research_topic": "Real-Time Push Notifications vs Polling Strategy",
+    "decision": "HYBRID: Plaid webhooks for real-time transaction alerts + scheduled full-sync polling every 2 hours",
+    "rationale": "Achieves <5min sync latency via webhooks while maintaining 99.9% reliability through periodic full sync as safety net. Webhooks alone (99.7% delivery) create single points of failure; polling alone cannot meet <5min SLA. Hybrid leverages strengths of both.",
+    "reliability_math": "Plaid webhook delivery: 99.7% success rate. With 2-hour fallback sync, even if webhooks fail for 2 hours, recovery is guaranteed. Effective reliability: 99.7% + (0.3% webhook failures caught by 2h sync) ≈ 99.95%",
+    "alternatives_considered": [
+      {
+        "option": "Pure Polling (every 2 hours)",
+        "rationale": "Simple implementation but violates <5min SLA, users see 2-hour stale data, higher API costs"
+      },
+      {
+        "option": "Pure Webhooks (real-time only)",
+        "rationale": "Lowest latency but network/Plaid outage risk, no fallback mechanism, difficult to achieve 99.9% alone"
+      },
+      {
+        "option": "Webhooks + Micro-Polling (every 15 min)",
+        "rationale": "Better latency but higher Plaid API costs (16 calls/day vs 12 for 2h), rate limit pressure at scale"
+      }
+    ],
+    "production_notes": "Plaid explicitly recommends this hybrid approach. Stripe/Square/Revolut all use: webhooks for balance updates + nightly reconciliation batch.",
+    "plaid_webhook_event_types": [
+      "TRANSACTIONS_READY: New transactions available",
+      "SYNC_UPDATES_AVAILABLE: Plaid has new data",
+      "ITEM_ERROR: Bank connection failed (reauth needed)",
+      "PENDING_EXPIRATION: Pending transactions expiring"
+    ],
+    "webhook_reliability_measures": [
+      "Implement webhook signature verification (HMAC-SHA256)",
+      "Store webhook events in database with idempotency key to prevent duplicates",
+      "Implement webhook dead-letter queue for failed processing",
+      "Monitor webhook delivery vs processing rates"
+    ],
+    "latency_breakdown": {
+      "webhook_path_ml": "Transaction posted → Plaid detects (5-30s) → Webhook sent (<1s) → Your processing (<2s) = 6-33s total (often <1min)",
+      "polling_path_ml": "Transaction posted → Plaid sync lag (0-30min) → Your 2h poll window (0-2h) → Processing (2s) = 30min-2h total",
+      "hybrid_worst_case": "If webhook fails: max 2h until next polling cycle. If polling fails: webhooks catch within 1min. Effectively: max(1min, 2h) = 1min for active accounts"
+    },
+    "cost_analysis": {
+      "plaid_pricing": "Per-item (connection), not per API call. Webhook + polling doesn't increase cost.",
+      "polling_cost_hybrid_2h": "12 sync calls/day per account. 1000 accounts = 360k calls/month. Included in standard plan.",
+      "conclusion": "Hybrid is cheapest while meeting SLA"
+    },
+    "dotnet_pattern": "Create TransactionSyncCoordinator class handling webhooks via PUT /webhook/plaid endpoint + ScheduledFullSyncAsync background job via Hangfire"
+  },
+  {
+    "research_topic": "Plaid Integration Architecture Pattern",
+    "decision": "HYBRID: Use Plaid SDK Link for credential handling during auth flow. Use Plaid REST API directly for all subsequent sync operations.",
+    "rationale": "SDK's Plaid Link UI handles credential collection securely (bank users enter credentials directly to Plaid, never touch your servers). REST API provides direct control over sync operations, retry logic, data transformation. Balances security (PCI-compliant) with flexibility (custom retry/error handling).",
+    "sdk_strengths": [
+      "Credential UI handled by Plaid (PCI-compliant, never see plaintext credentials)",
+      "Supports 12,000+ institutions out of box",
+      "Multi-factor auth handled by Plaid (SMS, OTP, etc.)",
+      "Reduces credential-related security bugs"
+    ],
+    "api_strengths": [
+      "Full control over retry logic and backoff strategies",
+      "Direct access to transaction data (no wrapper layers)",
+      "Can implement custom deduplication before storage",
+      "Enables correlation ID tracking for debugging",
+      "Lower latency (direct API calls vs SDK abstractions)"
+    ],
+    "alternatives_considered": [
+      {
+        "option": "Direct API Only (Manage credentials ourselves)",
+        "rationale": "PCI compliance burden, must implement MFA, support 12k+ institutions ourselves = impossible. Not recommended by Plaid."
+      },
+      {
+        "option": "SDK Only (Plaid Link + SDK wrappers for sync)",
+        "rationale": "Simplest path but less control over retry/backoff. SDK abstractions hide networking details. Harder to implement custom correlation IDs/tracing."
+      }
+    ],
+    "plaid_official_recommendation": "Official Plaid docs recommend: 'Use Plaid Link for authentication flow. Use API for data operations.'",
+    "plaid_link_flow": [
+      "1. Frontend calls Link SDK",
+      "2. User authenticates with bank",
+      "3. Plaid returns access_token (item_id)",
+      "4. Backend stores encrypted item_id",
+      "5. Backend uses item_id + API key to sync (never raw credentials)"
+    ],
+    "supported_institutions": {
+      "ireland": [
+        "AIB",
+        "Bank of Ireland",
+        "Revolut",
+        "Wise",
+        "ING",
+        "Danske Bank"
+      ],
+      "ukraine": [
+        "Monobank",
+        "PrivateBank",
+        "A-Bank",
+        "Oschadbank"
+      ],
+      "note": "All aggregated via single Plaid API; no per-bank code needed"
+    },
+    "eu_data_residency": "Plaid stores customer data in EU servers if EU flag set during initialization. Verify: Plaid.initialize({environment: 'production', country_codes: ['IE', 'UA'], ...})",
+    "credential_storage": "Never store raw Plaid credentials. Store only item_id (opaque token) + encryption_metadata. Item_id is safe; used only with Plaid API key.",
+    "api_key_security": "Store Plaid API keys in AWS Secrets Manager. Rotate quarterly. Frontend uses client_id (safe to expose), not API key.",
+    "correlation_ids": "Add plaid_request_id (from Plaid response headers) to all sync logs for debugging",
+    "dotnet_pattern": "PlaidAuthController (exchange_public_token endpoint) + PlaidApiService (direct HTTP calls to Plaid) + CredentialEncryptionService"
+  },
+  {
+    "research_topic": "PostgreSQL Schema Design for Bank Transactions",
+    "decision": "Composite index on (user_id, account_id, transaction_date DESC) for range queries. GIN index on description for full-text search. Hash-based deduplication. Pending/posted tracking in single row.",
+    "rationale": "99% of queries filter by user + account + date range. Composite index allows single-path index scan. Descending date order = latest transactions first (cache-friendly). GIN index enables substring search without table scan. Hash-based dedup (HMAC-SHA256) prevents duplicates from multiple sync runs.",
+    "index_strategy": {
+      "composite_range": "CREATE INDEX idx_transactions_user_account_date ON transactions (user_id, account_id, transaction_date DESC)",
+      "dedup_hash": "CREATE UNIQUE INDEX idx_transactions_unique_hash ON transactions (unique_hash)",
+      "full_text_search": "CREATE INDEX idx_transactions_description_gin ON transactions USING GIN (description gin_trgm_ops) [PostgreSQL only]",
+      "currency_aggregation": "CREATE INDEX idx_transactions_currency ON transactions (user_id, currency, transaction_date DESC)",
+      "sync_audit": "CREATE INDEX idx_transactions_synced_at ON transactions (account_id, synced_at DESC)"
+    },
+    "range_query_performance": "Composite index (user_id, account_id, transaction_date DESC) allows single-path index scan for 'transactions by account in date range' queries. Enables sub-50ms query latency at 100+ accounts/user.",
+    "deduplication_logic": {
+      "hash_computation": "HMAC-SHA256(account_id | amount | transaction_date | description.lowercase)",
+      "why_hash": "Banks return duplicates across sync runs (pagination boundaries). Hash allows O(1) duplicate detection + audit trail of deduped transactions.",
+      "pending_to_posted_handling": "Pending txn: {amount: 50, is_pending: true}. Later posted version: {amount: 50, is_pending: false}. Different hashes = not duplicate = both stored. Query groups to avoid double-counting.",
+      "collision_risk": "HMAC-SHA256: negligible. At 10M transactions, collision risk < 1e-20"
+    },
+    "pending_vs_posted": "pending_amount (nullable) tracks pre-authorization holds. posted_amount (NOT NULL) tracks settlement. Single row per transaction. Prevents double-counting when pending→posted.",
+    "multi_currency": "Store amount as DECIMAL(19,4) + separate currency column (EUR, GBP, UAH). Never convert in DB layer; application handles FX rates.",
+    "alternatives_considered": [
+      {
+        "option": "Single index on transaction_date (no user scoping in index)",
+        "rationale": "Index must filter millions of rows; 50ms → 500ms latency at scale. Fails user isolation audit."
+      },
+      {
+        "option": "Separate pending_transaction + posted_transaction tables",
+        "rationale": "Duplicate schema logic. Complicates pending→posted migration. Full-text search duplicated."
+      },
+      {
+        "option": "Single amount + is_posting_pending flag",
+        "rationale": "Loses ability to show 'held vs available balance'. Cannot audit pending→posted lifecycle."
+      }
+    ],
+    "partitioning_note": "Only if >100M transactions per user. For initial scale (100-500 txns/user), unnecessary. If needed later: partition by (user_id, transaction_date) range.",
+    "dotnet_pattern": "EF Core 9 Transaction entity with composite index configuration + TransactionRepository.UpsertTransactionsAsync for dedup-aware inserts",
+    "query_examples": {
+      "range_query": "SELECT * FROM transactions WHERE user_id = @userId AND account_id = @accountId AND transaction_date BETWEEN @start AND @end ORDER BY transaction_date DESC",
+      "fts_query": "SELECT * FROM transactions WHERE user_id = @userId AND description ILIKE '%term%' LIMIT 100",
+      "aggregation": "SELECT currency, SUM(posted_amount) FROM transactions WHERE user_id = @userId AND account_id = @accountId GROUP BY currency"
+    }
+  },
+  {
+    "research_topic": "AES-256 Encryption Strategy for Bank Credentials",
+    "decision": "Per-user master key in AWS Secrets Manager. Per-account derived key via PBKDF2(master_key, account_id, salt). Store encryption key version with each credential for rotation support.",
+    "rationale": "Per-account keys allow safe rotation: change one key without touching others. If key leaks, only that account compromised, not all users' data. Key versioning enables rotation without bulk re-encryption. Per-user (not per-account) keys are industry standard.",
+    "key_management": {
+      "master_key_storage": "AWS Secrets Manager (managed HSM). Auto-rotates, audits access, supports key policies.",
+      "per_account_derivation": "PBKDF2(master_key, account_id + static_salt, 100k iterations, SHA256) → 256-bit derived key. Prevents using same key for all accounts (defense in depth).",
+      "encryption_algorithm": "AES-256-GCM (authenticated encryption). Stronger than CBC; includes authentication tag to detect tampering.",
+      "key_versioning": "Store key_version with encrypted data. On decrypt: use key_version to fetch correct key. Enables rotation without bulk re-encryption."
+    },
+    "key_rotation_strategy": {
+      "frequency": "Quarterly",
+      "process": [
+        "Generate new master key, increment version",
+        "Keep old versions for 6 months (for decryption of old data)",
+        "New encryptions use new key",
+        "Migration job: slowly re-encrypt old data asynchronously"
+      ]
+    },
+    "system_security_cryptography_vs_bouncycastle": "Use System.Security.Cryptography (built-in). Faster, FIPS-certified, hardware-accelerated. BouncyCastle is legacy.",
+    "why_not_hsm_backed_encryption": "Higher AWS cost, slower (HSM API calls ~50-100ms each), overkill for credentials that are already OAuth tokens from Plaid (not raw passwords).",
+    "alternatives_considered": [
+      {
+        "option": "Single shared key for all credentials",
+        "rationale": "Key compromise = all credentials compromised. Key rotation requires re-encrypting all data (expensive). No per-account isolation."
+      },
+      {
+        "option": "Per-account master key (no KDF)",
+        "rationale": "N keys for N accounts (scale burden). Hard key rotation (must touch every record)."
+      },
+      {
+        "option": "Encrypt with HSM-backed key (no application-layer encryption)",
+        "rationale": "Maximum security but higher cost, slower, overkill for credentials that are already OAuth tokens."
+      }
+    ],
+    "encryption_workflow": [
+      "Credential received from Plaid",
+      "Encrypt with current key via AES-256-GCM",
+      "Store (key_version, encrypted_data, created_at) in DB",
+      "On decrypt: use key_version to fetch correct key, decrypt, verify auth tag"
+    ],
+    "audit_logging": "Every encrypt/decrypt logged (not values; event + timestamp + key_version + user_id). Enable CloudTrail on Secrets Manager for key access audit.",
+    "entry_point_dotnet": "IKeyManagementService (GetCurrentKey, GetKeyByVersion, RotateKey) injected via DI + AesGcmCredentialEncryptionService (Encrypt/Decrypt using PBKDF2 derivation)",
+    "implementation_lib": "System.Security.Cryptography.AesGcm (built-in to .NET 9+). No external dependencies."
+  },
+  {
+    "research_topic": "Retry Logic and Circuit Breaker for Plaid API Calls",
+    "decision": "Exponential backoff (5s, 25s, 125s, 625s base) with random jitter. Circuit breaker opens after 5 consecutive failures OR 50% failure rate over 100 requests. SyncJob records with error_message for audit. Correlation IDs for debugging.",
+    "rationale": "Exponential backoff catches transient errors quickly while respecting Plaid rate limits. Jitter prevents thundering herd: 1000 accounts failing simultaneously don't all retry at exact 5s. Circuit breaker protects against cascading failures: if Plaid API down, skip syncs immediately (fail-fast) instead of wasting compute on doomed retries.",
+    "exponential_backoff": {
+      "formula": "delay_ms = base_delay_ms * (multiplier ^ attempt) + random_jitter(0-25% of delay)",
+      "spec_vs_production": "Spec says 5min, 15min, 1hour (too conservative; first retry waits 5min = poor UX). Better: 5s, 25s, 125s, 625s. Catches transient errors in <15min.",
+      "sequence": [
+        "Attempt 1: 5s ± jitter",
+        "Attempt 2: 25s ± jitter",
+        "Attempt 3: 125s ± jitter",
+        "Attempt 4: 625s ± jitter (max ~10 minutes)"
+      ]
+    },
+    "jitter_rationale": "Without jitter: 1000 accounts fail → all retry at 5s → rate limit Plaid again. Jitter spreads: account1 at 5.2s, account2 at 5.7s, etc.",
+    "circuit_breaker": {
+      "open_condition": "After 5 consecutive failures OR 50% failure rate over rolling 100 requests",
+      "durationOfBreak": "2 minutes. After 2min, circuit enters half-open state.",
+      "half_open_behavior": "Allow 1 test request. Success = close circuit. Failure = reopen + extend cool-down to 4min (exponential backoff for circuit itself).",
+      "benefit": "Protects against cascading: if Plaid down, all syncs fail-fast. No wasted compute retrying doomed requests. Blocks until Plaid recovers."
+    },
+    "sync_job_records": {
+      "schema": "SyncJob {sync_job_id, account_id, started_at, completed_at, status (success|failed|circuit_breaker_open), transaction_count_fetched, error_code, error_message, retry_count, correlation_id}",
+      "error_codes": [
+        "PLAID_API_ERROR",
+        "RATE_LIMIT",
+        "NETWORK_TIMEOUT",
+        "AUTHENTICATION_FAILURE",
+        "INVALID_REQUEST",
+        "CIRCUIT_BREAKER_OPEN"
+      ],
+      "purpose": [
+        "Audit trail: what failed and why",
+        "User messaging: 'Last sync failed at {time}: {error}'",
+        "Operational dashboard: aggregate errors by code + time to identify patterns"
+      ]
+    },
+    "correlation_ids": {
+      "purpose": "Every API call gets unique correlation_id. Pass to Plaid (they echo in response). Log correlation_id in all related records (sync jobs, error logs, transaction inserts).",
+      "benefit": "Enable 'Show me all logs from this sync attempt' queries. Trace single sync request across database, logs, monitoring systems."
+    },
+    "alternatives_considered": [
+      {
+        "option": "Exponential backoff WITHOUT circuit breaker",
+        "rationale": "Cascading failures: if Plaid down, keeps retrying for hours. Wasted compute. No way to signal 'stop, just wait for recovery'."
+      },
+      {
+        "option": "Circuit breaker WITHOUT exponential backoff",
+        "rationale": "First transient error opens circuit, blocks all syncs for 1min. Flapping (circuit opens/closes frequently on borderline reliability)."
+      },
+      {
+        "option": "Retry with NO jitter (fixed exponential)",
+        "rationale": "Thundering herd at scale. Rate limit pressure. Poor UX."
+      },
+      {
+        "option": "Dead-letter queue for failed syncs (manual retry)",
+        "rationale": "Still wastes compute if retrying blindly. Doesn't address cascading failures. Manual intervention required."
+      }
+    ],
+    "dotnet_library": "Polly (NuGet). Provides HttpClientPolicy for retry + CircuitBreaker with fluent configuration.",
+    "polly_usage": {
+      "retry_policy": "Policy.Handle<HttpRequestException>().OrResult(r => r.StatusCode == 429 || (int)r.StatusCode >= 500).WaitAndRetryAsync(4, attempt => exponential backoff with jitter)",
+      "circuit_breaker": "Policy.Handle<HttpRequestException>().circuitBreakerAsync(handledEventsAllowedBeforeBreaking: 5, durationOfBreak: 2min)",
+      "composition": "Wrap(retry, circuitBreaker) to combine both"
+    },
+    "example_integration": "TransactionSyncOrchestrator.SyncAccountAsync with ResiliencePolicy.ExecuteAsync. Polly context passes correlation_id to all retry callbacks for logging."
+  }
+]

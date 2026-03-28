@@ -1,14 +1,65 @@
 {
-    "chat.promptFilesRecommendations": {
-        "speckit.constitution": true,
-        "speckit.specify": true,
-        "speckit.plan": true,
-        "speckit.tasks": true,
-        "speckit.implement": true
-    },
-    "chat.tools.terminal.autoApprove": {
-        ".specify/scripts/bash/": true,
-        ".specify/scripts/powershell/": true
-    }
+	"chat.promptFilesRecommendations": {
+		"speckit.constitution": true,
+		"speckit.specify": true,
+		"speckit.plan": true,
+		"speckit.tasks": true,
+		"speckit.implement": true
+	},
+	"chat.tools.terminal.autoApprove": {
+		".specify/scripts/bash/": true,
+		".specify/scripts/powershell/": true
+	},
+	"chat.mcp.serverSampling": {
+		"finance-sentry/.vscode/mcp.json: github": {
+			"allowedModels": [
+				"copilot/auto",
+				"copilotcli/claude-haiku-4.5",
+				"claude-code/claude-opus-4.6",
+				"claude-code/claude-opus-4.6-fast"
+			]
+		}
+	},
+	"dotnet.defaultSolutionOrFolder": "backend/FinanceSentry.sln",
+	"[csharp]": {
+		"editor.defaultFormatter": "ms-dotnettools.csharp",
+		"editor.formatOnSave": true,
+		"editor.codeActionsOnSave": {
+			"source.fixAll.csharp": "explicit"
+		}
+	},
+	"[typescript]": {
+		"editor.defaultFormatter": "esbenp.prettier-vscode",
+		"editor.formatOnSave": true
+	},
+	"[html]": {
+		"editor.defaultFormatter": "esbenp.prettier-vscode",
+		"editor.formatOnSave": true
+	},
+	"[scss]": {
+		"editor.defaultFormatter": "esbenp.prettier-vscode",
+		"editor.formatOnSave": true
+	},
+	"editor.codeActionsOnSave": {
+		"source.fixAll.eslint": "explicit"
+	},
+	"eslint.validate": ["javascript", "typescript", "angular"],
+	"search.exclude": {
+		"**/node_modules": true,
+		"**/bin": true,
+		"**/obj": true,
+		"**/.git": true
+	},
+	"files.exclude": {
+		"**/node_modules": true,
+		"**/bin": true,
+		"**/obj": true,
+		"**/.git": true
+	},
+	"files.watcherExclude": {
+		"**/node_modules": true,
+		"**/bin": true,
+		"**/obj": true,
+		"**/.git": true
+	}
 }
-

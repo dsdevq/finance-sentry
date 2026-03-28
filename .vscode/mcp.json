@@ -1,0 +1,15 @@
+{
+	"servers": {
+		"stitch": {
+			"type": "http",
+			"url": "https://stitch.googleapis.com/mcp",
+			"headers": {
+				"X-Goog-Api-Key": "AQ.Ab8RN6Jtg365TImhoN3wBq9XFRPUQdWWk6XRzDQQEELpQCm67Q"
+			}
+		},
+		"github": {
+			"type": "http",
+			"url": "https://api.githubcopilot.com/mcp/"
+		}
+	}
+}

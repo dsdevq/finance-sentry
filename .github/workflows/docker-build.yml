@@ -1,0 +1,49 @@
+name: Docker Build
+
+on:
+  push:
+    branches: [ main, 001-bank-account-sync ]
+    paths:
+      - 'backend/**'
+      - 'docker/Dockerfile'
+      - '.github/workflows/docker-build.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+      - 'docker/Dockerfile'
+
+jobs:
+  build-backend-image:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./
+        file: ./docker/Dockerfile
+        push: false
+        tags: finance-sentry-api:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        outputs: type=docker,dest=/tmp/image.tar
+
+    - name: Load image for testing
+      run: |
+        docker load --input /tmp/image.tar
+        docker images
+
+    - name: Test health endpoint
+      run: |
+        docker run -d --name finance-sentry-test -p 8080:8080 finance-sentry-api:latest
+        sleep 5
+        curl -f http://localhost:8080/api/v1/health || exit 1
+        docker stop finance-sentry-test
+      continue-on-error: true

@@ -1,0 +1,98 @@
+version: '3.8'
+
+services:
+  api:
+    image: ${REGISTRY:-finance-sentry}/api:${API_VERSION:-latest}
+    container_name: finance-sentry-api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:5000
+      Logging__LogLevel__Default: Information
+      Logging__LogLevel__Microsoft: Warning
+      ConnectionStrings__Default: "Host=postgres;Port=5432;Database=${DB_NAME:-finance_sentry};Username=${DB_USER:-finance_user};Password=${DB_PASSWORD};SslMode=Require;Trust Server Certificate=false;"
+      Plaid__ClientId: ${PLAID_CLIENT_ID}
+      Plaid__Secret: ${PLAID_SECRET}
+      Plaid__Environment: ${PLAID_ENVIRONMENT:-production}
+      Jwt__Secret: ${JWT_SECRET}
+      Jwt__Issuer: ${JWT_ISSUER:-https://finance-sentry.local}
+      Jwt__ExpirationMinutes: ${JWT_EXPIRATION_MINUTES:-60}
+      Encryption__MasterKey: ${ENCRYPTION_MASTER_KEY}
+      Encryption__KeyVersion: ${ENCRYPTION_KEY_VERSION:-1}
+    ports:
+      - "${API_PORT:-5000}:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - finance-sentry-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    volumes:
+      - api_logs:/app/logs
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  postgres:
+    image: postgres:14-alpine
+    container_name: finance-sentry-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-finance_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-finance_sentry}
+      POSTGRES_INITDB_ARGS: "-c max_connections=200 -c shared_buffers=256MB -c log_statement=all -c log_duration=on"
+      PGUSER: ${DB_USER:-finance_user}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/01-init.sql
+    networks:
+      - finance-sentry-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-finance_user} -d ${DB_NAME:-finance_sentry}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+volumes:
+  postgres_data:
+    driver: local
+  api_logs:
+    driver: local
+
+networks:
+  finance-sentry-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.100.0.0/16

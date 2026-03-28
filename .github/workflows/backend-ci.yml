@@ -1,0 +1,100 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [ main, 001-bank-account-sync ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:14-alpine
+        env:
+          POSTGRES_DB: finance_sentry
+          POSTGRES_USER: finance_user
+          POSTGRES_PASSWORD: finance_password
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore backend/FinanceSentry.sln
+
+    - name: Build solution
+      run: dotnet build backend/FinanceSentry.sln --configuration Release --no-restore
+
+    - name: Run unit tests with coverage
+      run: |
+        dotnet test backend/tests/FinanceSentry.Tests.Unit/FinanceSentry.Tests.Unit.csproj \
+          --configuration Release --no-build --verbosity normal \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/Unit \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+
+    - name: Run integration tests with coverage
+      env:
+        ConnectionStrings__Default: "Host=localhost;Port=5432;Database=finance_sentry;Username=finance_user;Password=finance_password"
+      run: |
+        dotnet test backend/tests/FinanceSentry.Tests.Integration/FinanceSentry.Tests.Integration.csproj \
+          --configuration Release --no-build --verbosity normal \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults/Integration \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+
+    # Constitution §II (NON-NEGOTIABLE): Enforce 80% minimum line coverage.
+    # Pipeline fails here if coverage drops below threshold.
+    - name: Enforce 80% coverage gate (Constitution §II)
+      run: |
+        dotnet tool install --global dotnet-reportgenerator-globaltool --version 5.* 2>/dev/null || true
+        ~/.dotnet/tools/reportgenerator \
+          -reports:"TestResults/**/coverage.opencover.xml" \
+          -targetdir:"TestResults/CoverageReport" \
+          -reporttypes:"TextSummary;Cobertura" \
+          -assemblyfilters:"+FinanceSentry.*"
+        COVERAGE=$(grep -oP 'Line coverage: \K[\d.]+' TestResults/CoverageReport/Summary.txt || echo "0")
+        echo "Line coverage: ${COVERAGE}%"
+        awk -v cov="$COVERAGE" 'BEGIN {
+          if (cov+0 < 80) {
+            print "FAIL: Coverage " cov "% is below 80% minimum (Constitution §II)";
+            exit 1
+          } else {
+            print "PASS: Coverage " cov "% meets 80% threshold"
+          }
+        }'
+
+    - name: Generate test report
+      if: always()
+      uses: dorny/test-reporter@v1
+      with:
+        name: .NET Test Results
+        path: '**/TestResults/**/*.trx'
+        reporter: 'dotnet trx'
+
+    - name: Upload coverage report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report-backend
+        path: TestResults/CoverageReport/
