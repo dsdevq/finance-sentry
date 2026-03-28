@@ -1,0 +1,32 @@
+<div class="connect-account">
+  <h2>Connect Your Bank Account</h2>
+
+  @if (isLoading) {
+    <div class="loading-state" role="status" aria-live="polite">
+      <p>Preparing secure connection...</p>
+    </div>
+  }
+
+  @if (errorMessage) {
+    <div class="error-state" role="alert">
+      <p class="error-message">{{ errorMessage }}</p>
+      <button class="btn-secondary" (click)="initPlaid()">Retry</button>
+    </div>
+  }
+
+  @if (isSyncing) {
+    <div class="syncing-state" role="status" aria-live="polite">
+      <p class="status-message">{{ statusMessage }}</p>
+      <p class="hint">This may take a minute. Please wait...</p>
+    </div>
+  }
+
+  @if (!isLoading && !isSyncing && !errorMessage) {
+    <div class="connect-prompt">
+      <p>Connect your bank account to start tracking your finances securely.</p>
+      <button class="btn-primary" (click)="openPlaidLink()">
+        Connect Bank Account
+      </button>
+    </div>
+  }
+</div>

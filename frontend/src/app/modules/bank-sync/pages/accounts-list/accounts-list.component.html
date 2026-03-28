@@ -1,0 +1,65 @@
+<div class="accounts-list">
+  <div class="accounts-header">
+    <h2>Connected Accounts</h2>
+    <button class="btn-primary" (click)="connectAccount()">Connect Account</button>
+  </div>
+
+  @if (isLoading) {
+    <div class="loading-state" role="status" aria-live="polite">
+      <p>Loading accounts...</p>
+    </div>
+  }
+
+  @if (errorMessage) {
+    <div class="error-state" role="alert">
+      <p class="error-message">{{ errorMessage }}</p>
+      <button class="btn-secondary" (click)="loadAccounts()">Retry</button>
+    </div>
+  }
+
+  @if (!isLoading && !errorMessage) {
+    @if (accounts.length === 0) {
+      <div class="empty-state">
+        <p>No accounts connected yet.</p>
+        <button class="btn-primary" (click)="connectAccount()">Connect Your First Account</button>
+      </div>
+    } @else {
+      <table class="accounts-table" aria-label="Connected bank accounts">
+        <thead>
+          <tr>
+            <th scope="col">Bank</th>
+            <th scope="col">Account</th>
+            <th scope="col">Balance</th>
+            <th scope="col">Currency</th>
+            <th scope="col">Last Sync</th>
+            <th scope="col">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (account of accounts; track account.accountId) {
+            <tr
+              class="account-row"
+              role="button"
+              tabindex="0"
+              (click)="viewTransactions(account.accountId)"
+              (keydown.enter)="viewTransactions(account.accountId)"
+            >
+              <td>{{ account.bankName }}</td>
+              <td>•••• {{ account.accountNumberLast4 }}</td>
+              <td>{{ account.currentBalance | number: '1.2-2' }}</td>
+              <td>{{ account.currency }}</td>
+              <td>
+                {{ account.lastSyncTimestamp ? (account.lastSyncTimestamp | date: 'short') : '—' }}
+              </td>
+              <td>
+                <span [class]="'badge ' + getStatusClass(account.syncStatus)">
+                  {{ getStatusLabel(account.syncStatus) }}
+                </span>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  }
+</div>

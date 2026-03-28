@@ -331,7 +331,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
 
 <!-- Frontend: US1 components -->
 
-- [ ] T216 [US1] Create frontend service: BankSyncService in `frontend/src/app/modules/bank-sync/services/bank-sync.service.ts`
+- [x] T216 [US1] Create frontend service: BankSyncService in `frontend/src/app/modules/bank-sync/services/bank-sync.service.ts`
   - **Details**: Angular service with methods:
     - getLinkToken(): calls POST /accounts/connect, returns linkToken
     - exchangePublicToken(publicToken): calls POST /accounts/link
@@ -339,7 +339,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - getTransactions(accountId, params): calls GET /accounts/{id}/transactions
   - **Success Criteria**: Service compiles, HTTP calls correct, mock interceptor works
 
-- [ ] T217 [US1] Create frontend component: ConnectAccountComponent in `frontend/src/app/modules/bank-sync/pages/connect-account/connect-account.component.ts` and `.html`
+- [x] T217 [US1] Create frontend component: ConnectAccountComponent in `frontend/src/app/modules/bank-sync/pages/connect-account/connect-account.component.ts` and `.html`
   - **Details**: Component that integrates Plaid Link for account connection:
     1. Dependency: @plaid/link-web package (installed in T002)
     2. On load: fetch linkToken from BankSyncService (calls backend POST /accounts/connect)
@@ -351,7 +351,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     8. Redirect to accounts list on completion
   - **Success Criteria**: Component renders, Plaid Link button opens, completes SDK flow, backend receives public token
 
-- [ ] T218 [US1] Create frontend component: AccountsListComponent in `frontend/src/app/modules/bank-sync/pages/accounts-list/accounts-list.component.ts` and `.html`
+- [x] T218 [US1] Create frontend component: AccountsListComponent in `frontend/src/app/modules/bank-sync/pages/accounts-list/accounts-list.component.ts` and `.html`
   - **Details**: Component:
     1. Fetch accounts on load via BankSyncService
     2. Display table: Bank Name | Account Number (last 4) | Balance | Currency | Last Sync Time | Status
@@ -360,7 +360,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     5. Click account row → show transactions
   - **Success Criteria**: Component renders, fetches accounts, displays status correctly
 
-- [ ] T219 [US1] Create frontend component: TransactionListComponent in `frontend/src/app/modules/bank-sync/pages/transaction-list/transaction-list.component.ts` and `.html`
+- [x] T219 [US1] Create frontend component: TransactionListComponent in `frontend/src/app/modules/bank-sync/pages/transaction-list/transaction-list.component.ts` and `.html`
   - **Details**: Component:
     1. Accept accountId as input parameter
     2. Fetch transactions for account via BankSyncService with pagination
@@ -369,7 +369,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     5. Filter by date range (start_date, end_date query params)
   - **Success Criteria**: Component renders, fetches transactions, pagination works
 
-- [ ] T220 [US1] Create E2E test: Connect account + view transactions in `frontend/tests/integration/bank-sync/connect-account-flow.e2e.spec.ts`
+- [x] T220 [US1] Create E2E test: Connect account + view transactions in `frontend/tests/integration/bank-sync/connect-account-flow.e2e.spec.ts`
   - **Details**: E2E test:
     1. Navigate to /connect-account
     2. Click "Connect Bank Account" button
