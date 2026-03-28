@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(bash .specify/scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks)"
+      "Bash(bash .specify/scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks)",
+      "Bash(bash .specify/scripts/bash/check-prerequisites.sh --json)"
     ]
   }
 }
