@@ -1,0 +1,103 @@
+<div class="transaction-list">
+  <div class="transaction-header">
+    <button class="btn-back" (click)="goBack()" aria-label="Back to accounts">← Back</button>
+    <h2>{{ bankName || 'Account' }} Transactions</h2>
+    @if (currency) {
+      <span class="currency-badge">{{ currency }}</span>
+    }
+  </div>
+
+  <div class="filters" role="search" aria-label="Filter transactions">
+    <label for="startDate">From</label>
+    <input
+      id="startDate"
+      type="date"
+      [(ngModel)]="startDate"
+      aria-label="Start date filter"
+    />
+    <label for="endDate">To</label>
+    <input
+      id="endDate"
+      type="date"
+      [(ngModel)]="endDate"
+      aria-label="End date filter"
+    />
+    <button class="btn-secondary" (click)="applyFilters()">Apply</button>
+  </div>
+
+  @if (isLoading) {
+    <div class="loading-state" role="status" aria-live="polite">
+      <p>Loading transactions...</p>
+    </div>
+  }
+
+  @if (errorMessage) {
+    <div class="error-state" role="alert">
+      <p class="error-message">{{ errorMessage }}</p>
+      <button class="btn-secondary" (click)="loadTransactions()">Retry</button>
+    </div>
+  }
+
+  @if (!isLoading && !errorMessage) {
+    @if (transactions.length === 0) {
+      <div class="empty-state">
+        <p>No transactions found for the selected period.</p>
+      </div>
+    } @else {
+      <table class="transactions-table" aria-label="Account transactions">
+        <thead>
+          <tr>
+            <th scope="col">Date</th>
+            <th scope="col">Description</th>
+            <th scope="col">Amount</th>
+            <th scope="col">Type</th>
+            <th scope="col">Category</th>
+            <th scope="col">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (tx of transactions; track tx.transactionId) {
+            <tr [class.pending]="tx.isPending">
+              <td>{{ (tx.postedDate ?? tx.pendingDate) | date: 'mediumDate' }}</td>
+              <td>{{ tx.description }}</td>
+              <td [class.debit]="tx.transactionType === 'debit'" [class.credit]="tx.transactionType === 'credit'">
+                {{ tx.transactionType === 'debit' ? '-' : '+' }}{{ tx.amount | number: '1.2-2' }} {{ currency }}
+              </td>
+              <td>
+                <span [class]="'badge ' + (tx.transactionType === 'debit' ? 'badge-danger' : 'badge-success')">
+                  {{ tx.transactionType | titlecase }}
+                </span>
+              </td>
+              <td>{{ tx.merchantCategory ?? '—' }}</td>
+              <td>
+                <span [class]="'badge ' + (tx.isPending ? 'badge-warning' : 'badge-secondary')">
+                  {{ tx.isPending ? 'Pending' : 'Posted' }}
+                </span>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      <div class="pagination" role="navigation" aria-label="Transaction pagination">
+        <button
+          class="btn-secondary"
+          [disabled]="!hasPrevious"
+          (click)="previousPage()"
+          aria-label="Previous page"
+        >
+          Previous
+        </button>
+        <span class="page-info">Page {{ currentPage }} of {{ totalPages }}</span>
+        <button
+          class="btn-secondary"
+          [disabled]="!hasNext"
+          (click)="nextPage()"
+          aria-label="Next page"
+        >
+          Next
+        </button>
+      </div>
+    }
+  }
+</div>
