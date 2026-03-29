@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, timer } from 'rxjs';
+import { shareReplay, switchMap, takeWhile } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
 import {
   AccountsResponse,
@@ -11,6 +12,21 @@ import {
   TransactionListResponse,
   TransactionQueryParams,
 } from '../models/transaction.model';
+
+export interface SyncStatusResponse {
+  status: 'pending' | 'running' | 'success' | 'failed';
+  transactionCountFetched: number;
+  transactionCountDeduped: number;
+  errorMessage: string | null;
+  lastSyncTimestamp: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+}
+
+export interface TriggerSyncResponse {
+  jobId: string;
+  message: string;
+}
 
 @Injectable({ providedIn: 'root' })
 export class BankSyncService {
@@ -51,5 +67,25 @@ export class BankSyncService {
       `${this.baseUrl}/${accountId}/transactions`,
       { params },
     );
+  }
+
+  triggerSync(accountId: string): Observable<TriggerSyncResponse> {
+    return this.http.post<TriggerSyncResponse>(`${this.baseUrl}/${accountId}/sync`, {});
+  }
+
+  getSyncStatus(accountId: string): Observable<SyncStatusResponse> {
+    return this.http.get<SyncStatusResponse>(`${this.baseUrl}/${accountId}/sync-status`);
+  }
+
+  pollSyncStatus(accountId: string, intervalMs = 2000): Observable<SyncStatusResponse> {
+    return timer(0, intervalMs).pipe(
+      switchMap(() => this.getSyncStatus(accountId)),
+      takeWhile(s => s.status !== 'success' && s.status !== 'failed', true),
+      shareReplay(1),
+    );
+  }
+
+  disconnectAccount(accountId: string): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/${accountId}`);
   }
 }

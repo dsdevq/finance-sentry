@@ -410,7 +410,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
 
 <!-- TDD: Write unit + integration tests FIRST, then implement to make them pass -->
 
-- [ ] T313 [P] [US2] Create unit tests for ScheduledSyncService in `backend/tests/Unit/BankSync/Application/ScheduledSyncServiceTests.cs`
+- [x] T313 [P] [US2] Create unit tests for ScheduledSyncService in `backend/tests/Unit/BankSync/Application/ScheduledSyncServiceTests.cs`
   - **Details**: Tests:
     - Successful sync: creates job, fetches transactions, deduplicates, saves to DB
     - Failed sync: catches exception, updates status to failed
@@ -418,7 +418,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Idempotency: same sync job ID run twice does not create duplicates
   - **Success Criteria**: All tests compile, ready to pass once T302 implemented
 
-- [ ] T314 [P] [US2] Create unit tests for webhook handler in `backend/tests/Unit/BankSync/API/WebhookHandlerTests.cs`
+- [x] T314 [P] [US2] Create unit tests for webhook handler in `backend/tests/Unit/BankSync/API/WebhookHandlerTests.cs`
   - **Details**: Tests:
     - Valid signature accepted, invalid rejected
     - TRANSACTIONS_READY enqueues sync job
@@ -426,7 +426,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Non-matching webhook_type ignored
   - **Success Criteria**: All tests compile, mocks signature validation correctly
 
-- [ ] T315 [P] [US2] Create integration tests: Hangfire job execution in `backend/tests/Integration/BankSync/HangfireJobExecutionTests.cs`
+- [x] T315 [P] [US2] Create integration tests: Hangfire job execution in `backend/tests/Integration/BankSync/HangfireJobExecutionTests.cs`
   - **Details**: Integration test:
     - Enqueue ScheduledSyncJob
     - Wait for execution (use Hangfire background worker)
@@ -436,11 +436,11 @@ Phase 6 (Polish & Cross-Cutting Concerns)
 
 <!-- Implementation: Make the tests above pass -->
 
-- [ ] T301 [P] [US2] Create SyncJob domain entity (for audit trail) in `backend/src/Modules/BankSync/Domain/Aggregates/SyncJob.cs`
+- [x] T301 [P] [US2] Create SyncJob domain entity (for audit trail) in `backend/src/Modules/BankSync/Domain/Aggregates/SyncJob.cs`
   - **Details**: Entity: sync_job_id, account_id, user_id, correlation_id, status, started_at, completed_at, transaction_count_fetched, transaction_count_deduped, retry_count, error_code, error_message, webhook_triggered. State machine: pending → in_progress → success/failed
   - **Success Criteria**: Entity compiles, state transitions work
 
-- [ ] T302 [P] [US2] Create ScheduledSyncService (polling every 2 hours) in `backend/src/Modules/BankSync/Application/Services/ScheduledSyncService.cs`
+- [x] T302 [P] [US2] Create ScheduledSyncService (polling every 2 hours) in `backend/src/Modules/BankSync/Application/Services/ScheduledSyncService.cs`
   - **Details**: Service with method PerformFullSyncAsync(accountId):
     1. Create SyncJob with status=in_progress
     2. Decrypt access token from EncryptedCredential
@@ -457,14 +457,14 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Never logs plaintext tokens
   - **Success Criteria**: T313 tests pass, service syncs transactions, updates sync metadata
 
-- [ ] T303 [P] [US2] Set up Hangfire for background job scheduling in `backend/src/Modules/BankSync/Infrastructure/Jobs/HangfireSetup.cs` and `SyncScheduler.cs`
+- [x] T303 [P] [US2] Set up Hangfire for background job scheduling in `backend/src/Modules/BankSync/Infrastructure/Jobs/HangfireSetup.cs` and `SyncScheduler.cs`
   - **Details**:
     - Register Hangfire using in-memory storage (for dev) or PostgreSQL (for production)
     - Create SyncScheduler service that enqueues ScheduledSyncJob every 2 hours for all active accounts
     - Implement recurring background job that runs on schedule
   - **Success Criteria**: T315 integration test passes, Hangfire starts up, job scheduled, Hangfire dashboard accessible
 
-- [ ] T304 [P] [US2] Create Hangfire background job: ScheduledSyncJob in `backend/src/Modules/BankSync/Infrastructure/Jobs/ScheduledSyncJob.cs`
+- [x] T304 [P] [US2] Create Hangfire background job: ScheduledSyncJob in `backend/src/Modules/BankSync/Infrastructure/Jobs/ScheduledSyncJob.cs`
   - **Details**: Job class with method:
     ```csharp
     [AutomaticRetry(Attempts = 0)] // Retry handled by business logic
@@ -473,7 +473,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     Calls ScheduledSyncService.PerformFullSyncAsync(accountId). Handles exceptions, logs errors
   - **Success Criteria**: Job executes when scheduled, completes successfully
 
-- [ ] T305 [P] [US2] Create webhook endpoint: POST /webhook/plaid in `backend/src/Modules/BankSync/API/Controllers/BankSyncController.cs`
+- [x] T305 [P] [US2] Create webhook endpoint: POST /webhook/plaid in `backend/src/Modules/BankSync/API/Controllers/BankSyncController.cs`
   - **Details**: Endpoint:
     1. Receive webhook from Plaid (POST)
     2. Verify signature with HMAC-SHA256 using Plaid webhook key (via T306)
@@ -487,14 +487,14 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     6. Return 200 OK to acknowledge
   - **Success Criteria**: T314 webhook handler tests pass, endpoint routes to correct handler
 
-- [ ] T306 [P] [US2] Implement webhook signature verification in `backend/src/Modules/Shared/Security/WebhookSignatureValidator.cs`
+- [x] T306 [P] [US2] Implement webhook signature verification in `backend/src/Modules/Shared/Security/WebhookSignatureValidator.cs`
   - **Details**: Verifies Plaid webhook signature:
     - Expected signature = HMAC-SHA256(webhook_body, plaid_webhook_key)
     - Compare with provided signature header
     - Reject if mismatch
   - **Success Criteria**: Unit tests verify valid signatures pass, invalid signatures rejected
 
-- [ ] T306-A [P] [US2] Create PlaidErrorMapper (translate Plaid errors → REST API responses) in `backend/src/Modules/BankSync/Infrastructure/Services/PlaidErrorMapper.cs`
+- [x] T306-A [P] [US2] Create PlaidErrorMapper (translate Plaid errors → REST API responses) in `backend/src/Modules/BankSync/Infrastructure/Services/PlaidErrorMapper.cs`
   - **Details**: Service mapping Plaid error codes to user-friendly REST responses:
     | Plaid Code | HTTP Status | User Message |
     |---|---|---|
@@ -511,7 +511,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Mapping used in ErrorHandlingMiddleware (T501) for both API responses and webhook handlers
   - **Success Criteria**: All Plaid error codes have mappings, messages are user-friendly, never leaks sensitive data
 
-- [ ] T307 [P] [US2] Create transaction sync coordinator (hybrid webhook + polling) in `backend/src/Modules/BankSync/Application/Services/TransactionSyncCoordinator.cs`
+- [x] T307 [P] [US2] Create transaction sync coordinator (hybrid webhook + polling) in `backend/src/Modules/BankSync/Application/Services/TransactionSyncCoordinator.cs`
   - **Details**: Service that:
     - Handles webhook-triggered syncs (immediate)
     - Handles scheduled syncs (every 2 hours)
@@ -519,7 +519,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Respects rate limits (Plaid: 20 items/min)
   - **Success Criteria**: Coordinator compiles, orchestrates both webhook and polling workflows
 
-- [ ] T308 [US2] Create REST endpoint: POST /accounts/{accountId}/sync (manual trigger) in `backend/src/Modules/BankSync/API/Controllers/BankSyncController.cs`
+- [x] T308 [US2] Create REST endpoint: POST /accounts/{accountId}/sync (manual trigger) in `backend/src/Modules/BankSync/API/Controllers/BankSyncController.cs`
   - **Details**: Endpoint:
     1. Verify authenticated user owns account
     2. Check if sync already in progress (return 409 Conflict if so)
@@ -527,14 +527,14 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     4. Return 202 Accepted with jobId + "Sync queued"
   - **Success Criteria**: Endpoint enqueues job, returns 202
 
-- [ ] T309 [US2] Create REST endpoint: GET /accounts/{accountId}/sync-status (poll sync progress) in `backend/src/Modules/BankSync/API/Controllers/BankSyncController.cs`
+- [x] T309 [US2] Create REST endpoint: GET /accounts/{accountId}/sync-status (poll sync progress) in `backend/src/Modules/BankSync/API/Controllers/BankSyncController.cs`
   - **Details**: Endpoint:
     1. Query SyncJob table for most recent job for account
     2. Return: status (pending/in_progress/success/failed), transaction_count_fetched, error_message, last_sync_timestamp
     3. If status = in_progress, return estimated time remaining
   - **Success Criteria**: Endpoint returns sync status correctly
 
-- [ ] T309-A [US2] Create REST endpoint: DELETE /accounts/{accountId} (unlink/disconnect account) in `backend/src/Modules/BankSync/API/Controllers/BankSyncController.cs`
+- [x] T309-A [US2] Create REST endpoint: DELETE /accounts/{accountId} (unlink/disconnect account) in `backend/src/Modules/BankSync/API/Controllers/BankSyncController.cs`
   - **Details**: Endpoint implementation:
     1. Verify authenticated user owns account (match user_id from JWT)
     2. Fetch BankAccount by accountId
@@ -549,29 +549,29 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Idempotent: calling twice with same accountId returns 204 both times
   - **Success Criteria**: Account marked inactive, transactions marked inactive, 204 returned, idempotent
 
-- [ ] T310 [US2] Create domain event: AccountSyncStartedEvent in `backend/src/Modules/BankSync/Domain/Events/AccountSyncStartedEvent.cs`
+- [x] T310 [US2] Create domain event: AccountSyncStartedEvent in `backend/src/Modules/BankSync/Domain/Events/AccountSyncStartedEvent.cs`
   - **Details**: Event published when sync starts. Include: accountId, correlationId, startedAt
   - **Success Criteria**: Event compiles, can be published
 
-- [ ] T311 [US2] Create domain event: AccountSyncCompletedEvent in `backend/src/Modules/BankSync/Domain/Events/AccountSyncCompletedEvent.cs`
+- [x] T311 [US2] Create domain event: AccountSyncCompletedEvent in `backend/src/Modules/BankSync/Domain/Events/AccountSyncCompletedEvent.cs`
   - **Details**: Event published when sync completes (success or failure). Include: accountId, status, transactionCountFetched, errorMessage
   - **Success Criteria**: Event compiles, can be published
 
-- [ ] T312 [US2] Create event handler: Update BankAccount status when sync completes in `backend/src/Modules/BankSync/Application/EventHandlers/SyncCompletionEventHandler.cs`
+- [x] T312 [US2] Create event handler: Update BankAccount status when sync completes in `backend/src/Modules/BankSync/Application/EventHandlers/SyncCompletionEventHandler.cs`
   - **Details**: When AccountSyncCompletedEvent published:
     - Update BankAccount.sync_status → active (if success) or failed (if failed)
     - Update BankAccount.last_sync_timestamp (if success)
     - Persist changes
   - **Success Criteria**: Handler executes, updates BankAccount correctly
 
-- [ ] T316 [US2] Create frontend service: extend BankSyncService with sync methods in `frontend/src/app/modules/bank-sync/services/bank-sync.service.ts`
+- [X] T316 [US2] Create frontend service: extend BankSyncService with sync methods in `frontend/src/app/modules/bank-sync/services/bank-sync.service.ts`
   - **Details**: Add methods:
     - triggerSync(accountId): POST /accounts/{id}/sync
     - getSyncStatus(accountId): GET /accounts/{id}/sync-status (poll every 2 seconds while status != success/failed)
     - stopPolling(): cancel polling
   - **Success Criteria**: Methods compile, polling logic correct
 
-- [ ] T317 [US2] Create frontend component: SyncStatusComponent in `frontend/src/app/modules/bank-sync/components/sync-status/sync-status.component.ts` and `.html`
+- [X] T317 [US2] Create frontend component: SyncStatusComponent in `frontend/src/app/modules/bank-sync/components/sync-status/sync-status.component.ts` and `.html`
   - **Details**: Component:
     1. Accept accountId as input
     2. Display status badge: Syncing (animated spinner), Success (checkmark), Failed (error icon with message)
@@ -581,11 +581,11 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     6. If failed: show error message, retry button
   - **Success Criteria**: Component renders, polling works, status updates in real-time
 
-- [ ] T318 [US2] Update AccountsListComponent to show sync status + "Sync Now" button in `frontend/src/app/modules/bank-sync/pages/accounts-list/accounts-list.component.html`
+- [X] T318 [US2] Update AccountsListComponent to show sync status + "Sync Now" button in `frontend/src/app/modules/bank-sync/pages/accounts-list/accounts-list.component.html`
   - **Details**: Add column to table: SyncStatus | LastSyncTime. Add "Sync Now" button in each row. Import SyncStatusComponent
   - **Success Criteria**: Component renders sync status, button functional
 
-- [ ] T319 [US2] Create E2E test: Manual sync trigger + status polling in `frontend/tests/integration/bank-sync/manual-sync-flow.e2e.spec.ts`
+- [X] T319 [US2] Create E2E test: Manual sync trigger + status polling in `frontend/tests/integration/bank-sync/manual-sync-flow.e2e.spec.ts`
   - **Details**: E2E test:
     1. Navigate to /accounts
     2. Click "Sync Now" button

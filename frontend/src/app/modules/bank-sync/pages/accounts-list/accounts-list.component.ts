@@ -9,11 +9,12 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { BankSyncService } from '../../services/bank-sync.service';
 import { BankAccount, SyncStatus } from '../../models/bank-account.model';
+import { SyncStatusComponent } from '../../components/sync-status/sync-status.component';
 
 @Component({
   selector: 'app-accounts-list',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, SyncStatusComponent],
   templateUrl: './accounts-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -25,6 +26,7 @@ export class AccountsListComponent implements OnInit {
   accounts: BankAccount[] = [];
   isLoading = false;
   errorMessage: string | null = null;
+  syncingAccountId: string | null = null;
 
   readonly statusLabels: Record<SyncStatus, string> = {
     pending: 'Pending',
@@ -70,6 +72,11 @@ export class AccountsListComponent implements OnInit {
 
   connectAccount(): void {
     void this.router.navigate(['/accounts/connect']);
+  }
+
+  triggerSync(accountId: string): void {
+    this.syncingAccountId = accountId;
+    this.cdr.markForCheck();
   }
 
   getStatusLabel(status: SyncStatus): string {

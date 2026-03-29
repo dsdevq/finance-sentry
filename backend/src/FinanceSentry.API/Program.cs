@@ -2,11 +2,15 @@ using Serilog;
 using FinanceSentry.Modules.BankSync;
 using FinanceSentry.Modules.BankSync.Infrastructure.Persistence.Repositories;
 using FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
+using FinanceSentry.Modules.BankSync.Infrastructure.Security;
+using FinanceSentry.Modules.BankSync.Infrastructure.Services;
+using FinanceSentry.Modules.BankSync.Infrastructure.Jobs;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
 using FinanceSentry.Modules.BankSync.Application.Services;
 using FinanceSentry.Infrastructure;
 using FinanceSentry.Infrastructure.Encryption;
 using FinanceSentry.Infrastructure.Logging;
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -72,11 +76,28 @@ builder.Services.AddHttpClient<IPlaidClient, PlaidHttpClient>(client =>
     client.BaseAddress = new Uri(builder.Configuration["Plaid:BaseUrl"] ?? "https://sandbox.plaid.com");
 });
 builder.Services.AddScoped<PlaidAdapter>();
+builder.Services.AddScoped<FinanceSentry.Modules.BankSync.Infrastructure.Plaid.IPlaidAdapter>(
+    sp => sp.GetRequiredService<PlaidAdapter>());
 
 // ── Infrastructure services ──────────────────────────────────────────────────
 builder.Services.AddSingleton<CorrelationIdAccessor>();
 builder.Services.AddScoped<ICorrelationIdAccessor>(sp => sp.GetRequiredService<CorrelationIdAccessor>());
 builder.Services.AddScoped<IBankSyncLogger, BankSyncLogger>();
+
+// ── Webhook security (T306) ──────────────────────────────────────────────────
+builder.Services.AddSingleton<IWebhookSignatureValidator, WebhookSignatureValidator>();
+
+// ── Plaid error mapping (T306-A) ─────────────────────────────────────────────
+builder.Services.AddSingleton<IPlaidErrorMapper, PlaidErrorMapper>();
+
+// ── Sync services (T302, T307) ───────────────────────────────────────────────
+builder.Services.AddScoped<IScheduledSyncService, ScheduledSyncService>();
+builder.Services.AddScoped<ITransactionSyncCoordinator, TransactionSyncCoordinator>();
+
+// ── Hangfire background jobs (T303, T304) ────────────────────────────────────
+builder.Services.AddHangfireServices(builder.Configuration);
+builder.Services.AddScoped<ScheduledSyncJob>();
+builder.Services.AddScoped<SyncScheduler>();
 
 var app = builder.Build();
 
@@ -87,6 +108,7 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+    app.UseHangfireDashboard("/hangfire");
 }
 
 app.UseHttpsRedirection();

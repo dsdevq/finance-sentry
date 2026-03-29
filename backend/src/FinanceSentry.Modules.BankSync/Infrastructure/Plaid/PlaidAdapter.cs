@@ -7,7 +7,7 @@ using FinanceSentry.Modules.BankSync.Application.Services;
 /// Translates raw Plaid HTTP responses (via IPlaidClient) into domain models.
 /// All Plaid-specific types stay in this layer — domain entities never import Plaid DTOs.
 /// </summary>
-public class PlaidAdapter
+public class PlaidAdapter : IPlaidAdapter
 {
     private readonly IPlaidClient _client;
 

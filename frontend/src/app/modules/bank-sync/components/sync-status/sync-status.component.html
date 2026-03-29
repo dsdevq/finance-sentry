@@ -1,0 +1,35 @@
+<div class="sync-status">
+  <!-- Status badge -->
+  <div class="sync-badge" [ngClass]="getSyncBadgeClass()">
+    <span *ngIf="isSyncing" class="spinner">&#x27F3;</span>
+    <span *ngIf="syncStatus?.status === 'success'">&#x2713;</span>
+    <span *ngIf="syncStatus?.status === 'failed'">&#x2717;</span>
+    <span *ngIf="!syncStatus">&ndash;</span>
+    <span class="status-text">
+      {{ isSyncing ? 'Syncing...' : (syncStatus?.status | titlecase) || 'Unknown' }}
+    </span>
+  </div>
+
+  <!-- Last synced -->
+  <div class="last-synced" *ngIf="syncStatus">
+    Last synced: {{ getRelativeTime(syncStatus.lastSyncTimestamp) }}
+    <span *ngIf="syncStatus.transactionCountFetched > 0">
+      ({{ syncStatus.transactionCountFetched }} transactions)
+    </span>
+  </div>
+
+  <!-- Error message -->
+  <div class="error-message" *ngIf="errorMessage">
+    {{ errorMessage }}
+    <button class="btn-retry" (click)="triggerSync()">Retry</button>
+  </div>
+
+  <!-- Sync Now button -->
+  <button
+    class="btn-sync-now"
+    [disabled]="isSyncing"
+    (click)="triggerSync()"
+    *ngIf="!errorMessage">
+    {{ isSyncing ? 'Syncing...' : 'Sync Now' }}
+  </button>
+</div>

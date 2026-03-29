@@ -153,11 +153,33 @@ public class BankSyncDbContext : DbContext
             .HasMaxLength(50)
             .HasDefaultValue("pending");
 
+        syncJobBuilder.Property(sj => sj.UserId)
+            .IsRequired();
+
+        syncJobBuilder.Property(sj => sj.CorrelationId)
+            .HasMaxLength(100)
+            .IsRequired(false);
+
         syncJobBuilder.Property(sj => sj.ErrorMessage)
             .HasMaxLength(1000);
 
         syncJobBuilder.Property(sj => sj.ErrorCode)
             .HasMaxLength(50);
+
+        syncJobBuilder.Property(sj => sj.TransactionCountFetched)
+            .HasDefaultValue(0);
+
+        syncJobBuilder.Property(sj => sj.TransactionCountDeduped)
+            .HasDefaultValue(0);
+
+        syncJobBuilder.Property(sj => sj.RetryCount)
+            .HasDefaultValue(0);
+
+        syncJobBuilder.Property(sj => sj.WebhookTriggered)
+            .HasDefaultValue(false);
+
+        syncJobBuilder.HasIndex(sj => new { sj.AccountId, sj.Status })
+            .HasDatabaseName("idx_sync_job_account_status");
 
         syncJobBuilder.Property(sj => sj.CreatedAt)
             .HasDefaultValueSql("CURRENT_TIMESTAMP");

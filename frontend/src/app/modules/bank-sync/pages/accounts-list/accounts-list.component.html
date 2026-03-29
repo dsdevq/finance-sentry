@@ -33,6 +33,7 @@
             <th scope="col">Currency</th>
             <th scope="col">Last Sync</th>
             <th scope="col">Status</th>
+            <th scope="col">Sync</th>
           </tr>
         </thead>
         <tbody>
@@ -55,6 +56,9 @@
                 <span [class]="'badge ' + getStatusClass(account.syncStatus)">
                   {{ getStatusLabel(account.syncStatus) }}
                 </span>
+              </td>
+              <td (click)="$event.stopPropagation()">
+                <app-sync-status [accountId]="account.accountId" />
               </td>
             </tr>
           }

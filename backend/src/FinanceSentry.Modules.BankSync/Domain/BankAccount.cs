@@ -152,6 +152,19 @@ public class BankAccount : Entity
         UpdatedAt = DateTime.UtcNow;
     }
 
+    /// <summary>
+    /// Transitions active/failed/pending/reauth_required → syncing for background/scheduled sync.
+    /// Unlike StartSync(), this method also accepts accounts that are already active or failed,
+    /// enabling re-sync without requiring a full re-auth cycle.
+    /// </summary>
+    public void BeginSync()
+    {
+        if (SyncStatus == "syncing")
+            throw new InvalidOperationException($"Account {Id} is already syncing.");
+        SyncStatus = "syncing";
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     /// <summary>Transitions any status → reauth_required (Plaid item expired).</summary>
     public void MarkReauthRequired()
     {
