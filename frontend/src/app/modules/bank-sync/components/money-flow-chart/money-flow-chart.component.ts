@@ -17,7 +17,7 @@ export class MoneyFlowChartComponent {
   }
 
   getMaxValue(): number {
-    const values = this.monthlyFlowData.flatMap(m => [m.inflow, m.outflow]);
+    const values = this.monthlyFlowData.flatMap((m) => [m.inflow, m.outflow]);
     return Math.max(...values, 1);
   }
 

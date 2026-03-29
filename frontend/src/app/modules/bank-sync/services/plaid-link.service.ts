@@ -26,8 +26,7 @@ declare global {
 @Injectable({ providedIn: 'root' })
 export class PlaidLinkService {
   private scriptLoaded = false;
-  private readonly plaidScriptUrl =
-    'https://cdn.plaid.com/link/v2/stable/link-initialize.js';
+  private readonly plaidScriptUrl = 'https://cdn.plaid.com/link/v2/stable/link-initialize.js';
 
   loadScript(): Promise<void> {
     if (this.scriptLoaded || window.Plaid) {
@@ -43,8 +42,7 @@ export class PlaidLinkService {
         this.scriptLoaded = true;
         resolve();
       };
-      script.onerror = () =>
-        reject(new Error('Failed to load Plaid Link script'));
+      script.onerror = () => reject(new Error('Failed to load Plaid Link script'));
       document.head.appendChild(script);
     });
   }

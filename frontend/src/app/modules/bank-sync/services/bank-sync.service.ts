@@ -8,10 +8,7 @@ import {
   ConnectResponse,
   LinkAccountResponse,
 } from '../models/bank-account.model';
-import {
-  TransactionListResponse,
-  TransactionQueryParams,
-} from '../models/transaction.model';
+import { TransactionListResponse, TransactionQueryParams } from '../models/transaction.model';
 
 export interface MonthlyFlow {
   month: string;
@@ -75,7 +72,7 @@ export class BankSyncService {
 
   getTransactions(
     accountId: string,
-    queryParams?: TransactionQueryParams,
+    queryParams?: TransactionQueryParams
   ): Observable<TransactionListResponse> {
     let params = new HttpParams();
     if (queryParams?.startDate) params = params.set('start_date', queryParams.startDate);
@@ -86,10 +83,9 @@ export class BankSyncService {
       params = params.set('limit', queryParams.limit.toString());
     if (queryParams?.status) params = params.set('status', queryParams.status);
     if (queryParams?.sort) params = params.set('sort', queryParams.sort);
-    return this.http.get<TransactionListResponse>(
-      `${this.baseUrl}/${accountId}/transactions`,
-      { params },
-    );
+    return this.http.get<TransactionListResponse>(`${this.baseUrl}/${accountId}/transactions`, {
+      params,
+    });
   }
 
   triggerSync(accountId: string): Observable<TriggerSyncResponse> {
@@ -103,8 +99,8 @@ export class BankSyncService {
   pollSyncStatus(accountId: string, intervalMs = 2000): Observable<SyncStatusResponse> {
     return timer(0, intervalMs).pipe(
       switchMap(() => this.getSyncStatus(accountId)),
-      takeWhile(s => s.status !== 'success' && s.status !== 'failed', true),
-      shareReplay(1),
+      takeWhile((s) => s.status !== 'success' && s.status !== 'failed', true),
+      shareReplay(1)
     );
   }
 

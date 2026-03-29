@@ -40,7 +40,7 @@ public class CredentialBackupJob
             AccountId = a.Id,
             InstitutionName = a.BankName,
             AccountType = a.AccountType,
-            LastSyncedAt = a.LastSyncedAt,
+            LastSyncedAt = a.UpdatedAt,
             BackedUpAt = DateTime.UtcNow
         }).ToList();
 

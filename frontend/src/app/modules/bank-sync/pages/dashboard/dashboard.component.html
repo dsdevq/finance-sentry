@@ -11,7 +11,7 @@
       <div class="balance-cards">
         <div class="balance-card" *ngFor="let entry of getCurrencyEntries()">
           <span class="currency">{{ entry[0] }}</span>
-          <span class="amount">{{ entry[1] | number:'1.2-2' }}</span>
+          <span class="amount">{{ entry[1] | number: '1.2-2' }}</span>
         </div>
       </div>
       <p class="account-count">{{ dashboardData.accountCount }} account(s) connected</p>
@@ -22,7 +22,8 @@
       <h2>Accounts by Type</h2>
       <ul>
         <li *ngFor="let entry of getAccountTypeEntries()">
-          <span class="type">{{ entry[0] | titlecase }}</span>:
+          <span class="type">{{ entry[0] | titlecase }}</span
+          >:
           <span class="count">{{ entry[1] }}</span>
         </li>
       </ul>
@@ -37,7 +38,9 @@
     <!-- Top categories -->
     <section class="top-categories">
       <h2>Top Spending Categories</h2>
-      <app-category-breakdown-chart [topCategoriesData]="dashboardData.topCategories"></app-category-breakdown-chart>
+      <app-category-breakdown-chart
+        [topCategoriesData]="dashboardData.topCategories"
+      ></app-category-breakdown-chart>
     </section>
 
     <!-- Last sync -->

@@ -6,18 +6,18 @@
         <div
           class="bar inflow"
           [style.height.%]="getBarHeightPercent(item.inflow)"
-          [title]="'Inflow: ' + item.inflow + ' ' + item.currency">
-        </div>
+          [title]="'Inflow: ' + item.inflow + ' ' + item.currency"
+        ></div>
         <div
           class="bar outflow"
           [style.height.%]="getBarHeightPercent(item.outflow)"
-          [title]="'Outflow: ' + item.outflow + ' ' + item.currency">
-        </div>
+          [title]="'Outflow: ' + item.outflow + ' ' + item.currency"
+        ></div>
       </div>
       <div class="bar-label">{{ item.month }}</div>
       <div class="bar-values">
-        <span class="inflow-val">+{{ item.inflow | number:'1.0-0' }}</span>
-        <span class="outflow-val">-{{ item.outflow | number:'1.0-0' }}</span>
+        <span class="inflow-val">+{{ item.inflow | number: '1.0-0' }}</span>
+        <span class="outflow-val">-{{ item.outflow | number: '1.0-0' }}</span>
       </div>
     </div>
   </div>

@@ -1,4 +1,12 @@
-import { Component, Input, OnInit, OnDestroy, inject, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import {
+  Component,
+  Input,
+  OnInit,
+  OnDestroy,
+  inject,
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { BankSyncService, SyncStatusResponse } from '../../services/bank-sync.service';
 import { Subscription } from 'rxjs';
@@ -36,7 +44,9 @@ export class SyncStatusComponent implements OnInit, OnDestroy {
         this.isSyncing = status.status === 'running' || status.status === 'pending';
         this.cdr.markForCheck();
       },
-      error: () => { /* ignore initial load errors */ }
+      error: () => {
+        /* ignore initial load errors */
+      },
     });
   }
 
@@ -51,7 +61,7 @@ export class SyncStatusComponent implements OnInit, OnDestroy {
         this.isSyncing = false;
         this.errorMessage = 'Failed to trigger sync. Please try again.';
         this.cdr.markForCheck();
-      }
+      },
     });
   }
 
@@ -70,7 +80,7 @@ export class SyncStatusComponent implements OnInit, OnDestroy {
         this.isSyncing = false;
         this.errorMessage = 'Sync status check failed.';
         this.cdr.markForCheck();
-      }
+      },
     });
   }
 

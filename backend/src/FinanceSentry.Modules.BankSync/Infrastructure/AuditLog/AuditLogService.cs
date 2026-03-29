@@ -2,6 +2,7 @@ namespace FinanceSentry.Modules.BankSync.Infrastructure.AuditLog;
 
 using FinanceSentry.Modules.BankSync.Domain;
 using FinanceSentry.Modules.BankSync.Infrastructure.Persistence;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 /// <summary>

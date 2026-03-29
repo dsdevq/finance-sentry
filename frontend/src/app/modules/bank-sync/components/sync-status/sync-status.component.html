@@ -25,11 +25,7 @@
   </div>
 
   <!-- Sync Now button -->
-  <button
-    class="btn-sync-now"
-    [disabled]="isSyncing"
-    (click)="triggerSync()"
-    *ngIf="!errorMessage">
+  <button class="btn-sync-now" [disabled]="isSyncing" (click)="triggerSync()" *ngIf="!errorMessage">
     {{ isSyncing ? 'Syncing...' : 'Sync Now' }}
   </button>
 </div>

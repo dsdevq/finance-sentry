@@ -4,13 +4,14 @@ import { RouterModule, Routes } from '@angular/router';
 const routes: Routes = [
   {
     path: 'accounts',
-    loadChildren: () => import('./modules/bank-sync/bank-sync.module').then(m => m.BankSyncModule)
+    loadChildren: () =>
+      import('./modules/bank-sync/bank-sync.module').then((m) => m.BankSyncModule),
   },
-  { path: '', redirectTo: '/accounts', pathMatch: 'full' }
+  { path: '', redirectTo: '/accounts', pathMatch: 'full' },
 ];
 
 @NgModule({
   imports: [RouterModule.forRoot(routes)],
-  exports: [RouterModule]
+  exports: [RouterModule],
 })
-export class AppRoutingModule { }
+export class AppRoutingModule {}

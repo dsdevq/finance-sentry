@@ -9,19 +9,9 @@
 
   <div class="filters" role="search" aria-label="Filter transactions">
     <label for="startDate">From</label>
-    <input
-      id="startDate"
-      type="date"
-      [(ngModel)]="startDate"
-      aria-label="Start date filter"
-    />
+    <input id="startDate" type="date" [(ngModel)]="startDate" aria-label="Start date filter" />
     <label for="endDate">To</label>
-    <input
-      id="endDate"
-      type="date"
-      [(ngModel)]="endDate"
-      aria-label="End date filter"
-    />
+    <input id="endDate" type="date" [(ngModel)]="endDate" aria-label="End date filter" />
     <button class="btn-secondary" (click)="applyFilters()">Apply</button>
   </div>
 
@@ -58,13 +48,21 @@
         <tbody>
           @for (tx of transactions; track tx.transactionId) {
             <tr [class.pending]="tx.isPending">
-              <td>{{ (tx.postedDate ?? tx.pendingDate) | date: 'mediumDate' }}</td>
+              <td>{{ tx.postedDate ?? tx.pendingDate | date: 'mediumDate' }}</td>
               <td>{{ tx.description }}</td>
-              <td [class.debit]="tx.transactionType === 'debit'" [class.credit]="tx.transactionType === 'credit'">
-                {{ tx.transactionType === 'debit' ? '-' : '+' }}{{ tx.amount | number: '1.2-2' }} {{ currency }}
+              <td
+                [class.debit]="tx.transactionType === 'debit'"
+                [class.credit]="tx.transactionType === 'credit'"
+              >
+                {{ tx.transactionType === 'debit' ? '-' : '+' }}{{ tx.amount | number: '1.2-2' }}
+                {{ currency }}
               </td>
               <td>
-                <span [class]="'badge ' + (tx.transactionType === 'debit' ? 'badge-danger' : 'badge-success')">
+                <span
+                  [class]="
+                    'badge ' + (tx.transactionType === 'debit' ? 'badge-danger' : 'badge-success')
+                  "
+                >
                   {{ tx.transactionType | titlecase }}
                 </span>
               </td>
