@@ -27,7 +27,11 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "mcp__github__create_pull_request",
-      "Bash(find /c/Users/denys/Work/finance-sentry/frontend/src -name *.ts)"
+      "Bash(find /c/Users/denys/Work/finance-sentry/frontend/src -name *.ts)",
+      "mcp__github__pull_request_read",
+      "Bash(gh run:*)",
+      "Bash(npx prettier:*)",
+      "Bash(dotnet build:*)"
     ]
   }
 }

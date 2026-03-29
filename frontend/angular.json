@@ -12,7 +12,7 @@
       },
       "root": "",
       "sourceRoot": "src",
-      "prefix": "app",
+      "prefix": "fns",
       "architect": {
         "build": {
           "builder": "@angular/build:application",
@@ -33,7 +33,6 @@
             "styles": [
               "src/styles.scss"
             ],
-            "scripts": [],
             "browser": "src/main.ts"
           },
           "configurations": {
@@ -83,40 +82,42 @@
           }
         },
         "test": {
-          "builder": "@angular/build:karma",
+          "builder": "@angular/build:unit-test",
           "options": {
-            "polyfills": [
-              "zone.js",
-              "zone.js/testing"
-            ],
             "tsConfig": "tsconfig.spec.json",
-            "inlineStyleLanguage": "scss",
-            "assets": [
-              "src/favicon.ico",
-              "src/assets"
-            ],
-            "styles": [
-              "src/styles.scss"
-            ],
-            "scripts": [],
-            "codeCoverage": true,
-            "codeCoverageExclude": [
+            "coverage": true,
+            "coverageExclude": [
               "src/environments/**",
               "src/main.ts",
               "src/main-aot.ts"
+            ],
+            "browsers": [
+              "chromium"
             ]
           },
           "configurations": {
             "ci": {
               "watch": false,
-              "browsers": "ChromeHeadless",
-              "codeCoverage": true,
-              "codeCoverageExclude": [
+              "browsers": [
+                "ChromeHeadless"
+              ],
+              "coverage": true,
+              "coverageExclude": [
                 "src/environments/**",
                 "src/main.ts",
                 "src/main-aot.ts"
-              ],
-              "karmaConfig": "karma.conf.ci.js"
+              ]
+            }
+          }
+        },
+        "e2e": {
+          "builder": "playwright-ng-schematics:playwright",
+          "options": {
+            "devServerTarget": "finance-sentry:serve"
+          },
+          "configurations": {
+            "production": {
+              "devServerTarget": "finance-sentry:serve:production"
             }
           }
         }
@@ -125,8 +126,10 @@
   },
   "cli": {
     "analytics": false,
-    "defaultCollection": "@angular/schematics",
-    "packageManager": "npm",
-    "strict": true
+    "schematicCollections": [
+      "@angular/schematics",
+      "playwright-ng-schematics"
+    ],
+    "packageManager": "npm"
   }
 }

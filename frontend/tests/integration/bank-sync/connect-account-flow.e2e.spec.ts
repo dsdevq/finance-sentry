@@ -7,10 +7,7 @@
  */
 
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
-import {
-  HttpClientTestingModule,
-  HttpTestingController,
-} from '@angular/common/http/testing';
+import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 import { Router } from '@angular/router';
 import { Location } from '@angular/common';
@@ -26,14 +23,12 @@ import {
   LinkAccountResponse,
   AccountsResponse,
 } from '../../../src/app/modules/bank-sync/models/bank-account.model';
-import {
-  TransactionListResponse,
-} from '../../../src/app/modules/bank-sync/models/transaction.model';
+import { TransactionListResponse } from '../../../src/app/modules/bank-sync/models/transaction.model';
 
 const MOCK_LINK_RESPONSE: ConnectResponse = {
   linkToken: 'link-sandbox-test-token',
   expiresIn: 600,
-  expiresAt: new Date(Date.now() + 600_000).toISOString(),
+  expiresAt: new Date(Date.now() + 600000).toISOString(),
   requestId: 'req_test_001',
 };
 
@@ -115,9 +110,7 @@ class MockPlaidLinkService {
     return Promise.resolve();
   }
 
-  create(options: {
-    onSuccess: (publicToken: string, metadata: unknown) => void;
-  }) {
+  create(options: { onSuccess: (publicToken: string, metadata: unknown) => void }) {
     this.successCallback = options.onSuccess;
     return {
       open: () => {
@@ -162,10 +155,7 @@ describe('Connect Account Flow (E2E Integration)', () => {
         AccountsListComponent,
         TransactionListComponent,
       ],
-      providers: [
-        BankSyncService,
-        { provide: PlaidLinkService, useValue: mockPlaidService },
-      ],
+      providers: [BankSyncService, { provide: PlaidLinkService, useValue: mockPlaidService }],
     }).compileComponents();
 
     httpMock = TestBed.inject(HttpTestingController);
@@ -220,9 +210,7 @@ describe('Connect Account Flow (E2E Integration)', () => {
         expect(res.pagination.totalCount).toBe(2);
       });
 
-    const req = httpMock.expectOne(
-      (r) => r.url.includes('/api/accounts/acct-001/transactions'),
-    );
+    const req = httpMock.expectOne((r) => r.url.includes('/api/accounts/acct-001/transactions'));
     expect(req.request.method).toBe('GET');
     expect(req.request.params.get('offset')).toBe('0');
     expect(req.request.params.get('limit')).toBe('50');
@@ -238,9 +226,7 @@ describe('Connect Account Flow (E2E Integration)', () => {
 
     fixture.detectChanges();
 
-    const req = httpMock.expectOne((r) =>
-      r.url.includes('/api/accounts') && r.method === 'GET',
-    );
+    const req = httpMock.expectOne((r) => r.url.includes('/api/accounts') && r.method === 'GET');
     req.flush(MOCK_ACCOUNTS_RESPONSE);
 
     fixture.detectChanges();
@@ -260,9 +246,7 @@ describe('Connect Account Flow (E2E Integration)', () => {
 
     fixture.detectChanges();
 
-    const req = httpMock.expectOne((r) =>
-      r.url.includes('/api/accounts') && r.method === 'GET',
-    );
+    const req = httpMock.expectOne((r) => r.url.includes('/api/accounts') && r.method === 'GET');
     req.flush({ accounts: [], totalCount: 0, currency_totals: {} });
 
     fixture.detectChanges();
@@ -280,9 +264,7 @@ describe('Connect Account Flow (E2E Integration)', () => {
 
     fixture.detectChanges();
 
-    const req = httpMock.expectOne((r) =>
-      r.url.includes('/api/accounts/acct-001/transactions'),
-    );
+    const req = httpMock.expectOne((r) => r.url.includes('/api/accounts/acct-001/transactions'));
     req.flush(MOCK_TRANSACTIONS_RESPONSE);
 
     fixture.detectChanges();
@@ -305,9 +287,7 @@ describe('Connect Account Flow (E2E Integration)', () => {
     fixture.detectChanges();
 
     // Initial load
-    const req1 = httpMock.expectOne((r) =>
-      r.url.includes('/api/accounts/acct-001/transactions'),
-    );
+    const req1 = httpMock.expectOne((r) => r.url.includes('/api/accounts/acct-001/transactions'));
     req1.flush({
       ...MOCK_TRANSACTIONS_RESPONSE,
       pagination: { offset: 0, limit: 50, totalCount: 120, hasMore: true },
@@ -317,13 +297,11 @@ describe('Connect Account Flow (E2E Integration)', () => {
     tick();
 
     // Go to next page
-    expect(component.hasNext).toBeTrue();
+    expect(component.hasNext).toBe(true);
     component.nextPage();
     fixture.detectChanges();
 
-    const req2 = httpMock.expectOne((r) =>
-      r.url.includes('/api/accounts/acct-001/transactions'),
-    );
+    const req2 = httpMock.expectOne((r) => r.url.includes('/api/accounts/acct-001/transactions'));
     expect(req2.request.params.get('offset')).toBe('50');
     req2.flush({
       ...MOCK_TRANSACTIONS_RESPONSE,
@@ -334,13 +312,11 @@ describe('Connect Account Flow (E2E Integration)', () => {
     tick();
 
     // Go back
-    expect(component.hasPrevious).toBeTrue();
+    expect(component.hasPrevious).toBe(true);
     component.previousPage();
     fixture.detectChanges();
 
-    const req3 = httpMock.expectOne((r) =>
-      r.url.includes('/api/accounts/acct-001/transactions'),
-    );
+    const req3 = httpMock.expectOne((r) => r.url.includes('/api/accounts/acct-001/transactions'));
     expect(req3.request.params.get('offset')).toBe('0');
     req3.flush(MOCK_TRANSACTIONS_RESPONSE);
   }));
@@ -359,7 +335,7 @@ describe('Connect Account Flow (E2E Integration)', () => {
     fixture.detectChanges();
     tick();
 
-    expect(component.isLoading).toBeFalse();
+    expect(component.isLoading).toBe(false);
     expect(component.errorMessage).toBeNull();
   }));
 
@@ -376,7 +352,7 @@ describe('Connect Account Flow (E2E Integration)', () => {
     tick();
 
     expect(component.errorMessage).toContain('Failed to initialize');
-    expect(component.isLoading).toBeFalse();
+    expect(component.isLoading).toBe(false);
   }));
 
   // ── T220-05: Deduplication accuracy check (SC-005) ──────────────────────
@@ -387,7 +363,7 @@ describe('Connect Account Flow (E2E Integration)', () => {
       accountId: 'acct-001',
       amount: (i + 1) * 5.0,
       transactionType: (i % 2 === 0 ? 'debit' : 'credit') as 'debit' | 'credit',
-      postedDate: `2026-01-${(i % 28 + 1).toString().padStart(2, '0')}`,
+      postedDate: `2026-01-${((i % 28) + 1).toString().padStart(2, '0')}`,
       pendingDate: null,
       isPending: false,
       description: `Merchant_${i}`,
@@ -396,16 +372,12 @@ describe('Connect Account Flow (E2E Integration)', () => {
       createdAt: new Date().toISOString(),
     }));
 
-    bankSyncService
-      .getTransactions('acct-001', { limit: 100 })
-      .subscribe((res) => {
-        const ids = new Set(res.transactions.map((t) => t.transactionId));
-        expect(ids.size).toBe(100);
-      });
+    bankSyncService.getTransactions('acct-001', { limit: 100 }).subscribe((res) => {
+      const ids = new Set(res.transactions.map((t) => t.transactionId));
+      expect(ids.size).toBe(100);
+    });
 
-    const req = httpMock.expectOne((r) =>
-      r.url.includes('/api/accounts/acct-001/transactions'),
-    );
+    const req = httpMock.expectOne((r) => r.url.includes('/api/accounts/acct-001/transactions'));
     req.flush({
       accountId: 'acct-001',
       bankName: 'AIB Ireland',
