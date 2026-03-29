@@ -1,6 +1,7 @@
 namespace FinanceSentry.Tests.Unit.BankSync.API;
 
 using FinanceSentry.Modules.BankSync.Infrastructure.Security;
+using Moq;
 using FluentAssertions;
 using Xunit;
 
@@ -17,10 +18,10 @@ public class WebhookHandlerTests
     public void IsValid_CorrectHmac_ReturnsTrue()
     {
         const string webhookKey = "my-super-secret-webhook-key";
-        const string rawBody    = """{"webhook_type":"TRANSACTIONS","webhook_code":"TRANSACTIONS_READY","item_id":"item_123"}""";
+        const string rawBody = """{"webhook_type":"TRANSACTIONS","webhook_code":"TRANSACTIONS_READY","item_id":"item_123"}""";
 
         // Compute the expected HMAC manually
-        var keyBytes  = System.Text.Encoding.UTF8.GetBytes(webhookKey);
+        var keyBytes = System.Text.Encoding.UTF8.GetBytes(webhookKey);
         var bodyBytes = System.Text.Encoding.UTF8.GetBytes(rawBody);
         using var hmac = new System.Security.Cryptography.HMACSHA256(keyBytes);
         var expectedHex = Convert.ToHexString(hmac.ComputeHash(bodyBytes)).ToLowerInvariant();
@@ -31,9 +32,9 @@ public class WebhookHandlerTests
     [Fact]
     public void IsValid_WrongSignature_ReturnsFalse()
     {
-        const string webhookKey    = "my-super-secret-webhook-key";
-        const string rawBody       = """{"webhook_type":"TRANSACTIONS","item_id":"item_123"}""";
-        const string badSignature  = "deadbeef00000000000000000000000000000000000000000000000000000000";
+        const string webhookKey = "my-super-secret-webhook-key";
+        const string rawBody = """{"webhook_type":"TRANSACTIONS","item_id":"item_123"}""";
+        const string badSignature = "deadbeef00000000000000000000000000000000000000000000000000000000";
 
         _validator.IsValid(rawBody, badSignature, webhookKey).Should().BeFalse();
     }
@@ -59,11 +60,11 @@ public class WebhookHandlerTests
     [Fact]
     public void IsValid_TamperedBody_ReturnsFalse()
     {
-        const string webhookKey    = "my-super-secret-webhook-key";
-        const string originalBody  = """{"webhook_type":"TRANSACTIONS","item_id":"item_123"}""";
-        const string tamperedBody  = """{"webhook_type":"TRANSACTIONS","item_id":"item_HACKED"}""";
+        const string webhookKey = "my-super-secret-webhook-key";
+        const string originalBody = """{"webhook_type":"TRANSACTIONS","item_id":"item_123"}""";
+        const string tamperedBody = """{"webhook_type":"TRANSACTIONS","item_id":"item_HACKED"}""";
 
-        var keyBytes  = System.Text.Encoding.UTF8.GetBytes(webhookKey);
+        var keyBytes = System.Text.Encoding.UTF8.GetBytes(webhookKey);
         var bodyBytes = System.Text.Encoding.UTF8.GetBytes(originalBody);
         using var hmac = new System.Security.Cryptography.HMACSHA256(keyBytes);
         var originalSig = Convert.ToHexString(hmac.ComputeHash(bodyBytes)).ToLowerInvariant();

@@ -17,27 +17,27 @@ using Microsoft.Extensions.Configuration;
 [Route("api/webhook")]
 public class WebhookController : ControllerBase
 {
-    private readonly IWebhookSignatureValidator   _signatureValidator;
-    private readonly IBackgroundJobClient         _backgroundJobs;
-    private readonly IBankAccountRepository       _accounts;
-    private readonly ITransactionSyncCoordinator  _coordinator;
-    private readonly IBankSyncLogger              _logger;
-    private readonly IConfiguration               _config;
+    private readonly IWebhookSignatureValidator _signatureValidator;
+    private readonly IBackgroundJobClient _backgroundJobs;
+    private readonly IBankAccountRepository _accounts;
+    private readonly ITransactionSyncCoordinator _coordinator;
+    private readonly IBankSyncLogger _logger;
+    private readonly IConfiguration _config;
 
     public WebhookController(
-        IWebhookSignatureValidator   signatureValidator,
-        IBackgroundJobClient         backgroundJobs,
-        IBankAccountRepository       accounts,
-        ITransactionSyncCoordinator  coordinator,
-        IBankSyncLogger              logger,
-        IConfiguration               config)
+        IWebhookSignatureValidator signatureValidator,
+        IBackgroundJobClient backgroundJobs,
+        IBankAccountRepository accounts,
+        ITransactionSyncCoordinator coordinator,
+        IBankSyncLogger logger,
+        IConfiguration config)
     {
         _signatureValidator = signatureValidator;
-        _backgroundJobs     = backgroundJobs;
-        _accounts           = accounts;
-        _coordinator        = coordinator;
-        _logger             = logger;
-        _config             = config;
+        _backgroundJobs = backgroundJobs;
+        _accounts = accounts;
+        _coordinator = coordinator;
+        _logger = logger;
+        _config = config;
     }
 
     // ── POST /api/webhook/plaid ── T305 ──────────────────────────────────────
@@ -50,14 +50,14 @@ public class WebhookController : ControllerBase
     public async Task<IActionResult> HandlePlaidWebhook(CancellationToken ct)
     {
         // Read raw body for signature validation
-        Request.EnableBuffering();
+        // Request.EnableBuffering();
         using var reader = new System.IO.StreamReader(Request.Body, leaveOpen: true);
         var rawBody = await reader.ReadToEndAsync(ct);
         Request.Body.Position = 0;
 
         // Validate signature
         var signatureHeader = Request.Headers["Plaid-Verification"].FirstOrDefault() ?? string.Empty;
-        var webhookKey      = _config["Plaid:WebhookKey"] ?? string.Empty;
+        var webhookKey = _config["Plaid:WebhookKey"] ?? string.Empty;
 
         if (!_signatureValidator.IsValid(rawBody, signatureHeader, webhookKey))
             return Unauthorized(new { error = "Invalid webhook signature." });

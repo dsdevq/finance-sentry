@@ -25,6 +25,17 @@ builder.Host.UseSerilog((context, loggerConfig) =>
         .MinimumLevel.Information()
 );
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Frontend", policy =>
+    {
+        policy
+            .WithOrigins("http://localhost:4200")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
 // ── ASP.NET Core services ───────────────────────────────────────────────────
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -110,6 +121,8 @@ var app = builder.Build();
 
 // ── Middleware pipeline ───────────────────────────────────────────────────────
 app.UseMiddleware<CorrelationIdMiddleware>();
+
+app.UseCors("Frontend");
 
 if (app.Environment.IsDevelopment())
 {
