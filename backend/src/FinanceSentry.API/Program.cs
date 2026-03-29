@@ -94,6 +94,13 @@ builder.Services.AddSingleton<IPlaidErrorMapper, PlaidErrorMapper>();
 builder.Services.AddScoped<IScheduledSyncService, ScheduledSyncService>();
 builder.Services.AddScoped<ITransactionSyncCoordinator, TransactionSyncCoordinator>();
 
+// ── Dashboard / aggregation services (T401–T410) ─────────────────────────────
+builder.Services.AddScoped<IAggregationService, AggregationService>();
+builder.Services.AddScoped<IMoneyFlowStatisticsService, MoneyFlowStatisticsService>();
+builder.Services.AddScoped<IMerchantCategoryStatisticsService, MerchantCategoryStatisticsService>();
+builder.Services.AddScoped<IDashboardQueryService, DashboardQueryService>();
+builder.Services.AddScoped<ITransferDetectionService, TransferDetectionService>();
+
 // ── Hangfire background jobs (T303, T304) ────────────────────────────────────
 builder.Services.AddHangfireServices(builder.Configuration);
 builder.Services.AddScoped<ScheduledSyncJob>();

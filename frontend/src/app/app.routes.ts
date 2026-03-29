@@ -8,5 +8,12 @@ export const APP_ROUTES: Routes = [
         (m) => m.BankSyncModule,
       ),
   },
+  {
+    path: 'dashboard',
+    loadComponent: () =>
+      import('./modules/bank-sync/pages/dashboard/dashboard.component').then(
+        (m) => m.DashboardComponent,
+      ),
+  },
   { path: '', redirectTo: '/accounts', pathMatch: 'full' },
 ];

@@ -165,6 +165,22 @@ public class TransactionRepository : ITransactionRepository
             .CountAsync(t => t.AccountId == accountId, cancellationToken);
     }
 
+    public async Task<IEnumerable<Transaction>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Transactions
+            .Where(t => t.UserId == userId)
+            .OrderByDescending(t => t.PostedDate ?? t.TransactionDate)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IEnumerable<Transaction>> GetByUserIdSinceAsync(Guid userId, DateTime since, CancellationToken cancellationToken = default)
+    {
+        return await _context.Transactions
+            .Where(t => t.UserId == userId && (t.PostedDate >= since || t.TransactionDate >= since))
+            .OrderByDescending(t => t.PostedDate ?? t.TransactionDate)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task SoftDeleteByAccountIdAsync(Guid accountId, CancellationToken cancellationToken = default)
     {
         var now = DateTime.UtcNow;
@@ -262,6 +278,14 @@ public class SyncJobRepository : ISyncJobRepository
     {
         return await _context.SyncJobs
             .AnyAsync(sj => sj.AccountId == accountId && sj.Status == "running", cancellationToken);
+    }
+
+    public async Task<SyncJob?> GetLatestSuccessfulByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await _context.SyncJobs
+            .Where(sj => sj.UserId == userId && sj.Status == "success")
+            .OrderByDescending(sj => sj.CompletedAt)
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

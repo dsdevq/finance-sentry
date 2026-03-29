@@ -628,7 +628,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
 
 <!-- TDD: Write unit + integration tests FIRST, then implement to make them pass -->
 
-- [ ] T412 [P] [US3] Create unit tests for AggregationService in `backend/tests/Unit/BankSync/Application/AggregationServiceTests.cs`
+- [X] T412 [P] [US3] Create unit tests for AggregationService in `backend/tests/Unit/BankSync/Application/AggregationServiceTests.cs`
   - **Details**: Tests:
     - Aggregate 3 accounts (2 EUR, 1 USD) → correct totals by currency
     - Handle NULL balances → exclude from sum
@@ -636,7 +636,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - available_balance aggregation works separately from current_balance
   - **Success Criteria**: All tests compile, ready to pass once T401 implemented
 
-- [ ] T413 [P] [US3] Create unit tests for MoneyFlowStatisticsService in `backend/tests/Unit/BankSync/Application/MoneyFlowStatisticsTests.cs`
+- [X] T413 [P] [US3] Create unit tests for MoneyFlowStatisticsService in `backend/tests/Unit/BankSync/Application/MoneyFlowStatisticsTests.cs`
   - **Details**: Tests:
     - Calculate 6 months of flow (inflow, outflow, net)
     - Correct grouping by month
@@ -645,7 +645,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Debit/credit classification via transaction_type field
   - **Success Criteria**: All tests compile, ready to pass once T402 implemented
 
-- [ ] T414 [P] [US3] Create integration tests: Dashboard aggregation queries in `backend/tests/Integration/BankSync/DashboardAggregationTests.cs`
+- [X] T414 [P] [US3] Create integration tests: Dashboard aggregation queries in `backend/tests/Integration/BankSync/DashboardAggregationTests.cs`
   - **Details**: Integration test with real DB:
     - Create 3 accounts (EUR, USD, EUR)
     - Create 50 transactions with varying transaction_type and merchant_category
@@ -657,7 +657,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
 
 <!-- Implementation: Make the tests above pass -->
 
-- [ ] T401 [P] [US3] Create AggregationService (balance sum + currency grouping) in `backend/src/Modules/BankSync/Application/Services/AggregationService.cs`
+- [X] T401 [P] [US3] Create AggregationService (balance sum + currency grouping) in `backend/src/Modules/BankSync/Application/Services/AggregationService.cs`
   - **Details**: Service with methods:
     - GetAggregatedBalanceAsync(userId): Sum current_balance by currency, return dict { Currency → Total }
     - GetAggregatedAvailableBalance(userId): Same for available_balance
@@ -668,7 +668,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Efficient DB queries (single aggregation query, not N+1)
   - **Success Criteria**: T412 tests pass, queries are efficient (1 query), values sum correctly
 
-- [ ] T402 [P] [US3] Create MoneyFlowStatisticsService (monthly inflow/outflow) in `backend/src/Modules/BankSync/Application/Services/MoneyFlowStatisticsService.cs`
+- [X] T402 [P] [US3] Create MoneyFlowStatisticsService (monthly inflow/outflow) in `backend/src/Modules/BankSync/Application/Services/MoneyFlowStatisticsService.cs`
   - **Details**: Service with method:
     - GetMonthlyFlowAsync(userId, months=6): Returns array of {month, inflow, outflow, net} for last 6 months
     - Inflow = sum of transactions where transaction_type = 'credit'
@@ -678,7 +678,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Exclude pending transactions (is_pending = true)
   - **Success Criteria**: T413 tests pass, calculations correct, queries efficient
 
-- [ ] T403 [P] [US3] Create MerchantCategoryStatisticsService (spending by category) in `backend/src/Modules/BankSync/Application/Services/MerchantCategoryStatisticsService.cs`
+- [X] T403 [P] [US3] Create MerchantCategoryStatisticsService (spending by category) in `backend/src/Modules/BankSync/Application/Services/MerchantCategoryStatisticsService.cs`
   - **Details**: Service with method:
     - GetTopCategoriesAsync(userId, limit=10): Returns top spending categories (from merchant_category field)
     - Calculate total spend per category
@@ -686,7 +686,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Include % of total spend
   - **Success Criteria**: Service compiles, categories sorted by spend, percentages sum to 100%
 
-- [ ] T404 [US3] Create DashboardQueryService (unified dashboard queries) in `backend/src/Modules/BankSync/Application/Services/DashboardQueryService.cs`
+- [X] T404 [US3] Create DashboardQueryService (unified dashboard queries) in `backend/src/Modules/BankSync/Application/Services/DashboardQueryService.cs`
   - **Details**: Service that aggregates all dashboard data:
     - Get aggregated balance
     - Get monthly flow stats
@@ -696,28 +696,28 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Return single dashboard DTO
   - **Success Criteria**: Service compiles, returns single DTO with all data
 
-- [ ] T405 [P] [US3] Create GetAggregatedBalanceQuery + handler in `backend/src/Modules/BankSync/Application/Queries/GetAggregatedBalanceQuery.cs` and `GetAggregatedBalanceQueryHandler.cs`
+- [X] T405 [P] [US3] Create GetAggregatedBalanceQuery + handler in `backend/src/Modules/BankSync/Application/Queries/GetAggregatedBalanceQuery.cs` and `GetAggregatedBalanceQueryHandler.cs`
   - **Details**: Query handler:
     1. Get userId from context
     2. Call AggregationService.GetAggregatedBalanceAsync()
     3. Return { balances: { EUR: 5000, USD: 1000 }, totalAccountCount: 3 }
   - **Success Criteria**: Query compiles, handler executes, returns correct totals
 
-- [ ] T406 [P] [US3] Create GetMoneyFlowStatisticsQuery + handler in `backend/src/Modules/BankSync/Application/Queries/GetMoneyFlowStatisticsQuery.cs` and `GetMoneyFlowStatisticsQueryHandler.cs`
+- [X] T406 [P] [US3] Create GetMoneyFlowStatisticsQuery + handler in `backend/src/Modules/BankSync/Application/Queries/GetMoneyFlowStatisticsQuery.cs` and `GetMoneyFlowStatisticsQueryHandler.cs`
   - **Details**: Query handler:
     1. Get userId from context
     2. Call MoneyFlowStatisticsService.GetMonthlyFlowAsync(userId, months=6)
     3. Return array of monthly stats
   - **Success Criteria**: Query compiles, returns 6 months of data
 
-- [ ] T407 [P] [US3] Create GetTopCategoriesQuery + handler in `backend/src/Modules/BankSync/Application/Queries/GetTopCategoriesQuery.cs` and `GetTopCategoriesQueryHandler.cs`
+- [X] T407 [P] [US3] Create GetTopCategoriesQuery + handler in `backend/src/Modules/BankSync/Application/Queries/GetTopCategoriesQuery.cs` and `GetTopCategoriesQueryHandler.cs`
   - **Details**: Query handler:
     1. Get userId from context
     2. Call MerchantCategoryStatisticsService.GetTopCategoriesAsync(userId, limit=10)
     3. Return array of { category, totalSpend, percentOfTotal }
   - **Success Criteria**: Query compiles, returns top 10 categories
 
-- [ ] T408 [US3] Create REST endpoint: GET /dashboard/aggregated (unified dashboard) in `backend/src/Modules/BankSync/API/Controllers/BankSyncController.cs`
+- [X] T408 [US3] Create REST endpoint: GET /dashboard/aggregated (unified dashboard) in `backend/src/Modules/BankSync/API/Controllers/BankSyncController.cs`
   - **Details**: Endpoint:
     1. Get userId from JWT
     2. Call DashboardQueryService.GetDashboardDataAsync(userId)
@@ -735,13 +735,13 @@ Phase 6 (Polish & Cross-Cutting Concerns)
        ```
   - **Success Criteria**: T414 integration test passes, endpoint returns 200 with complete dashboard data
 
-- [ ] T409 [US3] Create TransferDetectionService (detect internal transfers) in `backend/src/Modules/BankSync/Application/Services/TransferDetectionService.cs`
+- [X] T409 [US3] Create TransferDetectionService (detect internal transfers) in `backend/src/Modules/BankSync/Application/Services/TransferDetectionService.cs`
   - **Details**: Service to identify internal transfers (same user, both accounts):
     - CompareTransactionsForTransferAsync(debitTxn, creditTxn): returns true if likely same transfer
     - Logic: same amount, date within 1 day, transaction_type = 'transfer', description similar
   - **Success Criteria**: Service compiles, can be used in aggregation to avoid double-counting
 
-- [ ] T410 [US3] Create REST endpoint: GET /dashboard/transfers (internal transfer view) in `backend/src/Modules/BankSync/API/Controllers/BankSyncController.cs`
+- [X] T410 [US3] Create REST endpoint: GET /dashboard/transfers (internal transfer view) in `backend/src/Modules/BankSync/API/Controllers/BankSyncController.cs`
   - **Details**: Endpoint that shows linked internal transfers (debit + credit pairs)
   - **Success Criteria**: Endpoint returns transfer pairs
 
@@ -749,7 +749,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
   - **Details**: Decorator to cache aggregation query results (5-minute TTL). Invalidate on new transaction sync
   - **Success Criteria**: Cache works, invalidates on sync
 
-- [ ] T415 [US3] Create frontend DashboardComponent (main feature display) in `frontend/src/app/modules/bank-sync/pages/dashboard/dashboard.component.ts` and `.html`
+- [X] T415 [US3] Create frontend DashboardComponent (main feature display) in `frontend/src/app/modules/bank-sync/pages/dashboard/dashboard.component.ts` and `.html`
   - **Details**: Component:
     1. Fetch dashboard data on load via BankSyncService
     2. Display: Total balance card (grouped by currency), account count
@@ -759,26 +759,26 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     6. Refresh interval every 5 minutes
   - **Success Criteria**: Component renders all elements, data shows correctly
 
-- [ ] T416 [US3] Create frontend service: extend BankSyncService with aggregation methods in `frontend/src/app/modules/bank-sync/services/bank-sync.service.ts`
+- [X] T416 [US3] Create frontend service: extend BankSyncService with aggregation methods in `frontend/src/app/modules/bank-sync/services/bank-sync.service.ts`
   - **Details**: Add methods:
     - getDashboardData(): GET /dashboard/aggregated (returns all dashboard data in one call)
   - **Success Criteria**: Method compiles, HTTP call correct, dashboard data mapped to local model
 
-- [ ] T417 [US3] Create frontend chart component: MoneyFlowChart (line/bar chart) in `frontend/src/app/modules/bank-sync/components/money-flow-chart/money-flow-chart.component.ts` and `.html`
+- [X] T417 [US3] Create frontend chart component: MoneyFlowChart (line/bar chart) in `frontend/src/app/modules/bank-sync/components/money-flow-chart/money-flow-chart.component.ts` and `.html`
   - **Details**: Component using ngx-charts or Chart.js:
     - Accept monthlyFlowData as input
     - Render bar chart with months on X-axis, inflow (green) + outflow (red) on Y-axis
     - Show tooltip with exact values on hover
   - **Success Criteria**: Chart renders correctly, data points accurate
 
-- [ ] T418 [US3] Create frontend chart component: CategoryBreakdownChart (pie chart) in `frontend/src/app/modules/bank-sync/components/category-breakdown-chart/category-breakdown-chart.component.ts` and `.html`
+- [X] T418 [US3] Create frontend chart component: CategoryBreakdownChart (pie chart) in `frontend/src/app/modules/bank-sync/components/category-breakdown-chart/category-breakdown-chart.component.ts` and `.html`
   - **Details**: Component using ngx-charts:
     - Accept topCategoriesData as input
     - Render pie chart showing % spend per category
     - Show labels with category name + % on each slice
   - **Success Criteria**: Chart renders, percentages sum to 100%
 
-- [ ] T419 [US3] Create E2E test: Dashboard shows aggregated data in `frontend/tests/integration/bank-sync/dashboard-aggregation-flow.e2e.spec.ts`
+- [X] T419 [US3] Create E2E test: Dashboard shows aggregated data in `frontend/tests/integration/bank-sync/dashboard-aggregation-flow.e2e.spec.ts`
   - **Details**: E2E test:
     1. Navigate to /dashboard
     2. Verify title "Financial Overview"
@@ -787,7 +787,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     5. Verify top categories list shown
   - **Success Criteria**: Test passes with mock data
 
-- [ ] T420 [US3] Create documentation: Multi-currency handling guide in `docs/MULTI_CURRENCY_GUIDE.md`
+- [X] T420 [US3] Create documentation: Multi-currency handling guide in `docs/MULTI_CURRENCY_GUIDE.md`
   - **Details**: Document explaining how system handles multiple currencies:
     - No automatic conversion (EUR + USD not summed)
     - Currency totals shown separately

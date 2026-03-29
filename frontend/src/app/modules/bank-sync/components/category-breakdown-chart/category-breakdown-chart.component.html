@@ -1,0 +1,18 @@
+<div class="category-chart">
+  <div *ngIf="topCategoriesData.length === 0" class="no-data">No spending data available</div>
+  <div class="category-list" *ngIf="topCategoriesData.length > 0">
+    <div class="category-row" *ngFor="let item of sortedData">
+      <div class="category-name">{{ item.category }}</div>
+      <div class="category-bar-container">
+        <div
+          class="category-bar"
+          [style.width.%]="getBarWidthPercent(item.percentOfTotal)">
+        </div>
+      </div>
+      <div class="category-values">
+        <span class="spend">{{ item.totalSpend | number:'1.2-2' }}</span>
+        <span class="percent">({{ item.percentOfTotal | number:'1.1-1' }}%)</span>
+      </div>
+    </div>
+  </div>
+</div>

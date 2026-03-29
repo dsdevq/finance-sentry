@@ -13,6 +13,29 @@ import {
   TransactionQueryParams,
 } from '../models/transaction.model';
 
+export interface MonthlyFlow {
+  month: string;
+  currency: string;
+  inflow: number;
+  outflow: number;
+  net: number;
+}
+
+export interface CategoryStat {
+  category: string;
+  totalSpend: number;
+  percentOfTotal: number;
+}
+
+export interface DashboardData {
+  aggregatedBalance: Record<string, number>;
+  accountCount: number;
+  accountsByType: Record<string, number>;
+  monthlyFlow: MonthlyFlow[];
+  topCategories: CategoryStat[];
+  lastSyncTimestamp: string | null;
+}
+
 export interface SyncStatusResponse {
   status: 'pending' | 'running' | 'success' | 'failed';
   transactionCountFetched: number;
@@ -87,5 +110,9 @@ export class BankSyncService {
 
   disconnectAccount(accountId: string): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${accountId}`);
+  }
+
+  getDashboardData(): Observable<DashboardData> {
+    return this.http.get<DashboardData>(`${environment.apiBaseUrl}/api/dashboard/aggregated`);
   }
 }

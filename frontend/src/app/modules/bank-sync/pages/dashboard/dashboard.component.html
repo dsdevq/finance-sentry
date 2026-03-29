@@ -1,0 +1,49 @@
+<div class="dashboard">
+  <h1>Financial Overview</h1>
+
+  <div *ngIf="isLoading" class="loading">Loading dashboard...</div>
+  <div *ngIf="errorMessage" class="error">{{ errorMessage }}</div>
+
+  <ng-container *ngIf="dashboardData && !isLoading">
+    <!-- Balance cards -->
+    <section class="balance-section">
+      <h2>Total Balance</h2>
+      <div class="balance-cards">
+        <div class="balance-card" *ngFor="let entry of getCurrencyEntries()">
+          <span class="currency">{{ entry[0] }}</span>
+          <span class="amount">{{ entry[1] | number:'1.2-2' }}</span>
+        </div>
+      </div>
+      <p class="account-count">{{ dashboardData.accountCount }} account(s) connected</p>
+    </section>
+
+    <!-- Account breakdown by type -->
+    <section class="account-types">
+      <h2>Accounts by Type</h2>
+      <ul>
+        <li *ngFor="let entry of getAccountTypeEntries()">
+          <span class="type">{{ entry[0] | titlecase }}</span>:
+          <span class="count">{{ entry[1] }}</span>
+        </li>
+      </ul>
+    </section>
+
+    <!-- Monthly flow -->
+    <section class="monthly-flow">
+      <h2>Monthly Flow (Last 6 Months)</h2>
+      <app-money-flow-chart [monthlyFlowData]="dashboardData.monthlyFlow"></app-money-flow-chart>
+    </section>
+
+    <!-- Top categories -->
+    <section class="top-categories">
+      <h2>Top Spending Categories</h2>
+      <app-category-breakdown-chart [topCategoriesData]="dashboardData.topCategories"></app-category-breakdown-chart>
+    </section>
+
+    <!-- Last sync -->
+    <section class="last-sync">
+      <p>Last synced: {{ getRelativeTime(dashboardData.lastSyncTimestamp) }}</p>
+      <a routerLink="/accounts">View Accounts</a>
+    </section>
+  </ng-container>
+</div>

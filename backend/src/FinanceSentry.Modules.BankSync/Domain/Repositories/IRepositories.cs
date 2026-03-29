@@ -99,6 +99,16 @@ public interface ITransactionRepository
     Task<int> CountByAccountIdAsync(Guid accountId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Get all transactions for a user across all accounts.
+    /// </summary>
+    Task<IEnumerable<Transaction>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Get all transactions for a user posted or occurring on/after the given date.
+    /// </summary>
+    Task<IEnumerable<Transaction>> GetByUserIdSinceAsync(Guid userId, DateTime since, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Soft-deletes all transactions for an account (sets IsActive=false) for account removal flow.
     /// Uses IgnoreQueryFilters() internally to find already-inactive rows (idempotent).
     /// </summary>
@@ -155,6 +165,12 @@ public interface ISyncJobRepository
     /// Used to check for a currently running job before starting a new one.
     /// </summary>
     Task<bool> HasRunningJobAsync(Guid accountId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Get the most recent successful sync job for any account owned by the user.
+    /// Returns null if no successful sync has ever completed for the user.
+    /// </summary>
+    Task<SyncJob?> GetLatestSuccessfulByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Save changes to database.
