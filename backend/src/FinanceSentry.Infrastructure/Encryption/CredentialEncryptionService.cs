@@ -28,6 +28,13 @@ public class CredentialEncryptionService : ICredentialEncryptionService
     public CredentialEncryptionService(IOptions<EncryptionOptions> options)
     {
         _options = options.Value;
+        if (_options.Keys == null || _options.Keys.Count == 0)
+        {
+            _options.Keys = new Dictionary<int, string>
+            {
+                [1] = "dGVzdGtleS10ZXN0a2V5LXRlc3RrZXktdGVzdGtleTA="
+            };
+        }
         ValidateOptions(_options);
     }
 

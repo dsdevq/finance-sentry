@@ -70,5 +70,17 @@ public class SyncScheduler
                 job => job.ExecuteSyncAsync(account.Id),
                 Cron.HourInterval(2)); // every 2 hours
         }
+
+        // Register monthly data retention job (T527 — FR-008)
+        _recurringJobs.AddOrUpdate<DataRetentionJob>(
+            "data-retention",
+            job => job.RunAsync(false, CancellationToken.None),
+            Cron.Monthly());
+
+        // Register weekly credential backup job (T513)
+        _recurringJobs.AddOrUpdate<CredentialBackupJob>(
+            "credential-backup",
+            job => job.RunAsync(CancellationToken.None),
+            Cron.Weekly());
     }
 }

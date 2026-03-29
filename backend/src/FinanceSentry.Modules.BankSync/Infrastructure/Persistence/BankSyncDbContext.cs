@@ -18,6 +18,7 @@ public class BankSyncDbContext : DbContext
     public DbSet<Transaction> Transactions { get; set; } = null!;
     public DbSet<SyncJob> SyncJobs { get; set; } = null!;
     public DbSet<EncryptedCredential> EncryptedCredentials { get; set; } = null!;
+    public DbSet<AuditLog> AuditLogs { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -207,5 +208,36 @@ public class BankSyncDbContext : DbContext
 
         encryptedCredBuilder.Property(ec => ec.CreatedAt)
             .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+        // Configure AuditLog entity (T524)
+        var auditLogBuilder = modelBuilder.Entity<AuditLog>();
+
+        auditLogBuilder.ToTable("audit_logs");
+        auditLogBuilder.HasKey(al => al.AuditId);
+
+        auditLogBuilder.HasIndex(al => new { al.UserId, al.PerformedAt })
+            .HasDatabaseName("idx_audit_log_user_performed_at");
+
+        auditLogBuilder.HasIndex(al => new { al.ResourceType, al.ResourceId })
+            .HasDatabaseName("idx_audit_log_resource");
+
+        auditLogBuilder.Property(al => al.Action)
+            .IsRequired()
+            .HasMaxLength(50);
+
+        auditLogBuilder.Property(al => al.ResourceType)
+            .IsRequired()
+            .HasMaxLength(50);
+
+        auditLogBuilder.Property(al => al.IpAddress)
+            .HasMaxLength(45)
+            .IsRequired(false);
+
+        auditLogBuilder.Property(al => al.CorrelationId)
+            .HasMaxLength(64)
+            .IsRequired(false);
+
+        auditLogBuilder.Property(al => al.PerformedAt)
+            .IsRequired();
     }
 }

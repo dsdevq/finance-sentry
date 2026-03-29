@@ -1,0 +1,123 @@
+{
+  "info": {
+    "name": "Finance Sentry — Bank Sync API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000", "type": "string" },
+    { "key": "token",   "value": "<your-jwt-token>",      "type": "string" },
+    { "key": "userId",  "value": "<your-user-uuid>",      "type": "string" },
+    { "key": "accountId","value": "<account-uuid>",       "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Accounts",
+      "item": [
+        {
+          "name": "POST /api/accounts/connect — Get Plaid link token",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/accounts/connect",
+            "body": { "mode": "raw", "raw": "{ \"userId\": \"{{userId}}\" }" }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('Has linkToken', () => pm.expect(pm.response.json().linkToken).to.be.a('string'));"] } }]
+        },
+        {
+          "name": "POST /api/accounts/link — Exchange public token",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/accounts/link",
+            "body": { "mode": "raw", "raw": "{ \"userId\": \"{{userId}}\", \"publicToken\": \"public-sandbox-xxx\", \"institutionName\": \"Chase\" }" }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.environment.set('accountId', pm.response.json().accountId);"] } }]
+        },
+        {
+          "name": "GET /api/accounts — List accounts",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/accounts?userId={{userId}}", "query": [{ "key": "userId", "value": "{{userId}}" }] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "GET /api/accounts/:id/transactions",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/accounts/{{accountId}}/transactions?userId={{userId}}&offset=0&limit=50", "query": [{ "key": "userId", "value": "{{userId}}" }, { "key": "offset", "value": "0" }, { "key": "limit", "value": "50" }] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));", "pm.test('Has transactions array', () => pm.expect(pm.response.json().transactions).to.be.an('array'));"] } }]
+        },
+        {
+          "name": "POST /api/accounts/:id/sync — Trigger sync",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/accounts/{{accountId}}/sync?userId={{userId}}", "query": [{ "key": "userId", "value": "{{userId}}" }] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 202', () => pm.response.to.have.status(202));"] } }]
+        },
+        {
+          "name": "GET /api/accounts/:id/sync-status",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/accounts/{{accountId}}/sync-status?userId={{userId}}", "query": [{ "key": "userId", "value": "{{userId}}" }] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "DELETE /api/accounts/:id",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/accounts/{{accountId}}?userId={{userId}}", "query": [{ "key": "userId", "value": "{{userId}}" }] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 204', () => pm.response.to.have.status(204));"] } }]
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "GET /api/dashboard/aggregated",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/dashboard/aggregated?userId={{userId}}", "query": [{ "key": "userId", "value": "{{userId}}" }] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "GET /api/dashboard/transfers",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/dashboard/transfers?userId={{userId}}", "query": [{ "key": "userId", "value": "{{userId}}" }] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"] } }]
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /health/ready",
+          "request": { "method": "GET", "url": "{{baseUrl}}/health/ready" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('Status 200 or 503', () => pm.expect([200, 503]).to.include(pm.response.code));"] } }]
+        }
+      ]
+    }
+  ]
+}
