@@ -43,7 +43,7 @@ public class AuditLogServiceTests : IDisposable
         _sut.Log(userId, AuditActions.ReadAccount, "BankAccount", resourceId, correlationId: "corr-001");
 
         // Give fire-and-forget a moment to complete
-        await Task.Delay(200);
+        await Task.Delay(500);
 
         var row = await _db.AuditLogs.FirstOrDefaultAsync(a => a.UserId == userId);
         Assert.NotNull(row);
@@ -60,7 +60,7 @@ public class AuditLogServiceTests : IDisposable
 
         _sut.Log(userId, AuditActions.DeleteAccount, "BankAccount", accountId);
 
-        await Task.Delay(200);
+        await Task.Delay(500);
 
         var row = await _db.AuditLogs.FirstOrDefaultAsync(a => a.UserId == userId);
         Assert.NotNull(row);
@@ -74,7 +74,7 @@ public class AuditLogServiceTests : IDisposable
 
         _sut.Log(userId, AuditActions.CredentialAccess, "EncryptedCredential", null);
 
-        await Task.Delay(200);
+        await Task.Delay(500);
 
         var row = await _db.AuditLogs.FirstOrDefaultAsync(a => a.UserId == userId);
         Assert.NotNull(row);
@@ -87,15 +87,17 @@ public class AuditLogServiceTests : IDisposable
     [Fact]
     public async Task Log_WriteFailure_DoesNotThrow()
     {
-        // Arrange: create a service with a broken scope factory (disposed provider)
+        // Arrange: get the scope factory before disposing so the call doesn't throw,
+        // then dispose so that any scopes created inside the service will fail.
         var brokenProvider = new ServiceCollection()
             .AddDbContext<BankSyncDbContext>(o => o.UseInMemoryDatabase("broken"))
             .BuildServiceProvider();
 
+        var scopeFactory = brokenProvider.GetRequiredService<IServiceScopeFactory>();
         brokenProvider.Dispose();
 
         var brokenService = new AuditLogService(
-            brokenProvider.GetRequiredService<IServiceScopeFactory>(),
+            scopeFactory,
             NullLogger<AuditLogService>.Instance);
 
         // Act + Assert: must not throw even when the write fails

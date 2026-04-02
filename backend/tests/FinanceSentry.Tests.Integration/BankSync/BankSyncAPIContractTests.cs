@@ -1,14 +1,18 @@
 namespace FinanceSentry.Tests.Integration.BankSync;
 
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Security.Claims;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
 using FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
 using Moq;
+using System.IdentityModel.Tokens.Jwt;
 using Xunit;
 
 /// <summary>
@@ -30,7 +34,7 @@ public class BankSyncAPIContractTests : IClassFixture<BankSyncApiFactory>
     public BankSyncAPIContractTests(BankSyncApiFactory factory)
     {
         _factory = factory;
-        _client = factory.CreateClient();
+        _client = factory.CreateAuthenticatedClient();
     }
 
     // ── POST /accounts/connect ───────────────────────────────────────────────
@@ -187,6 +191,28 @@ public class BankSyncApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Plaid:Secret", "test-secret");
         builder.UseSetting("Jwt:Secret",
             "test-jwt-secret-key-for-integration-tests-minimum-32-chars");
+    }
+
+    public HttpClient CreateAuthenticatedClient()
+    {
+        var client = CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", GenerateTestJwt());
+        return client;
+    }
+
+    private static string GenerateTestJwt()
+    {
+        const string secret = "test-jwt-secret-key-for-integration-tests-minimum-32-chars";
+        var key = new SymmetricSecurityKey(System.Text.Encoding.ASCII.GetBytes(secret));
+        var handler = new JwtSecurityTokenHandler();
+        var token = handler.CreateToken(new SecurityTokenDescriptor
+        {
+            Subject = new ClaimsIdentity([new Claim("sub", Guid.NewGuid().ToString())]),
+            Expires = DateTime.UtcNow.AddHours(1),
+            SigningCredentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256Signature),
+        });
+        return handler.WriteToken(token);
     }
 
     private static void ReplaceService<T>(IServiceCollection services, T implementation)
