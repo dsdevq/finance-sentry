@@ -1,6 +1,6 @@
-import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { MonthlyFlow } from '../../services/bank-sync.service';
+import {Component, Input, ChangeDetectionStrategy} from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {MonthlyFlow} from '../../services/bank-sync.service';
 
 @Component({
   selector: 'app-money-flow-chart',

@@ -6,11 +6,11 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
-import { BankSyncService, DashboardData } from '../../services/bank-sync.service';
-import { MoneyFlowChartComponent } from '../../components/money-flow-chart/money-flow-chart.component';
-import { CategoryBreakdownChartComponent } from '../../components/category-breakdown-chart/category-breakdown-chart.component';
+import {CommonModule} from '@angular/common';
+import {RouterLink} from '@angular/router';
+import {BankSyncService, DashboardData} from '../../services/bank-sync.service';
+import {MoneyFlowChartComponent} from '../../components/money-flow-chart/money-flow-chart.component';
+import {CategoryBreakdownChartComponent} from '../../components/category-breakdown-chart/category-breakdown-chart.component';
 
 @Component({
   selector: 'app-dashboard',

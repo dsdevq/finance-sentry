@@ -6,10 +6,10 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
-import { BankSyncService } from '../../services/bank-sync.service';
-import { PlaidHandler, PlaidLinkService } from '../../services/plaid-link.service';
+import {CommonModule} from '@angular/common';
+import {Router} from '@angular/router';
+import {BankSyncService} from '../../services/bank-sync.service';
+import {PlaidHandler, PlaidLinkService} from '../../services/plaid-link.service';
 
 @Component({
   selector: 'app-connect-account',

@@ -1,15 +1,9 @@
-import {
-  Component,
-  OnInit,
-  inject,
-  ChangeDetectionStrategy,
-  ChangeDetectorRef,
-} from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
-import { BankSyncService } from '../../services/bank-sync.service';
-import { Transaction } from '../../models/transaction.model';
+import {Component, OnInit, inject, ChangeDetectionStrategy, ChangeDetectorRef} from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {FormsModule} from '@angular/forms';
+import {ActivatedRoute, Router} from '@angular/router';
+import {BankSyncService} from '../../services/bank-sync.service';
+import {Transaction} from '../../models/transaction.model';
 
 const PAGE_SIZE = 50;
 

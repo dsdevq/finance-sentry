@@ -1,14 +1,10 @@
-import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, timer } from 'rxjs';
-import { shareReplay, switchMap, takeWhile } from 'rxjs/operators';
-import { environment } from '../../../../environments/environment';
-import {
-  AccountsResponse,
-  ConnectResponse,
-  LinkAccountResponse,
-} from '../models/bank-account.model';
-import { TransactionListResponse, TransactionQueryParams } from '../models/transaction.model';
+import {Injectable, inject} from '@angular/core';
+import {HttpClient, HttpParams} from '@angular/common/http';
+import {Observable, timer} from 'rxjs';
+import {shareReplay, switchMap, takeWhile} from 'rxjs/operators';
+import {environment} from '../../../../environments/environment';
+import {AccountsResponse, ConnectResponse, LinkAccountResponse} from '../models/bank-account.model';
+import {TransactionListResponse, TransactionQueryParams} from '../models/transaction.model';
 
 export interface MonthlyFlow {
   month: string;
@@ -48,7 +44,7 @@ export interface TriggerSyncResponse {
   message: string;
 }
 
-@Injectable({ providedIn: 'root' })
+@Injectable({providedIn: 'root'})
 export class BankSyncService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiBaseUrl}/api/accounts`;
@@ -67,7 +63,7 @@ export class BankSyncService {
     let params = new HttpParams();
     if (status) params = params.set('status', status);
     if (currency) params = params.set('currency', currency);
-    return this.http.get<AccountsResponse>(this.baseUrl, { params });
+    return this.http.get<AccountsResponse>(this.baseUrl, {params});
   }
 
   public getTransactions(

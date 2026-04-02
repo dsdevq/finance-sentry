@@ -7,9 +7,9 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { BankSyncService, SyncStatusResponse } from '../../services/bank-sync.service';
-import { Subscription } from 'rxjs';
+import {CommonModule} from '@angular/common';
+import {BankSyncService, SyncStatusResponse} from '../../services/bank-sync.service';
+import {Subscription} from 'rxjs';
 
 @Component({
   selector: 'app-sync-status',

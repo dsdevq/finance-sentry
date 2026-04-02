@@ -1,15 +1,9 @@
-import {
-  Component,
-  OnInit,
-  inject,
-  ChangeDetectionStrategy,
-  ChangeDetectorRef,
-} from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
-import { BankSyncService } from '../../services/bank-sync.service';
-import { BankAccount, SyncStatus } from '../../models/bank-account.model';
-import { SyncStatusComponent } from '../../components/sync-status/sync-status.component';
+import {Component, OnInit, inject, ChangeDetectionStrategy, ChangeDetectorRef} from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {Router} from '@angular/router';
+import {BankSyncService} from '../../services/bank-sync.service';
+import {BankAccount, SyncStatus} from '../../models/bank-account.model';
+import {SyncStatusComponent} from '../../components/sync-status/sync-status.component';
 
 @Component({
   selector: 'app-accounts-list',
