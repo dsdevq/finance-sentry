@@ -31,7 +31,16 @@
       "mcp__github__pull_request_read",
       "Bash(gh run:*)",
       "Bash(npx prettier:*)",
-      "Bash(dotnet build:*)"
+      "Bash(dotnet build:*)",
+      "mcp__github__get_me",
+      "mcp__github__list_issues",
+      "mcp__github__issue_write",
+      "mcp__github__list_pull_requests",
+      "mcp__github__update_pull_request",
+      "Bash(dotnet test:*)",
+      "Bash(dotnet restore:*)",
+      "Bash(npm info:*)",
+      "Bash(node -e \"const v=require\\(''''fs''''\\).readFileSync\\(''''/dev/stdin'''',''''utf8''''\\); const arr=JSON.parse\\(v\\); console.log\\(arr.filter\\(x=>x.startsWith\\(''''21.''''\\)\\).join\\(''''\\\\n''''\\)\\)\")"
     ]
   }
 }

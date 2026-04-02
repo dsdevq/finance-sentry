@@ -185,6 +185,8 @@ public class BankSyncApiFactory : WebApplicationFactory<Program>
             "dGVzdGtleS10ZXN0a2V5LXRlc3RrZXktdGVzdGtleTA=");
         builder.UseSetting("Plaid:ClientId", "test-client-id");
         builder.UseSetting("Plaid:Secret", "test-secret");
+        builder.UseSetting("Jwt:Secret",
+            "test-jwt-secret-key-for-integration-tests-minimum-32-chars");
     }
 
     private static void ReplaceService<T>(IServiceCollection services, T implementation)
