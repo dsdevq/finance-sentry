@@ -20,24 +20,24 @@ import { CategoryBreakdownChartComponent } from '../../components/category-break
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DashboardComponent implements OnInit, OnDestroy {
+  public dashboardData: DashboardData | null = null;
+  public isLoading = true;
+  public errorMessage: string | null = null;
+
   private readonly bankSyncService = inject(BankSyncService);
   private readonly cdr = inject(ChangeDetectorRef);
-
-  dashboardData: DashboardData | null = null;
-  isLoading = true;
-  errorMessage: string | null = null;
   private refreshTimer: ReturnType<typeof setInterval> | null = null;
 
-  ngOnInit(): void {
+  public ngOnInit(): void {
     this.loadDashboard();
     this.refreshTimer = setInterval(() => this.loadDashboard(), 5 * 60 * 1000);
   }
 
-  ngOnDestroy(): void {
+  public ngOnDestroy(): void {
     if (this.refreshTimer) clearInterval(this.refreshTimer);
   }
 
-  loadDashboard(): void {
+  public loadDashboard(): void {
     this.bankSyncService.getDashboardData().subscribe({
       next: (data) => {
         this.dashboardData = data;
@@ -52,15 +52,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
 
-  getCurrencyEntries(): [string, number][] {
+  public getCurrencyEntries(): [string, number][] {
     return Object.entries(this.dashboardData?.aggregatedBalance ?? {});
   }
 
-  getAccountTypeEntries(): [string, number][] {
+  public getAccountTypeEntries(): [string, number][] {
     return Object.entries(this.dashboardData?.accountsByType ?? {});
   }
 
-  getRelativeTime(ts: string | null): string {
+  public getRelativeTime(ts: string | null): string {
     if (!ts) return 'Never';
     const diff = Date.now() - new Date(ts).getTime();
     const minutes = Math.floor(diff / 60000);

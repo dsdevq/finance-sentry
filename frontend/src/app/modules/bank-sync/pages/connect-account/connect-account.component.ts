@@ -19,26 +19,30 @@ import { PlaidHandler, PlaidLinkService } from '../../services/plaid-link.servic
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ConnectAccountComponent implements OnInit, OnDestroy {
+  public isLoading = false;
+  public isSyncing = false;
+  public errorMessage: string | null = null;
+  public statusMessage: string | null = null;
+
   private readonly bankSyncService = inject(BankSyncService);
   private readonly plaidLinkService = inject(PlaidLinkService);
   private readonly router = inject(Router);
   private readonly cdr = inject(ChangeDetectorRef);
-
-  isLoading = false;
-  isSyncing = false;
-  errorMessage: string | null = null;
-  statusMessage: string | null = null;
-
   private plaidHandler: PlaidHandler | null = null;
   private pollInterval: ReturnType<typeof setInterval> | null = null;
   private readonly pollMaxMs = 60_000;
   private readonly pollIntervalMs = 3_000;
 
-  async ngOnInit(): Promise<void> {
+  public async ngOnInit(): Promise<void> {
     await this.initPlaid();
   }
 
-  async initPlaid(): Promise<void> {
+  public ngOnDestroy(): void {
+    this.clearPoll();
+    this.plaidHandler?.destroy();
+  }
+
+  public async initPlaid(): Promise<void> {
     this.isLoading = true;
     this.errorMessage = null;
     this.cdr.markForCheck();
@@ -70,7 +74,7 @@ export class ConnectAccountComponent implements OnInit, OnDestroy {
     }
   }
 
-  openPlaidLink(): void {
+  public openPlaidLink(): void {
     this.plaidHandler?.open();
   }
 
@@ -126,10 +130,5 @@ export class ConnectAccountComponent implements OnInit, OnDestroy {
       clearInterval(this.pollInterval);
       this.pollInterval = null;
     }
-  }
-
-  ngOnDestroy(): void {
-    this.clearPoll();
-    this.plaidHandler?.destroy();
   }
 }

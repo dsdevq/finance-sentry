@@ -19,25 +19,25 @@ import { Subscription } from 'rxjs';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SyncStatusComponent implements OnInit, OnDestroy {
-  @Input() accountId!: string;
+  @Input() public accountId!: string;
 
-  syncStatus: SyncStatusResponse | null = null;
-  isSyncing = false;
-  errorMessage: string | null = null;
+  public syncStatus: SyncStatusResponse | null = null;
+  public isSyncing = false;
+  public errorMessage: string | null = null;
 
   private readonly bankSyncService = inject(BankSyncService);
   private readonly cdr = inject(ChangeDetectorRef);
   private pollSubscription: Subscription | null = null;
 
-  ngOnInit(): void {
+  public ngOnInit(): void {
     this.loadStatus();
   }
 
-  ngOnDestroy(): void {
+  public ngOnDestroy(): void {
     this.stopPolling();
   }
 
-  loadStatus(): void {
+  public loadStatus(): void {
     this.bankSyncService.getSyncStatus(this.accountId).subscribe({
       next: (status) => {
         this.syncStatus = status;
@@ -50,7 +50,7 @@ export class SyncStatusComponent implements OnInit, OnDestroy {
     });
   }
 
-  triggerSync(): void {
+  public triggerSync(): void {
     this.isSyncing = true;
     this.errorMessage = null;
     this.cdr.markForCheck();
@@ -63,6 +63,30 @@ export class SyncStatusComponent implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       },
     });
+  }
+
+  public stopPolling(): void {
+    this.pollSubscription?.unsubscribe();
+    this.pollSubscription = null;
+  }
+
+  public getRelativeTime(timestamp: string | null): string {
+    if (!timestamp) return 'Never';
+    const diff = Date.now() - new Date(timestamp).getTime();
+    const minutes = Math.floor(diff / 60000);
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
+    const hours = Math.floor(minutes / 60);
+    return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+  }
+
+  public getSyncBadgeClass(): Record<string, boolean> {
+    return {
+      'badge-syncing': this.isSyncing,
+      'badge-success': this.syncStatus?.status === 'success',
+      'badge-failed': this.syncStatus?.status === 'failed',
+      'badge-pending': !this.syncStatus,
+    };
   }
 
   private startPolling(): void {
@@ -82,29 +106,5 @@ export class SyncStatusComponent implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       },
     });
-  }
-
-  stopPolling(): void {
-    this.pollSubscription?.unsubscribe();
-    this.pollSubscription = null;
-  }
-
-  getRelativeTime(timestamp: string | null): string {
-    if (!timestamp) return 'Never';
-    const diff = Date.now() - new Date(timestamp).getTime();
-    const minutes = Math.floor(diff / 60000);
-    if (minutes < 1) return 'Just now';
-    if (minutes < 60) return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
-    const hours = Math.floor(minutes / 60);
-    return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
-  }
-
-  getSyncBadgeClass(): Record<string, boolean> {
-    return {
-      'badge-syncing': this.isSyncing,
-      'badge-success': this.syncStatus?.status === 'success',
-      'badge-failed': this.syncStatus?.status === 'failed',
-      'badge-pending': !this.syncStatus,
-    };
   }
 }

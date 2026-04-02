@@ -10,13 +10,13 @@ import { CategoryStat } from '../../services/bank-sync.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CategoryBreakdownChartComponent {
-  @Input() topCategoriesData: CategoryStat[] = [];
+  @Input() public topCategoriesData: CategoryStat[] = [];
 
-  get sortedData(): CategoryStat[] {
+  public get sortedData(): CategoryStat[] {
     return [...this.topCategoriesData].sort((a, b) => b.totalSpend - a.totalSpend);
   }
 
-  getBarWidthPercent(percentOfTotal: number): number {
+  public getBarWidthPercent(percentOfTotal: number): number {
     return Math.min(Math.round(percentOfTotal), 100);
   }
 }

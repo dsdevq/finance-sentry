@@ -21,48 +21,48 @@ const PAGE_SIZE = 50;
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TransactionListComponent implements OnInit {
+  public accountId = '';
+  public bankName = '';
+  public currency = '';
+
+  public transactions: Transaction[] = [];
+  public isLoading = false;
+  public errorMessage: string | null = null;
+
+  public offset = 0;
+  public totalCount = 0;
+  public readonly pageSize = PAGE_SIZE;
+
+  public startDate = '';
+  public endDate = '';
+
   private readonly bankSyncService = inject(BankSyncService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly cdr = inject(ChangeDetectorRef);
 
-  accountId = '';
-  bankName = '';
-  currency = '';
-
-  transactions: Transaction[] = [];
-  isLoading = false;
-  errorMessage: string | null = null;
-
-  offset = 0;
-  totalCount = 0;
-  readonly pageSize = PAGE_SIZE;
-
-  startDate = '';
-  endDate = '';
-
-  get currentPage(): number {
+  public get currentPage(): number {
     return Math.floor(this.offset / this.pageSize) + 1;
   }
 
-  get totalPages(): number {
+  public get totalPages(): number {
     return Math.max(1, Math.ceil(this.totalCount / this.pageSize));
   }
 
-  get hasPrevious(): boolean {
+  public get hasPrevious(): boolean {
     return this.offset > 0;
   }
 
-  get hasNext(): boolean {
+  public get hasNext(): boolean {
     return this.offset + this.pageSize < this.totalCount;
   }
 
-  ngOnInit(): void {
+  public ngOnInit(): void {
     this.accountId = this.route.snapshot.paramMap.get('accountId') ?? '';
     this.loadTransactions();
   }
 
-  loadTransactions(): void {
+  public loadTransactions(): void {
     if (!this.accountId) return;
 
     this.isLoading = true;
@@ -93,26 +93,26 @@ export class TransactionListComponent implements OnInit {
       });
   }
 
-  applyFilters(): void {
+  public applyFilters(): void {
     this.offset = 0;
     this.loadTransactions();
   }
 
-  previousPage(): void {
+  public previousPage(): void {
     if (this.hasPrevious) {
       this.offset = Math.max(0, this.offset - this.pageSize);
       this.loadTransactions();
     }
   }
 
-  nextPage(): void {
+  public nextPage(): void {
     if (this.hasNext) {
       this.offset += this.pageSize;
       this.loadTransactions();
     }
   }
 
-  goBack(): void {
+  public goBack(): void {
     void this.router.navigate(['/accounts']);
   }
 }

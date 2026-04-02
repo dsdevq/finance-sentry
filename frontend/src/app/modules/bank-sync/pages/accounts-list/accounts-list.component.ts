@@ -19,16 +19,12 @@ import { SyncStatusComponent } from '../../components/sync-status/sync-status.co
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AccountsListComponent implements OnInit {
-  private readonly bankSyncService = inject(BankSyncService);
-  private readonly router = inject(Router);
-  private readonly cdr = inject(ChangeDetectorRef);
+  public accounts: BankAccount[] = [];
+  public isLoading = false;
+  public errorMessage: string | null = null;
+  public syncingAccountId: string | null = null;
 
-  accounts: BankAccount[] = [];
-  isLoading = false;
-  errorMessage: string | null = null;
-  syncingAccountId: string | null = null;
-
-  readonly statusLabels: Record<SyncStatus, string> = {
+  public readonly statusLabels: Record<SyncStatus, string> = {
     pending: 'Pending',
     syncing: 'Syncing',
     active: 'Active',
@@ -36,7 +32,7 @@ export class AccountsListComponent implements OnInit {
     reauth_required: 'Reauth Required',
   };
 
-  readonly statusClasses: Record<SyncStatus, string> = {
+  public readonly statusClasses: Record<SyncStatus, string> = {
     pending: 'badge-secondary',
     syncing: 'badge-warning',
     active: 'badge-success',
@@ -44,11 +40,15 @@ export class AccountsListComponent implements OnInit {
     reauth_required: 'badge-orange',
   };
 
-  ngOnInit(): void {
+  private readonly bankSyncService = inject(BankSyncService);
+  private readonly router = inject(Router);
+  private readonly cdr = inject(ChangeDetectorRef);
+
+  public ngOnInit(): void {
     this.loadAccounts();
   }
 
-  loadAccounts(): void {
+  public loadAccounts(): void {
     this.isLoading = true;
     this.errorMessage = null;
 
@@ -66,24 +66,24 @@ export class AccountsListComponent implements OnInit {
     });
   }
 
-  viewTransactions(accountId: string): void {
+  public viewTransactions(accountId: string): void {
     void this.router.navigate(['/accounts', accountId, 'transactions']);
   }
 
-  connectAccount(): void {
+  public connectAccount(): void {
     void this.router.navigate(['/accounts/connect']);
   }
 
-  triggerSync(accountId: string): void {
+  public triggerSync(accountId: string): void {
     this.syncingAccountId = accountId;
     this.cdr.markForCheck();
   }
 
-  getStatusLabel(status: SyncStatus): string {
+  public getStatusLabel(status: SyncStatus): string {
     return this.statusLabels[status] ?? status;
   }
 
-  getStatusClass(status: SyncStatus): string {
+  public getStatusClass(status: SyncStatus): string {
     return this.statusClasses[status] ?? 'badge-secondary';
   }
 }

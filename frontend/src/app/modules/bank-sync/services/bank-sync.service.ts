@@ -53,24 +53,24 @@ export class BankSyncService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiBaseUrl}/api/accounts`;
 
-  getLinkToken(): Observable<ConnectResponse> {
+  public getLinkToken(): Observable<ConnectResponse> {
     return this.http.post<ConnectResponse>(`${this.baseUrl}/connect`, {});
   }
 
-  exchangePublicToken(publicToken: string): Observable<LinkAccountResponse> {
+  public exchangePublicToken(publicToken: string): Observable<LinkAccountResponse> {
     return this.http.post<LinkAccountResponse>(`${this.baseUrl}/link`, {
       publicToken,
     });
   }
 
-  getAccounts(status?: string, currency?: string): Observable<AccountsResponse> {
+  public getAccounts(status?: string, currency?: string): Observable<AccountsResponse> {
     let params = new HttpParams();
     if (status) params = params.set('status', status);
     if (currency) params = params.set('currency', currency);
     return this.http.get<AccountsResponse>(this.baseUrl, { params });
   }
 
-  getTransactions(
+  public getTransactions(
     accountId: string,
     queryParams?: TransactionQueryParams
   ): Observable<TransactionListResponse> {
@@ -88,15 +88,15 @@ export class BankSyncService {
     });
   }
 
-  triggerSync(accountId: string): Observable<TriggerSyncResponse> {
+  public triggerSync(accountId: string): Observable<TriggerSyncResponse> {
     return this.http.post<TriggerSyncResponse>(`${this.baseUrl}/${accountId}/sync`, {});
   }
 
-  getSyncStatus(accountId: string): Observable<SyncStatusResponse> {
+  public getSyncStatus(accountId: string): Observable<SyncStatusResponse> {
     return this.http.get<SyncStatusResponse>(`${this.baseUrl}/${accountId}/sync-status`);
   }
 
-  pollSyncStatus(accountId: string, intervalMs = 2000): Observable<SyncStatusResponse> {
+  public pollSyncStatus(accountId: string, intervalMs = 2000): Observable<SyncStatusResponse> {
     return timer(0, intervalMs).pipe(
       switchMap(() => this.getSyncStatus(accountId)),
       takeWhile((s) => s.status !== 'success' && s.status !== 'failed', true),
@@ -104,11 +104,11 @@ export class BankSyncService {
     );
   }
 
-  disconnectAccount(accountId: string): Observable<void> {
+  public disconnectAccount(accountId: string): Observable<void> {
     return this.http.delete<void>(`${this.baseUrl}/${accountId}`);
   }
 
-  getDashboardData(): Observable<DashboardData> {
+  public getDashboardData(): Observable<DashboardData> {
     return this.http.get<DashboardData>(`${environment.apiBaseUrl}/api/dashboard/aggregated`);
   }
 }

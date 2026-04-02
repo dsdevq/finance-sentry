@@ -9,8 +9,6 @@
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { RouterTestingModule } from '@angular/router/testing';
-import { Router } from '@angular/router';
-import { Location } from '@angular/common';
 
 import { BankSyncService } from '../../../src/app/modules/bank-sync/services/bank-sync.service';
 import { PlaidLinkService } from '../../../src/app/modules/bank-sync/services/plaid-link.service';
@@ -106,11 +104,14 @@ const MOCK_TRANSACTIONS_RESPONSE: TransactionListResponse = {
 class MockPlaidLinkService {
   private successCallback?: (publicToken: string, metadata: unknown) => void;
 
-  loadScript(): Promise<void> {
+  public loadScript(): Promise<void> {
     return Promise.resolve();
   }
 
-  create(options: { onSuccess: (publicToken: string, metadata: unknown) => void }) {
+  public create(options: { onSuccess: (publicToken: string, metadata: unknown) => void }): {
+    open: () => void;
+    destroy: () => void;
+  } {
     this.successCallback = options.onSuccess;
     return {
       open: () => {
@@ -122,7 +123,7 @@ class MockPlaidLinkService {
   }
 
   /** Test helper: trigger Plaid success programmatically */
-  triggerSuccess(publicToken = 'public-sandbox-test-token'): void {
+  public triggerSuccess(publicToken = 'public-sandbox-test-token'): void {
     this.successCallback?.(publicToken, {});
   }
 }
@@ -132,8 +133,6 @@ class MockPlaidLinkService {
 describe('Connect Account Flow (E2E Integration)', () => {
   let httpMock: HttpTestingController;
   let bankSyncService: BankSyncService;
-  let router: Router;
-  let location: Location;
   let mockPlaidService: MockPlaidLinkService;
 
   beforeEach(async () => {
@@ -160,8 +159,6 @@ describe('Connect Account Flow (E2E Integration)', () => {
 
     httpMock = TestBed.inject(HttpTestingController);
     bankSyncService = TestBed.inject(BankSyncService);
-    router = TestBed.inject(Router);
-    location = TestBed.inject(Location);
   });
 
   afterEach(() => {

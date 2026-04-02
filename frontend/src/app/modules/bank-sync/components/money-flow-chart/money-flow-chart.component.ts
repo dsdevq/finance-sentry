@@ -10,18 +10,18 @@ import { MonthlyFlow } from '../../services/bank-sync.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MoneyFlowChartComponent {
-  @Input() monthlyFlowData: MonthlyFlow[] = [];
+  @Input() public monthlyFlowData: MonthlyFlow[] = [];
 
-  get sortedData(): MonthlyFlow[] {
+  public get sortedData(): MonthlyFlow[] {
     return [...this.monthlyFlowData].sort((a, b) => a.month.localeCompare(b.month));
   }
 
-  getMaxValue(): number {
+  public getMaxValue(): number {
     const values = this.monthlyFlowData.flatMap((m) => [m.inflow, m.outflow]);
     return Math.max(...values, 1);
   }
 
-  getBarHeightPercent(value: number): number {
+  public getBarHeightPercent(value: number): number {
     return Math.round((value / this.getMaxValue()) * 100);
   }
 }
