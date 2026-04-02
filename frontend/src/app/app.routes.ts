@@ -1,10 +1,10 @@
-import { Routes } from '@angular/router';
+import {Routes} from '@angular/router';
 
 export const APP_ROUTES: Routes = [
   {
     path: 'accounts',
     loadChildren: () =>
-      import('./modules/bank-sync/bank-sync.module').then((m) => m.BankSyncModule),
+      import('./modules/bank-sync/bank-sync.routes').then(({BANK_SYNC_ROUTES}) => BANK_SYNC_ROUTES),
   },
   {
     path: 'dashboard',
@@ -13,5 +13,5 @@ export const APP_ROUTES: Routes = [
         (m) => m.DashboardComponent
       ),
   },
-  { path: '', redirectTo: '/accounts', pathMatch: 'full' },
+  {path: '', redirectTo: '/accounts', pathMatch: 'full'},
 ];

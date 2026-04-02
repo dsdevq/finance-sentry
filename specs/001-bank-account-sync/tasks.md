@@ -815,7 +815,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
 
 ### Phase 6 Tasks
 
-- [ ] T501 [P] Implement comprehensive error handling + user-friendly messages in `backend/src/Modules/BankSync/API/Middleware/ErrorHandlingMiddleware.cs` and `backend/src/Modules/Shared/Exceptions/BankSyncException.cs`
+- [x] T501 [P] Implement comprehensive error handling + user-friendly messages in `backend/src/Modules/BankSync/API/Middleware/ErrorHandlingMiddleware.cs` and `backend/src/Modules/Shared/Exceptions/BankSyncException.cs`
   - **Details**: Error handler that:
     - Catches specific exceptions (PlaidApiException, DbUpdateException, etc.)
     - Delegates to PlaidErrorMapper (T306-A) for Plaid-specific error codes
@@ -828,7 +828,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Rate limit → 429 "Too many requests. Please wait before trying again."
   - **Success Criteria**: All exception paths tested, messages user-friendly
 
-- [ ] T502 [P] Implement security: Rate limiting on API endpoints in `backend/src/Modules/Shared/Security/RateLimitingMiddleware.cs`
+- [x] T502 [P] Implement security: Rate limiting on API endpoints in `backend/src/Modules/Shared/Security/RateLimitingMiddleware.cs`
   - **Details**: Middleware that rate-limits:
     - Anonymous users: 10 req/min
     - Authenticated users: 100 req/min per endpoint
@@ -836,7 +836,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Return 429 with Retry-After header
   - **Success Criteria**: Rate limiting blocks requests over limit, allows legit traffic
 
-- [ ] T503 [P] Implement security: Validate JWT token on every request in `backend/src/Modules/Shared/Security/JwtAuthenticationMiddleware.cs`
+- [x] T503 [P] Implement security: Validate JWT token on every request in `backend/src/Modules/Shared/Security/JwtAuthenticationMiddleware.cs`
   - **Details**: Middleware:
     - Extract Bearer token from Authorization header
     - Validate signature using JWT secret
@@ -845,7 +845,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Attach user ID to HttpContext
   - **Success Criteria**: Middleware validates correctly, rejects invalid tokens
 
-- [ ] T504 [P] Implement CORS for frontend origin in `backend/src/Startup/Program.cs`
+- [x] T504 [P] Implement CORS for frontend origin in `backend/src/Startup/Program.cs`
   - **Details**: Configure CORS to allow:
     - Origin: http://localhost:4200 (dev), https://finance-sentry.com (prod)
     - Methods: GET, POST, PUT, DELETE
@@ -853,21 +853,21 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Credentials: true
   - **Success Criteria**: Preflight requests handled, frontend can call API
 
-- [ ] T505 [P] Implement database query performance monitoring in `backend/src/Modules/Shared/Performance/EFQueryLoggerInterceptor.cs`
+- [x] T505 [P] Implement database query performance monitoring in `backend/src/Modules/Shared/Performance/EFQueryLoggerInterceptor.cs`
   - **Details**: EF Core query interceptor that:
     - Logs slow queries (> 100ms)
     - Counts database round-trips per request
     - Warns on N+1 query patterns
   - **Success Criteria**: Slow queries logged, N+1 patterns detected
 
-- [ ] T506 [P] Add API response pagination best practices in `backend/src/Modules/Shared/API/PaginationExtensions.cs`
+- [x] T506 [P] Add API response pagination best practices in `backend/src/Modules/Shared/API/PaginationExtensions.cs`
   - **Details**: Extension methods:
     - ApplyPagination(query, offset, limit): apply pagination to IQueryable
     - CreatePaginatedResponse(items, totalCount): wrap in pagination metadata
     - Validate: offset >= 0, limit <= 100
   - **Success Criteria**: All paginated endpoints use extension, validation works
 
-- [ ] T507 [P] Create API documentation (OpenAPI/Swagger) in `backend/src/Startup/Program.cs` and `docs/SWAGGER.md`
+- [x] T507 [P] Create API documentation (OpenAPI/Swagger) in `backend/src/Startup/Program.cs` and `docs/SWAGGER.md`
   - **Details**: Configure Swagger:
     - Document all endpoints: /accounts/connect, /accounts/link, /accounts, /accounts/{id}/transactions, /dashboard/aggregated, /dashboard/transfers
     - Include request/response examples
@@ -875,7 +875,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Document error codes
   - **Success Criteria**: Swagger UI renders at /swagger, all endpoints documented
 
-- [ ] T508 [P] Create postman collection for manual API testing in `docs/Bank-Sync-API.postman_collection.json`
+- [x] T508 [P] Create postman collection for manual API testing in `docs/Bank-Sync-API.postman_collection.json`
   - **Details**: Postman collection with:
     - All endpoints preconfigured
     - Environment variables for baseUrl, token, accountId
@@ -883,7 +883,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Tests for status codes
   - **Success Criteria**: Postman collection importable, requests work
 
-- [ ] T509 [P] Add input validation to all REST endpoints in `backend/src/Modules/BankSync/API/Validators/`
+- [x] T509 [P] Add input validation to all REST endpoints in `backend/src/Modules/BankSync/API/Validators/`
   - **Details**: FluentValidation rules:
     - publicToken: required, max 100 chars
     - startDate: valid ISO date, <= today
@@ -892,7 +892,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - limit: 1-100
   - **Success Criteria**: All endpoints validate input, return 400 with errors
 
-- [ ] T510 [P] Create database backup & recovery strategy documentation in `docs/DATABASE_BACKUP.md`
+- [x] T510 [P] Create database backup & recovery strategy documentation in `docs/DATABASE_BACKUP.md`
   - **Details**: Document:
     - Backup frequency (daily, weekly)
     - Recovery procedure
@@ -900,21 +900,21 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Point-in-time recovery process
   - **Success Criteria**: Documentation complete, recovery tested
 
-- [ ] T511 [P] Implement structured logging to cloud sink (Application Insights / CloudWatch) in `backend/src/Startup/Program.cs`
+- [x] T511 [P] Implement structured logging to cloud sink (Application Insights / CloudWatch) in `backend/src/Startup/Program.cs`
   - **Details**: Configure Serilog to send logs to:
     - Development: console + file
     - Production: Application Insights / CloudWatch
     - Include custom properties: correlation_id, user_id, operation (never plaintext tokens)
   - **Success Criteria**: Logs appear in cloud sink, structured fields searchable
 
-- [ ] T512 [P] Create health check endpoint: GET /health in `backend/src/Modules/Shared/Health/HealthCheckController.cs`
+- [x] T512 [P] Create health check endpoint: GET /health in `backend/src/Modules/Shared/Health/HealthCheckController.cs`
   - **Details**: Endpoint that checks:
     - Database connectivity (query SELECT 1)
     - Plaid API connectivity (make dummy call, don't count requests)
     - Return: { status: "healthy" | "degraded" | "unhealthy", checks: { database, plaid } }
   - **Success Criteria**: Endpoint responds 200 healthy, 503 unhealthy
 
-- [ ] T513 [P] Create database maintenance job: Backup encrypted credentials in `backend/src/Modules/Shared/Jobs/CredentialBackupJob.cs`
+- [x] T513 [P] Create database maintenance job: Backup encrypted credentials in `backend/src/Modules/Shared/Jobs/CredentialBackupJob.cs`
   - **Details**: Background job (runs weekly):
     - Extract all encrypted credentials
     - Create encrypted backup file
@@ -922,7 +922,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Log completion (never log plaintext)
   - **Success Criteria**: Job runs, backup created, can be restored
 
-- [ ] T514 Create security audit: Penetration test checklist in `docs/SECURITY_AUDIT.md`
+- [x] T514 Create security audit: Penetration test checklist in `docs/SECURITY_AUDIT.md`
   - **Details**: Checklist:
     - SQL injection: parameterized queries ✓
     - XSS: sanitized output ✓
@@ -931,21 +931,21 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Rate limiting: implemented ✓
   - **Success Criteria**: Checklist completed, vulnerabilities documented
 
-- [ ] T515 Create frontend security: Angular Content Security Policy in `frontend/src/index.html`
+- [x] T515 Create frontend security: Angular Content Security Policy in `frontend/src/index.html`
   - **Details**: Add CSP headers:
     - script-src 'self' cdn.plaid.com
     - style-src 'self' 'unsafe-inline'
     - img-src 'self' data:
   - **Success Criteria**: CSP headers set, browser console no violations
 
-- [ ] T516 Create frontend performance: Tree-shaking + code splitting in `frontend/angular.json`
+- [x] T516 Create frontend performance: Tree-shaking + code splitting in `frontend/angular.json`
   - **Details**: Configure Angular build:
     - Production: minification, tree-shaking, bundlebudgets
     - Code-splitting: lazy-load bank-sync module
     - Compress: enable gzip
   - **Success Criteria**: Build succeeds, bundle size < 500KB (gzipped)
 
-- [ ] T517 [P] Create end-to-end performance test in `backend/tests/Performance/E2EPerformanceTest.cs`
+- [x] T517 [P] Create end-to-end performance test in `backend/tests/Performance/E2EPerformanceTest.cs`
   - **Details**: Test that simulates:
     - Connect 50 accounts (measure time, validates SC-008)
     - Sync 500 transactions each (measure time)
@@ -953,7 +953,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Assert: sync < 5 min, query < 1 sec across 50 accounts
   - **Success Criteria**: Test passes, performance SLAs met (SC-006, SC-008 validated)
 
-- [ ] T518 [P] Create load testing script (k6 / Artillery) in `tests/load/bank-sync-load-test.js`
+- [x] T518 [P] Create load testing script (k6 / Artillery) in `tests/load/bank-sync-load-test.js`
   - **Details**: Script that:
     - Simulates 100 concurrent users
     - Each user: connect account → sync → query dashboard
@@ -961,7 +961,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Assert: p99 latency < 5 sec, error rate < 1%
   - **Success Criteria**: Script runs, results captured
 
-- [ ] T519 [P] Update README with setup + deployment instructions in `README.md`
+- [x] T519 [P] Update README with setup + deployment instructions in `README.md`
   - **Details**: Add:
     - Feature overview
     - Local development setup (clone → docker-compose up)
@@ -970,7 +970,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Environment variables
   - **Success Criteria**: Instructions clear, tested by new developer
 
-- [ ] T520 Create QA Test Plan document in `docs/QA_TEST_PLAN.md`
+- [x] T520 Create QA Test Plan document in `docs/QA_TEST_PLAN.md`
   - **Details**: Document:
     - Manual test cases per user story (US1, US2, US3)
     - Edge cases to test (credential expiry, bank outage, etc.)
@@ -978,21 +978,21 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Browser/device compatibility matrix
   - **Success Criteria**: Test plan comprehensive, covers all scenarios
 
-- [ ] T521 [P] Implement feature flag for gradual rollout in `backend/src/Modules/Shared/FeatureFlags/FeatureFlagService.cs`
+- [x] T521 [P] Implement feature flag for gradual rollout in `backend/src/Modules/Shared/FeatureFlags/FeatureFlagService.cs`
   - **Details**: Service using environment variable or LaunchDarkly:
     - Feature: "BANK_SYNC_ENABLED"
     - Rollout: 10% → 50% → 100% of users
     - API returns 503 or hides UI if disabled
   - **Success Criteria**: Feature can be toggled via config, no code changes needed
 
-- [ ] T522 [P] Create data migration guide: How to export/import bank data in `docs/DATA_EXPORT_GUIDE.md`
+- [x] T522 [P] Create data migration guide: How to export/import bank data in `docs/DATA_EXPORT_GUIDE.md`
   - **Details**: Explain:
     - Export format: JSON with encrypted credentials masked
     - Import format: restore from backup
     - GDPR compliance: how to delete user data
   - **Success Criteria**: Guide clear, tested
 
-- [ ] T523 [P] Create operations runbook: Troubleshooting common issues in `docs/OPERATIONS_RUNBOOK.md`
+- [x] T523 [P] Create operations runbook: Troubleshooting common issues in `docs/OPERATIONS_RUNBOOK.md`
   - **Details**: Document solutions for:
     - Sync failing: check Plaid API health, check network
     - High error rate: check database connections, check rate limits
@@ -1001,7 +1001,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
 
 <!-- CONSTITUTION V COMPLIANCE: Audit logging — "Audit logs record all data access" (MUST) -->
 
-- [ ] T524 [P] Create audit_log DB table and EF Core migration in `backend/src/Migrations/M002_AuditLogSchema.cs` and `backend/src/Modules/Shared/Persistence/AuditLogDbContext.cs`
+- [x] T524 [P] Create audit_log DB table and EF Core migration in `backend/src/Migrations/M002_AuditLogSchema.cs` and `backend/src/Modules/Shared/Persistence/AuditLogDbContext.cs`
   - **Details**:
     - New table `audit_logs` with columns: audit_id (UUID PK), user_id (UUID, indexed), action (VARCHAR 50: READ_ACCOUNT, READ_TRANSACTIONS, WRITE_ACCOUNT, DELETE_ACCOUNT, CREDENTIAL_ACCESS, SYNC_TRIGGERED), resource_type (VARCHAR 50), resource_id (UUID), ip_address (VARCHAR 45), user_agent (TEXT), performed_at (TIMESTAMPTZ NOT NULL), correlation_id (VARCHAR 64)
     - Add EF Core entity `AuditLog` to AuditLogDbContext
@@ -1009,7 +1009,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Never log sensitive data (no tokens, no account numbers beyond last 4)
   - **Success Criteria**: Migration applies cleanly, rollback succeeds, table exists in PostgreSQL
 
-- [ ] T525 [P] Implement AuditLogService recording all data access events in `backend/src/Modules/Shared/AuditLog/IAuditLogService.cs` and `backend/src/Modules/Shared/AuditLog/AuditLogService.cs`
+- [x] T525 [P] Implement AuditLogService recording all data access events in `backend/src/Modules/Shared/AuditLog/IAuditLogService.cs` and `backend/src/Modules/Shared/AuditLog/AuditLogService.cs`
   - **Details**:
     - Interface: `Task LogAsync(string userId, string action, string resourceType, string resourceId, string correlationId)`
     - Implementation writes a row to audit_logs table asynchronously (fire-and-forget; never blocks request path)
@@ -1024,7 +1024,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Never log plaintext credentials, tokens, or full account numbers
   - **Success Criteria**: AuditLog rows created for every data access, service registered in DI, no performance impact (async write)
 
-- [ ] T526 [P] Create integration tests for audit logging in `backend/tests/Integration/Shared/AuditLogServiceTests.cs`
+- [x] T526 [P] Create integration tests for audit logging in `backend/tests/Integration/Shared/AuditLogServiceTests.cs`
   - **Details**: Integration tests using testcontainers PostgreSQL:
     - Test: Call GET /accounts → verify audit_logs row inserted with action=READ_ACCOUNT, correct user_id and resource_id
     - Test: Call DELETE /accounts/{id} → verify audit_logs row with action=DELETE_ACCOUNT
@@ -1035,7 +1035,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
 
 <!-- FR-008 COMPLIANCE: Data retention enforcement — "store transaction history for at least 24 months" -->
 
-- [ ] T527 [P] Implement data retention enforcement job (24-month archival) in `backend/src/Modules/BankSync/Infrastructure/Jobs/DataRetentionJob.cs` and `backend/src/Modules/Shared/Jobs/RetentionPolicy.cs`
+- [x] T527 [P] Implement data retention enforcement job (24-month archival) in `backend/src/Modules/BankSync/Infrastructure/Jobs/DataRetentionJob.cs` and `backend/src/Modules/Shared/Jobs/RetentionPolicy.cs`
   - **Details**: Background job (runs monthly via Hangfire recurring job) that enforces FR-008: 24-month transaction retention policy.
     - **Archival logic**: Identify transactions where `posted_date < NOW() - INTERVAL '24 months'` AND `is_active = true`
     - **Soft-archive** (not hard delete): Set `is_active = false`, `deleted_at = NOW()`, add note: `archived_reason = 'retention_policy_24m'` (requires adding `archived_reason VARCHAR(50)` nullable column to transactions — add to migration T005 or new migration)
