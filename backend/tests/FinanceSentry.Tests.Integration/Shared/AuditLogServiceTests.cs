@@ -4,7 +4,9 @@ using FinanceSentry.Modules.BankSync.Domain;
 using FinanceSentry.Modules.BankSync.Infrastructure.AuditLog;
 using FinanceSentry.Modules.BankSync.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -22,16 +24,20 @@ public class AuditLogServiceTests : IDisposable
     public AuditLogServiceTests()
     {
         var services = new ServiceCollection();
+        // Shared root ensures all DbContext instances (across DI scopes) write to the same store.
+        var dbRoot = new InMemoryDatabaseRoot();
+        var dbName = $"audit-log-test-{Guid.NewGuid()}";
         services.AddDbContext<BankSyncDbContext>(options =>
-            options.UseInMemoryDatabase($"audit-log-test-{Guid.NewGuid()}"));
+            options.UseInMemoryDatabase(dbName, dbRoot));
         services.AddLogging();
 
         _provider = services.BuildServiceProvider();
         _db = _provider.GetRequiredService<BankSyncDbContext>();
         _db.Database.EnsureCreated();
 
+        var loggerFactory = _provider.GetRequiredService<ILoggerFactory>();
         _sut = new AuditLogService(_provider.GetRequiredService<IServiceScopeFactory>(),
-            NullLogger<AuditLogService>.Instance);
+            loggerFactory.CreateLogger<AuditLogService>());
     }
 
     [Fact]
@@ -42,10 +48,7 @@ public class AuditLogServiceTests : IDisposable
 
         _sut.Log(userId, AuditActions.ReadAccount, "BankAccount", resourceId, correlationId: "corr-001");
 
-        // Give fire-and-forget a moment to complete
-        await Task.Delay(500);
-
-        var row = await _db.AuditLogs.FirstOrDefaultAsync(a => a.UserId == userId);
+        var row = await PollForAuditRowAsync(userId);
         Assert.NotNull(row);
         Assert.Equal(AuditActions.ReadAccount, row.Action);
         Assert.Equal(resourceId, row.ResourceId);
@@ -60,9 +63,7 @@ public class AuditLogServiceTests : IDisposable
 
         _sut.Log(userId, AuditActions.DeleteAccount, "BankAccount", accountId);
 
-        await Task.Delay(500);
-
-        var row = await _db.AuditLogs.FirstOrDefaultAsync(a => a.UserId == userId);
+        var row = await PollForAuditRowAsync(userId);
         Assert.NotNull(row);
         Assert.Equal(AuditActions.DeleteAccount, row.Action);
     }
@@ -74,9 +75,7 @@ public class AuditLogServiceTests : IDisposable
 
         _sut.Log(userId, AuditActions.CredentialAccess, "EncryptedCredential", null);
 
-        await Task.Delay(500);
-
-        var row = await _db.AuditLogs.FirstOrDefaultAsync(a => a.UserId == userId);
+        var row = await PollForAuditRowAsync(userId);
         Assert.NotNull(row);
 
         // Verify no sensitive data fields are populated
@@ -108,6 +107,24 @@ public class AuditLogServiceTests : IDisposable
         });
 
         Assert.Null(exception);
+    }
+
+    /// <summary>
+    /// Polls the database every 100 ms until a row for <paramref name="userId"/> appears
+    /// or 3 seconds elapse. More reliable than a fixed Task.Delay for fire-and-forget writes.
+    /// </summary>
+    private async Task<AuditLog?> PollForAuditRowAsync(Guid userId)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(3);
+        while (DateTime.UtcNow < deadline)
+        {
+            var row = await _db.AuditLogs.AsNoTracking()
+                .FirstOrDefaultAsync(a => a.UserId == userId);
+            if (row != null)
+                return row;
+            await Task.Delay(100);
+        }
+        return null;
     }
 
     public void Dispose()

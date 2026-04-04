@@ -40,7 +40,7 @@
       "Bash(dotnet test:*)",
       "Bash(dotnet restore:*)",
       "Bash(npm info:*)",
-      "Bash(node -e \"const v=require\\(''''fs''''\\).readFileSync\\(''''/dev/stdin'''',''''utf8''''\\); const arr=JSON.parse\\(v\\); console.log\\(arr.filter\\(x=>x.startsWith\\(''''21.''''\\)\\).join\\(''''\\\\n''''\\)\\)\")"
+      "Bash(node -e \":*)"
     ]
   }
 }

@@ -26,16 +26,10 @@ using Xunit;
 /// Uses WebApplicationFactory with mocked infrastructure dependencies
 /// (no real Plaid calls, no real database).
 /// </summary>
-public class BankSyncAPIContractTests : IClassFixture<BankSyncApiFactory>
+public class BankSyncAPIContractTests(BankSyncApiFactory factory) : IClassFixture<BankSyncApiFactory>
 {
-    private readonly HttpClient _client;
-    private readonly BankSyncApiFactory _factory;
-
-    public BankSyncAPIContractTests(BankSyncApiFactory factory)
-    {
-        _factory = factory;
-        _client = factory.CreateAuthenticatedClient();
-    }
+    private readonly HttpClient _client = factory.CreateAuthenticatedClient();
+    private readonly BankSyncApiFactory _factory = factory;
 
     // ── POST /accounts/connect ───────────────────────────────────────────────
 
@@ -88,7 +82,7 @@ public class BankSyncAPIContractTests : IClassFixture<BankSyncApiFactory>
         // Repository returns account owned by a DIFFERENT user
         _factory.BankAccountRepoMock
             .Setup(r => r.GetByIdAsync(accountId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new FinanceSentry.Modules.BankSync.Domain.BankAccount(
+            .ReturnsAsync(new Modules.BankSync.Domain.BankAccount(
                 userId: Guid.NewGuid(), // different user
                 plaidItemId: "item_xxx",
                 bankName: "AIB",
@@ -113,7 +107,7 @@ public class BankSyncAPIContractTests : IClassFixture<BankSyncApiFactory>
 
         _factory.BankAccountRepoMock
             .Setup(r => r.GetByIdAsync(accountId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new FinanceSentry.Modules.BankSync.Domain.BankAccount(
+            .ReturnsAsync(new Modules.BankSync.Domain.BankAccount(
                 userId: userId, // same user as requesting
                 plaidItemId: "item_abc",
                 bankName: "Revolut",
@@ -125,7 +119,7 @@ public class BankSyncAPIContractTests : IClassFixture<BankSyncApiFactory>
 
         _factory.TransactionRepoMock
             .Setup(r => r.GetByAccountIdAsync(accountId, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<FinanceSentry.Modules.BankSync.Domain.Transaction>());
+            .ReturnsAsync(Array.Empty<Modules.BankSync.Domain.Transaction>());
         _factory.TransactionRepoMock
             .Setup(r => r.CountByAccountIdAsync(accountId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(0);
@@ -157,7 +151,7 @@ public class BankSyncApiFactory : WebApplicationFactory<Program>
     public Mock<IBankAccountRepository> BankAccountRepoMock { get; } = new(MockBehavior.Loose);
     public Mock<ITransactionRepository> TransactionRepoMock { get; } = new(MockBehavior.Loose);
 
-    protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.ConfigureServices(services =>
         {
@@ -167,7 +161,7 @@ public class BankSyncApiFactory : WebApplicationFactory<Program>
             ReplaceService(services, TransactionRepoMock.Object);
 
             // Provide minimal configuration to satisfy Program.cs startup
-            services.Configure<FinanceSentry.Infrastructure.Encryption.EncryptionOptions>(opts =>
+            services.Configure<Infrastructure.Encryption.EncryptionOptions>(opts =>
             {
                 opts.CurrentKeyVersion = 1;
                 opts.Keys = new Dictionary<int, string>
@@ -195,7 +189,12 @@ public class BankSyncApiFactory : WebApplicationFactory<Program>
 
     public HttpClient CreateAuthenticatedClient()
     {
-        var client = CreateClient();
+        // AllowAutoRedirect = false prevents HttpsRedirection middleware from
+        // causing a scheme-change redirect that strips the Authorization header.
+        var client = CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+        });
         client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", GenerateTestJwt());
         return client;
@@ -221,6 +220,6 @@ public class BankSyncApiFactory : WebApplicationFactory<Program>
         var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(T));
         if (descriptor != null)
             services.Remove(descriptor);
-        services.AddScoped<T>(_ => implementation);
+        services.AddScoped(_ => implementation);
     }
 }
