@@ -75,6 +75,15 @@ public class BankAccountRepository : IBankAccountRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IEnumerable<BankAccount>> GetAllActiveAsync(CancellationToken cancellationToken = default)
+    {
+        return await _context.BankAccounts
+            .Where(ba => ba.IsActive)
+            .Include(ba => ba.EncryptedCredential)
+            .OrderBy(ba => ba.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         return await _context.SaveChangesAsync(cancellationToken);
@@ -156,6 +165,42 @@ public class TransactionRepository : ITransactionRepository
             .CountAsync(t => t.AccountId == accountId, cancellationToken);
     }
 
+    public async Task<IEnumerable<Transaction>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Transactions
+            .Where(t => t.UserId == userId)
+            .OrderByDescending(t => t.PostedDate ?? t.TransactionDate)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IEnumerable<Transaction>> GetByUserIdSinceAsync(Guid userId, DateTime since, CancellationToken cancellationToken = default)
+    {
+        return await _context.Transactions
+            .Where(t => t.UserId == userId && (t.PostedDate >= since || t.TransactionDate >= since))
+            .OrderByDescending(t => t.PostedDate ?? t.TransactionDate)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task SoftDeleteByAccountIdAsync(Guid accountId, CancellationToken cancellationToken = default)
+    {
+        var now = DateTime.UtcNow;
+        // IgnoreQueryFilters() bypasses the IsActive global filter so already-inactive rows
+        // are also covered, making this operation idempotent.
+        var transactions = await _context.Transactions
+            .IgnoreQueryFilters()
+            .Where(t => t.AccountId == accountId && t.IsActive)
+            .ToListAsync(cancellationToken);
+
+        foreach (var t in transactions)
+        {
+            t.IsActive = false;
+            t.DeletedAt = now;
+            t.ArchivedReason = "account_deleted";
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         return await _context.SaveChangesAsync(cancellationToken);
@@ -227,6 +272,20 @@ public class SyncJobRepository : ISyncJobRepository
         _context.SyncJobs.Remove(job);
         await _context.SaveChangesAsync(cancellationToken);
         return true;
+    }
+
+    public async Task<bool> HasRunningJobAsync(Guid accountId, CancellationToken cancellationToken = default)
+    {
+        return await _context.SyncJobs
+            .AnyAsync(sj => sj.AccountId == accountId && sj.Status == "running", cancellationToken);
+    }
+
+    public async Task<SyncJob?> GetLatestSuccessfulByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await _context.SyncJobs
+            .Where(sj => sj.UserId == userId && sj.Status == "success")
+            .OrderByDescending(sj => sj.CompletedAt)
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

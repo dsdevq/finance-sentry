@@ -1,6 +1,6 @@
 <div class="transaction-list">
   <div class="transaction-header">
-    <button class="btn-back" (click)="goBack()" aria-label="Back to accounts">← Back</button>
+    <button (click)="goBack()" class="btn-back" aria-label="Back to accounts">← Back</button>
     <h2>{{ bankName || 'Account' }} Transactions</h2>
     @if (currency) {
       <span class="currency-badge">{{ currency }}</span>
@@ -9,20 +9,10 @@
 
   <div class="filters" role="search" aria-label="Filter transactions">
     <label for="startDate">From</label>
-    <input
-      id="startDate"
-      type="date"
-      [(ngModel)]="startDate"
-      aria-label="Start date filter"
-    />
+    <input [(ngModel)]="startDate" id="startDate" type="date" aria-label="Start date filter" />
     <label for="endDate">To</label>
-    <input
-      id="endDate"
-      type="date"
-      [(ngModel)]="endDate"
-      aria-label="End date filter"
-    />
-    <button class="btn-secondary" (click)="applyFilters()">Apply</button>
+    <input [(ngModel)]="endDate" id="endDate" type="date" aria-label="End date filter" />
+    <button (click)="applyFilters()" class="btn-secondary">Apply</button>
   </div>
 
   @if (isLoading) {
@@ -34,7 +24,7 @@
   @if (errorMessage) {
     <div class="error-state" role="alert">
       <p class="error-message">{{ errorMessage }}</p>
-      <button class="btn-secondary" (click)="loadTransactions()">Retry</button>
+      <button (click)="loadTransactions()" class="btn-secondary">Retry</button>
     </div>
   }
 
@@ -58,13 +48,21 @@
         <tbody>
           @for (tx of transactions; track tx.transactionId) {
             <tr [class.pending]="tx.isPending">
-              <td>{{ (tx.postedDate ?? tx.pendingDate) | date: 'mediumDate' }}</td>
+              <td>{{ tx.postedDate ?? tx.pendingDate | date: 'mediumDate' }}</td>
               <td>{{ tx.description }}</td>
-              <td [class.debit]="tx.transactionType === 'debit'" [class.credit]="tx.transactionType === 'credit'">
-                {{ tx.transactionType === 'debit' ? '-' : '+' }}{{ tx.amount | number: '1.2-2' }} {{ currency }}
+              <td
+                [class.debit]="tx.transactionType === 'debit'"
+                [class.credit]="tx.transactionType === 'credit'"
+              >
+                {{ tx.transactionType === 'debit' ? '-' : '+' }}{{ tx.amount | number: '1.2-2' }}
+                {{ currency }}
               </td>
               <td>
-                <span [class]="'badge ' + (tx.transactionType === 'debit' ? 'badge-danger' : 'badge-success')">
+                <span
+                  [class]="
+                    'badge ' + (tx.transactionType === 'debit' ? 'badge-danger' : 'badge-success')
+                  "
+                >
                   {{ tx.transactionType | titlecase }}
                 </span>
               </td>
@@ -81,18 +79,18 @@
 
       <div class="pagination" role="navigation" aria-label="Transaction pagination">
         <button
-          class="btn-secondary"
           [disabled]="!hasPrevious"
           (click)="previousPage()"
+          class="btn-secondary"
           aria-label="Previous page"
         >
           Previous
         </button>
         <span class="page-info">Page {{ currentPage }} of {{ totalPages }}</span>
         <button
-          class="btn-secondary"
           [disabled]="!hasNext"
           (click)="nextPage()"
+          class="btn-secondary"
           aria-label="Next page"
         >
           Next

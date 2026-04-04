@@ -18,6 +18,7 @@ public class BankSyncDbContext : DbContext
     public DbSet<Transaction> Transactions { get; set; } = null!;
     public DbSet<SyncJob> SyncJobs { get; set; } = null!;
     public DbSet<EncryptedCredential> EncryptedCredentials { get; set; } = null!;
+    public DbSet<AuditLog> AuditLogs { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -153,11 +154,33 @@ public class BankSyncDbContext : DbContext
             .HasMaxLength(50)
             .HasDefaultValue("pending");
 
+        syncJobBuilder.Property(sj => sj.UserId)
+            .IsRequired();
+
+        syncJobBuilder.Property(sj => sj.CorrelationId)
+            .HasMaxLength(100)
+            .IsRequired(false);
+
         syncJobBuilder.Property(sj => sj.ErrorMessage)
             .HasMaxLength(1000);
 
         syncJobBuilder.Property(sj => sj.ErrorCode)
             .HasMaxLength(50);
+
+        syncJobBuilder.Property(sj => sj.TransactionCountFetched)
+            .HasDefaultValue(0);
+
+        syncJobBuilder.Property(sj => sj.TransactionCountDeduped)
+            .HasDefaultValue(0);
+
+        syncJobBuilder.Property(sj => sj.RetryCount)
+            .HasDefaultValue(0);
+
+        syncJobBuilder.Property(sj => sj.WebhookTriggered)
+            .HasDefaultValue(false);
+
+        syncJobBuilder.HasIndex(sj => new { sj.AccountId, sj.Status })
+            .HasDatabaseName("idx_sync_job_account_status");
 
         syncJobBuilder.Property(sj => sj.CreatedAt)
             .HasDefaultValueSql("CURRENT_TIMESTAMP");
@@ -185,5 +208,36 @@ public class BankSyncDbContext : DbContext
 
         encryptedCredBuilder.Property(ec => ec.CreatedAt)
             .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+        // Configure AuditLog entity (T524)
+        var auditLogBuilder = modelBuilder.Entity<AuditLog>();
+
+        auditLogBuilder.ToTable("audit_logs");
+        auditLogBuilder.HasKey(al => al.AuditId);
+
+        auditLogBuilder.HasIndex(al => new { al.UserId, al.PerformedAt })
+            .HasDatabaseName("idx_audit_log_user_performed_at");
+
+        auditLogBuilder.HasIndex(al => new { al.ResourceType, al.ResourceId })
+            .HasDatabaseName("idx_audit_log_resource");
+
+        auditLogBuilder.Property(al => al.Action)
+            .IsRequired()
+            .HasMaxLength(50);
+
+        auditLogBuilder.Property(al => al.ResourceType)
+            .IsRequired()
+            .HasMaxLength(50);
+
+        auditLogBuilder.Property(al => al.IpAddress)
+            .HasMaxLength(45)
+            .IsRequired(false);
+
+        auditLogBuilder.Property(al => al.CorrelationId)
+            .HasMaxLength(64)
+            .IsRequired(false);
+
+        auditLogBuilder.Property(al => al.PerformedAt)
+            .IsRequired();
     }
 }

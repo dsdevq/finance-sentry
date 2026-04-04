@@ -2,12 +2,22 @@ using Serilog;
 using FinanceSentry.Modules.BankSync;
 using FinanceSentry.Modules.BankSync.Infrastructure.Persistence.Repositories;
 using FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
+using FinanceSentry.Modules.BankSync.Infrastructure.Security;
+using FinanceSentry.Modules.BankSync.Infrastructure.Services;
+using FinanceSentry.Modules.BankSync.Infrastructure.Jobs;
+using FinanceSentry.Modules.BankSync.Infrastructure.AuditLog;
+using FinanceSentry.Modules.BankSync.Infrastructure.FeatureFlags;
+using FinanceSentry.Modules.BankSync.Infrastructure.Performance;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
 using FinanceSentry.Modules.BankSync.Application.Services;
+using FinanceSentry.Modules.BankSync.API.Middleware;
 using FinanceSentry.Infrastructure;
 using FinanceSentry.Infrastructure.Encryption;
 using FinanceSentry.Infrastructure.Logging;
+using Hangfire;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,6 +30,17 @@ builder.Host.UseSerilog((context, loggerConfig) =>
         .Enrich.FromLogContext()
         .MinimumLevel.Information()
 );
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Frontend", policy =>
+    {
+        policy
+            .WithOrigins("http://localhost:4200")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 
 // ── ASP.NET Core services ───────────────────────────────────────────────────
 builder.Services.AddControllers();
@@ -72,26 +93,92 @@ builder.Services.AddHttpClient<IPlaidClient, PlaidHttpClient>(client =>
     client.BaseAddress = new Uri(builder.Configuration["Plaid:BaseUrl"] ?? "https://sandbox.plaid.com");
 });
 builder.Services.AddScoped<PlaidAdapter>();
+builder.Services.AddScoped<FinanceSentry.Modules.BankSync.Infrastructure.Plaid.IPlaidAdapter>(
+    sp => sp.GetRequiredService<PlaidAdapter>());
 
 // ── Infrastructure services ──────────────────────────────────────────────────
 builder.Services.AddSingleton<CorrelationIdAccessor>();
 builder.Services.AddScoped<ICorrelationIdAccessor>(sp => sp.GetRequiredService<CorrelationIdAccessor>());
 builder.Services.AddScoped<IBankSyncLogger, BankSyncLogger>();
 
+// ── Webhook security (T306) ──────────────────────────────────────────────────
+builder.Services.AddSingleton<IWebhookSignatureValidator, WebhookSignatureValidator>();
+
+// ── Plaid error mapping (T306-A) ─────────────────────────────────────────────
+builder.Services.AddSingleton<IPlaidErrorMapper, PlaidErrorMapper>();
+
+// ── Sync services (T302, T307) ───────────────────────────────────────────────
+builder.Services.AddScoped<IScheduledSyncService, ScheduledSyncService>();
+builder.Services.AddScoped<ITransactionSyncCoordinator, TransactionSyncCoordinator>();
+
+// ── Dashboard / aggregation services (T401–T410) ─────────────────────────────
+builder.Services.AddScoped<IAggregationService, AggregationService>();
+builder.Services.AddScoped<IMoneyFlowStatisticsService, MoneyFlowStatisticsService>();
+builder.Services.AddScoped<IMerchantCategoryStatisticsService, MerchantCategoryStatisticsService>();
+builder.Services.AddScoped<IDashboardQueryService, DashboardQueryService>();
+builder.Services.AddScoped<ITransferDetectionService, TransferDetectionService>();
+
+// ── Hangfire background jobs (T303, T304) ────────────────────────────────────
+builder.Services.AddHangfireServices(builder.Configuration);
+builder.Services.AddScoped<ScheduledSyncJob>();
+builder.Services.AddScoped<SyncScheduler>();
+builder.Services.AddScoped<DataRetentionJob>();
+builder.Services.AddScoped<CredentialBackupJob>();
+
+// ── Feature flags (T521) ─────────────────────────────────────────────────────
+builder.Services.AddSingleton<IFeatureFlagService, FeatureFlagService>();
+
+// ── Audit logging (T524–T525) ────────────────────────────────────────────────
+builder.Services.AddSingleton<IAuditLogService, AuditLogService>();
+
+// ── EF query performance interceptor (T505) ─────────────────────────────────
+builder.Services.AddScoped<EFQueryLoggerInterceptor>();
+
+// ── Health checks (T512) ─────────────────────────────────────────────────────
+builder.Services.AddHealthChecks()
+    .AddNpgSql(connectionString, name: "npgsql", tags: ["ready"]);
+
+// ── Rate limiting (T502) ─────────────────────────────────────────────────────
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter(RateLimitingPolicies.Authenticated, cfg =>
+    {
+        cfg.PermitLimit = 100;
+        cfg.Window = TimeSpan.FromMinutes(1);
+        cfg.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        cfg.QueueLimit = 0;
+    });
+    options.AddFixedWindowLimiter(RateLimitingPolicies.Anonymous, cfg =>
+    {
+        cfg.PermitLimit = 10;
+        cfg.Window = TimeSpan.FromMinutes(1);
+        cfg.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        cfg.QueueLimit = 0;
+    });
+    options.RejectionStatusCode = 429;
+});
+
 var app = builder.Build();
 
 // ── Middleware pipeline ───────────────────────────────────────────────────────
+app.UseMiddleware<ErrorHandlingMiddleware>();
 app.UseMiddleware<CorrelationIdMiddleware>();
+app.UseMiddleware<JwtAuthenticationMiddleware>();
+
+app.UseCors("Frontend");
+app.UseRateLimiter();
 
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+    app.UseHangfireDashboard("/hangfire");
 }
 
 app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHealthChecks("/health/ready");
 
 app.Run();
 

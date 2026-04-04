@@ -2,13 +2,15 @@ namespace FinanceSentry.Modules.BankSync.API.Controllers;
 
 using FinanceSentry.Modules.BankSync.Application.Commands;
 using FinanceSentry.Modules.BankSync.Application.Queries;
+using FinanceSentry.Modules.BankSync.Application.Services;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
 using FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
+using Hangfire;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
 /// <summary>
-/// REST endpoints for Bank Account Sync (US1).
+/// REST endpoints for Bank Account Sync (US1 + US2).
 /// All endpoints are user-scoped — FR-009.
 /// </summary>
 [ApiController]
@@ -19,14 +21,26 @@ public class BankSyncController : ControllerBase
     private readonly PlaidAdapter _plaid;
     private readonly IBankAccountRepository _accounts;
     private readonly ITransactionRepository _transactions;
+    private readonly IBackgroundJobClient _backgroundJobs;
+    private readonly ISyncJobRepository _syncJobs;
+    private readonly ITransactionSyncCoordinator _coordinator;
 
-    public BankSyncController(IMediator mediator, PlaidAdapter plaid,
-        IBankAccountRepository accounts, ITransactionRepository transactions)
+    public BankSyncController(
+        IMediator mediator,
+        PlaidAdapter plaid,
+        IBankAccountRepository accounts,
+        ITransactionRepository transactions,
+        IBackgroundJobClient backgroundJobs,
+        ISyncJobRepository syncJobs,
+        ITransactionSyncCoordinator coordinator)
     {
-        _mediator = mediator;
-        _plaid = plaid;
-        _accounts = accounts;
-        _transactions = transactions;
+        _mediator       = mediator;
+        _plaid          = plaid;
+        _accounts       = accounts;
+        _transactions   = transactions;
+        _backgroundJobs = backgroundJobs;
+        _syncJobs       = syncJobs;
+        _coordinator    = coordinator;
     }
 
     // ── POST /api/accounts/connect ── T205 ───────────────────────────────────
@@ -124,6 +138,96 @@ public class BankSyncController : ControllerBase
             totalCount,
             hasMore = (offset + limit) < totalCount
         });
+    }
+
+    // ── POST /api/accounts/{accountId}/sync ── T308 ──────────────────────────
+
+    /// <summary>
+    /// Manually triggers an asynchronous sync for the given account.
+    /// Returns 202 Accepted with the Hangfire job ID.
+    /// Returns 409 Conflict if a sync is already running.
+    /// </summary>
+    [HttpPost("{accountId:guid}/sync")]
+    public async Task<IActionResult> TriggerSync(
+        Guid accountId,
+        [FromQuery] Guid userId,
+        CancellationToken ct)
+    {
+        // FR-009: ownership check
+        var account = await _accounts.GetByIdAsync(accountId, ct);
+        if (account == null || account.UserId != userId)
+            return NotFound(new { error = "Account not found." });
+
+        // Idempotency: reject if sync already running
+        if (await _syncJobs.HasRunningJobAsync(accountId, ct))
+            return Conflict(new { error = "A sync is already in progress for this account." });
+
+        var hangfireJobId = _backgroundJobs.Enqueue<FinanceSentry.Modules.BankSync.Infrastructure.Jobs.ScheduledSyncJob>(
+            job => job.ExecuteSyncAsync(accountId));
+
+        return Accepted(new
+        {
+            jobId   = hangfireJobId,
+            message = "Sync enqueued. Use GET /api/accounts/{accountId}/sync-status to track progress."
+        });
+    }
+
+    // ── GET /api/accounts/{accountId}/sync-status ── T309 ───────────────────
+
+    /// <summary>
+    /// Returns the latest sync job status for the given account.
+    /// </summary>
+    [HttpGet("{accountId:guid}/sync-status")]
+    public async Task<IActionResult> GetSyncStatus(
+        Guid accountId,
+        [FromQuery] Guid userId,
+        CancellationToken ct)
+    {
+        // FR-009: ownership check
+        var account = await _accounts.GetByIdAsync(accountId, ct);
+        if (account == null || account.UserId != userId)
+            return NotFound(new { error = "Account not found." });
+
+        var latestJob = await _syncJobs.GetLatestByAccountIdAsync(accountId, ct);
+        if (latestJob == null)
+            return Ok(new { status = "never_synced", message = "No sync history for this account." });
+
+        return Ok(new
+        {
+            status                  = latestJob.Status,
+            transactionCountFetched = latestJob.TransactionCountFetched,
+            transactionCountDeduped = latestJob.TransactionCountDeduped,
+            errorMessage            = latestJob.ErrorMessage,
+            lastSyncTimestamp       = latestJob.CompletedAt,
+            startedAt               = latestJob.StartedAt,
+            webhookTriggered        = latestJob.WebhookTriggered
+        });
+    }
+
+    // ── DELETE /api/accounts/{accountId} ── T309-A ───────────────────────────
+
+    /// <summary>
+    /// Soft-deletes the bank account and all associated transactions.
+    /// Account and transactions are marked IsActive=false for audit trail preservation.
+    /// </summary>
+    [HttpDelete("{accountId:guid}")]
+    public async Task<IActionResult> DeleteAccount(
+        Guid accountId,
+        [FromQuery] Guid userId,
+        CancellationToken ct)
+    {
+        // FR-009: ownership check
+        var account = await _accounts.GetByIdAsync(accountId, ct);
+        if (account == null || account.UserId != userId)
+            return NotFound(new { error = "Account not found." });
+
+        // Soft-delete all transactions for the account
+        await _transactions.SoftDeleteByAccountIdAsync(accountId, ct);
+
+        // Soft-delete the account itself
+        await _accounts.DeleteAsync(accountId, ct);
+
+        return NoContent();
     }
 }
 

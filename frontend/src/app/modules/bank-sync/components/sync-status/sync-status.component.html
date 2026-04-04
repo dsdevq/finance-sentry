@@ -1,0 +1,45 @@
+<div class="sync-status">
+  <!-- Status badge -->
+  <div [class]="getSyncBadgeClass()" class="sync-badge">
+    @if (isSyncing) {
+      <span class="spinner">&#x27F3;</span>
+    }
+    @if (syncStatus?.status === 'success') {
+      <span>&#x2713;</span>
+    }
+    @if (syncStatus?.status === 'failed') {
+      <span>&#x2717;</span>
+    }
+    @if (!syncStatus) {
+      <span>&ndash;</span>
+    }
+    <span class="status-text">
+      {{ isSyncing ? 'Syncing...' : (syncStatus?.status | titlecase) || 'Unknown' }}
+    </span>
+  </div>
+
+  <!-- Last synced -->
+  @if (syncStatus) {
+    <div class="last-synced">
+      Last synced: {{ getRelativeTime(syncStatus.lastSyncTimestamp) }}
+      @if (syncStatus.transactionCountFetched > 0) {
+        <span>({{ syncStatus.transactionCountFetched }} transactions)</span>
+      }
+    </div>
+  }
+
+  <!-- Error message -->
+  @if (errorMessage) {
+    <div class="error-message">
+      {{ errorMessage }}
+      <button (click)="triggerSync()" class="btn-retry">Retry</button>
+    </div>
+  }
+
+  <!-- Sync Now button -->
+  @if (!errorMessage) {
+    <button [disabled]="isSyncing" (click)="triggerSync()" class="btn-sync-now">
+      {{ isSyncing ? 'Syncing...' : 'Sync Now' }}
+    </button>
+  }
+</div>

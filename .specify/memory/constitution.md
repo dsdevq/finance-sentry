@@ -1,10 +1,13 @@
-<!-- SYNC IMPACT REPORT - Constitution 1.0.0
-Version: 1.0.0 (NEW)
-Bump Type: MAJOR (Initial ratification)
-Principles Added: I. Modular Monolith Architecture, II. Code Quality Enforcement, III. Multi-Source Financial Integration, IV. AI-Driven Analytics & Insights, V. Security-First Financial Data Handling
-Sections Added: Tech Stack Minimums, Development Workflow & Quality Gates
-Status: ✅ Templates aligned - plan.md, spec.md, tasks.md reviewed and aligned with modular + quality-first discipline
-Deferred: None
+<!-- SYNC IMPACT REPORT - Constitution 1.1.0
+Version: 1.0.0 → 1.1.0
+Bump Type: MINOR (Branching strategy, versioning, and tagging governance added)
+Principles Modified: None
+Sections Added: 
+  - Branching Strategy (Git workflow per-task isolation)
+  - Versioning & Tagging Policy (frontend package.json, API semantic versioning, GitHub tags)
+  - PR/Merge Workflow (automated version bumping, tag creation)
+Status: ✅ Templates remain compatible - no spec/plan/task amendments required (governance only)
+Follow-up: Implement pre-commit hook to enforce version bumps on frontend/API changes
 -->
 
 # Finance Sentry Constitution
@@ -46,6 +49,23 @@ All financial data is encrypted at rest and in transit. Authentication is enforc
 
 ## Development Workflow & Quality Gates
 
+### Branching Strategy
+
+All work MUST follow per-task feature branching discipline:
+
+- **Branch Naming**: `<feature-id>-<description>` (e.g., `001-bank-account-sync`, `T211-bank-account-tests`)
+- **Isolation**: Each task/story gets a dedicated branch from the current `main` or feature branch parent
+- **Per-Task Branching**: Do NOT commit multiple independent tasks to a single branch. Each logical task/story must have its own branch for independent review and potential rollback
+- **Lifecycle**:
+  1. Create branch from `main` (or current feature parent if sub-task)
+  2. Implement task, pass all tests, update versions if required (see Versioning & Tagging Policy)
+  3. Open PR to `main` (or parent feature branch)
+  4. Pass CI/CD (linting, tests, coverage)
+  5. Code review approval (MUST verify compliance with Principles I–V)
+  6. Merge to `main`
+  7. **Delete branch immediately after merge** (enforce via GitHub setting: "Automatically delete head branches")
+  8. **Create new branch from updated `main`** if continuing work on next task
+
 ### Code Review & Compliance
 
 Every PR MUST verify compliance with Core Principles I–V. Violations block merge:
@@ -53,36 +73,105 @@ Every PR MUST verify compliance with Core Principles I–V. Violations block mer
 - Missing or incomplete tests → automatic block
 - Non-encrypted data handling → automatic block
 - Coupling between modules → automatic block
+- Version NOT bumped on frontend/API changes → automatic block (see Versioning & Tagging Policy)
+- Tag NOT created for version bump → automatic block (see Versioning & Tagging Policy)
 
-Code review checklist includes security, testability, and adherence to modular boundaries.
+Code review checklist includes security, testability, adherence to modular boundaries, and version/tagging compliance.
 
 ### Testing Discipline
 
 - **Unit Tests**: Required for all business logic (>80% coverage target)
 - **Integration Tests**: Required for inter-module contracts and API boundaries
 - **Contract Tests**: Required for external API integrations (banks, brokers, Binance)
-- Test-First: Tests written and passing BEFORE feature implementation (TDD)
+- **Test-First**: Tests written and passing BEFORE feature implementation (TDD)
 - All tests must run in CI/CD pipeline; red pipeline blocks merge
+
+### Versioning & Tagging Policy
+
+#### Frontend (Angular SPA) Versioning
+
+- **Location**: `frontend/package.json` - `"version"` field
+- **Trigger**: Any change to Angular components, services, models, styling, or routing
+- **Semver Scheme**: MAJOR.MINOR.PATCH
+  - **MAJOR**: Breaking UI changes, major API contract change (requires backend coordination)
+  - **MINOR**: New component/feature, new service method, non-breaking changes
+  - **PATCH**: Bug fixes, dependency updates, style refinements
+- **Requirement**: Version bump MUST be committed in the same PR as the feature/fix
+- **CI/CD Check**: Pipeline validates that version in `package.json` matches the commit (MUST increment if any .ts/.html/.scss changed under `frontend/src/`)
+
+#### API (Backend) Versioning
+
+- **Location**: `FinanceSentry.API.csproj` - `<PropertyGroup><Version>` field, and OpenAPI/Swagger documentation
+- **Trigger**: Any change to REST API contract (new endpoint, parameter addition, response schema change, deprecation)
+- **Semver Scheme**: MAJOR.MINOR.PATCH
+  - **MAJOR**: Breaking endpoint changes (e.g., parameter removal, response structure incompatible with clients)
+  - **MINOR**: New endpoints, new optional parameters, new response fields
+  - **PATCH**: Bug fixes, security updates, endpoint improvements (no client impact)
+- **Requirement**: Version bump MUST be committed in the same PR as the API change
+- **CI/CD Check**: Pipeline validates version increment on PR
+- **OpenAPI/Swagger Update**: API documentation in `docs/SWAGGER.md` (or auto-generated) MUST reflect version
+
+#### GitHub Tags
+
+- **Naming Convention**: `v<MAJOR>.<MINOR>.<PATCH>` (e.g., `v0.2.0`, `v1.0.0-beta`)
+- **Scope**: Tags MUST be created for **both** frontend and backend version bumps
+  - If only frontend changes: tag as `frontend-v<VERSION>` (e.g., `frontend-v0.2.0`)
+  - If only backend changes: tag as `backend-v<VERSION>` (e.g., `backend-v0.1.0`)
+  - If both change in same PR: **coordination required**—create separate tags or single tag if coordinated release
+- **Timing**: Tag MUST be created after merge to `main` (via GitHub release automation or manual `git tag` + push)
+- **Release Notes**: Each tag MUST have release notes documenting changes (generated from PR description + linked issues)
+- **Automation**: CI/CD SHOULD automatically create tag on merge if version detected (recommended: GitHub Actions workflow `on: push to main`)
+
+#### Combined Example Workflow
+
+```
+1. Developer creates branch: git checkout -b T206-plaid-link-endpoint
+2. Implements POST /accounts/link REST endpoint
+3. Bumps backend version in FinanceSentry.API.csproj: 0.1.0 → 0.1.1
+4. Commits: "feat: implement POST /accounts/link endpoint (closes T206)"
+5. Pushes branch, opens PR
+6. CI/CD:
+   - ✅ Builds backend
+   - ✅ Runs tests (coverage >80%)
+   - ✅ Linting passes
+   - ✅ Validates version bump: 0.1.0 → 0.1.1 detected in .csproj ✓
+7. Code review approves
+8. Merge to `main`
+9. GitHub Actions detects version bump → creates tag `backend-v0.1.1`
+10. Release notes auto-populated from PR
+11. Branch deleted (automatic)
+12. Developer creates new branch for next task: git checkout -b T207-get-accounts
+```
 
 ### Deployment Process
 
-1. Feature branch → Pull Request (CI: build + lint + tests)
-2. Code review approval (MUST verify compliance)
+1. Feature branch → Pull Request (CI: build + lint + tests + version/tag validation)
+2. Code review approval (MUST verify compliance + version correctness)
 3. Merge to `main`
-4. Automated deployment to staging (via Docker)
-5. Manual verification in staging
-6. Production deployment (manual gate—team lead approval)
+4. **Automatic tag creation** (if version detected) or manual tag if required
+5. Automated deployment to staging (via Docker)
+6. Manual verification in staging
+7. Production deployment (manual gate—team lead approval)
 
-Rollback procedure documented and tested monthly.
+Rollback procedure documented and tested monthly. **Rollback includes tag management**: if reverting commits, delete associated version tags and recreate if necessary.
 
 ## Governance
 
 The constitution supersedes all other development practices. Amendments require documentation of rationale, impact on current tasks, and approval by team lead (Denys).
 
-**Compliance Enforcement**: All PRs are subject to automated compliance checks (linting, tests, security) and manual verification per architecture. Violations require explicit remediation or team lead approval. 
+**Compliance Enforcement**: All PRs are subject to automated compliance checks (linting, tests, security, version bumps, tagging) and manual verification per architecture. Violations require explicit remediation or team lead approval. 
 
 **Principles Trump Convenience**: When speed conflicts with a principle, the principle wins. Exceptions are documented and tracked.
 
-**Version Policy**: MAJOR bump for principle additions/removals, MINOR for new sections or guidance expansions, PATCH for clarifications or typos. Each version increments last amended date.
+**Branch Discipline**: Per-task branching is MANDATORY. Mixed multi-task branches require explicit team lead approval (rare exception for coordinated refactors).
 
-**Version**: 1.0.0 | **Ratified**: 2026-03-21 | **Last Amended**: 2026-03-21
+**Version & Tagging Enforcement**: Automatic CI/CD checks MUST validate version bumps and tag creation. Missing version bump or tag blocks PR merge.
+
+**Version Policy**: 
+- MAJOR bump for principle additions/removals or backward-incompatible API changes
+- MINOR bump for new principles/sections or new API endpoints
+- PATCH bump for clarifications, typos, or API bug fixes
+- Each version change increments **Last Amended** date (ISO format)
+- Applies to both constitution versioning and feature versioning (frontend/backend)
+
+**Version**: 1.1.0 | **Ratified**: 2026-03-21 | **Last Amended**: 2026-04-04

@@ -1,0 +1,24 @@
+<div class="category-chart">
+  @if (topCategoriesData().length === 0) {
+    <div class="no-data">No spending data available</div>
+  }
+  @if (topCategoriesData().length > 0) {
+    <div class="category-list">
+      @for (item of sortedData; track $index) {
+        <div class="category-row">
+          <div class="category-name">{{ item.category }}</div>
+          <div class="category-bar-container">
+            <div
+              [style.width.%]="getBarWidthPercent(item.percentOfTotal)"
+              class="category-bar"
+            ></div>
+          </div>
+          <div class="category-values">
+            <span class="spend">{{ item.totalSpend | number: '1.2-2' }}</span>
+            <span class="percent">({{ item.percentOfTotal | number: '1.1-1' }}%)</span>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

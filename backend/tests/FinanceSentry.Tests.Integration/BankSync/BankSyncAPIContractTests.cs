@@ -1,14 +1,21 @@
 namespace FinanceSentry.Tests.Integration.BankSync;
 
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Security.Claims;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
+using FinanceSentry.Modules.BankSync.Infrastructure.Persistence;
 using FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
 using Moq;
+using System.IdentityModel.Tokens.Jwt;
 using Xunit;
 
 /// <summary>
@@ -22,16 +29,10 @@ using Xunit;
 /// Uses WebApplicationFactory with mocked infrastructure dependencies
 /// (no real Plaid calls, no real database).
 /// </summary>
-public class BankSyncAPIContractTests : IClassFixture<BankSyncApiFactory>
+public class BankSyncAPIContractTests(BankSyncApiFactory factory) : IClassFixture<BankSyncApiFactory>
 {
-    private readonly HttpClient _client;
-    private readonly BankSyncApiFactory _factory;
-
-    public BankSyncAPIContractTests(BankSyncApiFactory factory)
-    {
-        _factory = factory;
-        _client = factory.CreateClient();
-    }
+    private readonly HttpClient _client = factory.CreateAuthenticatedClient();
+    private readonly BankSyncApiFactory _factory = factory;
 
     // ── POST /accounts/connect ───────────────────────────────────────────────
 
@@ -84,7 +85,7 @@ public class BankSyncAPIContractTests : IClassFixture<BankSyncApiFactory>
         // Repository returns account owned by a DIFFERENT user
         _factory.BankAccountRepoMock
             .Setup(r => r.GetByIdAsync(accountId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new FinanceSentry.Modules.BankSync.Domain.BankAccount(
+            .ReturnsAsync(new Modules.BankSync.Domain.BankAccount(
                 userId: Guid.NewGuid(), // different user
                 plaidItemId: "item_xxx",
                 bankName: "AIB",
@@ -109,7 +110,7 @@ public class BankSyncAPIContractTests : IClassFixture<BankSyncApiFactory>
 
         _factory.BankAccountRepoMock
             .Setup(r => r.GetByIdAsync(accountId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new FinanceSentry.Modules.BankSync.Domain.BankAccount(
+            .ReturnsAsync(new Modules.BankSync.Domain.BankAccount(
                 userId: userId, // same user as requesting
                 plaidItemId: "item_abc",
                 bankName: "Revolut",
@@ -121,7 +122,7 @@ public class BankSyncAPIContractTests : IClassFixture<BankSyncApiFactory>
 
         _factory.TransactionRepoMock
             .Setup(r => r.GetByAccountIdAsync(accountId, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<FinanceSentry.Modules.BankSync.Domain.Transaction>());
+            .ReturnsAsync(Array.Empty<Modules.BankSync.Domain.Transaction>());
         _factory.TransactionRepoMock
             .Setup(r => r.CountByAccountIdAsync(accountId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(0);
@@ -153,7 +154,7 @@ public class BankSyncApiFactory : WebApplicationFactory<Program>
     public Mock<IBankAccountRepository> BankAccountRepoMock { get; } = new(MockBehavior.Loose);
     public Mock<ITransactionRepository> TransactionRepoMock { get; } = new(MockBehavior.Loose);
 
-    protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.ConfigureServices(services =>
         {
@@ -162,8 +163,20 @@ public class BankSyncApiFactory : WebApplicationFactory<Program>
             ReplaceService(services, BankAccountRepoMock.Object);
             ReplaceService(services, TransactionRepoMock.Object);
 
+            // Replace the real Npgsql DbContext with an in-memory one so that
+            // AuditLogService fire-and-forget writes (and any other DB access) never
+            // attempt a real Postgres connection during contract tests.
+            var dbContextDescriptor = services.FirstOrDefault(
+                d => d.ServiceType == typeof(DbContextOptions<BankSyncDbContext>));
+            if (dbContextDescriptor != null)
+                services.Remove(dbContextDescriptor);
+
+            var dbRoot = new InMemoryDatabaseRoot();
+            services.AddDbContext<BankSyncDbContext>(options =>
+                options.UseInMemoryDatabase("contract-tests", dbRoot));
+
             // Provide minimal configuration to satisfy Program.cs startup
-            services.Configure<FinanceSentry.Infrastructure.Encryption.EncryptionOptions>(opts =>
+            services.Configure<Infrastructure.Encryption.EncryptionOptions>(opts =>
             {
                 opts.CurrentKeyVersion = 1;
                 opts.Keys = new Dictionary<int, string>
@@ -185,6 +198,35 @@ public class BankSyncApiFactory : WebApplicationFactory<Program>
             "dGVzdGtleS10ZXN0a2V5LXRlc3RrZXktdGVzdGtleTA=");
         builder.UseSetting("Plaid:ClientId", "test-client-id");
         builder.UseSetting("Plaid:Secret", "test-secret");
+        builder.UseSetting("Jwt:Secret",
+            "test-jwt-secret-key-for-integration-tests-minimum-32-chars");
+    }
+
+    public HttpClient CreateAuthenticatedClient()
+    {
+        // AllowAutoRedirect = false prevents HttpsRedirection middleware from
+        // causing a scheme-change redirect that strips the Authorization header.
+        var client = CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+        });
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", GenerateTestJwt());
+        return client;
+    }
+
+    private static string GenerateTestJwt()
+    {
+        const string secret = "test-jwt-secret-key-for-integration-tests-minimum-32-chars";
+        var key = new SymmetricSecurityKey(System.Text.Encoding.ASCII.GetBytes(secret));
+        var handler = new JwtSecurityTokenHandler();
+        var token = handler.CreateToken(new SecurityTokenDescriptor
+        {
+            Subject = new ClaimsIdentity([new Claim("sub", Guid.NewGuid().ToString())]),
+            Expires = DateTime.UtcNow.AddHours(1),
+            SigningCredentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256Signature),
+        });
+        return handler.WriteToken(token);
     }
 
     private static void ReplaceService<T>(IServiceCollection services, T implementation)
@@ -193,6 +235,6 @@ public class BankSyncApiFactory : WebApplicationFactory<Program>
         var descriptor = services.FirstOrDefault(d => d.ServiceType == typeof(T));
         if (descriptor != null)
             services.Remove(descriptor);
-        services.AddScoped<T>(_ => implementation);
+        services.AddScoped(_ => implementation);
     }
 }

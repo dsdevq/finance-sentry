@@ -1,19 +1,15 @@
-import {
-  Component,
-  OnInit,
-  inject,
-  ChangeDetectionStrategy,
-  ChangeDetectorRef,
-} from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
-import { BankSyncService } from '../../services/bank-sync.service';
-import { BankAccount, SyncStatus } from '../../models/bank-account.model';
+import {CommonModule} from '@angular/common';
+import {ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit} from '@angular/core';
+import {Router} from '@angular/router';
+
+import {SyncStatusComponent} from '../../components/sync-status/sync-status.component';
+import {BankAccount, SyncStatus} from '../../models/bank-account.model';
+import {BankSyncService} from '../../services/bank-sync.service';
 
 @Component({
-  selector: 'app-accounts-list',
+  selector: 'fns-accounts-list',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, SyncStatusComponent],
   templateUrl: './accounts-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -22,36 +18,39 @@ export class AccountsListComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly cdr = inject(ChangeDetectorRef);
 
-  accounts: BankAccount[] = [];
-  isLoading = false;
-  errorMessage: string | null = null;
+  public accounts: BankAccount[] = [];
+  public isLoading = false;
+  public errorMessage: string | null = null;
+  public syncingAccountId: string | null = null;
 
-  readonly statusLabels: Record<SyncStatus, string> = {
+  public readonly statusLabels: Record<SyncStatus, string> = {
     pending: 'Pending',
     syncing: 'Syncing',
     active: 'Active',
     failed: 'Failed',
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     reauth_required: 'Reauth Required',
   };
 
-  readonly statusClasses: Record<SyncStatus, string> = {
+  public readonly statusClasses: Record<SyncStatus, string> = {
     pending: 'badge-secondary',
     syncing: 'badge-warning',
     active: 'badge-success',
     failed: 'badge-danger',
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     reauth_required: 'badge-orange',
   };
 
-  ngOnInit(): void {
+  public ngOnInit(): void {
     this.loadAccounts();
   }
 
-  loadAccounts(): void {
+  public loadAccounts(): void {
     this.isLoading = true;
     this.errorMessage = null;
 
     this.bankSyncService.getAccounts().subscribe({
-      next: (res) => {
+      next: res => {
         this.accounts = res.accounts;
         this.isLoading = false;
         this.cdr.markForCheck();
@@ -64,19 +63,24 @@ export class AccountsListComponent implements OnInit {
     });
   }
 
-  viewTransactions(accountId: string): void {
+  public viewTransactions(accountId: string): void {
     void this.router.navigate(['/accounts', accountId, 'transactions']);
   }
 
-  connectAccount(): void {
+  public connectAccount(): void {
     void this.router.navigate(['/accounts/connect']);
   }
 
-  getStatusLabel(status: SyncStatus): string {
+  public triggerSync(accountId: string): void {
+    this.syncingAccountId = accountId;
+    this.cdr.markForCheck();
+  }
+
+  public getStatusLabel(status: SyncStatus): string {
     return this.statusLabels[status] ?? status;
   }
 
-  getStatusClass(status: SyncStatus): string {
+  public getStatusClass(status: SyncStatus): string {
     return this.statusClasses[status] ?? 'badge-secondary';
   }
 }

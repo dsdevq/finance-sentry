@@ -1,20 +1,15 @@
-import {
-  Component,
-  OnInit,
-  inject,
-  ChangeDetectionStrategy,
-  ChangeDetectorRef,
-} from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
-import { BankSyncService } from '../../services/bank-sync.service';
-import { Transaction } from '../../models/transaction.model';
+import {CommonModule} from '@angular/common';
+import {ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit} from '@angular/core';
+import {FormsModule} from '@angular/forms';
+import {ActivatedRoute, Router} from '@angular/router';
+
+import {Transaction} from '../../models/transaction.model';
+import {BankSyncService} from '../../services/bank-sync.service';
 
 const PAGE_SIZE = 50;
 
 @Component({
-  selector: 'app-transaction-list',
+  selector: 'fns-transaction-list',
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './transaction-list.component.html',
@@ -26,44 +21,46 @@ export class TransactionListComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly cdr = inject(ChangeDetectorRef);
 
-  accountId = '';
-  bankName = '';
-  currency = '';
+  public accountId = '';
+  public bankName = '';
+  public currency = '';
 
-  transactions: Transaction[] = [];
-  isLoading = false;
-  errorMessage: string | null = null;
+  public transactions: Transaction[] = [];
+  public isLoading = false;
+  public errorMessage: string | null = null;
 
-  offset = 0;
-  totalCount = 0;
-  readonly pageSize = PAGE_SIZE;
+  public offset = 0;
+  public totalCount = 0;
+  public readonly pageSize = PAGE_SIZE;
 
-  startDate = '';
-  endDate = '';
+  public startDate = '';
+  public endDate = '';
 
-  get currentPage(): number {
+  public get currentPage(): number {
     return Math.floor(this.offset / this.pageSize) + 1;
   }
 
-  get totalPages(): number {
+  public get totalPages(): number {
     return Math.max(1, Math.ceil(this.totalCount / this.pageSize));
   }
 
-  get hasPrevious(): boolean {
+  public get hasPrevious(): boolean {
     return this.offset > 0;
   }
 
-  get hasNext(): boolean {
+  public get hasNext(): boolean {
     return this.offset + this.pageSize < this.totalCount;
   }
 
-  ngOnInit(): void {
+  public ngOnInit(): void {
     this.accountId = this.route.snapshot.paramMap.get('accountId') ?? '';
     this.loadTransactions();
   }
 
-  loadTransactions(): void {
-    if (!this.accountId) return;
+  public loadTransactions(): void {
+    if (!this.accountId) {
+      return;
+    }
 
     this.isLoading = true;
     this.errorMessage = null;
@@ -77,7 +74,7 @@ export class TransactionListComponent implements OnInit {
         sort: 'date:desc',
       })
       .subscribe({
-        next: (res) => {
+        next: res => {
           this.transactions = res.transactions;
           this.totalCount = res.pagination.totalCount;
           this.bankName = res.bankName;
@@ -93,26 +90,26 @@ export class TransactionListComponent implements OnInit {
       });
   }
 
-  applyFilters(): void {
+  public applyFilters(): void {
     this.offset = 0;
     this.loadTransactions();
   }
 
-  previousPage(): void {
+  public previousPage(): void {
     if (this.hasPrevious) {
       this.offset = Math.max(0, this.offset - this.pageSize);
       this.loadTransactions();
     }
   }
 
-  nextPage(): void {
+  public nextPage(): void {
     if (this.hasNext) {
       this.offset += this.pageSize;
       this.loadTransactions();
     }
   }
 
-  goBack(): void {
+  public goBack(): void {
     void this.router.navigate(['/accounts']);
   }
 }

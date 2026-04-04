@@ -14,6 +14,16 @@ public class SyncJob : Entity
     public Guid AccountId { get; set; }
 
     /// <summary>
+    /// User who owns this sync job (denormalised from BankAccount for query performance).
+    /// </summary>
+    public Guid UserId { get; set; }
+
+    /// <summary>
+    /// Correlation ID for distributed tracing (nullable — not all jobs have one).
+    /// </summary>
+    public string? CorrelationId { get; set; }
+
+    /// <summary>
     /// Current status: pending, running, success, failed.
     /// </summary>
     public string Status { get; set; } = "pending";
@@ -39,14 +49,34 @@ public class SyncJob : Entity
     public string? ErrorCode { get; set; }
 
     /// <summary>
-    /// How many transactions were successfully synced.
+    /// How many transactions were successfully synced (legacy field — kept for compatibility).
     /// </summary>
     public int TransactionsSynced { get; set; }
+
+    /// <summary>
+    /// Total transactions fetched from Plaid during this job.
+    /// </summary>
+    public int TransactionCountFetched { get; set; }
+
+    /// <summary>
+    /// New (non-duplicate) transactions saved to the database after deduplication.
+    /// </summary>
+    public int TransactionCountDeduped { get; set; }
 
     /// <summary>
     /// Date of the last transaction synced during this job.
     /// </summary>
     public DateTime? LastTransactionDate { get; set; }
+
+    /// <summary>
+    /// Number of retry attempts for this job.
+    /// </summary>
+    public int RetryCount { get; set; } = 0;
+
+    /// <summary>
+    /// Whether this sync was triggered by a Plaid webhook.
+    /// </summary>
+    public bool WebhookTriggered { get; set; } = false;
 
     /// <summary>
     /// Navigation property to parent account.
@@ -64,19 +94,22 @@ public class SyncJob : Entity
     /// <summary>
     /// Constructor for creating new sync job.
     /// </summary>
-    public SyncJob(Guid accountId) : this()
+    public SyncJob(Guid accountId, Guid userId) : this()
     {
         AccountId = accountId;
+        UserId = userId;
     }
 
     /// <summary>
     /// Mark sync job as completed successfully.
     /// </summary>
-    public void MarkSuccess(int transactionsSynced, DateTime? lastTransactionDate = null)
+    public void MarkSuccess(int transactionCountFetched, int transactionCountDeduped, DateTime? lastTransactionDate = null)
     {
         Status = "success";
         CompletedAt = DateTime.UtcNow;
-        TransactionsSynced = transactionsSynced;
+        TransactionCountFetched = transactionCountFetched;
+        TransactionCountDeduped = transactionCountDeduped;
+        TransactionsSynced = transactionCountDeduped; // keep legacy field in sync
         LastTransactionDate = lastTransactionDate;
         ErrorMessage = null;
         ErrorCode = null;

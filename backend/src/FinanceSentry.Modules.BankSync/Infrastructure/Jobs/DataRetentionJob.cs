@@ -1,0 +1,76 @@
+namespace FinanceSentry.Modules.BankSync.Infrastructure.Jobs;
+
+using FinanceSentry.Modules.BankSync.Infrastructure.Persistence;
+using Hangfire;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+
+/// <summary>
+/// Monthly Hangfire job that enforces FR-008: 24-month transaction retention policy.
+/// Soft-archives (does NOT hard-delete) transactions older than 24 months.
+/// Idempotent: running twice for the same month archives the same set.
+/// GDPR: archived rows stay in DB with IsActive=false, invisible to user-facing queries.
+/// </summary>
+[AutomaticRetry(Attempts = 0)]
+public class DataRetentionJob
+{
+    private readonly BankSyncDbContext _db;
+    private readonly ILogger<DataRetentionJob> _logger;
+
+    private const int RetentionMonths = 24;
+    private const string ArchiveReason = "retention_policy_24m";
+
+    public DataRetentionJob(BankSyncDbContext db, ILogger<DataRetentionJob> logger)
+    {
+        _db = db;
+        _logger = logger;
+    }
+
+    /// <summary>
+    /// Runs the retention job.
+    /// </summary>
+    /// <param name="dryRun">
+    /// When true, logs how many transactions would be archived without actually archiving.
+    /// Use for ops validation before first production run.
+    /// </param>
+    public async Task RunAsync(bool dryRun = false, CancellationToken ct = default)
+    {
+        var cutoff = DateTime.UtcNow.AddMonths(-RetentionMonths);
+
+        _logger.LogInformation(
+            "DataRetentionJob starting. Cutoff date: {Cutoff}. DryRun: {DryRun}",
+            cutoff.ToString("yyyy-MM-dd"), dryRun);
+
+        // IgnoreQueryFilters() to access all rows, including already-inactive ones (idempotency)
+        var candidates = await _db.Transactions
+            .IgnoreQueryFilters()
+            .Where(t => t.IsActive
+                     && t.PostedDate.HasValue
+                     && t.PostedDate.Value < cutoff)
+            .ToListAsync(ct);
+
+        _logger.LogInformation(
+            "DataRetentionJob found {Count} transactions to archive (posted before {Cutoff}).",
+            candidates.Count, cutoff.ToString("yyyy-MM-dd"));
+
+        if (dryRun)
+        {
+            _logger.LogInformation("DataRetentionJob dry-run complete. No changes written.");
+            return;
+        }
+
+        var now = DateTime.UtcNow;
+        foreach (var tx in candidates)
+        {
+            tx.IsActive = false;
+            tx.DeletedAt = now;
+            tx.ArchivedReason = ArchiveReason;
+        }
+
+        await _db.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "DataRetentionJob completed. Archived {Count} transactions. Timestamp: {Timestamp}",
+            candidates.Count, now);
+    }
+}

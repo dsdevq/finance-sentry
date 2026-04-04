@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import {Injectable} from '@angular/core';
 
 export interface PlaidLinkOptions {
   token: string;
@@ -23,13 +23,12 @@ declare global {
   }
 }
 
-@Injectable({ providedIn: 'root' })
+@Injectable({providedIn: 'root'})
 export class PlaidLinkService {
   private scriptLoaded = false;
-  private readonly plaidScriptUrl =
-    'https://cdn.plaid.com/link/v2/stable/link-initialize.js';
+  private readonly plaidScriptUrl = 'https://cdn.plaid.com/link/v2/stable/link-initialize.js';
 
-  loadScript(): Promise<void> {
+  public loadScript(): Promise<void> {
     if (this.scriptLoaded || window.Plaid) {
       this.scriptLoaded = true;
       return Promise.resolve();
@@ -43,14 +42,15 @@ export class PlaidLinkService {
         this.scriptLoaded = true;
         resolve();
       };
-      script.onerror = () =>
-        reject(new Error('Failed to load Plaid Link script'));
+      script.onerror = () => reject(new Error('Failed to load Plaid Link script'));
       document.head.appendChild(script);
     });
   }
 
-  create(options: PlaidLinkOptions): PlaidHandler {
-    if (!window.Plaid) throw new Error('Plaid Link script is not loaded');
+  public create(options: PlaidLinkOptions): PlaidHandler {
+    if (!window.Plaid) {
+      throw new Error('Plaid Link script is not loaded');
+    }
     return window.Plaid.create(options);
   }
 }

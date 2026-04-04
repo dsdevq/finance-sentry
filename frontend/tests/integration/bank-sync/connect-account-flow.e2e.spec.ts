@@ -5,35 +5,29 @@
  * connect-account → accounts-list → transaction-list user journey without
  * a live backend. Plaid Link is mocked via the PlaidLinkService.
  */
+/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-magic-numbers */
 
-import { TestBed, fakeAsync, tick } from '@angular/core/testing';
-import {
-  HttpClientTestingModule,
-  HttpTestingController,
-} from '@angular/common/http/testing';
-import { RouterTestingModule } from '@angular/router/testing';
-import { Router } from '@angular/router';
-import { Location } from '@angular/common';
+import {HttpClientTestingModule, HttpTestingController} from '@angular/common/http/testing';
+import {fakeAsync, TestBed, tick} from '@angular/core/testing';
+import {RouterTestingModule} from '@angular/router/testing';
 
-import { BankSyncService } from '../../../src/app/modules/bank-sync/services/bank-sync.service';
-import { PlaidLinkService } from '../../../src/app/modules/bank-sync/services/plaid-link.service';
-import { ConnectAccountComponent } from '../../../src/app/modules/bank-sync/pages/connect-account/connect-account.component';
-import { AccountsListComponent } from '../../../src/app/modules/bank-sync/pages/accounts-list/accounts-list.component';
-import { TransactionListComponent } from '../../../src/app/modules/bank-sync/pages/transaction-list/transaction-list.component';
 import {
-  BankAccount,
-  ConnectResponse,
-  LinkAccountResponse,
-  AccountsResponse,
+  type AccountsResponse,
+  type BankAccount,
+  type ConnectResponse,
+  type LinkAccountResponse,
 } from '../../../src/app/modules/bank-sync/models/bank-account.model';
-import {
-  TransactionListResponse,
-} from '../../../src/app/modules/bank-sync/models/transaction.model';
+import {type TransactionListResponse} from '../../../src/app/modules/bank-sync/models/transaction.model';
+import {AccountsListComponent} from '../../../src/app/modules/bank-sync/pages/accounts-list/accounts-list.component';
+import {ConnectAccountComponent} from '../../../src/app/modules/bank-sync/pages/connect-account/connect-account.component';
+import {TransactionListComponent} from '../../../src/app/modules/bank-sync/pages/transaction-list/transaction-list.component';
+import {BankSyncService} from '../../../src/app/modules/bank-sync/services/bank-sync.service';
+import {PlaidLinkService} from '../../../src/app/modules/bank-sync/services/plaid-link.service';
 
 const MOCK_LINK_RESPONSE: ConnectResponse = {
   linkToken: 'link-sandbox-test-token',
   expiresIn: 600,
-  expiresAt: new Date(Date.now() + 600_000).toISOString(),
+  expiresAt: new Date(Date.now() + 600000).toISOString(),
   requestId: 'req_test_001',
 };
 
@@ -68,7 +62,8 @@ const MOCK_ACTIVE_ACCOUNT: BankAccount = {
 const MOCK_ACCOUNTS_RESPONSE: AccountsResponse = {
   accounts: [MOCK_ACTIVE_ACCOUNT],
   totalCount: 1,
-  currency_totals: { EUR: 5000 },
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  currency_totals: {EUR: 5000},
 };
 
 const MOCK_TRANSACTIONS_RESPONSE: TransactionListResponse = {
@@ -103,7 +98,7 @@ const MOCK_TRANSACTIONS_RESPONSE: TransactionListResponse = {
       createdAt: new Date().toISOString(),
     },
   ],
-  pagination: { offset: 0, limit: 50, totalCount: 2, hasMore: false },
+  pagination: {offset: 0, limit: 50, totalCount: 2, hasMore: false},
 };
 
 // ─── Mock PlaidLinkService ───────────────────────────────────────────────────
@@ -111,25 +106,27 @@ const MOCK_TRANSACTIONS_RESPONSE: TransactionListResponse = {
 class MockPlaidLinkService {
   private successCallback?: (publicToken: string, metadata: unknown) => void;
 
-  loadScript(): Promise<void> {
+  public loadScript(): Promise<void> {
     return Promise.resolve();
   }
 
-  create(options: {
-    onSuccess: (publicToken: string, metadata: unknown) => void;
-  }) {
+  public create(options: {onSuccess: (publicToken: string, metadata: unknown) => void}): {
+    open: () => void;
+    destroy: () => void;
+  } {
     this.successCallback = options.onSuccess;
     return {
       open: () => {
         // Simulate Plaid Link flow: user selects bank, success fires
         this.successCallback?.('public-sandbox-test-token', {});
       },
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
       destroy: () => {},
     };
   }
 
   /** Test helper: trigger Plaid success programmatically */
-  triggerSuccess(publicToken = 'public-sandbox-test-token'): void {
+  public triggerSuccess(publicToken = 'public-sandbox-test-token'): void {
     this.successCallback?.(publicToken, {});
   }
 }
@@ -139,8 +136,6 @@ class MockPlaidLinkService {
 describe('Connect Account Flow (E2E Integration)', () => {
   let httpMock: HttpTestingController;
   let bankSyncService: BankSyncService;
-  let router: Router;
-  let location: Location;
   let mockPlaidService: MockPlaidLinkService;
 
   beforeEach(async () => {
@@ -150,28 +145,23 @@ describe('Connect Account Flow (E2E Integration)', () => {
       imports: [
         HttpClientTestingModule,
         RouterTestingModule.withRoutes([
-          { path: 'accounts/connect', component: ConnectAccountComponent },
-          { path: 'accounts/list', component: AccountsListComponent },
+          {path: 'accounts/connect', component: ConnectAccountComponent},
+          {path: 'accounts/list', component: AccountsListComponent},
           {
             path: 'accounts/:accountId/transactions',
             component: TransactionListComponent,
           },
-          { path: '', redirectTo: 'accounts/list', pathMatch: 'full' },
+          {path: '', redirectTo: 'accounts/list', pathMatch: 'full'},
         ]),
         ConnectAccountComponent,
         AccountsListComponent,
         TransactionListComponent,
       ],
-      providers: [
-        BankSyncService,
-        { provide: PlaidLinkService, useValue: mockPlaidService },
-      ],
+      providers: [BankSyncService, {provide: PlaidLinkService, useValue: mockPlaidService}],
     }).compileComponents();
 
     httpMock = TestBed.inject(HttpTestingController);
     bankSyncService = TestBed.inject(BankSyncService);
-    router = TestBed.inject(Router);
-    location = TestBed.inject(Location);
   });
 
   afterEach(() => {
@@ -181,48 +171,46 @@ describe('Connect Account Flow (E2E Integration)', () => {
   // ── T220-01: BankSyncService calls correct endpoints ────────────────────
 
   it('getLinkToken calls POST /api/accounts/connect', () => {
-    bankSyncService.getLinkToken().subscribe((res) => {
+    bankSyncService.getLinkToken().subscribe(res => {
       expect(res.linkToken).toBe(MOCK_LINK_RESPONSE.linkToken);
     });
 
-    const req = httpMock.expectOne((r) => r.url.includes('/api/accounts/connect'));
+    const req = httpMock.expectOne(r => r.url.includes('/api/accounts/connect'));
     expect(req.request.method).toBe('POST');
     req.flush(MOCK_LINK_RESPONSE);
   });
 
   it('exchangePublicToken calls POST /api/accounts/link with publicToken', () => {
-    bankSyncService.exchangePublicToken('public-test-abc').subscribe((res) => {
+    bankSyncService.exchangePublicToken('public-test-abc').subscribe(res => {
       expect(res.accountId).toBe('acct-001');
     });
 
-    const req = httpMock.expectOne((r) => r.url.includes('/api/accounts/link'));
+    const req = httpMock.expectOne(r => r.url.includes('/api/accounts/link'));
     expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({ publicToken: 'public-test-abc' });
+    expect(req.request.body).toEqual({publicToken: 'public-test-abc'});
     req.flush(MOCK_LINK_ACCOUNT_RESPONSE);
   });
 
   it('getAccounts calls GET /api/accounts', () => {
-    bankSyncService.getAccounts().subscribe((res) => {
+    bankSyncService.getAccounts().subscribe(res => {
       expect(res.accounts.length).toBe(1);
       expect(res.accounts[0].syncStatus).toBe('active');
     });
 
-    const req = httpMock.expectOne((r) => r.url.includes('/api/accounts') && r.method === 'GET');
+    const req = httpMock.expectOne(r => r.url.includes('/api/accounts') && r.method === 'GET');
     expect(req.request.method).toBe('GET');
     req.flush(MOCK_ACCOUNTS_RESPONSE);
   });
 
   it('getTransactions calls GET /api/accounts/{id}/transactions with params', () => {
     bankSyncService
-      .getTransactions('acct-001', { offset: 0, limit: 50, sort: 'date:desc' })
-      .subscribe((res) => {
+      .getTransactions('acct-001', {offset: 0, limit: 50, sort: 'date:desc'})
+      .subscribe(res => {
         expect(res.transactions.length).toBe(2);
         expect(res.pagination.totalCount).toBe(2);
       });
 
-    const req = httpMock.expectOne(
-      (r) => r.url.includes('/api/accounts/acct-001/transactions'),
-    );
+    const req = httpMock.expectOne(r => r.url.includes('/api/accounts/acct-001/transactions'));
     expect(req.request.method).toBe('GET');
     expect(req.request.params.get('offset')).toBe('0');
     expect(req.request.params.get('limit')).toBe('50');
@@ -238,9 +226,7 @@ describe('Connect Account Flow (E2E Integration)', () => {
 
     fixture.detectChanges();
 
-    const req = httpMock.expectOne((r) =>
-      r.url.includes('/api/accounts') && r.method === 'GET',
-    );
+    const req = httpMock.expectOne(r => r.url.includes('/api/accounts') && r.method === 'GET');
     req.flush(MOCK_ACCOUNTS_RESPONSE);
 
     fixture.detectChanges();
@@ -260,10 +246,9 @@ describe('Connect Account Flow (E2E Integration)', () => {
 
     fixture.detectChanges();
 
-    const req = httpMock.expectOne((r) =>
-      r.url.includes('/api/accounts') && r.method === 'GET',
-    );
-    req.flush({ accounts: [], totalCount: 0, currency_totals: {} });
+    const req = httpMock.expectOne(r => r.url.includes('/api/accounts') && r.method === 'GET');
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    req.flush({accounts: [], totalCount: 0, currency_totals: {}});
 
     fixture.detectChanges();
 
@@ -280,9 +265,7 @@ describe('Connect Account Flow (E2E Integration)', () => {
 
     fixture.detectChanges();
 
-    const req = httpMock.expectOne((r) =>
-      r.url.includes('/api/accounts/acct-001/transactions'),
-    );
+    const req = httpMock.expectOne(r => r.url.includes('/api/accounts/acct-001/transactions'));
     req.flush(MOCK_TRANSACTIONS_RESPONSE);
 
     fixture.detectChanges();
@@ -305,89 +288,83 @@ describe('Connect Account Flow (E2E Integration)', () => {
     fixture.detectChanges();
 
     // Initial load
-    const req1 = httpMock.expectOne((r) =>
-      r.url.includes('/api/accounts/acct-001/transactions'),
-    );
+    const req1 = httpMock.expectOne(r => r.url.includes('/api/accounts/acct-001/transactions'));
     req1.flush({
       ...MOCK_TRANSACTIONS_RESPONSE,
-      pagination: { offset: 0, limit: 50, totalCount: 120, hasMore: true },
+      pagination: {offset: 0, limit: 50, totalCount: 120, hasMore: true},
     });
 
     fixture.detectChanges();
     tick();
 
     // Go to next page
-    expect(component.hasNext).toBeTrue();
+    expect(component.hasNext).toBe(true);
     component.nextPage();
     fixture.detectChanges();
 
-    const req2 = httpMock.expectOne((r) =>
-      r.url.includes('/api/accounts/acct-001/transactions'),
-    );
+    const req2 = httpMock.expectOne(r => r.url.includes('/api/accounts/acct-001/transactions'));
     expect(req2.request.params.get('offset')).toBe('50');
     req2.flush({
       ...MOCK_TRANSACTIONS_RESPONSE,
-      pagination: { offset: 50, limit: 50, totalCount: 120, hasMore: true },
+      pagination: {offset: 50, limit: 50, totalCount: 120, hasMore: true},
     });
 
     fixture.detectChanges();
     tick();
 
     // Go back
-    expect(component.hasPrevious).toBeTrue();
+    expect(component.hasPrevious).toBe(true);
     component.previousPage();
     fixture.detectChanges();
 
-    const req3 = httpMock.expectOne((r) =>
-      r.url.includes('/api/accounts/acct-001/transactions'),
-    );
+    const req3 = httpMock.expectOne(r => r.url.includes('/api/accounts/acct-001/transactions'));
     expect(req3.request.params.get('offset')).toBe('0');
     req3.flush(MOCK_TRANSACTIONS_RESPONSE);
   }));
 
   // ── T220-04: ConnectAccountComponent initializes Plaid Link ──────────────
 
-  it('ConnectAccountComponent: initializes Plaid Link on load', fakeAsync(async () => {
+  it('ConnectAccountComponent: initializes Plaid Link on load', fakeAsync(() => {
     const fixture = TestBed.createComponent(ConnectAccountComponent);
     const component = fixture.componentInstance;
 
-    await component.ngOnInit();
+    void component.ngOnInit();
 
-    const req = httpMock.expectOne((r) => r.url.includes('/api/accounts/connect'));
+    const req = httpMock.expectOne(r => r.url.includes('/api/accounts/connect'));
     req.flush(MOCK_LINK_RESPONSE);
 
     fixture.detectChanges();
     tick();
 
-    expect(component.isLoading).toBeFalse();
+    expect(component.isLoading).toBe(false);
     expect(component.errorMessage).toBeNull();
   }));
 
-  it('ConnectAccountComponent: shows error when getLinkToken fails', fakeAsync(async () => {
+  it('ConnectAccountComponent: shows error when getLinkToken fails', fakeAsync(() => {
     const fixture = TestBed.createComponent(ConnectAccountComponent);
     const component = fixture.componentInstance;
 
-    await component.ngOnInit();
+    void component.ngOnInit();
 
-    const req = httpMock.expectOne((r) => r.url.includes('/api/accounts/connect'));
-    req.flush('Server error', { status: 500, statusText: 'Internal Server Error' });
+    const req = httpMock.expectOne(r => r.url.includes('/api/accounts/connect'));
+    req.flush('Server error', {status: 500, statusText: 'Internal Server Error'});
 
     fixture.detectChanges();
     tick();
 
     expect(component.errorMessage).toContain('Failed to initialize');
-    expect(component.isLoading).toBeFalse();
+    expect(component.isLoading).toBe(false);
   }));
 
   // ── T220-05: Deduplication accuracy check (SC-005) ──────────────────────
 
   it('SC-005: 100 transactions with unique hashes all returned (no false duplicates)', () => {
-    const transactions = Array.from({ length: 100 }, (_, i) => ({
+    const transactions = Array.from({length: 100}, (_, i) => ({
       transactionId: `txn-${i.toString().padStart(3, '0')}`,
       accountId: 'acct-001',
       amount: (i + 1) * 5.0,
-      transactionType: (i % 2 === 0 ? 'debit' : 'credit') as 'debit' | 'credit',
-      postedDate: `2026-01-${(i % 28 + 1).toString().padStart(2, '0')}`,
+      transactionType: i % 2 === 0 ? 'debit' : 'credit',
+      postedDate: `2026-01-${((i % 28) + 1).toString().padStart(2, '0')}`,
       pendingDate: null,
       isPending: false,
       description: `Merchant_${i}`,
@@ -396,22 +373,18 @@ describe('Connect Account Flow (E2E Integration)', () => {
       createdAt: new Date().toISOString(),
     }));
 
-    bankSyncService
-      .getTransactions('acct-001', { limit: 100 })
-      .subscribe((res) => {
-        const ids = new Set(res.transactions.map((t) => t.transactionId));
-        expect(ids.size).toBe(100);
-      });
+    bankSyncService.getTransactions('acct-001', {limit: 100}).subscribe(res => {
+      const ids = new Set(res.transactions.map(t => t.transactionId));
+      expect(ids.size).toBe(100);
+    });
 
-    const req = httpMock.expectOne((r) =>
-      r.url.includes('/api/accounts/acct-001/transactions'),
-    );
+    const req = httpMock.expectOne(r => r.url.includes('/api/accounts/acct-001/transactions'));
     req.flush({
       accountId: 'acct-001',
       bankName: 'AIB Ireland',
       currency: 'EUR',
       transactions,
-      pagination: { offset: 0, limit: 100, totalCount: 100, hasMore: false },
+      pagination: {offset: 0, limit: 100, totalCount: 100, hasMore: false},
     });
   });
 });

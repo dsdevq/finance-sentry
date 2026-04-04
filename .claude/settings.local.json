@@ -23,7 +23,25 @@
       "Bash(echo \"TS Exit: $?\")",
       "Bash(npx ng:*)",
       "Bash(echo \"Build exit: $?\")",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "mcp__github__create_pull_request",
+      "Bash(find /c/Users/denys/Work/finance-sentry/frontend/src -name *.ts)",
+      "mcp__github__pull_request_read",
+      "Bash(gh run:*)",
+      "Bash(npx prettier:*)",
+      "Bash(dotnet build:*)",
+      "mcp__github__get_me",
+      "mcp__github__list_issues",
+      "mcp__github__issue_write",
+      "mcp__github__list_pull_requests",
+      "mcp__github__update_pull_request",
+      "Bash(dotnet test:*)",
+      "Bash(dotnet restore:*)",
+      "Bash(npm info:*)",
+      "Bash(node -e \":*)",
+      "Bash(npm run:*)"
     ]
   }
 }

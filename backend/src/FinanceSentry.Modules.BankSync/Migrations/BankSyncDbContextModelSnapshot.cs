@@ -163,6 +163,13 @@ namespace FinanceSentry.Modules.BankSync.Migrations
                     b.Property<Guid>("AccountId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string?>("CorrelationId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<DateTime?>("CompletedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -195,6 +202,26 @@ namespace FinanceSentry.Modules.BankSync.Migrations
                     b.Property<int>("TransactionsSynced")
                         .HasColumnType("integer");
 
+                    b.Property<int>("TransactionCountFetched")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<int>("TransactionCountDeduped")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<int>("RetryCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<bool>("WebhookTriggered")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -208,6 +235,9 @@ namespace FinanceSentry.Modules.BankSync.Migrations
 
                     b.HasIndex("Status")
                         .HasDatabaseName("idx_sync_job_status");
+
+                    b.HasIndex("AccountId", "Status")
+                        .HasDatabaseName("idx_sync_job_account_status");
 
                     b.ToTable("SyncJobs");
                 });

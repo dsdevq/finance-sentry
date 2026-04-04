@@ -410,7 +410,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
 
 <!-- TDD: Write unit + integration tests FIRST, then implement to make them pass -->
 
-- [ ] T313 [P] [US2] Create unit tests for ScheduledSyncService in `backend/tests/Unit/BankSync/Application/ScheduledSyncServiceTests.cs`
+- [x] T313 [P] [US2] Create unit tests for ScheduledSyncService in `backend/tests/Unit/BankSync/Application/ScheduledSyncServiceTests.cs`
   - **Details**: Tests:
     - Successful sync: creates job, fetches transactions, deduplicates, saves to DB
     - Failed sync: catches exception, updates status to failed
@@ -418,7 +418,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Idempotency: same sync job ID run twice does not create duplicates
   - **Success Criteria**: All tests compile, ready to pass once T302 implemented
 
-- [ ] T314 [P] [US2] Create unit tests for webhook handler in `backend/tests/Unit/BankSync/API/WebhookHandlerTests.cs`
+- [x] T314 [P] [US2] Create unit tests for webhook handler in `backend/tests/Unit/BankSync/API/WebhookHandlerTests.cs`
   - **Details**: Tests:
     - Valid signature accepted, invalid rejected
     - TRANSACTIONS_READY enqueues sync job
@@ -426,7 +426,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Non-matching webhook_type ignored
   - **Success Criteria**: All tests compile, mocks signature validation correctly
 
-- [ ] T315 [P] [US2] Create integration tests: Hangfire job execution in `backend/tests/Integration/BankSync/HangfireJobExecutionTests.cs`
+- [x] T315 [P] [US2] Create integration tests: Hangfire job execution in `backend/tests/Integration/BankSync/HangfireJobExecutionTests.cs`
   - **Details**: Integration test:
     - Enqueue ScheduledSyncJob
     - Wait for execution (use Hangfire background worker)
@@ -436,11 +436,11 @@ Phase 6 (Polish & Cross-Cutting Concerns)
 
 <!-- Implementation: Make the tests above pass -->
 
-- [ ] T301 [P] [US2] Create SyncJob domain entity (for audit trail) in `backend/src/Modules/BankSync/Domain/Aggregates/SyncJob.cs`
+- [x] T301 [P] [US2] Create SyncJob domain entity (for audit trail) in `backend/src/Modules/BankSync/Domain/Aggregates/SyncJob.cs`
   - **Details**: Entity: sync_job_id, account_id, user_id, correlation_id, status, started_at, completed_at, transaction_count_fetched, transaction_count_deduped, retry_count, error_code, error_message, webhook_triggered. State machine: pending → in_progress → success/failed
   - **Success Criteria**: Entity compiles, state transitions work
 
-- [ ] T302 [P] [US2] Create ScheduledSyncService (polling every 2 hours) in `backend/src/Modules/BankSync/Application/Services/ScheduledSyncService.cs`
+- [x] T302 [P] [US2] Create ScheduledSyncService (polling every 2 hours) in `backend/src/Modules/BankSync/Application/Services/ScheduledSyncService.cs`
   - **Details**: Service with method PerformFullSyncAsync(accountId):
     1. Create SyncJob with status=in_progress
     2. Decrypt access token from EncryptedCredential
@@ -457,14 +457,14 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Never logs plaintext tokens
   - **Success Criteria**: T313 tests pass, service syncs transactions, updates sync metadata
 
-- [ ] T303 [P] [US2] Set up Hangfire for background job scheduling in `backend/src/Modules/BankSync/Infrastructure/Jobs/HangfireSetup.cs` and `SyncScheduler.cs`
+- [x] T303 [P] [US2] Set up Hangfire for background job scheduling in `backend/src/Modules/BankSync/Infrastructure/Jobs/HangfireSetup.cs` and `SyncScheduler.cs`
   - **Details**:
     - Register Hangfire using in-memory storage (for dev) or PostgreSQL (for production)
     - Create SyncScheduler service that enqueues ScheduledSyncJob every 2 hours for all active accounts
     - Implement recurring background job that runs on schedule
   - **Success Criteria**: T315 integration test passes, Hangfire starts up, job scheduled, Hangfire dashboard accessible
 
-- [ ] T304 [P] [US2] Create Hangfire background job: ScheduledSyncJob in `backend/src/Modules/BankSync/Infrastructure/Jobs/ScheduledSyncJob.cs`
+- [x] T304 [P] [US2] Create Hangfire background job: ScheduledSyncJob in `backend/src/Modules/BankSync/Infrastructure/Jobs/ScheduledSyncJob.cs`
   - **Details**: Job class with method:
     ```csharp
     [AutomaticRetry(Attempts = 0)] // Retry handled by business logic
@@ -473,7 +473,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     Calls ScheduledSyncService.PerformFullSyncAsync(accountId). Handles exceptions, logs errors
   - **Success Criteria**: Job executes when scheduled, completes successfully
 
-- [ ] T305 [P] [US2] Create webhook endpoint: POST /webhook/plaid in `backend/src/Modules/BankSync/API/Controllers/BankSyncController.cs`
+- [x] T305 [P] [US2] Create webhook endpoint: POST /webhook/plaid in `backend/src/Modules/BankSync/API/Controllers/BankSyncController.cs`
   - **Details**: Endpoint:
     1. Receive webhook from Plaid (POST)
     2. Verify signature with HMAC-SHA256 using Plaid webhook key (via T306)
@@ -487,14 +487,14 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     6. Return 200 OK to acknowledge
   - **Success Criteria**: T314 webhook handler tests pass, endpoint routes to correct handler
 
-- [ ] T306 [P] [US2] Implement webhook signature verification in `backend/src/Modules/Shared/Security/WebhookSignatureValidator.cs`
+- [x] T306 [P] [US2] Implement webhook signature verification in `backend/src/Modules/Shared/Security/WebhookSignatureValidator.cs`
   - **Details**: Verifies Plaid webhook signature:
     - Expected signature = HMAC-SHA256(webhook_body, plaid_webhook_key)
     - Compare with provided signature header
     - Reject if mismatch
   - **Success Criteria**: Unit tests verify valid signatures pass, invalid signatures rejected
 
-- [ ] T306-A [P] [US2] Create PlaidErrorMapper (translate Plaid errors → REST API responses) in `backend/src/Modules/BankSync/Infrastructure/Services/PlaidErrorMapper.cs`
+- [x] T306-A [P] [US2] Create PlaidErrorMapper (translate Plaid errors → REST API responses) in `backend/src/Modules/BankSync/Infrastructure/Services/PlaidErrorMapper.cs`
   - **Details**: Service mapping Plaid error codes to user-friendly REST responses:
     | Plaid Code | HTTP Status | User Message |
     |---|---|---|
@@ -511,7 +511,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Mapping used in ErrorHandlingMiddleware (T501) for both API responses and webhook handlers
   - **Success Criteria**: All Plaid error codes have mappings, messages are user-friendly, never leaks sensitive data
 
-- [ ] T307 [P] [US2] Create transaction sync coordinator (hybrid webhook + polling) in `backend/src/Modules/BankSync/Application/Services/TransactionSyncCoordinator.cs`
+- [x] T307 [P] [US2] Create transaction sync coordinator (hybrid webhook + polling) in `backend/src/Modules/BankSync/Application/Services/TransactionSyncCoordinator.cs`
   - **Details**: Service that:
     - Handles webhook-triggered syncs (immediate)
     - Handles scheduled syncs (every 2 hours)
@@ -519,7 +519,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Respects rate limits (Plaid: 20 items/min)
   - **Success Criteria**: Coordinator compiles, orchestrates both webhook and polling workflows
 
-- [ ] T308 [US2] Create REST endpoint: POST /accounts/{accountId}/sync (manual trigger) in `backend/src/Modules/BankSync/API/Controllers/BankSyncController.cs`
+- [x] T308 [US2] Create REST endpoint: POST /accounts/{accountId}/sync (manual trigger) in `backend/src/Modules/BankSync/API/Controllers/BankSyncController.cs`
   - **Details**: Endpoint:
     1. Verify authenticated user owns account
     2. Check if sync already in progress (return 409 Conflict if so)
@@ -527,14 +527,14 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     4. Return 202 Accepted with jobId + "Sync queued"
   - **Success Criteria**: Endpoint enqueues job, returns 202
 
-- [ ] T309 [US2] Create REST endpoint: GET /accounts/{accountId}/sync-status (poll sync progress) in `backend/src/Modules/BankSync/API/Controllers/BankSyncController.cs`
+- [x] T309 [US2] Create REST endpoint: GET /accounts/{accountId}/sync-status (poll sync progress) in `backend/src/Modules/BankSync/API/Controllers/BankSyncController.cs`
   - **Details**: Endpoint:
     1. Query SyncJob table for most recent job for account
     2. Return: status (pending/in_progress/success/failed), transaction_count_fetched, error_message, last_sync_timestamp
     3. If status = in_progress, return estimated time remaining
   - **Success Criteria**: Endpoint returns sync status correctly
 
-- [ ] T309-A [US2] Create REST endpoint: DELETE /accounts/{accountId} (unlink/disconnect account) in `backend/src/Modules/BankSync/API/Controllers/BankSyncController.cs`
+- [x] T309-A [US2] Create REST endpoint: DELETE /accounts/{accountId} (unlink/disconnect account) in `backend/src/Modules/BankSync/API/Controllers/BankSyncController.cs`
   - **Details**: Endpoint implementation:
     1. Verify authenticated user owns account (match user_id from JWT)
     2. Fetch BankAccount by accountId
@@ -549,29 +549,29 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Idempotent: calling twice with same accountId returns 204 both times
   - **Success Criteria**: Account marked inactive, transactions marked inactive, 204 returned, idempotent
 
-- [ ] T310 [US2] Create domain event: AccountSyncStartedEvent in `backend/src/Modules/BankSync/Domain/Events/AccountSyncStartedEvent.cs`
+- [x] T310 [US2] Create domain event: AccountSyncStartedEvent in `backend/src/Modules/BankSync/Domain/Events/AccountSyncStartedEvent.cs`
   - **Details**: Event published when sync starts. Include: accountId, correlationId, startedAt
   - **Success Criteria**: Event compiles, can be published
 
-- [ ] T311 [US2] Create domain event: AccountSyncCompletedEvent in `backend/src/Modules/BankSync/Domain/Events/AccountSyncCompletedEvent.cs`
+- [x] T311 [US2] Create domain event: AccountSyncCompletedEvent in `backend/src/Modules/BankSync/Domain/Events/AccountSyncCompletedEvent.cs`
   - **Details**: Event published when sync completes (success or failure). Include: accountId, status, transactionCountFetched, errorMessage
   - **Success Criteria**: Event compiles, can be published
 
-- [ ] T312 [US2] Create event handler: Update BankAccount status when sync completes in `backend/src/Modules/BankSync/Application/EventHandlers/SyncCompletionEventHandler.cs`
+- [x] T312 [US2] Create event handler: Update BankAccount status when sync completes in `backend/src/Modules/BankSync/Application/EventHandlers/SyncCompletionEventHandler.cs`
   - **Details**: When AccountSyncCompletedEvent published:
     - Update BankAccount.sync_status → active (if success) or failed (if failed)
     - Update BankAccount.last_sync_timestamp (if success)
     - Persist changes
   - **Success Criteria**: Handler executes, updates BankAccount correctly
 
-- [ ] T316 [US2] Create frontend service: extend BankSyncService with sync methods in `frontend/src/app/modules/bank-sync/services/bank-sync.service.ts`
+- [X] T316 [US2] Create frontend service: extend BankSyncService with sync methods in `frontend/src/app/modules/bank-sync/services/bank-sync.service.ts`
   - **Details**: Add methods:
     - triggerSync(accountId): POST /accounts/{id}/sync
     - getSyncStatus(accountId): GET /accounts/{id}/sync-status (poll every 2 seconds while status != success/failed)
     - stopPolling(): cancel polling
   - **Success Criteria**: Methods compile, polling logic correct
 
-- [ ] T317 [US2] Create frontend component: SyncStatusComponent in `frontend/src/app/modules/bank-sync/components/sync-status/sync-status.component.ts` and `.html`
+- [X] T317 [US2] Create frontend component: SyncStatusComponent in `frontend/src/app/modules/bank-sync/components/sync-status/sync-status.component.ts` and `.html`
   - **Details**: Component:
     1. Accept accountId as input
     2. Display status badge: Syncing (animated spinner), Success (checkmark), Failed (error icon with message)
@@ -581,11 +581,11 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     6. If failed: show error message, retry button
   - **Success Criteria**: Component renders, polling works, status updates in real-time
 
-- [ ] T318 [US2] Update AccountsListComponent to show sync status + "Sync Now" button in `frontend/src/app/modules/bank-sync/pages/accounts-list/accounts-list.component.html`
+- [X] T318 [US2] Update AccountsListComponent to show sync status + "Sync Now" button in `frontend/src/app/modules/bank-sync/pages/accounts-list/accounts-list.component.html`
   - **Details**: Add column to table: SyncStatus | LastSyncTime. Add "Sync Now" button in each row. Import SyncStatusComponent
   - **Success Criteria**: Component renders sync status, button functional
 
-- [ ] T319 [US2] Create E2E test: Manual sync trigger + status polling in `frontend/tests/integration/bank-sync/manual-sync-flow.e2e.spec.ts`
+- [X] T319 [US2] Create E2E test: Manual sync trigger + status polling in `frontend/tests/integration/bank-sync/manual-sync-flow.e2e.spec.ts`
   - **Details**: E2E test:
     1. Navigate to /accounts
     2. Click "Sync Now" button
@@ -628,7 +628,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
 
 <!-- TDD: Write unit + integration tests FIRST, then implement to make them pass -->
 
-- [ ] T412 [P] [US3] Create unit tests for AggregationService in `backend/tests/Unit/BankSync/Application/AggregationServiceTests.cs`
+- [X] T412 [P] [US3] Create unit tests for AggregationService in `backend/tests/Unit/BankSync/Application/AggregationServiceTests.cs`
   - **Details**: Tests:
     - Aggregate 3 accounts (2 EUR, 1 USD) → correct totals by currency
     - Handle NULL balances → exclude from sum
@@ -636,7 +636,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - available_balance aggregation works separately from current_balance
   - **Success Criteria**: All tests compile, ready to pass once T401 implemented
 
-- [ ] T413 [P] [US3] Create unit tests for MoneyFlowStatisticsService in `backend/tests/Unit/BankSync/Application/MoneyFlowStatisticsTests.cs`
+- [X] T413 [P] [US3] Create unit tests for MoneyFlowStatisticsService in `backend/tests/Unit/BankSync/Application/MoneyFlowStatisticsTests.cs`
   - **Details**: Tests:
     - Calculate 6 months of flow (inflow, outflow, net)
     - Correct grouping by month
@@ -645,7 +645,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Debit/credit classification via transaction_type field
   - **Success Criteria**: All tests compile, ready to pass once T402 implemented
 
-- [ ] T414 [P] [US3] Create integration tests: Dashboard aggregation queries in `backend/tests/Integration/BankSync/DashboardAggregationTests.cs`
+- [X] T414 [P] [US3] Create integration tests: Dashboard aggregation queries in `backend/tests/Integration/BankSync/DashboardAggregationTests.cs`
   - **Details**: Integration test with real DB:
     - Create 3 accounts (EUR, USD, EUR)
     - Create 50 transactions with varying transaction_type and merchant_category
@@ -657,7 +657,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
 
 <!-- Implementation: Make the tests above pass -->
 
-- [ ] T401 [P] [US3] Create AggregationService (balance sum + currency grouping) in `backend/src/Modules/BankSync/Application/Services/AggregationService.cs`
+- [X] T401 [P] [US3] Create AggregationService (balance sum + currency grouping) in `backend/src/Modules/BankSync/Application/Services/AggregationService.cs`
   - **Details**: Service with methods:
     - GetAggregatedBalanceAsync(userId): Sum current_balance by currency, return dict { Currency → Total }
     - GetAggregatedAvailableBalance(userId): Same for available_balance
@@ -668,7 +668,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Efficient DB queries (single aggregation query, not N+1)
   - **Success Criteria**: T412 tests pass, queries are efficient (1 query), values sum correctly
 
-- [ ] T402 [P] [US3] Create MoneyFlowStatisticsService (monthly inflow/outflow) in `backend/src/Modules/BankSync/Application/Services/MoneyFlowStatisticsService.cs`
+- [X] T402 [P] [US3] Create MoneyFlowStatisticsService (monthly inflow/outflow) in `backend/src/Modules/BankSync/Application/Services/MoneyFlowStatisticsService.cs`
   - **Details**: Service with method:
     - GetMonthlyFlowAsync(userId, months=6): Returns array of {month, inflow, outflow, net} for last 6 months
     - Inflow = sum of transactions where transaction_type = 'credit'
@@ -678,7 +678,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Exclude pending transactions (is_pending = true)
   - **Success Criteria**: T413 tests pass, calculations correct, queries efficient
 
-- [ ] T403 [P] [US3] Create MerchantCategoryStatisticsService (spending by category) in `backend/src/Modules/BankSync/Application/Services/MerchantCategoryStatisticsService.cs`
+- [X] T403 [P] [US3] Create MerchantCategoryStatisticsService (spending by category) in `backend/src/Modules/BankSync/Application/Services/MerchantCategoryStatisticsService.cs`
   - **Details**: Service with method:
     - GetTopCategoriesAsync(userId, limit=10): Returns top spending categories (from merchant_category field)
     - Calculate total spend per category
@@ -686,7 +686,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Include % of total spend
   - **Success Criteria**: Service compiles, categories sorted by spend, percentages sum to 100%
 
-- [ ] T404 [US3] Create DashboardQueryService (unified dashboard queries) in `backend/src/Modules/BankSync/Application/Services/DashboardQueryService.cs`
+- [X] T404 [US3] Create DashboardQueryService (unified dashboard queries) in `backend/src/Modules/BankSync/Application/Services/DashboardQueryService.cs`
   - **Details**: Service that aggregates all dashboard data:
     - Get aggregated balance
     - Get monthly flow stats
@@ -696,28 +696,28 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Return single dashboard DTO
   - **Success Criteria**: Service compiles, returns single DTO with all data
 
-- [ ] T405 [P] [US3] Create GetAggregatedBalanceQuery + handler in `backend/src/Modules/BankSync/Application/Queries/GetAggregatedBalanceQuery.cs` and `GetAggregatedBalanceQueryHandler.cs`
+- [X] T405 [P] [US3] Create GetAggregatedBalanceQuery + handler in `backend/src/Modules/BankSync/Application/Queries/GetAggregatedBalanceQuery.cs` and `GetAggregatedBalanceQueryHandler.cs`
   - **Details**: Query handler:
     1. Get userId from context
     2. Call AggregationService.GetAggregatedBalanceAsync()
     3. Return { balances: { EUR: 5000, USD: 1000 }, totalAccountCount: 3 }
   - **Success Criteria**: Query compiles, handler executes, returns correct totals
 
-- [ ] T406 [P] [US3] Create GetMoneyFlowStatisticsQuery + handler in `backend/src/Modules/BankSync/Application/Queries/GetMoneyFlowStatisticsQuery.cs` and `GetMoneyFlowStatisticsQueryHandler.cs`
+- [X] T406 [P] [US3] Create GetMoneyFlowStatisticsQuery + handler in `backend/src/Modules/BankSync/Application/Queries/GetMoneyFlowStatisticsQuery.cs` and `GetMoneyFlowStatisticsQueryHandler.cs`
   - **Details**: Query handler:
     1. Get userId from context
     2. Call MoneyFlowStatisticsService.GetMonthlyFlowAsync(userId, months=6)
     3. Return array of monthly stats
   - **Success Criteria**: Query compiles, returns 6 months of data
 
-- [ ] T407 [P] [US3] Create GetTopCategoriesQuery + handler in `backend/src/Modules/BankSync/Application/Queries/GetTopCategoriesQuery.cs` and `GetTopCategoriesQueryHandler.cs`
+- [X] T407 [P] [US3] Create GetTopCategoriesQuery + handler in `backend/src/Modules/BankSync/Application/Queries/GetTopCategoriesQuery.cs` and `GetTopCategoriesQueryHandler.cs`
   - **Details**: Query handler:
     1. Get userId from context
     2. Call MerchantCategoryStatisticsService.GetTopCategoriesAsync(userId, limit=10)
     3. Return array of { category, totalSpend, percentOfTotal }
   - **Success Criteria**: Query compiles, returns top 10 categories
 
-- [ ] T408 [US3] Create REST endpoint: GET /dashboard/aggregated (unified dashboard) in `backend/src/Modules/BankSync/API/Controllers/BankSyncController.cs`
+- [X] T408 [US3] Create REST endpoint: GET /dashboard/aggregated (unified dashboard) in `backend/src/Modules/BankSync/API/Controllers/BankSyncController.cs`
   - **Details**: Endpoint:
     1. Get userId from JWT
     2. Call DashboardQueryService.GetDashboardDataAsync(userId)
@@ -735,13 +735,13 @@ Phase 6 (Polish & Cross-Cutting Concerns)
        ```
   - **Success Criteria**: T414 integration test passes, endpoint returns 200 with complete dashboard data
 
-- [ ] T409 [US3] Create TransferDetectionService (detect internal transfers) in `backend/src/Modules/BankSync/Application/Services/TransferDetectionService.cs`
+- [X] T409 [US3] Create TransferDetectionService (detect internal transfers) in `backend/src/Modules/BankSync/Application/Services/TransferDetectionService.cs`
   - **Details**: Service to identify internal transfers (same user, both accounts):
     - CompareTransactionsForTransferAsync(debitTxn, creditTxn): returns true if likely same transfer
     - Logic: same amount, date within 1 day, transaction_type = 'transfer', description similar
   - **Success Criteria**: Service compiles, can be used in aggregation to avoid double-counting
 
-- [ ] T410 [US3] Create REST endpoint: GET /dashboard/transfers (internal transfer view) in `backend/src/Modules/BankSync/API/Controllers/BankSyncController.cs`
+- [X] T410 [US3] Create REST endpoint: GET /dashboard/transfers (internal transfer view) in `backend/src/Modules/BankSync/API/Controllers/BankSyncController.cs`
   - **Details**: Endpoint that shows linked internal transfers (debit + credit pairs)
   - **Success Criteria**: Endpoint returns transfer pairs
 
@@ -749,7 +749,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
   - **Details**: Decorator to cache aggregation query results (5-minute TTL). Invalidate on new transaction sync
   - **Success Criteria**: Cache works, invalidates on sync
 
-- [ ] T415 [US3] Create frontend DashboardComponent (main feature display) in `frontend/src/app/modules/bank-sync/pages/dashboard/dashboard.component.ts` and `.html`
+- [X] T415 [US3] Create frontend DashboardComponent (main feature display) in `frontend/src/app/modules/bank-sync/pages/dashboard/dashboard.component.ts` and `.html`
   - **Details**: Component:
     1. Fetch dashboard data on load via BankSyncService
     2. Display: Total balance card (grouped by currency), account count
@@ -759,26 +759,26 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     6. Refresh interval every 5 minutes
   - **Success Criteria**: Component renders all elements, data shows correctly
 
-- [ ] T416 [US3] Create frontend service: extend BankSyncService with aggregation methods in `frontend/src/app/modules/bank-sync/services/bank-sync.service.ts`
+- [X] T416 [US3] Create frontend service: extend BankSyncService with aggregation methods in `frontend/src/app/modules/bank-sync/services/bank-sync.service.ts`
   - **Details**: Add methods:
     - getDashboardData(): GET /dashboard/aggregated (returns all dashboard data in one call)
   - **Success Criteria**: Method compiles, HTTP call correct, dashboard data mapped to local model
 
-- [ ] T417 [US3] Create frontend chart component: MoneyFlowChart (line/bar chart) in `frontend/src/app/modules/bank-sync/components/money-flow-chart/money-flow-chart.component.ts` and `.html`
+- [X] T417 [US3] Create frontend chart component: MoneyFlowChart (line/bar chart) in `frontend/src/app/modules/bank-sync/components/money-flow-chart/money-flow-chart.component.ts` and `.html`
   - **Details**: Component using ngx-charts or Chart.js:
     - Accept monthlyFlowData as input
     - Render bar chart with months on X-axis, inflow (green) + outflow (red) on Y-axis
     - Show tooltip with exact values on hover
   - **Success Criteria**: Chart renders correctly, data points accurate
 
-- [ ] T418 [US3] Create frontend chart component: CategoryBreakdownChart (pie chart) in `frontend/src/app/modules/bank-sync/components/category-breakdown-chart/category-breakdown-chart.component.ts` and `.html`
+- [X] T418 [US3] Create frontend chart component: CategoryBreakdownChart (pie chart) in `frontend/src/app/modules/bank-sync/components/category-breakdown-chart/category-breakdown-chart.component.ts` and `.html`
   - **Details**: Component using ngx-charts:
     - Accept topCategoriesData as input
     - Render pie chart showing % spend per category
     - Show labels with category name + % on each slice
   - **Success Criteria**: Chart renders, percentages sum to 100%
 
-- [ ] T419 [US3] Create E2E test: Dashboard shows aggregated data in `frontend/tests/integration/bank-sync/dashboard-aggregation-flow.e2e.spec.ts`
+- [X] T419 [US3] Create E2E test: Dashboard shows aggregated data in `frontend/tests/integration/bank-sync/dashboard-aggregation-flow.e2e.spec.ts`
   - **Details**: E2E test:
     1. Navigate to /dashboard
     2. Verify title "Financial Overview"
@@ -787,7 +787,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     5. Verify top categories list shown
   - **Success Criteria**: Test passes with mock data
 
-- [ ] T420 [US3] Create documentation: Multi-currency handling guide in `docs/MULTI_CURRENCY_GUIDE.md`
+- [X] T420 [US3] Create documentation: Multi-currency handling guide in `docs/MULTI_CURRENCY_GUIDE.md`
   - **Details**: Document explaining how system handles multiple currencies:
     - No automatic conversion (EUR + USD not summed)
     - Currency totals shown separately
@@ -815,7 +815,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
 
 ### Phase 6 Tasks
 
-- [ ] T501 [P] Implement comprehensive error handling + user-friendly messages in `backend/src/Modules/BankSync/API/Middleware/ErrorHandlingMiddleware.cs` and `backend/src/Modules/Shared/Exceptions/BankSyncException.cs`
+- [x] T501 [P] Implement comprehensive error handling + user-friendly messages in `backend/src/Modules/BankSync/API/Middleware/ErrorHandlingMiddleware.cs` and `backend/src/Modules/Shared/Exceptions/BankSyncException.cs`
   - **Details**: Error handler that:
     - Catches specific exceptions (PlaidApiException, DbUpdateException, etc.)
     - Delegates to PlaidErrorMapper (T306-A) for Plaid-specific error codes
@@ -828,7 +828,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Rate limit → 429 "Too many requests. Please wait before trying again."
   - **Success Criteria**: All exception paths tested, messages user-friendly
 
-- [ ] T502 [P] Implement security: Rate limiting on API endpoints in `backend/src/Modules/Shared/Security/RateLimitingMiddleware.cs`
+- [x] T502 [P] Implement security: Rate limiting on API endpoints in `backend/src/Modules/Shared/Security/RateLimitingMiddleware.cs`
   - **Details**: Middleware that rate-limits:
     - Anonymous users: 10 req/min
     - Authenticated users: 100 req/min per endpoint
@@ -836,7 +836,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Return 429 with Retry-After header
   - **Success Criteria**: Rate limiting blocks requests over limit, allows legit traffic
 
-- [ ] T503 [P] Implement security: Validate JWT token on every request in `backend/src/Modules/Shared/Security/JwtAuthenticationMiddleware.cs`
+- [x] T503 [P] Implement security: Validate JWT token on every request in `backend/src/Modules/Shared/Security/JwtAuthenticationMiddleware.cs`
   - **Details**: Middleware:
     - Extract Bearer token from Authorization header
     - Validate signature using JWT secret
@@ -845,7 +845,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Attach user ID to HttpContext
   - **Success Criteria**: Middleware validates correctly, rejects invalid tokens
 
-- [ ] T504 [P] Implement CORS for frontend origin in `backend/src/Startup/Program.cs`
+- [x] T504 [P] Implement CORS for frontend origin in `backend/src/Startup/Program.cs`
   - **Details**: Configure CORS to allow:
     - Origin: http://localhost:4200 (dev), https://finance-sentry.com (prod)
     - Methods: GET, POST, PUT, DELETE
@@ -853,21 +853,21 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Credentials: true
   - **Success Criteria**: Preflight requests handled, frontend can call API
 
-- [ ] T505 [P] Implement database query performance monitoring in `backend/src/Modules/Shared/Performance/EFQueryLoggerInterceptor.cs`
+- [x] T505 [P] Implement database query performance monitoring in `backend/src/Modules/Shared/Performance/EFQueryLoggerInterceptor.cs`
   - **Details**: EF Core query interceptor that:
     - Logs slow queries (> 100ms)
     - Counts database round-trips per request
     - Warns on N+1 query patterns
   - **Success Criteria**: Slow queries logged, N+1 patterns detected
 
-- [ ] T506 [P] Add API response pagination best practices in `backend/src/Modules/Shared/API/PaginationExtensions.cs`
+- [x] T506 [P] Add API response pagination best practices in `backend/src/Modules/Shared/API/PaginationExtensions.cs`
   - **Details**: Extension methods:
     - ApplyPagination(query, offset, limit): apply pagination to IQueryable
     - CreatePaginatedResponse(items, totalCount): wrap in pagination metadata
     - Validate: offset >= 0, limit <= 100
   - **Success Criteria**: All paginated endpoints use extension, validation works
 
-- [ ] T507 [P] Create API documentation (OpenAPI/Swagger) in `backend/src/Startup/Program.cs` and `docs/SWAGGER.md`
+- [x] T507 [P] Create API documentation (OpenAPI/Swagger) in `backend/src/Startup/Program.cs` and `docs/SWAGGER.md`
   - **Details**: Configure Swagger:
     - Document all endpoints: /accounts/connect, /accounts/link, /accounts, /accounts/{id}/transactions, /dashboard/aggregated, /dashboard/transfers
     - Include request/response examples
@@ -875,7 +875,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Document error codes
   - **Success Criteria**: Swagger UI renders at /swagger, all endpoints documented
 
-- [ ] T508 [P] Create postman collection for manual API testing in `docs/Bank-Sync-API.postman_collection.json`
+- [x] T508 [P] Create postman collection for manual API testing in `docs/Bank-Sync-API.postman_collection.json`
   - **Details**: Postman collection with:
     - All endpoints preconfigured
     - Environment variables for baseUrl, token, accountId
@@ -883,7 +883,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Tests for status codes
   - **Success Criteria**: Postman collection importable, requests work
 
-- [ ] T509 [P] Add input validation to all REST endpoints in `backend/src/Modules/BankSync/API/Validators/`
+- [x] T509 [P] Add input validation to all REST endpoints in `backend/src/Modules/BankSync/API/Validators/`
   - **Details**: FluentValidation rules:
     - publicToken: required, max 100 chars
     - startDate: valid ISO date, <= today
@@ -892,7 +892,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - limit: 1-100
   - **Success Criteria**: All endpoints validate input, return 400 with errors
 
-- [ ] T510 [P] Create database backup & recovery strategy documentation in `docs/DATABASE_BACKUP.md`
+- [x] T510 [P] Create database backup & recovery strategy documentation in `docs/DATABASE_BACKUP.md`
   - **Details**: Document:
     - Backup frequency (daily, weekly)
     - Recovery procedure
@@ -900,21 +900,21 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Point-in-time recovery process
   - **Success Criteria**: Documentation complete, recovery tested
 
-- [ ] T511 [P] Implement structured logging to cloud sink (Application Insights / CloudWatch) in `backend/src/Startup/Program.cs`
+- [x] T511 [P] Implement structured logging to cloud sink (Application Insights / CloudWatch) in `backend/src/Startup/Program.cs`
   - **Details**: Configure Serilog to send logs to:
     - Development: console + file
     - Production: Application Insights / CloudWatch
     - Include custom properties: correlation_id, user_id, operation (never plaintext tokens)
   - **Success Criteria**: Logs appear in cloud sink, structured fields searchable
 
-- [ ] T512 [P] Create health check endpoint: GET /health in `backend/src/Modules/Shared/Health/HealthCheckController.cs`
+- [x] T512 [P] Create health check endpoint: GET /health in `backend/src/Modules/Shared/Health/HealthCheckController.cs`
   - **Details**: Endpoint that checks:
     - Database connectivity (query SELECT 1)
     - Plaid API connectivity (make dummy call, don't count requests)
     - Return: { status: "healthy" | "degraded" | "unhealthy", checks: { database, plaid } }
   - **Success Criteria**: Endpoint responds 200 healthy, 503 unhealthy
 
-- [ ] T513 [P] Create database maintenance job: Backup encrypted credentials in `backend/src/Modules/Shared/Jobs/CredentialBackupJob.cs`
+- [x] T513 [P] Create database maintenance job: Backup encrypted credentials in `backend/src/Modules/Shared/Jobs/CredentialBackupJob.cs`
   - **Details**: Background job (runs weekly):
     - Extract all encrypted credentials
     - Create encrypted backup file
@@ -922,7 +922,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Log completion (never log plaintext)
   - **Success Criteria**: Job runs, backup created, can be restored
 
-- [ ] T514 Create security audit: Penetration test checklist in `docs/SECURITY_AUDIT.md`
+- [x] T514 Create security audit: Penetration test checklist in `docs/SECURITY_AUDIT.md`
   - **Details**: Checklist:
     - SQL injection: parameterized queries ✓
     - XSS: sanitized output ✓
@@ -931,21 +931,21 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Rate limiting: implemented ✓
   - **Success Criteria**: Checklist completed, vulnerabilities documented
 
-- [ ] T515 Create frontend security: Angular Content Security Policy in `frontend/src/index.html`
+- [x] T515 Create frontend security: Angular Content Security Policy in `frontend/src/index.html`
   - **Details**: Add CSP headers:
     - script-src 'self' cdn.plaid.com
     - style-src 'self' 'unsafe-inline'
     - img-src 'self' data:
   - **Success Criteria**: CSP headers set, browser console no violations
 
-- [ ] T516 Create frontend performance: Tree-shaking + code splitting in `frontend/angular.json`
+- [x] T516 Create frontend performance: Tree-shaking + code splitting in `frontend/angular.json`
   - **Details**: Configure Angular build:
     - Production: minification, tree-shaking, bundlebudgets
     - Code-splitting: lazy-load bank-sync module
     - Compress: enable gzip
   - **Success Criteria**: Build succeeds, bundle size < 500KB (gzipped)
 
-- [ ] T517 [P] Create end-to-end performance test in `backend/tests/Performance/E2EPerformanceTest.cs`
+- [x] T517 [P] Create end-to-end performance test in `backend/tests/Performance/E2EPerformanceTest.cs`
   - **Details**: Test that simulates:
     - Connect 50 accounts (measure time, validates SC-008)
     - Sync 500 transactions each (measure time)
@@ -953,7 +953,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Assert: sync < 5 min, query < 1 sec across 50 accounts
   - **Success Criteria**: Test passes, performance SLAs met (SC-006, SC-008 validated)
 
-- [ ] T518 [P] Create load testing script (k6 / Artillery) in `tests/load/bank-sync-load-test.js`
+- [x] T518 [P] Create load testing script (k6 / Artillery) in `tests/load/bank-sync-load-test.js`
   - **Details**: Script that:
     - Simulates 100 concurrent users
     - Each user: connect account → sync → query dashboard
@@ -961,7 +961,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Assert: p99 latency < 5 sec, error rate < 1%
   - **Success Criteria**: Script runs, results captured
 
-- [ ] T519 [P] Update README with setup + deployment instructions in `README.md`
+- [x] T519 [P] Update README with setup + deployment instructions in `README.md`
   - **Details**: Add:
     - Feature overview
     - Local development setup (clone → docker-compose up)
@@ -970,7 +970,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Environment variables
   - **Success Criteria**: Instructions clear, tested by new developer
 
-- [ ] T520 Create QA Test Plan document in `docs/QA_TEST_PLAN.md`
+- [x] T520 Create QA Test Plan document in `docs/QA_TEST_PLAN.md`
   - **Details**: Document:
     - Manual test cases per user story (US1, US2, US3)
     - Edge cases to test (credential expiry, bank outage, etc.)
@@ -978,21 +978,21 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Browser/device compatibility matrix
   - **Success Criteria**: Test plan comprehensive, covers all scenarios
 
-- [ ] T521 [P] Implement feature flag for gradual rollout in `backend/src/Modules/Shared/FeatureFlags/FeatureFlagService.cs`
+- [x] T521 [P] Implement feature flag for gradual rollout in `backend/src/Modules/Shared/FeatureFlags/FeatureFlagService.cs`
   - **Details**: Service using environment variable or LaunchDarkly:
     - Feature: "BANK_SYNC_ENABLED"
     - Rollout: 10% → 50% → 100% of users
     - API returns 503 or hides UI if disabled
   - **Success Criteria**: Feature can be toggled via config, no code changes needed
 
-- [ ] T522 [P] Create data migration guide: How to export/import bank data in `docs/DATA_EXPORT_GUIDE.md`
+- [x] T522 [P] Create data migration guide: How to export/import bank data in `docs/DATA_EXPORT_GUIDE.md`
   - **Details**: Explain:
     - Export format: JSON with encrypted credentials masked
     - Import format: restore from backup
     - GDPR compliance: how to delete user data
   - **Success Criteria**: Guide clear, tested
 
-- [ ] T523 [P] Create operations runbook: Troubleshooting common issues in `docs/OPERATIONS_RUNBOOK.md`
+- [x] T523 [P] Create operations runbook: Troubleshooting common issues in `docs/OPERATIONS_RUNBOOK.md`
   - **Details**: Document solutions for:
     - Sync failing: check Plaid API health, check network
     - High error rate: check database connections, check rate limits
@@ -1001,7 +1001,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
 
 <!-- CONSTITUTION V COMPLIANCE: Audit logging — "Audit logs record all data access" (MUST) -->
 
-- [ ] T524 [P] Create audit_log DB table and EF Core migration in `backend/src/Migrations/M002_AuditLogSchema.cs` and `backend/src/Modules/Shared/Persistence/AuditLogDbContext.cs`
+- [x] T524 [P] Create audit_log DB table and EF Core migration in `backend/src/Migrations/M002_AuditLogSchema.cs` and `backend/src/Modules/Shared/Persistence/AuditLogDbContext.cs`
   - **Details**:
     - New table `audit_logs` with columns: audit_id (UUID PK), user_id (UUID, indexed), action (VARCHAR 50: READ_ACCOUNT, READ_TRANSACTIONS, WRITE_ACCOUNT, DELETE_ACCOUNT, CREDENTIAL_ACCESS, SYNC_TRIGGERED), resource_type (VARCHAR 50), resource_id (UUID), ip_address (VARCHAR 45), user_agent (TEXT), performed_at (TIMESTAMPTZ NOT NULL), correlation_id (VARCHAR 64)
     - Add EF Core entity `AuditLog` to AuditLogDbContext
@@ -1009,7 +1009,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Never log sensitive data (no tokens, no account numbers beyond last 4)
   - **Success Criteria**: Migration applies cleanly, rollback succeeds, table exists in PostgreSQL
 
-- [ ] T525 [P] Implement AuditLogService recording all data access events in `backend/src/Modules/Shared/AuditLog/IAuditLogService.cs` and `backend/src/Modules/Shared/AuditLog/AuditLogService.cs`
+- [x] T525 [P] Implement AuditLogService recording all data access events in `backend/src/Modules/Shared/AuditLog/IAuditLogService.cs` and `backend/src/Modules/Shared/AuditLog/AuditLogService.cs`
   - **Details**:
     - Interface: `Task LogAsync(string userId, string action, string resourceType, string resourceId, string correlationId)`
     - Implementation writes a row to audit_logs table asynchronously (fire-and-forget; never blocks request path)
@@ -1024,7 +1024,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
     - Never log plaintext credentials, tokens, or full account numbers
   - **Success Criteria**: AuditLog rows created for every data access, service registered in DI, no performance impact (async write)
 
-- [ ] T526 [P] Create integration tests for audit logging in `backend/tests/Integration/Shared/AuditLogServiceTests.cs`
+- [x] T526 [P] Create integration tests for audit logging in `backend/tests/Integration/Shared/AuditLogServiceTests.cs`
   - **Details**: Integration tests using testcontainers PostgreSQL:
     - Test: Call GET /accounts → verify audit_logs row inserted with action=READ_ACCOUNT, correct user_id and resource_id
     - Test: Call DELETE /accounts/{id} → verify audit_logs row with action=DELETE_ACCOUNT
@@ -1035,7 +1035,7 @@ Phase 6 (Polish & Cross-Cutting Concerns)
 
 <!-- FR-008 COMPLIANCE: Data retention enforcement — "store transaction history for at least 24 months" -->
 
-- [ ] T527 [P] Implement data retention enforcement job (24-month archival) in `backend/src/Modules/BankSync/Infrastructure/Jobs/DataRetentionJob.cs` and `backend/src/Modules/Shared/Jobs/RetentionPolicy.cs`
+- [x] T527 [P] Implement data retention enforcement job (24-month archival) in `backend/src/Modules/BankSync/Infrastructure/Jobs/DataRetentionJob.cs` and `backend/src/Modules/Shared/Jobs/RetentionPolicy.cs`
   - **Details**: Background job (runs monthly via Hangfire recurring job) that enforces FR-008: 24-month transaction retention policy.
     - **Archival logic**: Identify transactions where `posted_date < NOW() - INTERVAL '24 months'` AND `is_active = true`
     - **Soft-archive** (not hard delete): Set `is_active = false`, `deleted_at = NOW()`, add note: `archived_reason = 'retention_policy_24m'` (requires adding `archived_reason VARCHAR(50)` nullable column to transactions — add to migration T005 or new migration)
