@@ -55,15 +55,17 @@ A user connects their Interactive Brokers account. The system fetches stock/ETF/
 
 ---
 
-### User Story 3 - AI-Powered Portfolio Analysis & Reports (Priority: P3)
+### User Story 3 - AI-Powered Portfolio Analysis & Reports (Priority: P3 — **DEFERRED to Later Phase**)
+
+**Status**: FUTURE - Not included in initial implementation phases. To be implemented after core multi-source aggregation is stable.
 
 For each asset (crypto or stock) and for the portfolio overall, the system generates AI-powered analysis including performance summary, risk assessment, and forecast. Users can view asset-specific reports and an overall portfolio summary.
 
-**Why this priority**: AI analysis is the core value proposition per product vision. Delivers actionable insights and recommendations. Depends on Stories 1 & 2 for holdings data.
+**Why this priority (when implemented)**: AI analysis is an advanced value proposition per product vision. Delivers actionable insights and recommendations. Depends on Stories 1 & 2 for holdings data.
 
 **Independent Test**: Can be tested by connecting investment accounts, allowing AI analysis to generate, and verifying reports are displayed. Delivers insights that help users make decisions.
 
-**Acceptance Scenarios**:
+**Acceptance Scenarios** (for future implementation):
 
 1. **Given** the user has multiple holdings, **When** they click "AI Analysis" for a specific asset, **Then** the system displays a report with: performance summary, risk factors, forecast trend
 2. **Given** holdings and market data are available, **When** the user views portfolio analysis, **Then** they see overall risk score, asset allocation recommendations, and diversification suggestions
@@ -94,8 +96,8 @@ For each asset (crypto or stock) and for the portfolio overall, the system gener
 - **FR-006**: System MUST aggregate holdings from multiple sources and calculate portfolio metrics: total value, allocation %, gains/losses
 - **FR-007**: System MUST support multi-currency portfolio (automatically convert all assets to a single base currency)
 - **FR-008**: System MUST calculate portfolio risk metrics: volatility, concentration risk, diversification score
-- **FR-009**: System MUST generate AI-powered analysis for individual assets and portfolio overall (via LLM integration)
-- **FR-010**: AI analysis MUST generate human-readable reports with insights and actionable recommendations
+- **FR-009**: *(DEFERRED to future phase)* System MUST generate AI-powered analysis for individual assets and portfolio overall (via LLM integration)
+- **FR-010**: *(DEFERRED to future phase)* AI analysis MUST generate human-readable reports with insights and actionable recommendations
 - **FR-011**: System MUST handle failed syncs gracefully and implement exponential backoff retry logic
 - **FR-012**: Each user's portfolio data MUST be isolated; holdings/analysis from one user are never visible to another
 
