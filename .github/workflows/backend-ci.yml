@@ -52,10 +52,9 @@ jobs:
       run: |
         dotnet test backend/tests/FinanceSentry.Tests.Unit/FinanceSentry.Tests.Unit.csproj \
           --configuration Release --no-build --verbosity normal \
-          --collect:"XPlat Code Coverage" \
+          --collect:"XPlat Code Coverage;Format=opencover" \
           --results-directory TestResults/Unit \
-          --logger "trx;LogFileName=unit-results.trx" \
-          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+          --logger "trx;LogFileName=unit-results.trx"
 
     - name: Run integration tests with coverage
       env:
@@ -63,10 +62,9 @@ jobs:
       run: |
         dotnet test backend/tests/FinanceSentry.Tests.Integration/FinanceSentry.Tests.Integration.csproj \
           --configuration Release --no-build --verbosity normal \
-          --collect:"XPlat Code Coverage" \
+          --collect:"XPlat Code Coverage;Format=opencover" \
           --results-directory TestResults/Integration \
-          --logger "trx;LogFileName=integration-results.trx" \
-          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+          --logger "trx;LogFileName=integration-results.trx"
 
     # Constitution §II (NON-NEGOTIABLE): Enforce 80% minimum line coverage.
     # Pipeline fails here if coverage drops below threshold.
