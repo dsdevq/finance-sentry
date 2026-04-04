@@ -5,10 +5,13 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
+using FinanceSentry.Modules.BankSync.Infrastructure.Persistence;
 using FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Moq;
@@ -159,6 +162,18 @@ public class BankSyncApiFactory : WebApplicationFactory<Program>
             ReplaceService(services, PlaidClientMock.Object);
             ReplaceService(services, BankAccountRepoMock.Object);
             ReplaceService(services, TransactionRepoMock.Object);
+
+            // Replace the real Npgsql DbContext with an in-memory one so that
+            // AuditLogService fire-and-forget writes (and any other DB access) never
+            // attempt a real Postgres connection during contract tests.
+            var dbContextDescriptor = services.FirstOrDefault(
+                d => d.ServiceType == typeof(DbContextOptions<BankSyncDbContext>));
+            if (dbContextDescriptor != null)
+                services.Remove(dbContextDescriptor);
+
+            var dbRoot = new InMemoryDatabaseRoot();
+            services.AddDbContext<BankSyncDbContext>(options =>
+                options.UseInMemoryDatabase("contract-tests", dbRoot));
 
             // Provide minimal configuration to satisfy Program.cs startup
             services.Configure<Infrastructure.Encryption.EncryptionOptions>(opts =>
