@@ -40,7 +40,8 @@
       "Bash(dotnet test:*)",
       "Bash(dotnet restore:*)",
       "Bash(npm info:*)",
-      "Bash(node -e \":*)"
+      "Bash(node -e \":*)",
+      "Bash(npm run:*)"
     ]
   }
 }
