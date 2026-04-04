@@ -48,7 +48,7 @@ export interface TriggerSyncResponse {
 @Injectable({providedIn: 'root'})
 export class BankSyncService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = `${environment.apiBaseUrl}/api/accounts`;
+  private readonly baseUrl = `${environment.apiBaseUrl}/accounts`;
 
   public getLinkToken(): Observable<ConnectResponse> {
     return this.http.post<ConnectResponse>(`${this.baseUrl}/connect`, {});
@@ -120,6 +120,6 @@ export class BankSyncService {
   }
 
   public getDashboardData(): Observable<DashboardData> {
-    return this.http.get<DashboardData>(`${environment.apiBaseUrl}/api/dashboard/aggregated`);
+    return this.http.get<DashboardData>(`${environment.apiBaseUrl}/dashboard/aggregated`);
   }
 }
