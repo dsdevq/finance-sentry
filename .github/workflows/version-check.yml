@@ -1,0 +1,149 @@
+name: Version Check & Validation
+
+on:
+  pull_request:
+    paths:
+      - 'frontend/**/*.ts'
+      - 'frontend/**/*.html'
+      - 'frontend/**/*.scss'
+      - 'frontend/**/*.css'
+      - 'frontend/package.json'
+      - 'backend/src/**/*.cs'
+      - 'backend/**/*.csproj'
+
+jobs:
+  check-frontend-version:
+    name: Frontend Version Validation
+    runs-on: ubuntu-latest
+    if: |
+      contains(github.event.pull_request.files.*.filename, 'frontend/src/') ||
+      contains(github.event.pull_request.files.*.filename, 'frontend/package.json')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get current version
+        id: current
+        run: |
+          VERSION=$(cat frontend/package.json | jq -r '.version')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Current frontend version: $VERSION"
+
+      - name: Get base branch version
+        id: base
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          VERSION=$(git show origin/${{ github.base_ref }}:frontend/package.json | jq -r '.version')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Base branch frontend version: $VERSION"
+
+      - name: Check if version was bumped
+        id: bumped
+        run: |
+          CURRENT="${{ steps.current.outputs.version }}"
+          BASE="${{ steps.base.outputs.version }}"
+          if [ "$CURRENT" != "$BASE" ]; then
+            echo "bumped=true" >> $GITHUB_OUTPUT
+            echo "✅ Frontend version bumped: $BASE → $CURRENT"
+          else
+            echo "bumped=false" >> $GITHUB_OUTPUT
+            echo "❌ Frontend version NOT bumped (still $CURRENT)"
+          fi
+
+      - name: Verify version bump requirement
+        if: steps.bumped.outputs.bumped == 'false'
+        run: |
+          echo "❌ ERROR: Frontend version must be bumped when code changes"
+          echo ""
+          echo "Frontend files changed but version was not incremented in frontend/package.json"
+          echo "Current version: ${{ steps.current.outputs.version }}"
+          echo "Base version: ${{ steps.base.outputs.version }}"
+          echo ""
+          echo "Please update frontend/package.json version field:"
+          echo "  - MAJOR: breaking UI changes or major API changes"
+          echo "  - MINOR: new components, features, non-breaking changes"
+          echo "  - PATCH: bug fixes, style refinements"
+          exit 1
+
+  check-backend-version:
+    name: Backend Version Validation
+    runs-on: ubuntu-latest
+    if: |
+      contains(github.event.pull_request.files.*.filename, 'backend/src/') ||
+      contains(github.event.pull_request.files.*.filename, 'backend/**/*.csproj')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get current API version
+        id: current
+        run: |
+          VERSION=$(grep -m1 "<Version>" backend/src/FinanceSentry.API/FinanceSentry.API.csproj | sed 's/.*<Version>\(.*\)<\/Version>.*/\1/')
+          if [ -z "$VERSION" ]; then
+            echo "version=NOT_SET" >> $GITHUB_OUTPUT
+            echo "⚠️  Backend API version NOT SET in FinanceSentry.API.csproj"
+          else
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "Current backend API version: $VERSION"
+          fi
+
+      - name: Get base branch API version
+        id: base
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          VERSION=$(git show origin/${{ github.base_ref }}:backend/src/FinanceSentry.API/FinanceSentry.API.csproj | grep -m1 "<Version>" | sed 's/.*<Version>\(.*\)<\/Version>.*/\1/' || echo "NOT_SET")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Base branch backend API version: $VERSION"
+
+      - name: Check if version was bumped
+        id: bumped
+        run: |
+          CURRENT="${{ steps.current.outputs.version }}"
+          BASE="${{ steps.base.outputs.version }}"
+          if [ "$CURRENT" == "NOT_SET" ] && [ "$BASE" == "NOT_SET" ]; then
+            echo "bumped=na" >> $GITHUB_OUTPUT
+            echo "⚠️  Version fields not yet set (will be set during initial setup)"
+          elif [ "$CURRENT" != "$BASE" ]; then
+            echo "bumped=true" >> $GITHUB_OUTPUT
+            echo "✅ Backend API version bumped: $BASE → $CURRENT"
+          else
+            echo "bumped=false" >> $GITHUB_OUTPUT
+            echo "❌ Backend API version NOT bumped (still $CURRENT)"
+          fi
+
+      - name: Verify version bump requirement
+        if: |
+          steps.bumped.outputs.bumped == 'false' &&
+          steps.current.outputs.version != 'NOT_SET' &&
+          steps.base.outputs.version != 'NOT_SET'
+        run: |
+          echo "❌ ERROR: Backend API version must be bumped when code changes"
+          echo ""
+          echo "Backend files changed but API version was not incremented in FinanceSentry.API.csproj"
+          echo "Current version: ${{ steps.current.outputs.version }}"
+          echo "Base version: ${{ steps.base.outputs.version }}"
+          echo ""
+          echo "Please update <Version> in backend/src/FinanceSentry.API/FinanceSentry.API.csproj:"
+          echo "  - MAJOR: breaking API changes (parameter removal, response incompatibility)"
+          echo "  - MINOR: new endpoints, new optional parameters, new response fields"
+          echo "  - PATCH: bug fixes, security updates, no client impact"
+          exit 1
+
+      - name: Summarize checks
+        if: always()
+        run: |
+          echo "## Version Check Summary"
+          echo ""
+          echo "### Frontend"
+          echo "- Current: ${{ steps.current.outputs.version }}"
+          echo "- Base: ${{ steps.base.outputs.version }}"
+          echo "- Status: ${{ steps.bumped.outputs.bumped }}"
+          echo ""
+          echo "### Backend API"
+          echo "- Current: ${{ steps.current.outputs.version }}"
+          echo "- Base: ${{ steps.base.outputs.version }}"
+          echo "- Status: ${{ steps.bumped.outputs.bumped }}"
