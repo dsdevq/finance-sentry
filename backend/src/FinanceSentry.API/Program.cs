@@ -160,6 +160,23 @@ builder.Services.AddRateLimiter(options =>
 
 var app = builder.Build();
 
+// ── Database initialization and migrations ──────────────────────────────────
+try
+{
+    using (var scope = app.Services.CreateScope())
+    {
+        var dbContext = scope.ServiceProvider.GetRequiredService<FinanceSentry.Modules.BankSync.Infrastructure.Persistence.BankSyncDbContext>();
+        
+        app.Logger.LogInformation("Applying database migrations...");
+        dbContext.Database.Migrate();
+        app.Logger.LogInformation("Database migrations completed successfully");
+    }
+}
+catch (Exception ex)
+{
+    app.Logger.LogError(ex, "An error occurred while migrating the database. Startup will continue, but database operations may fail.");
+}
+
 // ── Middleware pipeline ───────────────────────────────────────────────────────
 app.UseMiddleware<ErrorHandlingMiddleware>();
 app.UseMiddleware<CorrelationIdMiddleware>();
@@ -179,6 +196,11 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health/ready");
+
+// ── Health check endpoint for Docker ─────────────────────────────────────────
+app.MapGet("/api/v1/health", () => new { status = "healthy", timestamp = DateTime.UtcNow })
+    .WithName("Health")
+    .WithOpenApi();
 
 app.Run();
 
