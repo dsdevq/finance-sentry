@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 describe('Manual Sync Flow', () => {
   describe('Manual sync trigger + status polling', () => {
     it('should show syncing status after clicking Sync Now', () => {

@@ -1,7 +1,8 @@
-import {Injectable, inject} from '@angular/core';
 import {HttpClient, HttpParams} from '@angular/common/http';
+import {inject, Injectable} from '@angular/core';
 import {Observable, timer} from 'rxjs';
 import {shareReplay, switchMap, takeWhile} from 'rxjs/operators';
+
 import {environment} from '../../../../environments/environment';
 import {AccountsResponse, ConnectResponse, LinkAccountResponse} from '../models/bank-account.model';
 import {TransactionListResponse, TransactionQueryParams} from '../models/transaction.model';
@@ -61,8 +62,12 @@ export class BankSyncService {
 
   public getAccounts(status?: string, currency?: string): Observable<AccountsResponse> {
     let params = new HttpParams();
-    if (status) params = params.set('status', status);
-    if (currency) params = params.set('currency', currency);
+    if (status) {
+      params = params.set('status', status);
+    }
+    if (currency) {
+      params = params.set('currency', currency);
+    }
     return this.http.get<AccountsResponse>(this.baseUrl, {params});
   }
 
@@ -71,14 +76,24 @@ export class BankSyncService {
     queryParams?: TransactionQueryParams
   ): Observable<TransactionListResponse> {
     let params = new HttpParams();
-    if (queryParams?.startDate) params = params.set('start_date', queryParams.startDate);
-    if (queryParams?.endDate) params = params.set('end_date', queryParams.endDate);
-    if (queryParams?.offset !== undefined)
+    if (queryParams?.startDate) {
+      params = params.set('start_date', queryParams.startDate);
+    }
+    if (queryParams?.endDate) {
+      params = params.set('end_date', queryParams.endDate);
+    }
+    if (queryParams?.offset !== undefined) {
       params = params.set('offset', queryParams.offset.toString());
-    if (queryParams?.limit !== undefined)
+    }
+    if (queryParams?.limit !== undefined) {
       params = params.set('limit', queryParams.limit.toString());
-    if (queryParams?.status) params = params.set('status', queryParams.status);
-    if (queryParams?.sort) params = params.set('sort', queryParams.sort);
+    }
+    if (queryParams?.status) {
+      params = params.set('status', queryParams.status);
+    }
+    if (queryParams?.sort) {
+      params = params.set('sort', queryParams.sort);
+    }
     return this.http.get<TransactionListResponse>(`${this.baseUrl}/${accountId}/transactions`, {
       params,
     });
@@ -95,7 +110,7 @@ export class BankSyncService {
   public pollSyncStatus(accountId: string, intervalMs = 2000): Observable<SyncStatusResponse> {
     return timer(0, intervalMs).pipe(
       switchMap(() => this.getSyncStatus(accountId)),
-      takeWhile((s) => s.status !== 'success' && s.status !== 'failed', true),
+      takeWhile(s => s.status !== 'success' && s.status !== 'failed', true),
       shareReplay(1)
     );
   }

@@ -1,4 +1,5 @@
-import {Routes} from '@angular/router';
+import {type Routes} from '@angular/router';
+
 import {AccountsListComponent} from './pages/accounts-list/accounts-list.component';
 import {ConnectAccountComponent} from './pages/connect-account/connect-account.component';
 import {TransactionListComponent} from './pages/transaction-list/transaction-list.component';

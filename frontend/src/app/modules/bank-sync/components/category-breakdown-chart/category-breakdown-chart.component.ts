@@ -1,22 +1,24 @@
-import {Component, Input, ChangeDetectionStrategy} from '@angular/core';
 import {CommonModule} from '@angular/common';
+import {ChangeDetectionStrategy, Component, input} from '@angular/core';
+
 import {CategoryStat} from '../../services/bank-sync.service';
 
 @Component({
-  selector: 'app-category-breakdown-chart',
+  selector: 'fns-category-breakdown-chart',
   standalone: true,
   imports: [CommonModule],
   templateUrl: './category-breakdown-chart.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CategoryBreakdownChartComponent {
-  @Input() public topCategoriesData: CategoryStat[] = [];
+  public readonly topCategoriesData = input<CategoryStat[]>([]);
 
   public get sortedData(): CategoryStat[] {
-    return [...this.topCategoriesData].sort((a, b) => b.totalSpend - a.totalSpend);
+    return [...this.topCategoriesData()].sort((a, b) => b.totalSpend - a.totalSpend);
   }
 
   public getBarWidthPercent(percentOfTotal: number): number {
-    return Math.min(Math.round(percentOfTotal), 100);
+    const maxPercent = 100;
+    return Math.min(Math.round(percentOfTotal), maxPercent);
   }
 }

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 describe('Dashboard Aggregation Flow', () => {
   describe('Dashboard shows aggregated data', () => {
     it('should display Financial Overview title', () => {

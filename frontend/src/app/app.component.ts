@@ -1,38 +1,39 @@
-import {Component} from '@angular/core';
+import {ChangeDetectionStrategy, Component} from '@angular/core';
 import {RouterOutlet} from '@angular/router';
 
 @Component({
-  selector: 'app-root',
+  selector: 'fns-root',
   imports: [RouterOutlet],
   template: `
-    <div class="app-container">
-      <header class="app-header">
+    <div class="fns-container">
+      <header class="fns-header">
         <h1>Finance Sentry</h1>
       </header>
-      <main class="app-main">
-        <router-outlet></router-outlet>
+      <main class="fns-main">
+        <router-outlet />
       </main>
     </div>
   `,
   styles: [
     `
-      .app-container {
+      .fns-container {
         min-height: 100vh;
         display: flex;
         flex-direction: column;
       }
-      .app-header {
+      .fns-header {
         background-color: #1976d2;
         color: white;
         padding: 1rem;
       }
-      .app-main {
+      .fns-main {
         flex: 1;
         padding: 1rem;
       }
     `,
   ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppComponent {
-  public title: string = 'Finance Sentry';
+  public title = 'Finance Sentry';
 }

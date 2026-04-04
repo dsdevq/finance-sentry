@@ -1,18 +1,23 @@
-import {Component, OnInit, inject, ChangeDetectionStrategy, ChangeDetectorRef} from '@angular/core';
 import {CommonModule} from '@angular/common';
+import {ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit} from '@angular/core';
 import {Router} from '@angular/router';
-import {BankSyncService} from '../../services/bank-sync.service';
-import {BankAccount, SyncStatus} from '../../models/bank-account.model';
+
 import {SyncStatusComponent} from '../../components/sync-status/sync-status.component';
+import {BankAccount, SyncStatus} from '../../models/bank-account.model';
+import {BankSyncService} from '../../services/bank-sync.service';
 
 @Component({
-  selector: 'app-accounts-list',
+  selector: 'fns-accounts-list',
   standalone: true,
   imports: [CommonModule, SyncStatusComponent],
   templateUrl: './accounts-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AccountsListComponent implements OnInit {
+  private readonly bankSyncService = inject(BankSyncService);
+  private readonly router = inject(Router);
+  private readonly cdr = inject(ChangeDetectorRef);
+
   public accounts: BankAccount[] = [];
   public isLoading = false;
   public errorMessage: string | null = null;
@@ -23,6 +28,7 @@ export class AccountsListComponent implements OnInit {
     syncing: 'Syncing',
     active: 'Active',
     failed: 'Failed',
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     reauth_required: 'Reauth Required',
   };
 
@@ -31,12 +37,9 @@ export class AccountsListComponent implements OnInit {
     syncing: 'badge-warning',
     active: 'badge-success',
     failed: 'badge-danger',
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     reauth_required: 'badge-orange',
   };
-
-  private readonly bankSyncService = inject(BankSyncService);
-  private readonly router = inject(Router);
-  private readonly cdr = inject(ChangeDetectorRef);
 
   public ngOnInit(): void {
     this.loadAccounts();
@@ -47,7 +50,7 @@ export class AccountsListComponent implements OnInit {
     this.errorMessage = null;
 
     this.bankSyncService.getAccounts().subscribe({
-      next: (res) => {
+      next: res => {
         this.accounts = res.accounts;
         this.isLoading = false;
         this.cdr.markForCheck();

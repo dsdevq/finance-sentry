@@ -1,20 +1,26 @@
-import {Component, OnInit, inject, ChangeDetectionStrategy, ChangeDetectorRef} from '@angular/core';
 import {CommonModule} from '@angular/common';
+import {ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit} from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {ActivatedRoute, Router} from '@angular/router';
-import {BankSyncService} from '../../services/bank-sync.service';
+
 import {Transaction} from '../../models/transaction.model';
+import {BankSyncService} from '../../services/bank-sync.service';
 
 const PAGE_SIZE = 50;
 
 @Component({
-  selector: 'app-transaction-list',
+  selector: 'fns-transaction-list',
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './transaction-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TransactionListComponent implements OnInit {
+  private readonly bankSyncService = inject(BankSyncService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly cdr = inject(ChangeDetectorRef);
+
   public accountId = '';
   public bankName = '';
   public currency = '';
@@ -29,11 +35,6 @@ export class TransactionListComponent implements OnInit {
 
   public startDate = '';
   public endDate = '';
-
-  private readonly bankSyncService = inject(BankSyncService);
-  private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
-  private readonly cdr = inject(ChangeDetectorRef);
 
   public get currentPage(): number {
     return Math.floor(this.offset / this.pageSize) + 1;
@@ -57,7 +58,9 @@ export class TransactionListComponent implements OnInit {
   }
 
   public loadTransactions(): void {
-    if (!this.accountId) return;
+    if (!this.accountId) {
+      return;
+    }
 
     this.isLoading = true;
     this.errorMessage = null;
@@ -71,7 +74,7 @@ export class TransactionListComponent implements OnInit {
         sort: 'date:desc',
       })
       .subscribe({
-        next: (res) => {
+        next: res => {
           this.transactions = res.transactions;
           this.totalCount = res.pagination.totalCount;
           this.bankName = res.bankName;

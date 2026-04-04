@@ -48,7 +48,9 @@ export class PlaidLinkService {
   }
 
   public create(options: PlaidLinkOptions): PlaidHandler {
-    if (!window.Plaid) throw new Error('Plaid Link script is not loaded');
+    if (!window.Plaid) {
+      throw new Error('Plaid Link script is not loaded');
+    }
     return window.Plaid.create(options);
   }
 }

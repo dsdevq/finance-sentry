@@ -1,33 +1,38 @@
+import {CommonModule} from '@angular/common';
 import {
-  Component,
-  Input,
-  OnInit,
-  OnDestroy,
-  inject,
   ChangeDetectionStrategy,
   ChangeDetectorRef,
+  Component,
+  inject,
+  input,
+  OnDestroy,
+  OnInit,
 } from '@angular/core';
-import {CommonModule} from '@angular/common';
-import {BankSyncService, SyncStatusResponse} from '../../services/bank-sync.service';
 import {Subscription} from 'rxjs';
 
+import {BankSyncService, SyncStatusResponse} from '../../services/bank-sync.service';
+
+const ONE_MINUTE_MS = 60000;
+const SECONDS_PER_MINUTE = 60;
+const MINUTES_PER_HOUR = 60;
+
 @Component({
-  selector: 'app-sync-status',
+  selector: 'fns-sync-status',
   standalone: true,
   imports: [CommonModule],
   templateUrl: './sync-status.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SyncStatusComponent implements OnInit, OnDestroy {
-  @Input() public accountId!: string;
+  private readonly bankSyncService = inject(BankSyncService);
+  private readonly cdr = inject(ChangeDetectorRef);
+  private pollSubscription: Subscription | null = null;
+
+  public readonly accountId = input.required<string>();
 
   public syncStatus: SyncStatusResponse | null = null;
   public isSyncing = false;
   public errorMessage: string | null = null;
-
-  private readonly bankSyncService = inject(BankSyncService);
-  private readonly cdr = inject(ChangeDetectorRef);
-  private pollSubscription: Subscription | null = null;
 
   public ngOnInit(): void {
     this.loadStatus();
@@ -38,8 +43,8 @@ export class SyncStatusComponent implements OnInit, OnDestroy {
   }
 
   public loadStatus(): void {
-    this.bankSyncService.getSyncStatus(this.accountId).subscribe({
-      next: (status) => {
+    this.bankSyncService.getSyncStatus(this.accountId()).subscribe({
+      next: status => {
         this.syncStatus = status;
         this.isSyncing = status.status === 'running' || status.status === 'pending';
         this.cdr.markForCheck();
@@ -55,7 +60,7 @@ export class SyncStatusComponent implements OnInit, OnDestroy {
     this.errorMessage = null;
     this.cdr.markForCheck();
 
-    this.bankSyncService.triggerSync(this.accountId).subscribe({
+    this.bankSyncService.triggerSync(this.accountId()).subscribe({
       next: () => this.startPolling(),
       error: () => {
         this.isSyncing = false;
@@ -71,28 +76,38 @@ export class SyncStatusComponent implements OnInit, OnDestroy {
   }
 
   public getRelativeTime(timestamp: string | null): string {
-    if (!timestamp) return 'Never';
+    if (!timestamp) {
+      return 'Never';
+    }
     const diff = Date.now() - new Date(timestamp).getTime();
-    const minutes = Math.floor(diff / 60000);
-    if (minutes < 1) return 'Just now';
-    if (minutes < 60) return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
-    const hours = Math.floor(minutes / 60);
+    const minutes = Math.floor(diff / ONE_MINUTE_MS);
+    if (minutes < 1) {
+      return 'Just now';
+    }
+    if (minutes < SECONDS_PER_MINUTE) {
+      return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
+    }
+    const hours = Math.floor(minutes / MINUTES_PER_HOUR);
     return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
   }
 
   public getSyncBadgeClass(): Record<string, boolean> {
     return {
+      // eslint-disable-next-line @typescript-eslint/naming-convention
       'badge-syncing': this.isSyncing,
+      // eslint-disable-next-line @typescript-eslint/naming-convention
       'badge-success': this.syncStatus?.status === 'success',
+      // eslint-disable-next-line @typescript-eslint/naming-convention
       'badge-failed': this.syncStatus?.status === 'failed',
+      // eslint-disable-next-line @typescript-eslint/naming-convention
       'badge-pending': !this.syncStatus,
     };
   }
 
   private startPolling(): void {
     this.stopPolling();
-    this.pollSubscription = this.bankSyncService.pollSyncStatus(this.accountId).subscribe({
-      next: (status) => {
+    this.pollSubscription = this.bankSyncService.pollSyncStatus(this.accountId()).subscribe({
+      next: status => {
         this.syncStatus = status;
         this.isSyncing = status.status === 'running' || status.status === 'pending';
         if (status.status === 'failed') {

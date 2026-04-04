@@ -1,29 +1,25 @@
+import {CommonModule} from '@angular/common';
 import {
-  Component,
-  OnInit,
-  OnDestroy,
-  inject,
   ChangeDetectionStrategy,
   ChangeDetectorRef,
+  Component,
+  inject,
+  OnDestroy,
+  OnInit,
 } from '@angular/core';
-import {CommonModule} from '@angular/common';
 import {Router} from '@angular/router';
+
 import {BankSyncService} from '../../services/bank-sync.service';
 import {PlaidHandler, PlaidLinkService} from '../../services/plaid-link.service';
 
 @Component({
-  selector: 'app-connect-account',
+  selector: 'fns-connect-account',
   standalone: true,
   imports: [CommonModule],
   templateUrl: './connect-account.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ConnectAccountComponent implements OnInit, OnDestroy {
-  public isLoading = false;
-  public isSyncing = false;
-  public errorMessage: string | null = null;
-  public statusMessage: string | null = null;
-
   private readonly bankSyncService = inject(BankSyncService);
   private readonly plaidLinkService = inject(PlaidLinkService);
   private readonly router = inject(Router);
@@ -33,8 +29,13 @@ export class ConnectAccountComponent implements OnInit, OnDestroy {
   private readonly pollMaxMs = 60_000;
   private readonly pollIntervalMs = 3_000;
 
-  public async ngOnInit(): Promise<void> {
-    await this.initPlaid();
+  public isLoading = false;
+  public isSyncing = false;
+  public errorMessage: string | null = null;
+  public statusMessage: string | null = null;
+
+  public ngOnInit(): void {
+    void this.initPlaid();
   }
 
   public ngOnDestroy(): void {
@@ -51,16 +52,16 @@ export class ConnectAccountComponent implements OnInit, OnDestroy {
       await this.plaidLinkService.loadScript();
 
       this.bankSyncService.getLinkToken().subscribe({
-        next: (res) => {
+        next: res => {
           this.plaidHandler = this.plaidLinkService.create({
             token: res.linkToken,
-            onSuccess: (publicToken) => this.onPlaidSuccess(publicToken),
-            onExit: (err) => this.onPlaidExit(err),
+            onSuccess: publicToken => this.onPlaidSuccess(publicToken),
+            onExit: err => this.onPlaidExit(err),
           });
           this.isLoading = false;
           this.cdr.markForCheck();
         },
-        error: (err) => {
+        error: err => {
           console.error('getLinkToken error:', err);
           this.errorMessage = 'Failed to initialize bank connection. Please try again.';
           this.isLoading = false;
@@ -114,8 +115,8 @@ export class ConnectAccountComponent implements OnInit, OnDestroy {
       }
 
       this.bankSyncService.getAccounts().subscribe({
-        next: (res) => {
-          const isActive = res.accounts.some((a) => a.syncStatus === 'active');
+        next: res => {
+          const isActive = res.accounts.some(a => a.syncStatus === 'active');
           if (isActive) {
             this.clearPoll();
             void this.router.navigate(['/accounts']);

@@ -1,31 +1,45 @@
 <div class="sync-status">
   <!-- Status badge -->
-  <div class="sync-badge" [ngClass]="getSyncBadgeClass()">
-    <span *ngIf="isSyncing" class="spinner">&#x27F3;</span>
-    <span *ngIf="syncStatus?.status === 'success'">&#x2713;</span>
-    <span *ngIf="syncStatus?.status === 'failed'">&#x2717;</span>
-    <span *ngIf="!syncStatus">&ndash;</span>
+  <div [class]="getSyncBadgeClass()" class="sync-badge">
+    @if (isSyncing) {
+      <span class="spinner">&#x27F3;</span>
+    }
+    @if (syncStatus?.status === 'success') {
+      <span>&#x2713;</span>
+    }
+    @if (syncStatus?.status === 'failed') {
+      <span>&#x2717;</span>
+    }
+    @if (!syncStatus) {
+      <span>&ndash;</span>
+    }
     <span class="status-text">
       {{ isSyncing ? 'Syncing...' : (syncStatus?.status | titlecase) || 'Unknown' }}
     </span>
   </div>
 
   <!-- Last synced -->
-  <div class="last-synced" *ngIf="syncStatus">
-    Last synced: {{ getRelativeTime(syncStatus.lastSyncTimestamp) }}
-    <span *ngIf="syncStatus.transactionCountFetched > 0">
-      ({{ syncStatus.transactionCountFetched }} transactions)
-    </span>
-  </div>
+  @if (syncStatus) {
+    <div class="last-synced">
+      Last synced: {{ getRelativeTime(syncStatus.lastSyncTimestamp) }}
+      @if (syncStatus.transactionCountFetched > 0) {
+        <span>({{ syncStatus.transactionCountFetched }} transactions)</span>
+      }
+    </div>
+  }
 
   <!-- Error message -->
-  <div class="error-message" *ngIf="errorMessage">
-    {{ errorMessage }}
-    <button class="btn-retry" (click)="triggerSync()">Retry</button>
-  </div>
+  @if (errorMessage) {
+    <div class="error-message">
+      {{ errorMessage }}
+      <button (click)="triggerSync()" class="btn-retry">Retry</button>
+    </div>
+  }
 
   <!-- Sync Now button -->
-  <button class="btn-sync-now" [disabled]="isSyncing" (click)="triggerSync()" *ngIf="!errorMessage">
-    {{ isSyncing ? 'Syncing...' : 'Sync Now' }}
-  </button>
+  @if (!errorMessage) {
+    <button [disabled]="isSyncing" (click)="triggerSync()" class="btn-sync-now">
+      {{ isSyncing ? 'Syncing...' : 'Sync Now' }}
+    </button>
+  }
 </div>

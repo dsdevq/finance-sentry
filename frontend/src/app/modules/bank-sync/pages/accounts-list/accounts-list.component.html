@@ -1,7 +1,7 @@
 <div class="accounts-list">
   <div class="accounts-header">
     <h2>Connected Accounts</h2>
-    <button class="btn-primary" (click)="connectAccount()">Connect Account</button>
+    <button (click)="connectAccount()" class="btn-primary">Connect Account</button>
   </div>
 
   @if (isLoading) {
@@ -13,7 +13,7 @@
   @if (errorMessage) {
     <div class="error-state" role="alert">
       <p class="error-message">{{ errorMessage }}</p>
-      <button class="btn-secondary" (click)="loadAccounts()">Retry</button>
+      <button (click)="loadAccounts()" class="btn-secondary">Retry</button>
     </div>
   }
 
@@ -21,7 +21,7 @@
     @if (accounts.length === 0) {
       <div class="empty-state">
         <p>No accounts connected yet.</p>
-        <button class="btn-primary" (click)="connectAccount()">Connect Your First Account</button>
+        <button (click)="connectAccount()" class="btn-primary">Connect Your First Account</button>
       </div>
     } @else {
       <table class="accounts-table" aria-label="Connected bank accounts">
@@ -39,11 +39,11 @@
         <tbody>
           @for (account of accounts; track account.accountId) {
             <tr
+              (click)="viewTransactions(account.accountId)"
+              (keydown.enter)="viewTransactions(account.accountId)"
               class="account-row"
               role="button"
               tabindex="0"
-              (click)="viewTransactions(account.accountId)"
-              (keydown.enter)="viewTransactions(account.accountId)"
             >
               <td>{{ account.bankName }}</td>
               <td>•••• {{ account.accountNumberLast4 }}</td>
@@ -58,7 +58,7 @@
                 </span>
               </td>
               <td (click)="$event.stopPropagation()">
-                <app-sync-status [accountId]="account.accountId" />
+                <fns-sync-status [accountId]="account.accountId" />
               </td>
             </tr>
           }
