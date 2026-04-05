@@ -38,7 +38,8 @@ builder.Services.AddCors(options =>
         policy
             .WithOrigins("http://localhost:4200")
             .AllowAnyHeader()
-            .AllowAnyMethod();
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
 
@@ -163,14 +164,12 @@ var app = builder.Build();
 // ── Database initialization and migrations ──────────────────────────────────
 try
 {
-    using (var scope = app.Services.CreateScope())
-    {
-        var dbContext = scope.ServiceProvider.GetRequiredService<FinanceSentry.Modules.BankSync.Infrastructure.Persistence.BankSyncDbContext>();
-        
-        app.Logger.LogInformation("Applying database migrations...");
-        dbContext.Database.Migrate();
-        app.Logger.LogInformation("Database migrations completed successfully");
-    }
+    using var scope = app.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<FinanceSentry.Modules.BankSync.Infrastructure.Persistence.BankSyncDbContext>();
+
+    app.Logger.LogInformation("Applying database migrations...");
+    dbContext.Database.Migrate();
+    app.Logger.LogInformation("Database migrations completed successfully");
 }
 catch (Exception ex)
 {
@@ -178,11 +177,11 @@ catch (Exception ex)
 }
 
 // ── Middleware pipeline ───────────────────────────────────────────────────────
+app.UseCors("Frontend");
 app.UseMiddleware<ErrorHandlingMiddleware>();
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseMiddleware<JwtAuthenticationMiddleware>();
 
-app.UseCors("Frontend");
 app.UseRateLimiter();
 
 if (app.Environment.IsDevelopment())
