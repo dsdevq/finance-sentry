@@ -20,14 +20,9 @@ public interface IAggregationService
 }
 
 /// <inheritdoc />
-public class AggregationService : IAggregationService
+public class AggregationService(IBankAccountRepository accounts) : IAggregationService
 {
-    private readonly IBankAccountRepository _accounts;
-
-    public AggregationService(IBankAccountRepository accounts)
-    {
-        _accounts = accounts ?? throw new ArgumentNullException(nameof(accounts));
-    }
+    private readonly IBankAccountRepository _accounts = accounts ?? throw new ArgumentNullException(nameof(accounts));
 
     /// <inheritdoc />
     public async Task<Dictionary<string, decimal>> GetAggregatedBalanceAsync(Guid userId, CancellationToken ct = default)

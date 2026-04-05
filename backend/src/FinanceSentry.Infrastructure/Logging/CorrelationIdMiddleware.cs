@@ -10,23 +10,16 @@ using Microsoft.Extensions.Logging;
 ///
 /// Header name: X-Correlation-ID (incoming) / X-Correlation-ID (outgoing)
 /// </summary>
-public class CorrelationIdMiddleware
+public class CorrelationIdMiddleware(
+    RequestDelegate next,
+    ILogger<CorrelationIdMiddleware> logger,
+    CorrelationIdAccessor accessor)
 {
     private const string CorrelationIdHeader = "X-Correlation-ID";
 
-    private readonly RequestDelegate _next;
-    private readonly ILogger<CorrelationIdMiddleware> _logger;
-    private readonly CorrelationIdAccessor _accessor;
-
-    public CorrelationIdMiddleware(
-        RequestDelegate next,
-        ILogger<CorrelationIdMiddleware> logger,
-        CorrelationIdAccessor accessor)
-    {
-        _next = next;
-        _logger = logger;
-        _accessor = accessor;
-    }
+    private readonly RequestDelegate _next = next;
+    private readonly ILogger<CorrelationIdMiddleware> _logger = logger;
+    private readonly CorrelationIdAccessor _accessor = accessor;
 
     public async Task InvokeAsync(HttpContext context)
     {

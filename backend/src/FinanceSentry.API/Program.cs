@@ -94,7 +94,7 @@ builder.Services.AddHttpClient<IPlaidClient, PlaidHttpClient>(client =>
     client.BaseAddress = new Uri(builder.Configuration["Plaid:BaseUrl"] ?? "https://sandbox.plaid.com");
 });
 builder.Services.AddScoped<PlaidAdapter>();
-builder.Services.AddScoped<FinanceSentry.Modules.BankSync.Infrastructure.Plaid.IPlaidAdapter>(
+builder.Services.AddScoped<IPlaidAdapter>(
     sp => sp.GetRequiredService<PlaidAdapter>());
 
 // ── Infrastructure services ──────────────────────────────────────────────────

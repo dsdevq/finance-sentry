@@ -21,33 +21,22 @@ using MediatR;
 /// 6. Update BankAccount.SyncStatus → active
 /// 7. Complete SyncJob (status=success or failed)
 /// </summary>
-public class BankAccountConnectedEventHandler : INotificationHandler<BankAccountConnectedEvent>
+public class BankAccountConnectedEventHandler(
+    IBankAccountRepository accounts,
+    ITransactionRepository transactions,
+    ISyncJobRepository syncJobs,
+    IEncryptedCredentialRepository credentials,
+    ICredentialEncryptionService encryption,
+    PlaidAdapter plaid,
+    ITransactionDeduplicationService deduplication) : INotificationHandler<BankAccountConnectedEvent>
 {
-    private readonly IBankAccountRepository _accounts;
-    private readonly ITransactionRepository _transactions;
-    private readonly ISyncJobRepository _syncJobs;
-    private readonly IEncryptedCredentialRepository _credentials;
-    private readonly ICredentialEncryptionService _encryption;
-    private readonly PlaidAdapter _plaid;
-    private readonly ITransactionDeduplicationService _deduplication;
-
-    public BankAccountConnectedEventHandler(
-        IBankAccountRepository accounts,
-        ITransactionRepository transactions,
-        ISyncJobRepository syncJobs,
-        IEncryptedCredentialRepository credentials,
-        ICredentialEncryptionService encryption,
-        PlaidAdapter plaid,
-        ITransactionDeduplicationService deduplication)
-    {
-        _accounts = accounts;
-        _transactions = transactions;
-        _syncJobs = syncJobs;
-        _credentials = credentials;
-        _encryption = encryption;
-        _plaid = plaid;
-        _deduplication = deduplication;
-    }
+    private readonly IBankAccountRepository _accounts = accounts;
+    private readonly ITransactionRepository _transactions = transactions;
+    private readonly ISyncJobRepository _syncJobs = syncJobs;
+    private readonly IEncryptedCredentialRepository _credentials = credentials;
+    private readonly ICredentialEncryptionService _encryption = encryption;
+    private readonly PlaidAdapter _plaid = plaid;
+    private readonly ITransactionDeduplicationService _deduplication = deduplication;
 
     public async Task Handle(BankAccountConnectedEvent notification, CancellationToken cancellationToken)
     {

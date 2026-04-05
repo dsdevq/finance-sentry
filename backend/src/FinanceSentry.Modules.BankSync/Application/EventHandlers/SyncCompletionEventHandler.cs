@@ -8,14 +8,9 @@ using MediatR;
 /// Handles <see cref="AccountSyncCompletedEvent"/> published after a sync job finishes.
 /// Updates the BankAccount's SyncStatus to reflect the outcome.
 /// </summary>
-public class SyncCompletionEventHandler : INotificationHandler<AccountSyncCompletedEvent>
+public class SyncCompletionEventHandler(IBankAccountRepository accounts) : INotificationHandler<AccountSyncCompletedEvent>
 {
-    private readonly IBankAccountRepository _accounts;
-
-    public SyncCompletionEventHandler(IBankAccountRepository accounts)
-    {
-        _accounts = accounts ?? throw new ArgumentNullException(nameof(accounts));
-    }
+    private readonly IBankAccountRepository _accounts = accounts ?? throw new ArgumentNullException(nameof(accounts));
 
     /// <inheritdoc />
     public async Task Handle(AccountSyncCompletedEvent notification, CancellationToken cancellationToken)

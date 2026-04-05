@@ -15,33 +15,22 @@ using Microsoft.AspNetCore.Mvc;
 /// </summary>
 [ApiController]
 [Route("api/accounts")]
-public class BankSyncController : ControllerBase
+public class BankSyncController(
+    IMediator mediator,
+    PlaidAdapter plaid,
+    IBankAccountRepository accounts,
+    ITransactionRepository transactions,
+    IBackgroundJobClient backgroundJobs,
+    ISyncJobRepository syncJobs,
+    ITransactionSyncCoordinator coordinator) : ControllerBase
 {
-    private readonly IMediator _mediator;
-    private readonly PlaidAdapter _plaid;
-    private readonly IBankAccountRepository _accounts;
-    private readonly ITransactionRepository _transactions;
-    private readonly IBackgroundJobClient _backgroundJobs;
-    private readonly ISyncJobRepository _syncJobs;
-    private readonly ITransactionSyncCoordinator _coordinator;
-
-    public BankSyncController(
-        IMediator mediator,
-        PlaidAdapter plaid,
-        IBankAccountRepository accounts,
-        ITransactionRepository transactions,
-        IBackgroundJobClient backgroundJobs,
-        ISyncJobRepository syncJobs,
-        ITransactionSyncCoordinator coordinator)
-    {
-        _mediator       = mediator;
-        _plaid          = plaid;
-        _accounts       = accounts;
-        _transactions   = transactions;
-        _backgroundJobs = backgroundJobs;
-        _syncJobs       = syncJobs;
-        _coordinator    = coordinator;
-    }
+    private readonly IMediator _mediator = mediator;
+    private readonly PlaidAdapter _plaid = plaid;
+    private readonly IBankAccountRepository _accounts = accounts;
+    private readonly ITransactionRepository _transactions = transactions;
+    private readonly IBackgroundJobClient _backgroundJobs = backgroundJobs;
+    private readonly ISyncJobRepository _syncJobs = syncJobs;
+    private readonly ITransactionSyncCoordinator _coordinator = coordinator;
 
     // ── POST /api/accounts/connect ── T205 ───────────────────────────────────
 
@@ -162,12 +151,12 @@ public class BankSyncController : ControllerBase
         if (await _syncJobs.HasRunningJobAsync(accountId, ct))
             return Conflict(new { error = "A sync is already in progress for this account." });
 
-        var hangfireJobId = _backgroundJobs.Enqueue<FinanceSentry.Modules.BankSync.Infrastructure.Jobs.ScheduledSyncJob>(
+        var hangfireJobId = _backgroundJobs.Enqueue<Infrastructure.Jobs.ScheduledSyncJob>(
             job => job.ExecuteSyncAsync(accountId));
 
         return Accepted(new
         {
-            jobId   = hangfireJobId,
+            jobId = hangfireJobId,
             message = "Sync enqueued. Use GET /api/accounts/{accountId}/sync-status to track progress."
         });
     }
@@ -194,13 +183,13 @@ public class BankSyncController : ControllerBase
 
         return Ok(new
         {
-            status                  = latestJob.Status,
+            status = latestJob.Status,
             transactionCountFetched = latestJob.TransactionCountFetched,
             transactionCountDeduped = latestJob.TransactionCountDeduped,
-            errorMessage            = latestJob.ErrorMessage,
-            lastSyncTimestamp       = latestJob.CompletedAt,
-            startedAt               = latestJob.StartedAt,
-            webhookTriggered        = latestJob.WebhookTriggered
+            errorMessage = latestJob.ErrorMessage,
+            lastSyncTimestamp = latestJob.CompletedAt,
+            startedAt = latestJob.StartedAt,
+            webhookTriggered = latestJob.WebhookTriggered
         });
     }
 

@@ -12,19 +12,13 @@ using Microsoft.Extensions.Logging;
 /// GDPR: archived rows stay in DB with IsActive=false, invisible to user-facing queries.
 /// </summary>
 [AutomaticRetry(Attempts = 0)]
-public class DataRetentionJob
+public class DataRetentionJob(BankSyncDbContext db, ILogger<DataRetentionJob> logger)
 {
-    private readonly BankSyncDbContext _db;
-    private readonly ILogger<DataRetentionJob> _logger;
+    private readonly BankSyncDbContext _db = db;
+    private readonly ILogger<DataRetentionJob> _logger = logger;
 
     private const int RetentionMonths = 24;
     private const string ArchiveReason = "retention_policy_24m";
-
-    public DataRetentionJob(BankSyncDbContext db, ILogger<DataRetentionJob> logger)
-    {
-        _db = db;
-        _logger = logger;
-    }
 
     /// <summary>
     /// Runs the retention job.

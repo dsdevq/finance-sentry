@@ -9,7 +9,7 @@ using FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
 using FluentAssertions;
 using Moq;
 using Xunit;
-using IPlaidAdapterInterface = FinanceSentry.Modules.BankSync.Infrastructure.Plaid.IPlaidAdapter;
+using IPlaidAdapterInterface = Modules.BankSync.Infrastructure.Plaid.IPlaidAdapter;
 
 /// <summary>
 /// Unit tests for ScheduledSyncService (T313).
@@ -19,7 +19,7 @@ public class ScheduledSyncServiceTests
 {
     // ── Shared test data ────────────────────────────────────────────────────
     private static readonly Guid AccountId = Guid.NewGuid();
-    private static readonly Guid UserId    = Guid.NewGuid();
+    private static readonly Guid UserId = Guid.NewGuid();
 
     private static BankAccount MakeActiveAccount()
     {
@@ -30,33 +30,33 @@ public class ScheduledSyncServiceTests
     }
 
     private static EncryptedCredential MakeCredential(Guid accountId)
-        => new EncryptedCredential(
+        => new(
             accountId,
             encryptedData: new byte[32],          // non-empty encrypted data
-            iv:            new byte[12],           // exactly 12 bytes
-            authTag:       new byte[16],           // exactly 16 bytes
-            keyVersion:    1);
+            iv: new byte[12],           // exactly 12 bytes
+            authTag: new byte[16],           // exactly 16 bytes
+            keyVersion: 1);
 
     // ── Mocks + SUT factory ─────────────────────────────────────────────────
 
     private (ScheduledSyncService sut,
              Mock<IBankAccountRepository> accountRepo,
              Mock<ITransactionRepository> txRepo,
-             Mock<ISyncJobRepository>     jobRepo,
+             Mock<ISyncJobRepository> jobRepo,
              Mock<IEncryptedCredentialRepository> credRepo,
-             Mock<ICredentialEncryptionService>   encryption,
-             Mock<IPlaidAdapterInterface>          plaid,
+             Mock<ICredentialEncryptionService> encryption,
+             Mock<IPlaidAdapterInterface> plaid,
              Mock<ITransactionDeduplicationService> dedup,
-             Mock<IBankSyncLogger>                logger) BuildSut()
+             Mock<IBankSyncLogger> logger) BuildSut()
     {
         var accountRepo = new Mock<IBankAccountRepository>();
-        var txRepo      = new Mock<ITransactionRepository>();
-        var jobRepo     = new Mock<ISyncJobRepository>();
-        var credRepo    = new Mock<IEncryptedCredentialRepository>();
-        var encryption  = new Mock<ICredentialEncryptionService>();
-        var plaid       = new Mock<IPlaidAdapterInterface>();
-        var dedup       = new Mock<ITransactionDeduplicationService>();
-        var logger      = new Mock<IBankSyncLogger>();
+        var txRepo = new Mock<ITransactionRepository>();
+        var jobRepo = new Mock<ISyncJobRepository>();
+        var credRepo = new Mock<IEncryptedCredentialRepository>();
+        var encryption = new Mock<ICredentialEncryptionService>();
+        var plaid = new Mock<IPlaidAdapterInterface>();
+        var dedup = new Mock<ITransactionDeduplicationService>();
+        var logger = new Mock<IBankSyncLogger>();
 
         var sut = new ScheduledSyncService(
             accountRepo.Object, txRepo.Object, jobRepo.Object, credRepo.Object,
@@ -88,7 +88,7 @@ public class ScheduledSyncServiceTests
     {
         var (sut, accountRepo, txRepo, jobRepo, credRepo, encryption, plaid, dedup, _) = BuildSut();
 
-        var account    = MakeActiveAccount();
+        var account = MakeActiveAccount();
         var credential = MakeCredential(AccountId);
 
         accountRepo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), default)).ReturnsAsync(account);
@@ -119,13 +119,13 @@ public class ScheduledSyncServiceTests
              .ReturnsAsync(candidates);
 
         plaid.Setup(p => p.GetAccountsWithBalanceAsync("access-sandbox-token", default))
-             .ReturnsAsync(new List<PlaidAccountInfo>
-             {
+             .ReturnsAsync(
+             [
                  new("plaid_acc_1", "Checking", "checking", "1234", 1200m, 1200m, "EUR")
-             });
+             ]);
 
         txRepo.Setup(r => r.GetByAccountIdAsync(It.IsAny<Guid>(), default))
-              .ReturnsAsync(new List<Transaction>());
+              .ReturnsAsync([]);
 
         dedup.Setup(d => d.FilterDuplicates(
                 It.IsAny<IEnumerable<TransactionCandidate>>(),
@@ -159,7 +159,7 @@ public class ScheduledSyncServiceTests
     {
         var (sut, accountRepo, txRepo, jobRepo, credRepo, encryption, plaid, dedup, _) = BuildSut();
 
-        var account    = MakeActiveAccount();
+        var account = MakeActiveAccount();
         var credential = MakeCredential(AccountId);
 
         accountRepo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), default)).ReturnsAsync(account);
@@ -186,15 +186,15 @@ public class ScheduledSyncServiceTests
              .ReturnsAsync(allCandidates);
 
         plaid.Setup(p => p.GetAccountsWithBalanceAsync("access-sandbox-token", default))
-             .ReturnsAsync(new List<PlaidAccountInfo>
-             {
+             .ReturnsAsync(
+             [
                  new("plaid_acc_1", "Checking", "checking", "1234", 900m, 900m, "EUR")
-             });
+             ]);
 
         // Only one existing transaction in DB
         var existingTx = new Transaction(AccountId, UserId, 50m, DateTime.UtcNow.AddDays(-1), "Coffee", "hash_existing", false);
         txRepo.Setup(r => r.GetByAccountIdAsync(It.IsAny<Guid>(), default))
-              .ReturnsAsync(new List<Transaction> { existingTx });
+              .ReturnsAsync([existingTx]);
 
         // Dedup returns only the NEW candidate (the existing one is filtered out)
         var newCandidates = allCandidates.Skip(1).ToList();
@@ -223,7 +223,7 @@ public class ScheduledSyncServiceTests
     {
         var (sut, accountRepo, txRepo, jobRepo, credRepo, encryption, plaid, dedup, logger) = BuildSut();
 
-        var account    = MakeActiveAccount();
+        var account = MakeActiveAccount();
         var credential = MakeCredential(AccountId);
 
         accountRepo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), default)).ReturnsAsync(account);
@@ -238,7 +238,7 @@ public class ScheduledSyncServiceTests
         encryption.Setup(e => e.Decrypt(It.IsAny<byte[]>(), It.IsAny<byte[]>(), It.IsAny<byte[]>(), It.IsAny<int>()))
                   .Returns("access-sandbox-token");
         txRepo.Setup(r => r.GetByAccountIdAsync(It.IsAny<Guid>(), default))
-              .ReturnsAsync(new List<Transaction>());
+              .ReturnsAsync([]);
 
         plaid.Setup(p => p.GetTransactionsAsync(
                 It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<Guid>(),

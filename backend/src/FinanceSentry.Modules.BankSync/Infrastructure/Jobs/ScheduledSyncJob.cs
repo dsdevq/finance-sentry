@@ -8,14 +8,9 @@ using FinanceSentry.Modules.BankSync.Application.Services;
 /// AutomaticRetry is disabled at the Hangfire level — retry logic lives inside
 /// <see cref="ITransactionSyncCoordinator"/> / Polly if needed.
 /// </summary>
-public class ScheduledSyncJob
+public class ScheduledSyncJob(ITransactionSyncCoordinator coordinator)
 {
-    private readonly ITransactionSyncCoordinator _coordinator;
-
-    public ScheduledSyncJob(ITransactionSyncCoordinator coordinator)
-    {
-        _coordinator = coordinator ?? throw new ArgumentNullException(nameof(coordinator));
-    }
+    private readonly ITransactionSyncCoordinator _coordinator = coordinator ?? throw new ArgumentNullException(nameof(coordinator));
 
     /// <summary>
     /// Entry-point called by Hangfire. Delegates to the coordinator which enforces
@@ -23,5 +18,5 @@ public class ScheduledSyncJob
     /// </summary>
     [AutomaticRetry(Attempts = 0)]
     public async Task ExecuteSyncAsync(Guid accountId)
-        => await _coordinator.TriggerScheduledSyncAsync(accountId);
+          => await _coordinator.TriggerScheduledSyncAsync(accountId);
 }

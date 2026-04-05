@@ -46,15 +46,12 @@ public record BankAccountDto(
 // Handler
 // ──────────────────────────────────────────────
 
-public class GetAccountsQueryHandler : IRequestHandler<GetAccountsQuery, GetAccountsResult>
+public class GetAccountsQueryHandler(IBankAccountRepository accounts) : IRequestHandler<GetAccountsQuery, GetAccountsResult>
 {
-    private readonly IBankAccountRepository _accounts;
-
-    public GetAccountsQueryHandler(IBankAccountRepository accounts)
-        => _accounts = accounts;
+    private readonly IBankAccountRepository _accounts = accounts;
 
     public async Task<GetAccountsResult> Handle(
-        GetAccountsQuery request, CancellationToken cancellationToken)
+          GetAccountsQuery request, CancellationToken cancellationToken)
     {
         var accounts = await _accounts.GetByUserIdAsync(request.UserId, cancellationToken);
 

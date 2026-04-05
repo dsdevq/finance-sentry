@@ -81,13 +81,13 @@ public class WebhookHandlerTests
     [Fact]
     public async Task TransactionSyncCoordinator_WebhookSync_AlreadyRunning_DropsRequest()
     {
-        var syncJobRepo = new Moq.Mock<FinanceSentry.Modules.BankSync.Domain.Repositories.ISyncJobRepository>();
-        var syncService = new Moq.Mock<FinanceSentry.Modules.BankSync.Application.Services.IScheduledSyncService>();
+        var syncJobRepo = new Mock<Modules.BankSync.Domain.Repositories.ISyncJobRepository>();
+        var syncService = new Mock<Modules.BankSync.Application.Services.IScheduledSyncService>();
 
         var accountId = Guid.NewGuid();
         syncJobRepo.Setup(r => r.HasRunningJobAsync(accountId, default)).ReturnsAsync(true);
 
-        var coordinator = new FinanceSentry.Modules.BankSync.Application.Services.TransactionSyncCoordinator(
+        var coordinator = new Modules.BankSync.Application.Services.TransactionSyncCoordinator(
             syncJobRepo.Object, syncService.Object);
 
         var result = await coordinator.TriggerWebhookSyncAsync(accountId);
@@ -95,22 +95,22 @@ public class WebhookHandlerTests
         result.Success.Should().BeFalse();
         result.ErrorCode.Should().Be("SYNC_IN_PROGRESS");
         syncService.Verify(
-            s => s.PerformFullSyncAsync(It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<System.Threading.CancellationToken>()),
+            s => s.PerformFullSyncAsync(It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()),
             Moq.Times.Never);
     }
 
     [Fact]
     public async Task TransactionSyncCoordinator_WebhookSync_NoRunningJob_ForwardsTriggerAsWebhook()
     {
-        var syncJobRepo = new Moq.Mock<FinanceSentry.Modules.BankSync.Domain.Repositories.ISyncJobRepository>();
-        var syncService = new Moq.Mock<FinanceSentry.Modules.BankSync.Application.Services.IScheduledSyncService>();
+        var syncJobRepo = new Mock<Modules.BankSync.Domain.Repositories.ISyncJobRepository>();
+        var syncService = new Mock<Modules.BankSync.Application.Services.IScheduledSyncService>();
 
         var accountId = Guid.NewGuid();
         syncJobRepo.Setup(r => r.HasRunningJobAsync(accountId, default)).ReturnsAsync(false);
         syncService.Setup(s => s.PerformFullSyncAsync(accountId, true, default))
-                   .ReturnsAsync(new FinanceSentry.Modules.BankSync.Application.Services.SyncResult(true, 5, 3, null, null));
+                   .ReturnsAsync(new Modules.BankSync.Application.Services.SyncResult(true, 5, 3, null, null));
 
-        var coordinator = new FinanceSentry.Modules.BankSync.Application.Services.TransactionSyncCoordinator(
+        var coordinator = new Modules.BankSync.Application.Services.TransactionSyncCoordinator(
             syncJobRepo.Object, syncService.Object);
 
         var result = await coordinator.TriggerWebhookSyncAsync(accountId);
@@ -122,15 +122,15 @@ public class WebhookHandlerTests
     [Fact]
     public async Task TransactionSyncCoordinator_ManualSync_NoRunningJob_DelegatesToService()
     {
-        var syncJobRepo = new Moq.Mock<FinanceSentry.Modules.BankSync.Domain.Repositories.ISyncJobRepository>();
-        var syncService = new Moq.Mock<FinanceSentry.Modules.BankSync.Application.Services.IScheduledSyncService>();
+        var syncJobRepo = new Mock<Modules.BankSync.Domain.Repositories.ISyncJobRepository>();
+        var syncService = new Mock<Modules.BankSync.Application.Services.IScheduledSyncService>();
 
         var accountId = Guid.NewGuid();
         syncJobRepo.Setup(r => r.HasRunningJobAsync(accountId, default)).ReturnsAsync(false);
         syncService.Setup(s => s.PerformFullSyncAsync(accountId, false, default))
-                   .ReturnsAsync(new FinanceSentry.Modules.BankSync.Application.Services.SyncResult(true, 10, 10, null, null));
+                   .ReturnsAsync(new Modules.BankSync.Application.Services.SyncResult(true, 10, 10, null, null));
 
-        var coordinator = new FinanceSentry.Modules.BankSync.Application.Services.TransactionSyncCoordinator(
+        var coordinator = new Modules.BankSync.Application.Services.TransactionSyncCoordinator(
             syncJobRepo.Object, syncService.Object);
 
         var result = await coordinator.TriggerManualSyncAsync(accountId);

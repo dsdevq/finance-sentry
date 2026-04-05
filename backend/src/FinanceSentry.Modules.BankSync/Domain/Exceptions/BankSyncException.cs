@@ -26,33 +26,23 @@ public class BankSyncException : Exception
 /// <summary>
 /// Thrown when Plaid returns an error that maps to a user-facing message.
 /// </summary>
-public class PlaidApiException : BankSyncException
+public class PlaidApiException(string plaidErrorCode, string message, int httpStatusCode = 400) : BankSyncException("PLAID_ERROR", message, httpStatusCode)
 {
-    public string PlaidErrorCode { get; }
-
-    public PlaidApiException(string plaidErrorCode, string message, int httpStatusCode = 400)
-        : base("PLAID_ERROR", message, httpStatusCode)
-    {
-        PlaidErrorCode = plaidErrorCode;
-    }
+    public string PlaidErrorCode { get; } = plaidErrorCode;
 }
 
 /// <summary>
 /// Thrown when a bank account is not found or not accessible by the requesting user.
 /// </summary>
-public class AccountNotFoundException : BankSyncException
+public class AccountNotFoundException(Guid accountId) : BankSyncException("ACCOUNT_NOT_FOUND", $"Account {accountId} not found.", 404)
 {
-    public AccountNotFoundException(Guid accountId)
-        : base("ACCOUNT_NOT_FOUND", $"Account {accountId} not found.", 404) { }
 }
 
 /// <summary>
 /// Thrown when a sync is attempted but one is already running.
 /// </summary>
-public class SyncAlreadyRunningException : BankSyncException
+public class SyncAlreadyRunningException(Guid accountId) : BankSyncException("SYNC_ALREADY_RUNNING", "A sync is already in progress for this account.", 409)
 {
-    public SyncAlreadyRunningException(Guid accountId)
-        : base("SYNC_ALREADY_RUNNING", "A sync is already in progress for this account.", 409) { }
 }
 
 /// <summary>

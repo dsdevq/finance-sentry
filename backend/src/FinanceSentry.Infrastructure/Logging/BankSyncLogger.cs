@@ -21,9 +21,9 @@ public interface IBankSyncLogger
 }
 
 /// <inheritdoc />
-public class BankSyncLogger : IBankSyncLogger
+public class BankSyncLogger(ILogger<BankSyncLogger> logger) : IBankSyncLogger
 {
-    private readonly ILogger<BankSyncLogger> _logger;
+    private readonly ILogger<BankSyncLogger> _logger = logger;
 
     // Log message templates — using compile-time constants for performance
     private static readonly Action<ILogger, string, Guid, Exception?> _syncStarted =
@@ -59,10 +59,8 @@ public class BankSyncLogger : IBankSyncLogger
             new EventId(1006, "WebhookReceived"),
             "[{CorrelationId}] Plaid webhook received: type={WebhookType}, code={WebhookCode}");
 
-    public BankSyncLogger(ILogger<BankSyncLogger> logger) => _logger = logger;
-
     public void SyncStarted(string correlationId, Guid accountId)
-        => _syncStarted(_logger, correlationId, accountId, null);
+          => _syncStarted(_logger, correlationId, accountId, null);
 
     public void SyncCompleted(string correlationId, Guid accountId,
         int transactionsFetched, int deduped, long durationMs)

@@ -12,15 +12,12 @@ public record GetMoneyFlowStatisticsQuery(Guid UserId, int Months = 6) : IReques
 
 // ── Handler ────────────────────────────────────────────────────────────────────
 
-public class GetMoneyFlowStatisticsQueryHandler : IRequestHandler<GetMoneyFlowStatisticsQuery, IReadOnlyList<MonthlyFlow>>
+public class GetMoneyFlowStatisticsQueryHandler(IMoneyFlowStatisticsService service) : IRequestHandler<GetMoneyFlowStatisticsQuery, IReadOnlyList<MonthlyFlow>>
 {
-    private readonly IMoneyFlowStatisticsService _service;
-
-    public GetMoneyFlowStatisticsQueryHandler(IMoneyFlowStatisticsService service)
-        => _service = service;
+    private readonly IMoneyFlowStatisticsService _service = service;
 
     public async Task<IReadOnlyList<MonthlyFlow>> Handle(
-        GetMoneyFlowStatisticsQuery request, CancellationToken cancellationToken)
+          GetMoneyFlowStatisticsQuery request, CancellationToken cancellationToken)
     {
         return await _service.GetMonthlyFlowAsync(request.UserId, request.Months, cancellationToken);
     }

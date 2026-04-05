@@ -11,11 +11,11 @@ using Xunit;
 public class TransactionTests
 {
     private static readonly Guid AccountId = Guid.Parse("aaaaaaaa-0000-0000-0000-000000000001");
-    private static readonly Guid UserId   = Guid.Parse("bbbbbbbb-0000-0000-0000-000000000001");
+    private static readonly Guid UserId = Guid.Parse("bbbbbbbb-0000-0000-0000-000000000001");
 
     private static Transaction MakeTx(decimal amount = 50m, string description = "Tesco",
         bool isPending = false, string transactionType = "debit")
-        => new Transaction(
+        => new(
             accountId: AccountId,
             userId: UserId,
             amount: amount,
@@ -116,7 +116,7 @@ public class TransactionTests
     [Fact]
     public void TransactionType_CanBeSetToDebitOrCredit()
     {
-        var debit  = MakeTx(transactionType: "debit");
+        var debit = MakeTx(transactionType: "debit");
         var credit = MakeTx(transactionType: "credit");
 
         debit.TransactionType.Should().Be("debit");

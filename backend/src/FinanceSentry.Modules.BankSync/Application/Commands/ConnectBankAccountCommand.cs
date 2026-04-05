@@ -34,31 +34,22 @@ public record ConnectBankAccountResult(
 // Handler
 // ──────────────────────────────────────────────
 
-public class ConnectBankAccountCommandHandler
-    : IRequestHandler<ConnectBankAccountCommand, ConnectBankAccountResult>
+public class ConnectBankAccountCommandHandler(
+    PlaidAdapter plaid,
+    ICredentialEncryptionService encryption,
+    IBankAccountRepository accounts,
+    IEncryptedCredentialRepository credentials,
+    IMediator mediator)
+        : IRequestHandler<ConnectBankAccountCommand, ConnectBankAccountResult>
 {
-    private readonly PlaidAdapter _plaid;
-    private readonly ICredentialEncryptionService _encryption;
-    private readonly IBankAccountRepository _accounts;
-    private readonly IEncryptedCredentialRepository _credentials;
-    private readonly IMediator _mediator;
-
-    public ConnectBankAccountCommandHandler(
-        PlaidAdapter plaid,
-        ICredentialEncryptionService encryption,
-        IBankAccountRepository accounts,
-        IEncryptedCredentialRepository credentials,
-        IMediator mediator)
-    {
-        _plaid = plaid;
-        _encryption = encryption;
-        _accounts = accounts;
-        _credentials = credentials;
-        _mediator = mediator;
-    }
+    private readonly PlaidAdapter _plaid = plaid;
+    private readonly ICredentialEncryptionService _encryption = encryption;
+    private readonly IBankAccountRepository _accounts = accounts;
+    private readonly IEncryptedCredentialRepository _credentials = credentials;
+    private readonly IMediator _mediator = mediator;
 
     public async Task<ConnectBankAccountResult> Handle(
-        ConnectBankAccountCommand request, CancellationToken cancellationToken)
+          ConnectBankAccountCommand request, CancellationToken cancellationToken)
     {
         // 1. Exchange public token → access token (never logged)
         var exchange = await _plaid.ExchangePublicTokenAsync(request.PublicToken, cancellationToken);

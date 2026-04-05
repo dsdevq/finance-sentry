@@ -19,18 +19,12 @@ public interface ITransactionSyncCoordinator
 }
 
 /// <inheritdoc />
-public class TransactionSyncCoordinator : ITransactionSyncCoordinator
+public class TransactionSyncCoordinator(
+    ISyncJobRepository syncJobs,
+    IScheduledSyncService syncService) : ITransactionSyncCoordinator
 {
-    private readonly ISyncJobRepository    _syncJobs;
-    private readonly IScheduledSyncService _syncService;
-
-    public TransactionSyncCoordinator(
-        ISyncJobRepository    syncJobs,
-        IScheduledSyncService syncService)
-    {
-        _syncJobs    = syncJobs;
-        _syncService = syncService;
-    }
+    private readonly ISyncJobRepository _syncJobs = syncJobs;
+    private readonly IScheduledSyncService _syncService = syncService;
 
     /// <inheritdoc />
     public async Task<SyncResult> TriggerWebhookSyncAsync(Guid accountId, CancellationToken ct = default)

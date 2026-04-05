@@ -1,7 +1,6 @@
 namespace FinanceSentry.Modules.BankSync.API.Middleware;
 
 using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;

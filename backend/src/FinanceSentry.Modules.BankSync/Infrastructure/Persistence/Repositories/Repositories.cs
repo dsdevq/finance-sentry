@@ -7,14 +7,9 @@ using FinanceSentry.Modules.BankSync.Domain.Repositories;
 /// <summary>
 /// Entity Framework Core implementation of IBankAccountRepository.
 /// </summary>
-public class BankAccountRepository : IBankAccountRepository
+public class BankAccountRepository(BankSyncDbContext context) : IBankAccountRepository
 {
-    private readonly BankSyncDbContext _context;
-
-    public BankAccountRepository(BankSyncDbContext context)
-    {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
-    }
+    private readonly BankSyncDbContext _context = context ?? throw new ArgumentNullException(nameof(context));
 
     public async Task<BankAccount> AddAsync(BankAccount account, CancellationToken cancellationToken = default)
     {
@@ -93,14 +88,9 @@ public class BankAccountRepository : IBankAccountRepository
 /// <summary>
 /// Entity Framework Core implementation of ITransactionRepository.
 /// </summary>
-public class TransactionRepository : ITransactionRepository
+public class TransactionRepository(BankSyncDbContext context) : ITransactionRepository
 {
-    private readonly BankSyncDbContext _context;
-
-    public TransactionRepository(BankSyncDbContext context)
-    {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
-    }
+    private readonly BankSyncDbContext _context = context ?? throw new ArgumentNullException(nameof(context));
 
     public async Task<Transaction> AddAsync(Transaction transaction, CancellationToken cancellationToken = default)
     {
@@ -210,14 +200,9 @@ public class TransactionRepository : ITransactionRepository
 /// <summary>
 /// Entity Framework Core implementation of ISyncJobRepository.
 /// </summary>
-public class SyncJobRepository : ISyncJobRepository
+public class SyncJobRepository(BankSyncDbContext context) : ISyncJobRepository
 {
-    private readonly BankSyncDbContext _context;
-
-    public SyncJobRepository(BankSyncDbContext context)
-    {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
-    }
+    private readonly BankSyncDbContext _context = context ?? throw new ArgumentNullException(nameof(context));
 
     public async Task<SyncJob> AddAsync(SyncJob job, CancellationToken cancellationToken = default)
     {
@@ -297,14 +282,9 @@ public class SyncJobRepository : ISyncJobRepository
 /// <summary>
 /// Entity Framework Core implementation of IEncryptedCredentialRepository.
 /// </summary>
-public class EncryptedCredentialRepository : IEncryptedCredentialRepository
+public class EncryptedCredentialRepository(BankSyncDbContext context) : IEncryptedCredentialRepository
 {
-    private readonly BankSyncDbContext _context;
-
-    public EncryptedCredentialRepository(BankSyncDbContext context)
-    {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
-    }
+    private readonly BankSyncDbContext _context = context ?? throw new ArgumentNullException(nameof(context));
 
     public async Task<EncryptedCredential> AddAsync(EncryptedCredential credential, CancellationToken cancellationToken = default)
     {

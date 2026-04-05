@@ -32,42 +32,30 @@ public interface IScheduledSyncService
 }
 
 /// <inheritdoc />
-public class ScheduledSyncService : IScheduledSyncService
+public class ScheduledSyncService(
+    IBankAccountRepository accounts,
+    ITransactionRepository transactions,
+    ISyncJobRepository syncJobs,
+    IEncryptedCredentialRepository credentials,
+    ICredentialEncryptionService encryption,
+    IPlaidAdapter plaid,
+    ITransactionDeduplicationService dedup,
+    IBankSyncLogger logger) : IScheduledSyncService
 {
-    private readonly IBankAccountRepository           _accounts;
-    private readonly ITransactionRepository           _transactions;
-    private readonly ISyncJobRepository               _syncJobs;
-    private readonly IEncryptedCredentialRepository   _credentials;
-    private readonly ICredentialEncryptionService     _encryption;
-    private readonly IPlaidAdapter                    _plaid;
-    private readonly ITransactionDeduplicationService _dedup;
-    private readonly IBankSyncLogger                  _logger;
-
-    public ScheduledSyncService(
-        IBankAccountRepository           accounts,
-        ITransactionRepository           transactions,
-        ISyncJobRepository               syncJobs,
-        IEncryptedCredentialRepository   credentials,
-        ICredentialEncryptionService     encryption,
-        IPlaidAdapter                    plaid,
-        ITransactionDeduplicationService dedup,
-        IBankSyncLogger                  logger)
-    {
-        _accounts     = accounts;
-        _transactions = transactions;
-        _syncJobs     = syncJobs;
-        _credentials  = credentials;
-        _encryption   = encryption;
-        _plaid        = plaid;
-        _dedup        = dedup;
-        _logger       = logger;
-    }
+    private readonly IBankAccountRepository _accounts = accounts;
+    private readonly ITransactionRepository _transactions = transactions;
+    private readonly ISyncJobRepository _syncJobs = syncJobs;
+    private readonly IEncryptedCredentialRepository _credentials = credentials;
+    private readonly ICredentialEncryptionService _encryption = encryption;
+    private readonly IPlaidAdapter _plaid = plaid;
+    private readonly ITransactionDeduplicationService _dedup = dedup;
+    private readonly IBankSyncLogger _logger = logger;
 
     /// <inheritdoc />
     public async Task<SyncResult> PerformFullSyncAsync(
-        Guid accountId,
-        bool webhookTriggered = false,
-        CancellationToken ct = default)
+          Guid accountId,
+          bool webhookTriggered = false,
+          CancellationToken ct = default)
     {
         var startedAt = DateTime.UtcNow;
 
@@ -79,9 +67,9 @@ public class ScheduledSyncService : IScheduledSyncService
         // 2. Create and persist a running SyncJob
         var job = new SyncJob(accountId, account.UserId)
         {
-            Status           = "running",
+            Status = "running",
             WebhookTriggered = webhookTriggered,
-            StartedAt        = startedAt
+            StartedAt = startedAt
         };
         await _syncJobs.AddAsync(job, ct);
 
@@ -116,7 +104,7 @@ public class ScheduledSyncService : IScheduledSyncService
                 .ToHashSet();
 
             var newCandidates = _dedup.FilterDuplicates(candidates, existing);
-            var entities      = newCandidates.Select(_dedup.ToEntity).ToList();
+            var entities = newCandidates.Select(_dedup.ToEntity).ToList();
 
             // 8. Bulk insert new transactions
             if (entities.Count > 0)
@@ -124,7 +112,7 @@ public class ScheduledSyncService : IScheduledSyncService
 
             // 9. Fetch updated balance and mark account active
             var accounts = await _plaid.GetAccountsWithBalanceAsync(accessToken, ct);
-            var balance  = accounts.FirstOrDefault()?.CurrentBalance ?? 0m;
+            var balance = accounts.FirstOrDefault()?.CurrentBalance ?? 0m;
 
             account.MarkActive(balance);
             await _accounts.UpdateAsync(account, ct);

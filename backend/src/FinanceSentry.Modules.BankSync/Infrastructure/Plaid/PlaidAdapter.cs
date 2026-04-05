@@ -7,12 +7,9 @@ using FinanceSentry.Modules.BankSync.Application.Services;
 /// Translates raw Plaid HTTP responses (via IPlaidClient) into domain models.
 /// All Plaid-specific types stay in this layer — domain entities never import Plaid DTOs.
 /// </summary>
-public class PlaidAdapter : IPlaidAdapter
+public class PlaidAdapter(IPlaidClient client) : IPlaidAdapter
 {
-    private readonly IPlaidClient _client;
-
-    public PlaidAdapter(IPlaidClient client)
-        => _client = client;
+    private readonly IPlaidClient _client = client;
 
     /// <summary>Creates a Plaid Link token for the frontend (step 1 of account connection).</summary>
     public async Task<LinkTokenResult> CreateLinkTokenAsync(Guid userId, CancellationToken ct = default)

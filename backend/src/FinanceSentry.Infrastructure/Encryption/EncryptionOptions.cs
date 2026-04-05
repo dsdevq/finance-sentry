@@ -22,5 +22,5 @@ public class EncryptionOptions
     /// Dictionary of version → Base64-encoded 32-byte AES-256 key.
     /// Keys must be exactly 32 bytes (256 bits) when decoded from Base64.
     /// </summary>
-    public Dictionary<int, string> Keys { get; set; } = new();
+    public Dictionary<int, string> Keys { get; set; } = [];
 }

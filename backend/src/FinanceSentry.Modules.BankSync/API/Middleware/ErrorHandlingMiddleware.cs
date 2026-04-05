@@ -11,21 +11,15 @@ using Microsoft.Extensions.Logging;
 /// Global exception handler — converts domain/infrastructure exceptions to
 /// user-friendly HTTP responses. Never exposes stack traces or technical details.
 /// </summary>
-public class ErrorHandlingMiddleware
+public class ErrorHandlingMiddleware(RequestDelegate next, ILogger<ErrorHandlingMiddleware> logger)
 {
-    private readonly RequestDelegate _next;
-    private readonly ILogger<ErrorHandlingMiddleware> _logger;
+    private readonly RequestDelegate _next = next;
+    private readonly ILogger<ErrorHandlingMiddleware> _logger = logger;
 
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
-
-    public ErrorHandlingMiddleware(RequestDelegate next, ILogger<ErrorHandlingMiddleware> logger)
-    {
-        _next = next;
-        _logger = logger;
-    }
 
     public async Task InvokeAsync(HttpContext context)
     {

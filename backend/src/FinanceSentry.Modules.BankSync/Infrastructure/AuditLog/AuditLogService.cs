@@ -26,25 +26,19 @@ public interface IAuditLogService
         string? userAgent = null);
 }
 
-public class AuditLogService : IAuditLogService
+public class AuditLogService(IServiceScopeFactory scopeFactory, ILogger<AuditLogService> logger) : IAuditLogService
 {
-    private readonly IServiceScopeFactory _scopeFactory;
-    private readonly ILogger<AuditLogService> _logger;
-
-    public AuditLogService(IServiceScopeFactory scopeFactory, ILogger<AuditLogService> logger)
-    {
-        _scopeFactory = scopeFactory;
-        _logger = logger;
-    }
+    private readonly IServiceScopeFactory _scopeFactory = scopeFactory;
+    private readonly ILogger<AuditLogService> _logger = logger;
 
     public void Log(
-        Guid userId,
-        string action,
-        string resourceType,
-        Guid? resourceId,
-        string? correlationId = null,
-        string? ipAddress = null,
-        string? userAgent = null)
+          Guid userId,
+          string action,
+          string resourceType,
+          Guid? resourceId,
+          string? correlationId = null,
+          string? ipAddress = null,
+          string? userAgent = null)
     {
         // Fire-and-forget — do not await
         _ = Task.Run(async () =>

@@ -10,18 +10,12 @@ using Microsoft.Extensions.Logging;
 /// Actual storage destination (S3, file system) is injected via ICredentialBackupStorage.
 /// </summary>
 [AutomaticRetry(Attempts = 0)]
-public class CredentialBackupJob
+public class CredentialBackupJob(
+    IBankAccountRepository accounts,
+    ILogger<CredentialBackupJob> logger)
 {
-    private readonly IBankAccountRepository _accounts;
-    private readonly ILogger<CredentialBackupJob> _logger;
-
-    public CredentialBackupJob(
-        IBankAccountRepository accounts,
-        ILogger<CredentialBackupJob> logger)
-    {
-        _accounts = accounts;
-        _logger = logger;
-    }
+    private readonly IBankAccountRepository _accounts = accounts;
+    private readonly ILogger<CredentialBackupJob> _logger = logger;
 
     /// <summary>
     /// Runs the credential backup. Logs account count and backup timestamp only —

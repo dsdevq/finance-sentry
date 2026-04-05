@@ -29,7 +29,7 @@ public static class HangfireSetup
         services.AddHangfireServer(options =>
         {
             options.WorkerCount = 2;
-            options.Queues      = ["default"];
+            options.Queues = ["default"];
         });
 
         return services;
@@ -40,18 +40,12 @@ public static class HangfireSetup
 /// Schedules recurring sync jobs for all active accounts.
 /// Call <see cref="ScheduleAllActiveAccounts"/> once at startup after the database is ready.
 /// </summary>
-public class SyncScheduler
+public class SyncScheduler(
+    IBankAccountRepository accounts,
+    IRecurringJobManager recurringJobs)
 {
-    private readonly IBankAccountRepository      _accounts;
-    private readonly IRecurringJobManager        _recurringJobs;
-
-    public SyncScheduler(
-        IBankAccountRepository      accounts,
-        IRecurringJobManager        recurringJobs)
-    {
-        _accounts      = accounts;
-        _recurringJobs = recurringJobs;
-    }
+    private readonly IBankAccountRepository _accounts = accounts;
+    private readonly IRecurringJobManager _recurringJobs = recurringJobs;
 
     /// <summary>
     /// Registers (or updates) a recurring Hangfire job for every active bank account.

@@ -17,18 +17,18 @@ public class EncryptedCredential : Entity
     /// <summary>
     /// AES-256-GCM encrypted Plaid access token.
     /// </summary>
-    public byte[] EncryptedData { get; set; } = Array.Empty<byte>();
+    public byte[] EncryptedData { get; set; } = [];
 
     /// <summary>
     /// Initialization vector (IV) for encryption (typically 12 bytes).
     /// </summary>
-    public byte[] Iv { get; set; } = Array.Empty<byte>();
+    public byte[] Iv { get; set; } = [];
 
     /// <summary>
     /// Authentication tag from GCM mode (typically 16 bytes).
     /// Used to verify ciphertext integrity.
     /// </summary>
-    public byte[] AuthTag { get; set; } = Array.Empty<byte>();
+    public byte[] AuthTag { get; set; } = [];
 
     /// <summary>
     /// Key version for rotation support.

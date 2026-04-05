@@ -7,11 +7,8 @@ using FinanceSentry.Modules.BankSync.Domain;
 /// Entity Framework Core DbContext for BankSync module.
 /// Configures entities, relationships, indexes, and conversions.
 /// </summary>
-public class BankSyncDbContext : DbContext
+public class BankSyncDbContext(DbContextOptions<BankSyncDbContext> options) : DbContext(options)
 {
-    public BankSyncDbContext(DbContextOptions<BankSyncDbContext> options) : base(options)
-    {
-    }
 
     // DbSets
     public DbSet<BankAccount> BankAccounts { get; set; } = null!;
@@ -26,9 +23,9 @@ public class BankSyncDbContext : DbContext
 
         // Configure BankAccount entity
         var bankAccountBuilder = modelBuilder.Entity<BankAccount>();
-        
+
         bankAccountBuilder.HasKey(ba => ba.Id);
-        
+
         bankAccountBuilder.HasIndex(ba => ba.UserId).HasDatabaseName("idx_bank_account_user_id");
         bankAccountBuilder.HasIndex(ba => ba.SyncStatus).HasDatabaseName("idx_bank_account_sync_status");
         bankAccountBuilder.HasIndex(ba => ba.PlaidItemId).IsUnique().HasDatabaseName("idx_bank_account_plaid_item_id_unique");

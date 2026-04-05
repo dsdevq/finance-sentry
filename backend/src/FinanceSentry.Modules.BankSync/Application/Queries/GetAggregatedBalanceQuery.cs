@@ -18,18 +18,15 @@ public record AggregatedBalanceResult(
 
 // ── Handler ────────────────────────────────────────────────────────────────────
 
-public class GetAggregatedBalanceQueryHandler : IRequestHandler<GetAggregatedBalanceQuery, AggregatedBalanceResult>
+public class GetAggregatedBalanceQueryHandler(IAggregationService aggregation) : IRequestHandler<GetAggregatedBalanceQuery, AggregatedBalanceResult>
 {
-    private readonly IAggregationService _aggregation;
-
-    public GetAggregatedBalanceQueryHandler(IAggregationService aggregation)
-        => _aggregation = aggregation;
+    private readonly IAggregationService _aggregation = aggregation;
 
     public async Task<AggregatedBalanceResult> Handle(
-        GetAggregatedBalanceQuery request, CancellationToken cancellationToken)
+          GetAggregatedBalanceQuery request, CancellationToken cancellationToken)
     {
-        var balances  = await _aggregation.GetAggregatedBalanceAsync(request.UserId, cancellationToken);
-        var byType    = await _aggregation.GetAccountCountByTypeAsync(request.UserId, cancellationToken);
+        var balances = await _aggregation.GetAggregatedBalanceAsync(request.UserId, cancellationToken);
+        var byType = await _aggregation.GetAccountCountByTypeAsync(request.UserId, cancellationToken);
         var totalCount = byType.Values.Sum();
 
         return new AggregatedBalanceResult(balances, totalCount);

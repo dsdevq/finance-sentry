@@ -10,21 +10,14 @@ using Microsoft.AspNetCore.Mvc;
 /// </summary>
 [ApiController]
 [Route("api/dashboard")]
-public class DashboardController : ControllerBase
+public class DashboardController(
+    IDashboardQueryService dashboard,
+    ITransactionRepository transactions,
+    ITransferDetectionService transferDetection) : ControllerBase
 {
-    private readonly IDashboardQueryService _dashboard;
-    private readonly ITransactionRepository _transactions;
-    private readonly ITransferDetectionService _transferDetection;
-
-    public DashboardController(
-        IDashboardQueryService dashboard,
-        ITransactionRepository transactions,
-        ITransferDetectionService transferDetection)
-    {
-        _dashboard         = dashboard         ?? throw new ArgumentNullException(nameof(dashboard));
-        _transactions      = transactions      ?? throw new ArgumentNullException(nameof(transactions));
-        _transferDetection = transferDetection ?? throw new ArgumentNullException(nameof(transferDetection));
-    }
+    private readonly IDashboardQueryService _dashboard = dashboard ?? throw new ArgumentNullException(nameof(dashboard));
+    private readonly ITransactionRepository _transactions = transactions ?? throw new ArgumentNullException(nameof(transactions));
+    private readonly ITransferDetectionService _transferDetection = transferDetection ?? throw new ArgumentNullException(nameof(transferDetection));
 
     // ── GET /api/dashboard/aggregated ── T408 ─────────────────────────────────
 
@@ -42,12 +35,12 @@ public class DashboardController : ControllerBase
 
         return Ok(new
         {
-            aggregatedBalance  = data.AggregatedBalance,
-            accountCount       = data.AccountCount,
-            accountsByType     = data.AccountsByType,
-            monthlyFlow        = data.MonthlyFlow,
-            topCategories      = data.TopCategories,
-            lastSyncTimestamp  = data.LastSyncTimestamp
+            aggregatedBalance = data.AggregatedBalance,
+            accountCount = data.AccountCount,
+            accountsByType = data.AccountsByType,
+            monthlyFlow = data.MonthlyFlow,
+            topCategories = data.TopCategories,
+            lastSyncTimestamp = data.LastSyncTimestamp
         });
     }
 
@@ -65,7 +58,7 @@ public class DashboardController : ControllerBase
         var allTx = (await _transactions.GetByUserIdAsync(userId, ct)).ToList();
 
         // Separate debits and credits that are candidates for transfer pairing
-        var debits  = allTx.Where(t => t.TransactionType == "debit"  && !t.IsPending).ToList();
+        var debits = allTx.Where(t => t.TransactionType == "debit" && !t.IsPending).ToList();
         var credits = allTx.Where(t => t.TransactionType == "credit" && !t.IsPending).ToList();
 
         var pairs = new List<object>();
@@ -81,18 +74,18 @@ public class DashboardController : ControllerBase
                         debit = new
                         {
                             transactionId = debit.Id,
-                            accountId     = debit.AccountId,
-                            amount        = debit.Amount,
-                            date          = debit.PostedDate ?? debit.TransactionDate,
-                            description   = debit.Description
+                            accountId = debit.AccountId,
+                            amount = debit.Amount,
+                            date = debit.PostedDate ?? debit.TransactionDate,
+                            description = debit.Description
                         },
                         credit = new
                         {
                             transactionId = credit.Id,
-                            accountId     = credit.AccountId,
-                            amount        = credit.Amount,
-                            date          = credit.PostedDate ?? credit.TransactionDate,
-                            description   = credit.Description
+                            accountId = credit.AccountId,
+                            amount = credit.Amount,
+                            date = credit.PostedDate ?? credit.TransactionDate,
+                            description = credit.Description
                         }
                     });
                 }

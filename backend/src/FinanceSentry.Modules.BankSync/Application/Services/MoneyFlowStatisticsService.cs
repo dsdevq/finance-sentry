@@ -26,22 +26,16 @@ public interface IMoneyFlowStatisticsService
 }
 
 /// <inheritdoc />
-public class MoneyFlowStatisticsService : IMoneyFlowStatisticsService
+public class MoneyFlowStatisticsService(
+    ITransactionRepository transactions,
+    IBankAccountRepository accounts) : IMoneyFlowStatisticsService
 {
-    private readonly ITransactionRepository _transactions;
-    private readonly IBankAccountRepository _accounts;
-
-    public MoneyFlowStatisticsService(
-        ITransactionRepository transactions,
-        IBankAccountRepository accounts)
-    {
-        _transactions = transactions ?? throw new ArgumentNullException(nameof(transactions));
-        _accounts = accounts ?? throw new ArgumentNullException(nameof(accounts));
-    }
+    private readonly ITransactionRepository _transactions = transactions ?? throw new ArgumentNullException(nameof(transactions));
+    private readonly IBankAccountRepository _accounts = accounts ?? throw new ArgumentNullException(nameof(accounts));
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<MonthlyFlow>> GetMonthlyFlowAsync(
-        Guid userId, int months = 6, CancellationToken ct = default)
+          Guid userId, int months = 6, CancellationToken ct = default)
     {
         var since = DateTime.UtcNow.AddMonths(-months);
 
@@ -66,7 +60,7 @@ public class MoneyFlowStatisticsService : IMoneyFlowStatisticsService
             .GroupBy(x => new { x.Currency, Month = x.EffectiveDate.ToString("yyyy-MM") })
             .Select(g =>
             {
-                var inflow  = g.Where(x => x.Transaction.TransactionType == "credit").Sum(x => x.Transaction.Amount);
+                var inflow = g.Where(x => x.Transaction.TransactionType == "credit").Sum(x => x.Transaction.Amount);
                 var outflow = g.Where(x => x.Transaction.TransactionType == "debit").Sum(x => x.Transaction.Amount);
                 return new MonthlyFlow(g.Key.Month, g.Key.Currency, inflow, outflow, inflow - outflow);
             })

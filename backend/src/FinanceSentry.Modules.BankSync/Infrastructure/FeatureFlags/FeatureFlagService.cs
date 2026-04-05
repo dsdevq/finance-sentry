@@ -19,14 +19,9 @@ public interface IFeatureFlagService
     bool IsEnabledForUser(string flagKey, Guid userId);
 }
 
-public class FeatureFlagService : IFeatureFlagService
+public class FeatureFlagService(IConfiguration config) : IFeatureFlagService
 {
-    private readonly IConfiguration _config;
-
-    public FeatureFlagService(IConfiguration config)
-    {
-        _config = config;
-    }
+    private readonly IConfiguration _config = config;
 
     public bool IsEnabled(string flagKey)
     {

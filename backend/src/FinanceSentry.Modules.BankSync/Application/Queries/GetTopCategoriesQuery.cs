@@ -12,15 +12,12 @@ public record GetTopCategoriesQuery(Guid UserId, int Limit = 10) : IRequest<IRea
 
 // ── Handler ────────────────────────────────────────────────────────────────────
 
-public class GetTopCategoriesQueryHandler : IRequestHandler<GetTopCategoriesQuery, IReadOnlyList<CategoryStat>>
+public class GetTopCategoriesQueryHandler(IMerchantCategoryStatisticsService service) : IRequestHandler<GetTopCategoriesQuery, IReadOnlyList<CategoryStat>>
 {
-    private readonly IMerchantCategoryStatisticsService _service;
-
-    public GetTopCategoriesQueryHandler(IMerchantCategoryStatisticsService service)
-        => _service = service;
+    private readonly IMerchantCategoryStatisticsService _service = service;
 
     public async Task<IReadOnlyList<CategoryStat>> Handle(
-        GetTopCategoriesQuery request, CancellationToken cancellationToken)
+          GetTopCategoriesQuery request, CancellationToken cancellationToken)
     {
         return await _service.GetTopCategoriesAsync(request.UserId, request.Limit, cancellationToken);
     }

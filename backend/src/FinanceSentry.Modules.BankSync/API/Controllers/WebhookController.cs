@@ -15,30 +15,20 @@ using Microsoft.Extensions.Configuration;
 /// </summary>
 [ApiController]
 [Route("api/webhook")]
-public class WebhookController : ControllerBase
+public class WebhookController(
+    IWebhookSignatureValidator signatureValidator,
+    IBackgroundJobClient backgroundJobs,
+    IBankAccountRepository accounts,
+    ITransactionSyncCoordinator coordinator,
+    IBankSyncLogger logger,
+    IConfiguration config) : ControllerBase
 {
-    private readonly IWebhookSignatureValidator _signatureValidator;
-    private readonly IBackgroundJobClient _backgroundJobs;
-    private readonly IBankAccountRepository _accounts;
-    private readonly ITransactionSyncCoordinator _coordinator;
-    private readonly IBankSyncLogger _logger;
-    private readonly IConfiguration _config;
-
-    public WebhookController(
-        IWebhookSignatureValidator signatureValidator,
-        IBackgroundJobClient backgroundJobs,
-        IBankAccountRepository accounts,
-        ITransactionSyncCoordinator coordinator,
-        IBankSyncLogger logger,
-        IConfiguration config)
-    {
-        _signatureValidator = signatureValidator;
-        _backgroundJobs = backgroundJobs;
-        _accounts = accounts;
-        _coordinator = coordinator;
-        _logger = logger;
-        _config = config;
-    }
+    private readonly IWebhookSignatureValidator _signatureValidator = signatureValidator;
+    private readonly IBackgroundJobClient _backgroundJobs = backgroundJobs;
+    private readonly IBankAccountRepository _accounts = accounts;
+    private readonly ITransactionSyncCoordinator _coordinator = coordinator;
+    private readonly IBankSyncLogger _logger = logger;
+    private readonly IConfiguration _config = config;
 
     // ── POST /api/webhook/plaid ── T305 ──────────────────────────────────────
 
@@ -51,7 +41,7 @@ public class WebhookController : ControllerBase
     {
         // Read raw body for signature validation
         // Request.EnableBuffering();
-        using var reader = new System.IO.StreamReader(Request.Body, leaveOpen: true);
+        using var reader = new StreamReader(Request.Body, leaveOpen: true);
         var rawBody = await reader.ReadToEndAsync(ct);
         Request.Body.Position = 0;
 
@@ -113,7 +103,7 @@ public class WebhookController : ControllerBase
         if (accountId == null)
             return;
 
-        _backgroundJobs.Enqueue<FinanceSentry.Modules.BankSync.Infrastructure.Jobs.ScheduledSyncJob>(
+        _backgroundJobs.Enqueue<Infrastructure.Jobs.ScheduledSyncJob>(
             job => job.ExecuteSyncAsync(accountId.Value));
     }
 

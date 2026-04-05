@@ -31,15 +31,9 @@ public class ValidDateNotFutureAttribute : ValidationAttribute
     }
 }
 
-public class ValidEndDateAttribute : ValidationAttribute
+public class ValidEndDateAttribute(string startDateProperty) : ValidationAttribute("endDate must be >= startDate.")
 {
-    private readonly string _startDateProperty;
-
-    public ValidEndDateAttribute(string startDateProperty)
-        : base("endDate must be >= startDate.")
-    {
-        _startDateProperty = startDateProperty;
-    }
+    private readonly string _startDateProperty = startDateProperty;
 
     protected override ValidationResult? IsValid(object? value, ValidationContext context)
     {

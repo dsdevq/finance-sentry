@@ -9,24 +9,17 @@ using Microsoft.Extensions.Configuration;
 /// IPlaidClient implementation that calls the real Plaid REST API over HTTPS.
 /// Injected via AddHttpClient in Program.cs; BaseAddress set from config.
 /// </summary>
-public class PlaidHttpClient : IPlaidClient
+public class PlaidHttpClient(HttpClient http, IConfiguration config) : IPlaidClient
 {
-    private readonly HttpClient _http;
-    private readonly string _clientId;
-    private readonly string _secret;
+    private readonly HttpClient _http = http;
+    private readonly string _clientId = config["Plaid:ClientId"] ?? throw new InvalidOperationException("Plaid:ClientId is required.");
+    private readonly string _secret = config["Plaid:Secret"] ?? throw new InvalidOperationException("Plaid:Secret is required.");
 
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
-
-    public PlaidHttpClient(HttpClient http, IConfiguration config)
-    {
-        _http = http;
-        _clientId = config["Plaid:ClientId"] ?? throw new InvalidOperationException("Plaid:ClientId is required.");
-        _secret = config["Plaid:Secret"] ?? throw new InvalidOperationException("Plaid:Secret is required.");
-    }
 
     public async Task<PlaidLinkTokenResponse> CreateLinkTokenAsync(string userId, CancellationToken ct = default)
     {

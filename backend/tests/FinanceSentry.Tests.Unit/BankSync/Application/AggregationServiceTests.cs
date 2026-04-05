@@ -93,7 +93,7 @@ public class AggregationServiceTests
         // Arrange
         var repoMock = new Mock<IBankAccountRepository>();
         repoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new List<BankAccount>());
+                .ReturnsAsync([]);
 
         var sut = new AggregationService(repoMock.Object);
 
@@ -129,7 +129,7 @@ public class AggregationServiceTests
 
         // Act
         var balances = await sut.GetAggregatedBalanceAsync(UserId);
-        var byType   = await sut.GetAccountCountByTypeAsync(UserId);
+        var byType = await sut.GetAccountCountByTypeAsync(UserId);
 
         // Assert — all EUR balances are summed
         balances.Should().ContainKey("EUR").WhoseValue.Should().Be(2000m);

@@ -21,18 +21,13 @@ public interface IMerchantCategoryStatisticsService
 }
 
 /// <inheritdoc />
-public class MerchantCategoryStatisticsService : IMerchantCategoryStatisticsService
+public class MerchantCategoryStatisticsService(ITransactionRepository transactions) : IMerchantCategoryStatisticsService
 {
-    private readonly ITransactionRepository _transactions;
-
-    public MerchantCategoryStatisticsService(ITransactionRepository transactions)
-    {
-        _transactions = transactions ?? throw new ArgumentNullException(nameof(transactions));
-    }
+    private readonly ITransactionRepository _transactions = transactions ?? throw new ArgumentNullException(nameof(transactions));
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<CategoryStat>> GetTopCategoriesAsync(
-        Guid userId, int limit = 10, CancellationToken ct = default)
+          Guid userId, int limit = 10, CancellationToken ct = default)
     {
         var txList = await _transactions.GetByUserIdAsync(userId, ct);
 

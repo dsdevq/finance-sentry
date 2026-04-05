@@ -9,26 +9,21 @@ using Microsoft.Extensions.Logging;
 /// that may indicate N+1 problems (many sequential round-trips).
 /// Slow threshold: WARNING at >100ms, ERROR at >500ms.
 /// </summary>
-public sealed class EFQueryLoggerInterceptor : DbCommandInterceptor
+public sealed class EFQueryLoggerInterceptor(ILogger<EFQueryLoggerInterceptor> logger) : DbCommandInterceptor
 {
     private const int WarnThresholdMs = 100;
     private const int ErrorThresholdMs = 500;
 
-    private readonly ILogger<EFQueryLoggerInterceptor> _logger;
+    private readonly ILogger<EFQueryLoggerInterceptor> _logger = logger;
 
     // Per-request round-trip counter (thread-local, lightweight approximation)
     [ThreadStatic]
     private static int _roundTripsThisRequest;
 
-    public EFQueryLoggerInterceptor(ILogger<EFQueryLoggerInterceptor> logger)
-    {
-        _logger = logger;
-    }
-
     public override DbDataReader ReaderExecuted(
-        DbCommand command,
-        CommandExecutedEventData eventData,
-        DbDataReader result)
+          DbCommand command,
+          CommandExecutedEventData eventData,
+          DbDataReader result)
     {
         LogIfSlow(command, eventData.Duration);
         return base.ReaderExecuted(command, eventData, result);

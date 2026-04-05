@@ -54,7 +54,7 @@ public class MoneyFlowStatisticsTests
             var month = now.AddMonths(-i);
             var monthDate = new DateTime(month.Year, month.Month, 15, 0, 0, 0, DateTimeKind.Utc);
             transactions.Add(MakeTx(accountId, 1000m, "credit", monthDate));
-            transactions.Add(MakeTx(accountId, 600m,  "debit",  monthDate));
+            transactions.Add(MakeTx(accountId, 600m, "debit", monthDate));
         }
 
         var txRepoMock = new Mock<ITransactionRepository>();
@@ -63,7 +63,7 @@ public class MoneyFlowStatisticsTests
 
         var accountRepoMock = new Mock<IBankAccountRepository>();
         accountRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
-                       .ReturnsAsync(new List<BankAccount> { account });
+                       .ReturnsAsync([account]);
 
         var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object);
 
@@ -107,7 +107,7 @@ public class MoneyFlowStatisticsTests
 
         var accountRepoMock = new Mock<IBankAccountRepository>();
         accountRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
-                       .ReturnsAsync(new List<BankAccount> { account });
+                       .ReturnsAsync([account]);
 
         var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object);
 
@@ -145,7 +145,7 @@ public class MoneyFlowStatisticsTests
 
         var accountRepoMock = new Mock<IBankAccountRepository>();
         accountRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
-                       .ReturnsAsync(new List<BankAccount> { eurAccount, usdAccount });
+                       .ReturnsAsync([eurAccount, usdAccount]);
 
         var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object);
 
@@ -188,7 +188,7 @@ public class MoneyFlowStatisticsTests
 
         var accountRepoMock = new Mock<IBankAccountRepository>();
         accountRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
-                       .ReturnsAsync(new List<BankAccount> { account });
+                       .ReturnsAsync([account]);
 
         var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object);
 
