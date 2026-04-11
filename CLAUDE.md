@@ -126,3 +126,4 @@ From the cross-artifact analysis of `specs/001-bank-account-sync/`:
 - One fix at a time. Diagnose before pivoting.
 - Never change `Host=postgres` to `localhost` to work around Docker issues — fix Docker instead.
 - Never modify connection strings or env config as workarounds — fix the root cause.
+- Do not create markdown files at the repo root. Only `README.md` and `CLAUDE.md` belong there. Session artifacts, debug notes, and how-to docs do not get their own files — put relevant content in `README.md` or the appropriate `.specify/` artifact.
