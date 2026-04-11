@@ -41,7 +41,22 @@
       "Bash(dotnet restore:*)",
       "Bash(npm info:*)",
       "Bash(node -e \":*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(docker version:*)",
+      "Bash(docker context:*)",
+      "Bash(docker --context default ps)",
+      "Bash(powershell -Command \"Get-Process 'Docker Desktop' -ErrorAction SilentlyContinue | Select-Object Name, CPU, WorkingSet\")",
+      "Bash(docker --context default info)",
+      "Bash(DOCKER_CONTEXT=default docker-compose -f docker-compose.override.dev.yml up -d --build)",
+      "Bash(docker --context default compose -f docker-compose.yml up -d)",
+      "Bash(dotnet run:*)",
+      "Bash(curl -s http://localhost:5000/api/v1/health)",
+      "Bash(docker --context default compose -f docker-compose.override.dev.yml up -d --build)",
+      "mcp__atlassian__getVisibleJiraProjects",
+      "Bash(git diff:*)",
+      "Bash(git restore:*)",
+      "Bash(git checkout:*)",
+      "Bash(git apply:*)"
     ]
   }
 }

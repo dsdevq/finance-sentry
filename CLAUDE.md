@@ -83,7 +83,7 @@ docker/
   Dockerfile.frontend                     # Node 22 Alpine, ng serve
 
 .specify/
-  memory/constitution.md                  # Project governance (v1.1.1)
+  memory/constitution.md                  # Project governance (v1.2.0)
   specs/001-bank-account-sync/            # Feature spec, plan, tasks for bank sync
 ```
 
@@ -119,6 +119,15 @@ From the cross-artifact analysis of `specs/001-bank-account-sync/`:
 
 ---
 
+## Jira
+
+- **Site**: `denyssychovdev.atlassian.net` (cloud ID: `d9132aff-8b45-41b5-ab9e-b23bc406543b`)
+- **Project**: Finance Sentry — key `SCRUM`
+- **Issue types**: Epic, Story, Feature, Task, Bug, Subtask
+- **Sync rule**: after `speckit.tasks` runs, all tasks must be mirrored to Jira before implementation starts (see constitution § Issue Tracker Sync)
+
+---
+
 ## Collaboration Style
 
 - Responses must be short and direct. No trailing summaries — Denys can read the diff.
@@ -127,3 +136,10 @@ From the cross-artifact analysis of `specs/001-bank-account-sync/`:
 - Never change `Host=postgres` to `localhost` to work around Docker issues — fix Docker instead.
 - Never modify connection strings or env config as workarounds — fix the root cause.
 - Do not create markdown files at the repo root. Only `README.md` and `CLAUDE.md` belong there. Session artifacts, debug notes, and how-to docs do not get their own files — put relevant content in `README.md` or the appropriate `.specify/` artifact.
+
+## Active Technologies
+- C# 13 / .NET 9 (backend) · TypeScript 5.x strict (frontend) + ASP.NET Core 9, EF Core 9, MediatR, ASP.NET Core Identity (`Microsoft.AspNetCore.Identity.EntityFrameworkCore`), Npgsql.EF Core (backend) · Angular 20, RxJS, Angular standalone routing (frontend) (003-auth-flow)
+- PostgreSQL 14 — shared database, separate `AuthDbContext : IdentityDbContext<ApplicationUser>` with independent migrations (003-auth-flow)
+
+## Recent Changes
+- 003-auth-flow: Added C# 13 / .NET 9 (backend) · TypeScript 5.x strict (frontend) + ASP.NET Core 9, EF Core 9, MediatR, ASP.NET Core Identity (`Microsoft.AspNetCore.Identity.EntityFrameworkCore`), Npgsql.EF Core (backend) · Angular 20, RxJS, Angular standalone routing (frontend)

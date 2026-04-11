@@ -227,6 +227,16 @@ and version/tagging compliance.
 Rollback procedure documented and tested monthly. **Rollback includes tag management**:
 if reverting commits, delete associated version tags and recreate if necessary.
 
+## Issue Tracker Sync
+
+All features developed via the speckit toolchain MUST be mirrored to Jira before implementation begins:
+
+- **Trigger**: After `speckit.tasks` completes and `tasks.md` is finalized, every task in the file MUST have a corresponding Jira issue in the `SCRUM` project on `denyssychovdev.atlassian.net`.
+- **Issue type mapping**: speckit Phases → Epics; individual tasks → Stories or Tasks depending on scope.
+- **Sync method**: Use the `speckit.taskstoissues` skill (Jira variant via Atlassian MCP) or manually via MCP tools if the skill is not yet wired to Jira.
+- **Blocking**: Implementation (`speckit.implement`) MUST NOT start until all tasks have Jira issues created.
+- **Updates**: If tasks.md changes after sync (e.g., follow-up tasks added), Jira must be updated in the same session before the next implement run.
+
 ## Governance
 
 The constitution supersedes all other development practices. Amendments require
@@ -252,4 +262,4 @@ and tag creation. Missing version bump or tag blocks PR merge.
 - Each version change increments **Last Amended** date (ISO format)
 - Applies to both constitution versioning and feature versioning (frontend/backend)
 
-**Version**: 1.1.1 | **Ratified**: 2026-03-21 | **Last Amended**: 2026-04-11
+**Version**: 1.2.0 | **Ratified**: 2026-03-21 | **Last Amended**: 2026-04-11
