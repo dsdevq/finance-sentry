@@ -9,128 +9,126 @@ Personal finance aggregation platform with bank account sync, transaction histor
 - **Multi-currency dashboard** with aggregated balances, money flow charts, and spending categories
 - **Transfer detection** across linked accounts
 - **AES-256-GCM encryption** for all stored bank credentials
-- **Full audit logging** of all data access events (Constitution V compliant)
-- **24-month data retention** with automatic archival
+- **Full audit logging** of all data access events
 
 ## Prerequisites
 
-- .NET 9 SDK
-- Node.js 20+
 - Docker & Docker Compose
 - Plaid developer account (sandbox credentials)
 
-## Local Development Setup
+## Local Development
+
+Everything runs in Docker:
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/your-org/finance-sentry
-cd finance-sentry
-
-# 2. Start PostgreSQL
-docker-compose up -d db
-
-# 3. Configure secrets (copy and fill in values)
-cp backend/src/FinanceSentry.API/appsettings.json \
-   backend/src/FinanceSentry.API/appsettings.Development.json
-
-# Required values in appsettings.Development.json:
-# - ConnectionStrings:Default  (PostgreSQL connection string)
-# - Deduplication:MasterKeyBase64  (32-byte AES key, base64)
-# - Plaid:ClientId, Plaid:Secret, Plaid:WebhookKey
-# - Jwt:Secret  (JWT signing secret, ≥32 chars)
-
-# 4. Run database migrations
-cd backend
-dotnet ef database update \
-  --project src/FinanceSentry.Modules.BankSync \
-  --startup-project src/FinanceSentry.API
-
-# 5. Start the backend
-dotnet run --project src/FinanceSentry.API
-
-# 6. Start the frontend (separate terminal)
-cd frontend
-npm install
-npm start
+cd docker
+docker compose -f docker-compose.dev.yml up -d --build
 ```
 
-Application URLs:
-- Frontend: http://localhost:4200
-- API: http://localhost:5000
-- Swagger: http://localhost:5000/swagger
-- Hangfire: http://localhost:5000/hangfire
-- Health: http://localhost:5000/health/ready
+Startup order is enforced by health checks: `postgres → api → frontend`
 
-## Running Tests
+| Service | URL |
+|---|---|
+| Frontend (Angular) | http://localhost:4200 |
+| Backend API | http://localhost:5000/api/v1 |
+| Health check | http://localhost:5000/api/v1/health |
+| Swagger UI | http://localhost:5000/swagger |
+| Hangfire dashboard | http://localhost:5000/hangfire |
+| PostgreSQL | localhost:5432 |
+
+For faster frontend iteration, run `ng serve` locally while keeping API + DB in Docker:
 
 ```bash
-# All tests
-cd backend && dotnet test
+# Terminal 1 — backend + db only
+cd docker && docker compose -f docker-compose.dev.yml up -d postgres api
 
-# Unit tests only
-dotnet test tests/FinanceSentry.Tests.Unit
-
-# Integration tests
-dotnet test tests/FinanceSentry.Tests.Integration
-
-# Load tests (requires k6)
-k6 run tests/load/bank-sync-load-test.js
+# Terminal 2 — frontend with hot reload
+cd frontend && npm start
 ```
 
-## Environment Variables
+### Environment Variables
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `ConnectionStrings__Default` | PostgreSQL DSN | `Host=localhost;Database=finance_sentry;Username=postgres;Password=...` |
-| `Deduplication__MasterKeyBase64` | AES-256 master key (base64) | `<32-byte key>` |
-| `Plaid__ClientId` | Plaid API client ID | `abc123` |
-| `Plaid__Secret` | Plaid API secret | `secret` |
-| `Plaid__WebhookKey` | Plaid webhook signing key | `whsec_...` |
-| `Jwt__Secret` | JWT signing secret | `<≥32 char secret>` |
-| `FeatureFlags__BANK_SYNC_ENABLED` | Feature flag (bool or 0-100%) | `true` |
+| Variable | Description |
+|---|---|
+| `ConnectionStrings__Default` | PostgreSQL DSN |
+| `Deduplication__MasterKeyBase64` | AES-256 master key (base64, 32 bytes) |
+| `Plaid__ClientId` | Plaid API client ID |
+| `Plaid__Secret` | Plaid API secret |
+| `Plaid__WebhookKey` | Plaid webhook signing key |
+| `Jwt__Secret` | JWT signing secret (≥32 chars) |
 
-## Deployment
+## Development Workflow
 
-```bash
-# Build production Docker image
-docker build -t finance-sentry-api ./backend
+This project uses **speckit** — a spec-driven development toolchain built on top of Claude Code.
 
-# Run with production environment
-docker run -p 5000:5000 \
-  -e ConnectionStrings__Default="..." \
-  -e Plaid__ClientId="..." \
-  finance-sentry-api
 ```
+constitution → spec → plan → tasks → implement
+```
+
+### Toolchain
+
+| Command | Purpose |
+|---|---|
+| `/speckit.specify` | Create or update a feature spec from a natural language description |
+| `/speckit.clarify` | Identify underspecified areas in the current spec |
+| `/speckit.plan` | Generate implementation design from the spec |
+| `/speckit.tasks` | Generate a dependency-ordered task list from the plan |
+| `/speckit.implement` | Execute tasks from `tasks.md` |
+| `/speckit.analyze` | Cross-artifact consistency check across spec/plan/tasks |
+| `/speckit.constitution` | Create or amend the project constitution |
+
+### Artifacts
+
+```
+.specify/
+  memory/
+    constitution.md     # Project governance — principles, quality gates, branching rules
+  specs/
+    001-bank-account-sync/
+      spec.md           # Feature requirements and acceptance criteria
+      plan.md           # Implementation design and component breakdown
+      tasks.md          # Ordered, actionable task list
+  templates/            # Spec, plan, tasks, agent-file templates
+```
+
+### Agent Context
+
+- [`CLAUDE.md`](CLAUDE.md) — Current project state (stack, what's built, what's next). Auto-loaded by Claude on every session.
+- [`.specify/memory/constitution.md`](.specify/memory/constitution.md) — Authoritative source for architecture principles, testing requirements, and code quality gates. When CLAUDE.md and the constitution conflict, the constitution wins.
+
+### Governance Rules (summary)
+
+Full rules are in the constitution. Key gates that block PR merge:
+
+- Failing linter / zero-warning build violation
+- Missing or incomplete tests (unit >80% coverage; contract tests mandatory for every endpoint and external integration)
+- External integration accessed without a domain interface
+- Version not bumped on frontend/API changes
 
 ## Architecture
 
 ```
-frontend/          Angular 18+ SPA (standalone components)
+frontend/                       Angular 20+ SPA (strict TypeScript, lazy-loaded modules)
 backend/
   src/
-    FinanceSentry.API/           ASP.NET Core 9 host + Program.cs
-    FinanceSentry.Core/          Shared domain abstractions
-    FinanceSentry.Infrastructure/ Encryption service
-    FinanceSentry.Modules.BankSync/  Modular monolith module
-      Domain/                    Entities, repositories, domain events
-      Application/               CQRS commands/queries/handlers, services
-      Infrastructure/            EF Core, Plaid adapter, Hangfire jobs
-      API/                       Controllers, middleware, validators
-      Migrations/                EF Core migrations
-  tests/
-    FinanceSentry.Tests.Unit/
-    FinanceSentry.Tests.Integration/
-tests/
-  load/                          k6 load tests
-docs/                            API docs, runbooks, security audit
+    FinanceSentry.API/           ASP.NET Core 9 host — middleware pipeline, DI
+    FinanceSentry.Modules.BankSync/
+      Domain/                   Entities, repositories, domain events
+      Application/              CQRS commands/queries (MediatR)
+      Infrastructure/           EF Core, Plaid adapter, Hangfire jobs, encryption
+      API/                      Controllers, JWT middleware, validators
+docker/
+  docker-compose.dev.yml        Full stack (postgres + api + frontend)
+  Dockerfile                    Multi-stage backend build
+  Dockerfile.frontend           Node 22 Alpine, ng serve
 ```
 
-## Documentation
+## Running Tests
 
-- [API Collection (Postman)](docs/Bank-Sync-API.postman_collection.json)
-- [Security Audit](docs/SECURITY_AUDIT.md)
-- [Database Backup & Recovery](docs/DATABASE_BACKUP.md)
-- [Operations Runbook](docs/OPERATIONS_RUNBOOK.md)
-- [QA Test Plan](docs/QA_TEST_PLAN.md)
-- [Data Export Guide](docs/DATA_EXPORT_GUIDE.md)
-- [Multi-Currency Guide](docs/MULTI_CURRENCY_GUIDE.md)
+```bash
+# Backend
+cd backend && dotnet test
+
+# Frontend
+cd frontend && npm test
+```
