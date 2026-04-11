@@ -1,15 +1,16 @@
 namespace FinanceSentry.Modules.BankSync.API.Controllers;
 
+using System.Security.Claims;
 using FinanceSentry.Modules.BankSync.Application.Services;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
 /// <summary>
 /// Dashboard endpoints — aggregated balance, money flow, category stats, and transfer detection.
-/// All endpoints are user-scoped (FR-009).
+/// All endpoints are user-scoped (FR-009). userId is extracted from the JWT claim `sub`.
 /// </summary>
 [ApiController]
-[Route("api/dashboard")]
+[Route("dashboard")]
 public class DashboardController(
     IDashboardQueryService dashboard,
     ITransactionRepository transactions,
@@ -19,6 +20,13 @@ public class DashboardController(
     private readonly ITransactionRepository _transactions = transactions ?? throw new ArgumentNullException(nameof(transactions));
     private readonly ITransferDetectionService _transferDetection = transferDetection ?? throw new ArgumentNullException(nameof(transferDetection));
 
+    private Guid? GetUserIdFromClaims()
+    {
+        var sub = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+               ?? User.FindFirst("sub")?.Value;
+        return Guid.TryParse(sub, out var id) ? id : null;
+    }
+
     // ── GET /api/dashboard/aggregated ── T408 ─────────────────────────────────
 
     /// <summary>
@@ -26,12 +34,13 @@ public class DashboardController(
     /// aggregated balances, account counts, monthly flow, top categories, last sync timestamp.
     /// </summary>
     [HttpGet("aggregated")]
-    public async Task<IActionResult> GetAggregated([FromQuery] Guid userId, CancellationToken ct)
+    public async Task<IActionResult> GetAggregated(CancellationToken ct)
     {
-        if (userId == Guid.Empty)
-            return BadRequest(new { error = "userId is required." });
+        var userId = GetUserIdFromClaims();
+        if (userId is null)
+            return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
 
-        var data = await _dashboard.GetDashboardDataAsync(userId, ct);
+        var data = await _dashboard.GetDashboardDataAsync(userId.Value, ct);
 
         return Ok(new
         {
@@ -50,12 +59,13 @@ public class DashboardController(
     /// Returns pairs of transactions that are likely internal transfers between accounts.
     /// </summary>
     [HttpGet("transfers")]
-    public async Task<IActionResult> GetTransfers([FromQuery] Guid userId, CancellationToken ct)
+    public async Task<IActionResult> GetTransfers(CancellationToken ct)
     {
-        if (userId == Guid.Empty)
-            return BadRequest(new { error = "userId is required." });
+        var userId = GetUserIdFromClaims();
+        if (userId is null)
+            return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
 
-        var allTx = (await _transactions.GetByUserIdAsync(userId, ct)).ToList();
+        var allTx = (await _transactions.GetByUserIdAsync(userId.Value, ct)).ToList();
 
         // Separate debits and credits that are candidates for transfer pairing
         var debits = allTx.Where(t => t.TransactionType == "debit" && !t.IsPending).ToList();

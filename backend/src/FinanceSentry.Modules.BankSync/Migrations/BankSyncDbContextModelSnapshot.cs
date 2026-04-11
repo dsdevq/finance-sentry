@@ -22,6 +22,53 @@ namespace FinanceSentry.Modules.BankSync.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("FinanceSentry.Modules.BankSync.Domain.AuditLog", b =>
+                {
+                    b.Property<Guid>("AuditId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("CorrelationId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(45)
+                        .HasColumnType("character varying(45)");
+
+                    b.Property<DateTime>("PerformedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ResourceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ResourceType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("UserAgent")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("AuditId");
+
+                    b.HasIndex("ResourceType", "ResourceId")
+                        .HasDatabaseName("idx_audit_log_resource");
+
+                    b.HasIndex("UserId", "PerformedAt")
+                        .HasDatabaseName("idx_audit_log_user_performed_at");
+
+                    b.ToTable("audit_logs", (string)null);
+                });
+
             modelBuilder.Entity("FinanceSentry.Modules.BankSync.Domain.BankAccount", b =>
                 {
                     b.Property<Guid>("Id")
@@ -66,6 +113,9 @@ namespace FinanceSentry.Modules.BankSync.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
                         .HasDefaultValue(true);
+
+                    b.Property<string>("LastSyncError")
+                        .HasColumnType("text");
 
                     b.Property<string>("OwnerName")
                         .IsRequired()
@@ -163,15 +213,12 @@ namespace FinanceSentry.Modules.BankSync.Migrations
                     b.Property<Guid>("AccountId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string?>("CorrelationId")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
                     b.Property<DateTime?>("CompletedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CorrelationId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
@@ -189,6 +236,11 @@ namespace FinanceSentry.Modules.BankSync.Migrations
                     b.Property<DateTime?>("LastTransactionDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("RetryCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<DateTime>("StartedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -199,31 +251,29 @@ namespace FinanceSentry.Modules.BankSync.Migrations
                         .HasColumnType("character varying(50)")
                         .HasDefaultValue("pending");
 
-                    b.Property<int>("TransactionsSynced")
-                        .HasColumnType("integer");
+                    b.Property<int>("TransactionCountDeduped")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
 
                     b.Property<int>("TransactionCountFetched")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasDefaultValue(0);
 
-                    b.Property<int>("TransactionCountDeduped")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0);
+                    b.Property<int>("TransactionsSynced")
+                        .HasColumnType("integer");
 
-                    b.Property<int>("RetryCount")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0);
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("WebhookTriggered")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
                         .HasDefaultValue(false);
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
@@ -255,17 +305,33 @@ namespace FinanceSentry.Modules.BankSync.Migrations
                         .HasPrecision(15, 2)
                         .HasColumnType("numeric(15,2)");
 
+                    b.Property<string>("ArchivedReason")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
                     b.Property<bool>("IsPending")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("MerchantCategory")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("MerchantName")
                         .HasMaxLength(255)
@@ -289,6 +355,9 @@ namespace FinanceSentry.Modules.BankSync.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("AccountId")
@@ -299,6 +368,9 @@ namespace FinanceSentry.Modules.BankSync.Migrations
 
                     b.HasIndex("PostedDate")
                         .HasDatabaseName("idx_transaction_posted_date");
+
+                    b.HasIndex("AccountId", "IsActive")
+                        .HasDatabaseName("idx_transaction_account_active");
 
                     b.HasIndex("AccountId", "UniqueHash")
                         .IsUnique()

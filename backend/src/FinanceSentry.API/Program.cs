@@ -1,4 +1,5 @@
 using Serilog;
+using FinanceSentry.API.Conventions;
 using FinanceSentry.Modules.BankSync;
 using FinanceSentry.Modules.BankSync.Infrastructure.Persistence.Repositories;
 using FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
@@ -14,6 +15,11 @@ using FinanceSentry.Modules.BankSync.API.Middleware;
 using FinanceSentry.Infrastructure;
 using FinanceSentry.Infrastructure.Encryption;
 using FinanceSentry.Infrastructure.Logging;
+using FinanceSentry.Modules.Auth.Domain.Entities;
+using FinanceSentry.Modules.Auth.Application.Interfaces;
+using FinanceSentry.Modules.Auth.Infrastructure.Persistence;
+using FinanceSentry.Modules.Auth.Infrastructure.Services;
+using Microsoft.AspNetCore.Identity;
 using Hangfire;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -44,7 +50,8 @@ builder.Services.AddCors(options =>
 });
 
 // ── ASP.NET Core services ───────────────────────────────────────────────────
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+    options.Conventions.Add(new ApiVersionPrefixConvention("api/v1")));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -61,7 +68,8 @@ builder.Services.AddSwaggerGen(c =>
 // ── MediatR (CQRS) ──────────────────────────────────────────────────────────
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(
     typeof(Program).Assembly,
-    typeof(BankSyncModule).Assembly
+    typeof(BankSyncModule).Assembly,
+    typeof(JwtTokenService).Assembly
 ));
 
 // ── Database (EF Core + PostgreSQL) ─────────────────────────────────────────
@@ -70,6 +78,26 @@ var connectionString = builder.Configuration.GetConnectionString("Default")
 
 builder.Services.AddDbContext<FinanceSentry.Modules.BankSync.Infrastructure.Persistence.BankSyncDbContext>(
     options => options.UseNpgsql(connectionString));
+
+builder.Services.AddDbContext<AuthDbContext>(
+    options => options.UseNpgsql(connectionString));
+
+// ── ASP.NET Core Identity ────────────────────────────────────────────────────
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+    {
+        options.Password.RequireDigit = true;
+        options.Password.RequireLowercase = true;
+        options.Password.RequireUppercase = true;
+        options.Password.RequiredLength = 8;
+        options.Password.RequireNonAlphanumeric = false;
+        options.User.RequireUniqueEmail = true;
+    })
+    .AddEntityFrameworkStores<AuthDbContext>()
+    .AddDefaultTokenProviders();
+
+// ── Token service ────────────────────────────────────────────────────────────
+builder.Services.AddSingleton<ITokenService, JwtTokenService>();
+builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
 
 // ── Repositories ─────────────────────────────────────────────────────────────
 builder.Services.AddScoped<IBankAccountRepository, BankAccountRepository>();
@@ -162,18 +190,31 @@ builder.Services.AddRateLimiter(options =>
 var app = builder.Build();
 
 // ── Database initialization and migrations ──────────────────────────────────
-try
+using (var scope = app.Services.CreateScope())
 {
-    using var scope = app.Services.CreateScope();
-    var dbContext = scope.ServiceProvider.GetRequiredService<FinanceSentry.Modules.BankSync.Infrastructure.Persistence.BankSyncDbContext>();
+    try
+    {
+        var bankSyncDbContext = scope.ServiceProvider.GetRequiredService<FinanceSentry.Modules.BankSync.Infrastructure.Persistence.BankSyncDbContext>();
+        app.Logger.LogInformation("Applying BankSync database migrations...");
+        bankSyncDbContext.Database.Migrate();
+        app.Logger.LogInformation("BankSync migrations applied successfully");
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, "BankSync migration failed. Startup will continue.");
+    }
 
-    app.Logger.LogInformation("Applying database migrations...");
-    dbContext.Database.Migrate();
-    app.Logger.LogInformation("Database migrations completed successfully");
-}
-catch (Exception ex)
-{
-    app.Logger.LogError(ex, "An error occurred while migrating the database. Startup will continue, but database operations may fail.");
+    try
+    {
+        var authDbContext = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        app.Logger.LogInformation("Applying Auth database migrations...");
+        authDbContext.Database.Migrate();
+        app.Logger.LogInformation("Auth migrations applied successfully");
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, "Auth migration failed. Startup will continue.");
+    }
 }
 
 // ── Middleware pipeline ───────────────────────────────────────────────────────

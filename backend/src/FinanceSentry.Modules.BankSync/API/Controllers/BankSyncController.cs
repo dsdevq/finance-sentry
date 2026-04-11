@@ -1,5 +1,6 @@
 namespace FinanceSentry.Modules.BankSync.API.Controllers;
 
+using System.Security.Claims;
 using FinanceSentry.Modules.BankSync.Application.Commands;
 using FinanceSentry.Modules.BankSync.Application.Queries;
 using FinanceSentry.Modules.BankSync.Application.Services;
@@ -11,10 +12,10 @@ using Microsoft.AspNetCore.Mvc;
 
 /// <summary>
 /// REST endpoints for Bank Account Sync (US1 + US2).
-/// All endpoints are user-scoped — FR-009.
+/// All endpoints are user-scoped — FR-009. userId is extracted from the JWT claim `sub`.
 /// </summary>
 [ApiController]
-[Route("api/accounts")]
+[Route("accounts")]
 public class BankSyncController(
     IMediator mediator,
     PlaidAdapter plaid,
@@ -32,13 +33,24 @@ public class BankSyncController(
     private readonly ISyncJobRepository _syncJobs = syncJobs;
     private readonly ITransactionSyncCoordinator _coordinator = coordinator;
 
+    private Guid? GetUserIdFromClaims()
+    {
+        var sub = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+               ?? User.FindFirst("sub")?.Value;
+        return Guid.TryParse(sub, out var id) ? id : null;
+    }
+
     // ── POST /api/accounts/connect ── T205 ───────────────────────────────────
 
     /// <summary>Step 1: Get a Plaid Link token to open Plaid Link in the frontend.</summary>
     [HttpPost("connect")]
-    public async Task<IActionResult> Connect([FromBody] ConnectRequest request, CancellationToken ct)
+    public async Task<IActionResult> Connect(CancellationToken ct)
     {
-        var result = await _plaid.CreateLinkTokenAsync(request.UserId, ct);
+        var userId = GetUserIdFromClaims();
+        if (userId is null)
+            return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
+
+        var result = await _plaid.CreateLinkTokenAsync(userId.Value, ct);
         return Ok(new
         {
             linkToken = result.LinkToken,
@@ -53,8 +65,12 @@ public class BankSyncController(
     [HttpPost("link")]
     public async Task<IActionResult> Link([FromBody] LinkRequest request, CancellationToken ct)
     {
+        var userId = GetUserIdFromClaims();
+        if (userId is null)
+            return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
+
         var result = await _mediator.Send(new ConnectBankAccountCommand(
-            request.UserId, request.PublicToken, request.InstitutionName), ct);
+            userId.Value, request.PublicToken, request.InstitutionName), ct);
 
         return Ok(new
         {
@@ -70,16 +86,19 @@ public class BankSyncController(
 
     // ── GET /api/accounts ── T207 ────────────────────────────────────────────
 
-    /// <summary>Returns all accounts for the authenticated user. FR-009: scoped to userId.</summary>
+    /// <summary>Returns all accounts for the authenticated user. FR-009: scoped to userId from JWT.</summary>
     [HttpGet]
     public async Task<IActionResult> GetAccounts(
-        [FromQuery] Guid userId,
         [FromQuery] string? status = null,
         [FromQuery] string? currency = null,
         CancellationToken ct = default)
     {
+        var userId = GetUserIdFromClaims();
+        if (userId is null)
+            return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
+
         var result = await _mediator.Send(
-            new GetAccountsQuery(userId, status, currency), ct);
+            new GetAccountsQuery(userId.Value, status, currency), ct);
 
         return Ok(new
         {
@@ -95,16 +114,19 @@ public class BankSyncController(
     [HttpGet("{accountId:guid}/transactions")]
     public async Task<IActionResult> GetTransactions(
         Guid accountId,
-        [FromQuery] Guid userId,
         [FromQuery] int offset = 0,
         [FromQuery] int limit = 50,
         [FromQuery] DateTime? startDate = null,
         [FromQuery] DateTime? endDate = null,
         CancellationToken ct = default)
     {
+        var userId = GetUserIdFromClaims();
+        if (userId is null)
+            return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
+
         // FR-009: verify ownership before returning data
         var account = await _accounts.GetByIdAsync(accountId, ct);
-        if (account == null || account.UserId != userId)
+        if (account == null || account.UserId != userId.Value)
             return NotFound(new { error = "Account not found." });
 
         var transactions = (await _transactions.GetByAccountIdAsync(accountId, offset, limit, ct)).ToList();
@@ -139,12 +161,15 @@ public class BankSyncController(
     [HttpPost("{accountId:guid}/sync")]
     public async Task<IActionResult> TriggerSync(
         Guid accountId,
-        [FromQuery] Guid userId,
         CancellationToken ct)
     {
+        var userId = GetUserIdFromClaims();
+        if (userId is null)
+            return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
+
         // FR-009: ownership check
         var account = await _accounts.GetByIdAsync(accountId, ct);
-        if (account == null || account.UserId != userId)
+        if (account == null || account.UserId != userId.Value)
             return NotFound(new { error = "Account not found." });
 
         // Idempotency: reject if sync already running
@@ -169,12 +194,15 @@ public class BankSyncController(
     [HttpGet("{accountId:guid}/sync-status")]
     public async Task<IActionResult> GetSyncStatus(
         Guid accountId,
-        [FromQuery] Guid userId,
         CancellationToken ct)
     {
+        var userId = GetUserIdFromClaims();
+        if (userId is null)
+            return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
+
         // FR-009: ownership check
         var account = await _accounts.GetByIdAsync(accountId, ct);
-        if (account == null || account.UserId != userId)
+        if (account == null || account.UserId != userId.Value)
             return NotFound(new { error = "Account not found." });
 
         var latestJob = await _syncJobs.GetLatestByAccountIdAsync(accountId, ct);
@@ -202,12 +230,15 @@ public class BankSyncController(
     [HttpDelete("{accountId:guid}")]
     public async Task<IActionResult> DeleteAccount(
         Guid accountId,
-        [FromQuery] Guid userId,
         CancellationToken ct)
     {
+        var userId = GetUserIdFromClaims();
+        if (userId is null)
+            return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
+
         // FR-009: ownership check
         var account = await _accounts.GetByIdAsync(accountId, ct);
-        if (account == null || account.UserId != userId)
+        if (account == null || account.UserId != userId.Value)
             return NotFound(new { error = "Account not found." });
 
         // Soft-delete all transactions for the account
@@ -222,6 +253,4 @@ public class BankSyncController(
 
 // ── Request DTOs ─────────────────────────────────────────────────────────────
 
-public record ConnectRequest(Guid UserId);
-
-public record LinkRequest(Guid UserId, string PublicToken, string InstitutionName);
+public record LinkRequest(string PublicToken, string InstitutionName);
