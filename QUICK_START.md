@@ -1,185 +1,115 @@
-# 🚀 Running Finance Sentry Full Stack - Quick Start
+# Finance Sentry — Quick Start
 
-## All Issues Fixed ✅
+## How to Run
 
-Your full-stack debug configuration is now ready. Here's what was fixed:
+Everything runs in Docker. One command starts the full stack (frontend, API, database):
 
-### Core Fixes Applied
-1. ✅ Database migrations auto-run on API startup
-2. ✅ CORS enabled for frontend (localhost:4200)
-3. ✅ Health check endpoint for Docker
-4. ✅ Frontend environment configuration
-5. ✅ Backend development settings
-6. ✅ Docker Compose environment variables
-7. ✅ VSCode debug tasks
-
----
-
-## How to Run the Application
-
-### Option 1: VSCode Debug (Recommended)
-1. **Update Plaid credentials** (optional - sandbox defaults work):
-   ```bash
-   # Edit docker/.env
-   PLAID_CLIENT_ID=your_id_here
-   PLAID_SECRET=your_secret_here
-   ```
-
-2. **Press F5** in VS Code
-3. **Select**: "Full Stack: Backend + Frontend + DB"
-4. Wait for services to start (~30 seconds)
-5. Chrome opens at http://localhost:4200
-
-### Option 2: Manual Docker + Local Run
-```bash
-# Start Docker services only
-cd docker
-docker-compose -f docker-compose.override.dev.yml up -d
-
-# In separate terminal, run backend
-cd backend/src/FinanceSentry.API
-dotnet run
-
-# In another terminal, run frontend
-cd frontend
-npm start
-```
-
-### Option 3: Just Docker (No debugging)
 ```bash
 cd docker
-docker-compose -f docker-compose.override.dev.yml up
+docker compose -f docker-compose.dev.yml up -d --build
 ```
 
----
+Stop everything:
 
-## What Each Configuration Does
-
-### Docker Compose Services
-- **postgres**: PostgreSQL database (port 5432)
-- **api**: .NET 9 backend (port 5000)
-
-### Frontend
-- Angular dev server (port 4200)
-- Auto-compiles and hot-reloads
-
-### Backend
-- Auto-runs database migrations
-- Swagger UI at http://localhost:5000/swagger
-- API routes at http://localhost:5000/api
-
----
-
-## Verifying Everything Works
-
-1. **Docker is running**:
-   ```bash
-   docker ps
-   # Should show postgres and api containers
-   ```
-
-2. **Backend is healthy**:
-   ```bash
-   curl http://localhost:5000/api/v1/health
-   # Should return: {"status":"healthy","timestamp":"..."}
-   ```
-
-3. **Frontend loads**:
-   - Open http://localhost:4200
-   - Should see Angular app (Bank Sync module)
-
-4. **Database connected**:
-   - Check docker logs for migration output
-   - ```bash
-     docker logs finance-sentry-api | grep -i migration
-     ```
-
----
-
-## Debugging Tips
-
-### Backend Debugging in VSCode
-- Breakpoints work in C# code
-- Watch variables, call stack visible
-- Step through code with F10/F11
-
-### Frontend Debugging in Chrome
-- DevTools opens automatically
-- Breakpoints work in TypeScript
-- Source maps enabled
-
-### Common Issues
-
-**Port already in use?**
 ```bash
-# Kill process using port 5000 (backend)
-lsof -i :5000 | grep LISTEN | awk '{print $2}' | xargs kill -9
-
-# Kill process using port 4200 (frontend)
-lsof -i :4200 | grep LISTEN | awk '{print $2}' | xargs kill -9
-
-# Kill process using port 5432 (database)
-lsof -i :5432 | grep LISTEN | awk '{print $2}' | xargs kill -9
-```
-
-**Docker containers won't start?**
-```bash
-# Clean up old containers
-docker-compose -f docker/docker-compose.override.dev.yml down -v
-
-# Start fresh
-docker-compose -f docker/docker-compose.override.dev.yml up -d
-```
-
-**Backend migrations fail?**
-```bash
-# Check logs
-docker logs finance-sentry-api
-
-# If database is corrupted, reset it
-docker-compose -f docker/docker-compose.override.dev.yml down -v
-docker-compose -f docker/docker-compose.override.dev.yml up -d
+cd docker
+docker compose -f docker-compose.dev.yml down
 ```
 
 ---
 
-## Architecture
+## Services
+
+| Service | URL | Description |
+|---------|-----|-------------|
+| **Frontend** (Angular) | http://localhost:4200 | Angular dev server — main UI |
+| **Backend API** | http://localhost:5000/api/v1 | ASP.NET Core REST API |
+| **Health check** | http://localhost:5000/api/v1/health | Returns `{"status":"healthy"}` |
+| **Swagger UI** | http://localhost:5000/swagger | Interactive API documentation |
+| **Hangfire dashboard** | http://localhost:5000/hangfire | Background job monitor (dev only) |
+| **PostgreSQL** | localhost:5432 | Database (user: finance_user / pw: finance_password / db: finance_sentry) |
+
+---
+
+## Environment Variables
+
+Sensitive values can be overridden via environment variables or a `docker/.env` file:
+
+```bash
+# docker/.env (optional — defaults below work for local sandbox testing)
+PLAID_CLIENT_ID=your_plaid_client_id
+PLAID_SECRET=your_plaid_secret
+JWT_SECRET=your_jwt_secret
+ENCRYPTION_MASTER_KEY=your_encryption_key
+```
+
+Sandbox defaults are pre-configured in `docker-compose.dev.yml` so the stack
+runs out of the box without a `.env` file.
+
+---
+
+## Startup Order
+
+Docker Compose enforces startup order automatically:
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Your Development Machine                 │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  ┌──────────────────────┐         ┌──────────────────────┐  │
-│  │   Chrome Browser     │         │   VS Code Debugger   │  │
-│  │  http://localhost:4200        │  .NET & TypeScript   │  │
-│  └──────────────────────┘         └──────────────────────┘  │
-│           │                                 │                │
-│           ▼                                 ▼                │
-│  ┌──────────────────────┐         ┌──────────────────────┐  │
-│  │  Angular Dev Server  │◄───────►│   .NET 9 Backend     │  │
-│  │  npm start (4200)    │         │  dotnet run (5000)   │  │
-│  └──────────────────────┘         └──────────────────────┘  │
-│           │                                 │                │
-│           └─────────────────┬────────────────┘                │
-│                             ▼                │                │
-│                      ┌──────────────────┐    │                │
-│                      │  PostgreSQL 14   │◄───┘                │
-│                      │ port 5432 (5432) │                     │
-│                      └──────────────────┘                     │
-│                                                              │
-│             (All in Docker containers)                       │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
+postgres (healthy)
+    └─> api (healthy)
+            └─> frontend
+```
+
+The API auto-runs EF Core migrations on startup. The frontend waits until the API
+reports healthy before starting.
+
+---
+
+## What Is Running
+
+| Container | Image | Source |
+|-----------|-------|--------|
+| `finance-sentry-postgres` | postgres:14-alpine | Official image |
+| `finance-sentry-api` | Built from `docker/Dockerfile` | `backend/` (ASP.NET 9) |
+| `finance-sentry-frontend` | Built from `docker/Dockerfile.frontend` | `frontend/` (Angular, `ng serve`) |
+
+---
+
+## Connecting to the Database
+
+```bash
+docker exec -it finance-sentry-postgres psql -U finance_user -d finance_sentry
 ```
 
 ---
 
-## Next Steps
+## Viewing Logs
 
-1. ✅ **Configuration complete** - Ready to debug
-2. 🚀 **Start the application** - Press F5 or run docker-compose
-3. 🧪 **Test the application** - Create bank accounts, sync transactions
-4. 📝 **Feature 002 Implementation** - Ready to begin after testing
+```bash
+# All services
+docker compose -f docker/docker-compose.dev.yml logs -f
 
-Enjoy debugging! 🎉
+# Single service
+docker compose -f docker/docker-compose.dev.yml logs -f api
+docker compose -f docker/docker-compose.dev.yml logs -f frontend
+```
+
+---
+
+## Rebuilding After Code Changes
+
+Frontend and API images must be rebuilt after source changes (no hot-reload in Docker):
+
+```bash
+cd docker
+docker compose -f docker-compose.dev.yml up -d --build
+```
+
+> **Tip**: For faster frontend iteration, run `ng serve` locally (outside Docker)
+> while keeping the API and database in Docker:
+>
+> ```bash
+> # Terminal 1 — DB + API in Docker
+> cd docker && docker compose -f docker-compose.dev.yml up -d postgres api
+>
+> # Terminal 2 — Frontend locally (hot-reload)
+> cd frontend && npm start
+> ```

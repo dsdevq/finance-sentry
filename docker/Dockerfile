@@ -6,6 +6,7 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0-alpine AS build
 WORKDIR /src
 
 # Copy solution and project files (layer 1: stable dependencies)
+COPY ["backend/NuGet.Config", "backend/"]
 COPY ["backend/FinanceSentry.sln", "backend/"]
 COPY ["backend/src/FinanceSentry.API/FinanceSentry.API.csproj", "backend/src/FinanceSentry.API/"]
 COPY ["backend/src/FinanceSentry.Core/FinanceSentry.Core.csproj", "backend/src/FinanceSentry.Core/"]
@@ -23,7 +24,7 @@ COPY ["backend/src/", "src/"]
 COPY ["backend/tests/", "tests/"]
 
 # Build application
-RUN dotnet build FinanceSentry.sln -c Release --no-restore
+RUN dotnet build FinanceSentry.sln -c Release
 
 # Run tests before publishing (fail fast on test failures)
 RUN dotnet test tests/FinanceSentry.Tests.Unit/FinanceSentry.Tests.Unit.csproj -c Release --no-build --nologo --verbosity minimal

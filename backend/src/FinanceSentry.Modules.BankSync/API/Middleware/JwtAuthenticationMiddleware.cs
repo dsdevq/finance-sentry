@@ -22,6 +22,7 @@ public class JwtAuthenticationMiddleware
     private static readonly string[] _exemptPrefixes =
     [
         "/health",
+        "/api/v1/health",
         "/swagger",
         "/api/webhook",
         "/hangfire"

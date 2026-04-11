@@ -196,11 +196,6 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health/ready");
 
-// ── Health check endpoint for Docker ─────────────────────────────────────────
-app.MapGet("/api/v1/health", () => new { status = "healthy", timestamp = DateTime.UtcNow })
-    .WithName("Health")
-    .WithOpenApi();
-
 app.Run();
 
 // Expose Program for WebApplicationFactory in integration/contract tests
