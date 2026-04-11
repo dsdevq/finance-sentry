@@ -47,7 +47,7 @@ public class BankSyncAPIContractTests(BankSyncApiFactory factory) : IClassFixtur
                 "req_001",
                 DateTime.UtcNow.AddMinutes(30)));
 
-        var response = await _client.PostAsync("/api/accounts/connect",
+        var response = await _client.PostAsync("/api/v1/accounts/connect",
             JsonContent.Create(new { userId = Guid.NewGuid() }));
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -65,7 +65,7 @@ public class BankSyncAPIContractTests(BankSyncApiFactory factory) : IClassFixtur
             .Setup(r => r.GetByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
 
-        var response = await _client.GetAsync("/api/accounts");
+        var response = await _client.GetAsync("/api/v1/accounts");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<AccountsListResponse>();
@@ -96,7 +96,7 @@ public class BankSyncAPIContractTests(BankSyncApiFactory factory) : IClassFixtur
                 currency: "EUR",
                 createdBy: Guid.NewGuid()));
 
-        var url = $"/api/accounts/{accountId}/transactions?userId={requestingUserId}";
+        var url = $"/api/v1/accounts/{accountId}/transactions?userId={requestingUserId}";
         var response = await _client.GetAsync(url);
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound,
@@ -128,7 +128,7 @@ public class BankSyncAPIContractTests(BankSyncApiFactory factory) : IClassFixtur
             .Setup(r => r.CountByAccountIdAsync(accountId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(0);
 
-        var url = $"/api/accounts/{accountId}/transactions?offset=0&limit=50";
+        var url = $"/api/v1/accounts/{accountId}/transactions?offset=0&limit=50";
         var response = await _client.GetAsync(url);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);

@@ -39,7 +39,7 @@ public class AccountsAuthContractTests : IClassFixture<AuthApiFactory>
     [Fact]
     public async Task GetAccounts_WithNoToken_Returns401Unauthorized()
     {
-        var response = await _unauthenticatedClient.GetAsync("/api/accounts");
+        var response = await _unauthenticatedClient.GetAsync("/api/v1/accounts");
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
 
@@ -52,7 +52,7 @@ public class AccountsAuthContractTests : IClassFixture<AuthApiFactory>
     public async Task GetAccounts_WithValidToken_Returns200WithoutUserIdQueryParam()
     {
         // The endpoint must NOT require ?userId — userId comes from JWT claim
-        var response = await _authenticatedClient.GetAsync("/api/accounts");
+        var response = await _authenticatedClient.GetAsync("/api/v1/accounts");
 
         // 200 or other non-auth error (e.g. 500 from missing DB data) is acceptable —
         // the key assertion is that it is NOT 401/403.

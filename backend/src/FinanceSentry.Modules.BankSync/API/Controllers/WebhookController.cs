@@ -14,7 +14,7 @@ using Microsoft.Extensions.Configuration;
 /// All incoming payloads are signature-validated before processing (T306).
 /// </summary>
 [ApiController]
-[Route("api/webhook")]
+[Route("api/v1/webhook")]
 public class WebhookController(
     IWebhookSignatureValidator signatureValidator,
     IBackgroundJobClient backgroundJobs,

@@ -188,23 +188,31 @@ builder.Services.AddRateLimiter(options =>
 var app = builder.Build();
 
 // ── Database initialization and migrations ──────────────────────────────────
-try
+using (var scope = app.Services.CreateScope())
 {
-    using var scope = app.Services.CreateScope();
+    try
+    {
+        var bankSyncDbContext = scope.ServiceProvider.GetRequiredService<FinanceSentry.Modules.BankSync.Infrastructure.Persistence.BankSyncDbContext>();
+        app.Logger.LogInformation("Applying BankSync database migrations...");
+        bankSyncDbContext.Database.Migrate();
+        app.Logger.LogInformation("BankSync migrations applied successfully");
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, "BankSync migration failed. Startup will continue.");
+    }
 
-    var bankSyncDbContext = scope.ServiceProvider.GetRequiredService<FinanceSentry.Modules.BankSync.Infrastructure.Persistence.BankSyncDbContext>();
-    app.Logger.LogInformation("Applying BankSync database migrations...");
-    bankSyncDbContext.Database.Migrate();
-
-    var authDbContext = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
-    app.Logger.LogInformation("Applying Auth database migrations...");
-    authDbContext.Database.Migrate();
-
-    app.Logger.LogInformation("Database migrations completed successfully");
-}
-catch (Exception ex)
-{
-    app.Logger.LogError(ex, "An error occurred while migrating the database. Startup will continue, but database operations may fail.");
+    try
+    {
+        var authDbContext = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        app.Logger.LogInformation("Applying Auth database migrations...");
+        authDbContext.Database.Migrate();
+        app.Logger.LogInformation("Auth migrations applied successfully");
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, "Auth migration failed. Startup will continue.");
+    }
 }
 
 // ── Middleware pipeline ───────────────────────────────────────────────────────
