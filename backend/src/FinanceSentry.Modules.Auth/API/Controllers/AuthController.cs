@@ -8,7 +8,7 @@ using System.Security.Claims;
 namespace FinanceSentry.Modules.Auth.API.Controllers;
 
 [ApiController]
-[Route("api/v1/auth")]
+[Route("auth")]
 public class AuthController(IMediator mediator) : ControllerBase
 {
     private const string RefreshTokenCookie = "fs_refresh_token";

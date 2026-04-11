@@ -1,4 +1,5 @@
 using Serilog;
+using FinanceSentry.API.Conventions;
 using FinanceSentry.Modules.BankSync;
 using FinanceSentry.Modules.BankSync.Infrastructure.Persistence.Repositories;
 using FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
@@ -49,7 +50,8 @@ builder.Services.AddCors(options =>
 });
 
 // ── ASP.NET Core services ───────────────────────────────────────────────────
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+    options.Conventions.Add(new ApiVersionPrefixConvention("api/v1")));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {

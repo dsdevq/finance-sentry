@@ -15,7 +15,7 @@ using Microsoft.AspNetCore.Mvc;
 /// All endpoints are user-scoped — FR-009. userId is extracted from the JWT claim `sub`.
 /// </summary>
 [ApiController]
-[Route("api/v1/accounts")]
+[Route("accounts")]
 public class BankSyncController(
     IMediator mediator,
     PlaidAdapter plaid,
