@@ -1,23 +1,12 @@
 # Finance Sentry — Claude Context
 
+> **Source of truth split**: For architecture principles, testing requirements, code quality gates, and branching rules — the constitution at [`.specify/memory/constitution.md`](.specify/memory/constitution.md) is authoritative. This file covers **current state only** (what's built, what's running, what's next). When in doubt, constitution wins.
+
 ## Project Overview
 
 Finance Sentry is a personal finance aggregation app built as an ASP.NET Core 9 modular monolith + Angular 20 SPA. It integrates with Plaid for bank data, with plans for Interactive Brokers, Binance, and AI-driven portfolio analytics.
 
 Sole developer: Denys. Spec-driven development via the **speckit** toolchain (constitution → spec → plan → tasks → implement).
-
----
-
-## Governance
-
-Project principles are in [`.specify/memory/constitution.md`](.specify/memory/constitution.md) (v1.1.1).
-
-Key non-negotiables:
-- Every external integration MUST be behind a domain interface (`IBankProvider`, `IBrokerAdapter`, etc.) — no concrete adapters referenced directly in modules
-- Strict code quality: zero-warning builds, StyleCop, ESLint/Prettier, Angular strict mode
-- Security-first: all financial data encrypted at rest and in transit, user data isolation absolute
-- Per-task feature branching mandatory; each task gets its own branch and PR
-- Contract tests mandatory for every external API integration AND every REST endpoint
 
 ---
 
