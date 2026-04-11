@@ -91,3 +91,4 @@ frontend/**/*.spec.ts
 backend/bin/
 backend/obj/
 backend/packages/
+.claude/settings.local.json
