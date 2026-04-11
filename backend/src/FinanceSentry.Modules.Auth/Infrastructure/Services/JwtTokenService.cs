@@ -8,16 +8,10 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace FinanceSentry.Modules.Auth.Infrastructure.Services;
 
-public class JwtTokenService : ITokenService
+public class JwtTokenService(IConfiguration configuration) : ITokenService
 {
-    private readonly string _secret;
-    private readonly int _expiryMinutes;
-
-    public JwtTokenService(IConfiguration configuration)
-    {
-        _secret = configuration["Jwt:Secret"] ?? throw new InvalidOperationException("Jwt:Secret is not configured.");
-        _expiryMinutes = int.TryParse(configuration["Jwt:ExpiryMinutes"], out var minutes) ? minutes : 60;
-    }
+    private readonly string _secret = configuration["Jwt:Secret"] ?? throw new InvalidOperationException("Jwt:Secret is not configured.");
+    private readonly int _expiryMinutes = int.TryParse(configuration["Jwt:ExpiryMinutes"], out var minutes) ? minutes : 60;
 
     public string GenerateToken(ApplicationUser user)
     {
