@@ -25,7 +25,8 @@ public class JwtAuthenticationMiddleware
         "/api/v1/health",
         "/swagger",
         "/api/webhook",
-        "/hangfire"
+        "/hangfire",
+        "/api/v1/auth"
     ];
 
     public JwtAuthenticationMiddleware(
