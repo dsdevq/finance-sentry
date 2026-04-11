@@ -124,7 +124,10 @@ From the cross-artifact analysis of `specs/001-bank-account-sync/`:
 - **Site**: `denyssychovdev.atlassian.net` (cloud ID: `d9132aff-8b45-41b5-ab9e-b23bc406543b`)
 - **Project**: Finance Sentry — key `SCRUM`
 - **Issue types**: Epic, Story, Feature, Task, Bug, Subtask
-- **Sync rule**: after `speckit.tasks` runs, all tasks must be mirrored to Jira before implementation starts (see constitution § Issue Tracker Sync)
+- **Sync rule (pre-implement)**: after `speckit.tasks` runs, all tasks must be mirrored to Jira before implementation starts
+- **Sync rule (post-merge)**: after merging to `main`, transition all feature Jira issues to **Done** — mandatory, not optional
+- **Issue hierarchy**: 1 Epic per feature → 1 Story per User Story/phase → Tasks under each Story
+- **How**: use Atlassian MCP tools directly (`mcp__atlassian__createJiraIssue`, `mcp__atlassian__transitionJiraIssue`); create Epic first, then Stories, then transition all to Done
 
 ---
 

@@ -247,10 +247,10 @@ if reverting commits, delete associated version tags and recreate if necessary.
 
 All features developed via the speckit toolchain MUST be mirrored to Jira before implementation begins:
 
-- **Trigger**: After `speckit.tasks` completes and `tasks.md` is finalized, every task in the file MUST have a corresponding Jira issue in the `SCRUM` project on `denyssychovdev.atlassian.net`.
-- **Issue type mapping**: speckit Phases → Epics; individual tasks → Stories or Tasks depending on scope.
-- **Sync method**: Use the `speckit.taskstoissues` skill (Jira variant via Atlassian MCP) or manually via MCP tools if the skill is not yet wired to Jira.
-- **Blocking**: Implementation (`speckit.implement`) MUST NOT start until all tasks have Jira issues created.
+- **Trigger (pre-implement)**: After `speckit.tasks` completes and `tasks.md` is finalized, every task MUST have a corresponding Jira issue in the `SCRUM` project on `denyssychovdev.atlassian.net`. Implementation MUST NOT start until all issues exist.
+- **Trigger (post-merge)**: After a feature branch is merged to `main`, all Jira issues for that feature MUST be transitioned to **Done**. This is mandatory — not optional.
+- **Issue type mapping**: One Epic per feature → one Story per User Story / phase → individual tasks as Tasks or Subtasks under their parent Story.
+- **Sync method**: Use the Atlassian MCP tools (`mcp__atlassian__createJiraIssue`, `mcp__atlassian__transitionJiraIssue`) directly. Create Epic first, then Stories, then transition all to Done after merge.
 - **Updates**: If tasks.md changes after sync (e.g., follow-up tasks added), Jira must be updated in the same session before the next implement run.
 
 ## Governance
