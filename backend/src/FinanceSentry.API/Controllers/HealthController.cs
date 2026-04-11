@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 /// Health check endpoint for monitoring and liveness probes.
 /// </summary>
 [ApiController]
-[Route("api/v1/[controller]")]
+[Route("[controller]")]
 public class HealthController : ControllerBase
 {
     /// <summary>
