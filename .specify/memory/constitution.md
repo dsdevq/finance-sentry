@@ -97,7 +97,7 @@ access. No shortcuts on security—violations require explicit team lead approva
 **Message Queue/Async**: RabbitMQ or built-in hosted service (if monolith only)
 **Containerization**: Docker for all services; Docker Compose for local development
 **AI/LLM**: OpenAI API or compatible; documented prompts and request patterns
-**Testing**: xUnit/.NET test framework for backend, Jasmine/Karma for frontend
+**Testing**: xUnit/.NET test framework for backend, Vitest + Playwright for frontend
 **Monitoring**: ELK (Elasticsearch, Logstash, Kibana) or Application Insights for
 structured logging
 
