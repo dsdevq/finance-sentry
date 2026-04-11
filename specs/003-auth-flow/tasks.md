@@ -271,9 +271,9 @@ Frontend: T016 (login component) → T017 (auth.service login) → T018 (route)
 
 **Goal**: On 401, the interceptor silently refreshes the access token and retries once. Logout calls the server endpoint.
 
-- [ ] T055 Add `refresh(): Observable<AuthResponse>` to `auth.service.ts` that calls `POST /api/v1/auth/refresh` (no body — browser sends the httpOnly cookie automatically); on success stores the new access token in `frontend/src/app/modules/auth/services/auth.service.ts`
-- [ ] T056 Update `logout(): void` in `auth.service.ts` to call `POST /api/v1/auth/logout` before clearing localStorage and navigating to `/login` in `frontend/src/app/modules/auth/services/auth.service.ts`
-- [ ] T057 Update `auth.interceptor.ts`: on `HttpErrorResponse` 401, call `authService.refresh()`, clone and retry the original request with the new token exactly once; if refresh fails (error or another 401) call `authService.logout()` instead of logging out immediately in `frontend/src/app/modules/auth/interceptors/auth.interceptor.ts`
+- [X] T055 Add `refresh(): Observable<AuthResponse>` to `auth.service.ts` that calls `POST /api/v1/auth/refresh` (no body — browser sends the httpOnly cookie automatically); on success stores the new access token in `frontend/src/app/modules/auth/services/auth.service.ts`
+- [X] T056 Update `logout(): void` in `auth.service.ts` to call `POST /api/v1/auth/logout` before clearing localStorage and navigating to `/login` in `frontend/src/app/modules/auth/services/auth.service.ts`
+- [X] T057 Update `auth.interceptor.ts`: on `HttpErrorResponse` 401, call `authService.refresh()`, clone and retry the original request with the new token exactly once; if refresh fails (error or another 401) call `authService.logout()` instead of logging out immediately in `frontend/src/app/modules/auth/interceptors/auth.interceptor.ts`
 
 ---
 
