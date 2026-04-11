@@ -126,3 +126,25 @@
 - [Assumption about scope boundaries, e.g., "Mobile support is out of scope for v1"]
 - [Assumption about data/environment, e.g., "Existing authentication system will be reused"]
 - [Dependency on existing system/service, e.g., "Requires access to the existing user profile API"]
+
+## Notes
+
+<!--
+  Use this section to record integration decisions, architectural trade-offs, and
+  resolved clarifications. Any item that was marked "NEEDS CLARIFICATION" during
+  spec drafting MUST be resolved here before /speckit.tasks is run.
+
+  Format each note as a decision record:
+    - [DECISION] <topic>: <decision made and rationale>
+    - [OUT OF SCOPE] <topic>: <what is excluded and why>
+    - [DEFERRED] <topic>: <what will be addressed in a future feature>
+
+  Example:
+    - [DECISION] Webhook vs polling: System uses Plaid webhooks for real-time updates
+      AND scheduled polling as a fallback. Rationale: webhooks reduce latency but
+      polling ensures no events are missed during outages.
+    - [OUT OF SCOPE] Currency conversion: Exchange rate conversion deferred to
+      Feature 004 (multi-currency analytics).
+-->
+
+- [Add decision records here]

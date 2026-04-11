@@ -8,7 +8,13 @@ description: "Task list template for feature implementation"
 **Input**: Design documents from `/specs/[###-feature-name]/`
 **Prerequisites**: plan.md (required), spec.md (required for user stories), research.md, data-model.md, contracts/
 
-**Tests**: The examples below include test tasks. Tests are OPTIONAL - only include them if explicitly requested in the feature specification.
+**Tests**: The examples below include test tasks. Test requirements per constitution:
+- **Contract tests for external API integrations** (banks, brokers, exchanges): MANDATORY
+- **Contract tests for REST endpoints**: MANDATORY — every new endpoint MUST ship with a
+  contract test in the same task/PR validating request/response shape and status codes
+- **Unit tests** (business logic): MANDATORY — >80% coverage gate enforced in CI/CD
+- **Integration tests** (inter-module, DB): MANDATORY for cross-module contracts
+- **E2E tests**: OPTIONAL — include only if explicitly requested in the feature specification
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
@@ -79,11 +85,12 @@ Examples of foundational tasks (adjust based on your project):
 
 **Independent Test**: [How to verify this story works on its own]
 
-### Tests for User Story 1 (OPTIONAL - only if tests requested) ⚠️
+### Tests for User Story 1
 
-> **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
+> **TDD: Write these tests FIRST, ensure they FAIL before implementation**
 
 - [ ] T010 [P] [US1] Contract test for [endpoint] in tests/contract/test_[name].py
+  *(MANDATORY per constitution — validates request/response shape)*
 - [ ] T011 [P] [US1] Integration test for [user journey] in tests/integration/test_[name].py
 
 ### Implementation for User Story 1
@@ -105,9 +112,12 @@ Examples of foundational tasks (adjust based on your project):
 
 **Independent Test**: [How to verify this story works on its own]
 
-### Tests for User Story 2 (OPTIONAL - only if tests requested) ⚠️
+### Tests for User Story 2
+
+> **TDD: Write these tests FIRST, ensure they FAIL before implementation**
 
 - [ ] T018 [P] [US2] Contract test for [endpoint] in tests/contract/test_[name].py
+  *(MANDATORY per constitution — validates request/response shape)*
 - [ ] T019 [P] [US2] Integration test for [user journey] in tests/integration/test_[name].py
 
 ### Implementation for User Story 2
@@ -127,9 +137,12 @@ Examples of foundational tasks (adjust based on your project):
 
 **Independent Test**: [How to verify this story works on its own]
 
-### Tests for User Story 3 (OPTIONAL - only if tests requested) ⚠️
+### Tests for User Story 3
+
+> **TDD: Write these tests FIRST, ensure they FAIL before implementation**
 
 - [ ] T024 [P] [US3] Contract test for [endpoint] in tests/contract/test_[name].py
+  *(MANDATORY per constitution — validates request/response shape)*
 - [ ] T025 [P] [US3] Integration test for [user journey] in tests/integration/test_[name].py
 
 ### Implementation for User Story 3
