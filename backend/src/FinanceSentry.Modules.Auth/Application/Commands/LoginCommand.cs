@@ -3,4 +3,4 @@ using MediatR;
 
 namespace FinanceSentry.Modules.Auth.Application.Commands;
 
-public record LoginCommand(string Email, string Password) : IRequest<AuthResponse>;
+public record LoginCommand(string Email, string Password) : IRequest<AuthResult>;

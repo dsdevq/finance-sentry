@@ -222,6 +222,61 @@ Frontend: T016 (login component) → T017 (auth.service login) → T018 (route)
 
 ---
 
+## Phase 9: Foundational — Refresh Token Domain
+
+**Purpose**: Add `RefreshToken` entity, persistence, and the service layer that all refresh-flow endpoints depend on.
+
+**⚠️ CRITICAL**: Phases 10–12 cannot begin until this phase is complete.
+
+- [X] T040 Create `RefreshToken.cs` entity (`Id`, `UserId`, `TokenHash`, `ExpiresAt`, `CreatedAt`, `IsRevoked`) in `backend/src/FinanceSentry.Modules.Auth/Domain/Entities/RefreshToken.cs`
+- [X] T041 [P] Add `DbSet<RefreshToken> RefreshTokens` to `AuthDbContext` and configure the entity (index on `TokenHash`, index on `UserId`) in `backend/src/FinanceSentry.Modules.Auth/Infrastructure/Persistence/AuthDbContext.cs`
+- [X] T042 Run `dotnet ef migrations add M006_RefreshTokens --project FinanceSentry.Modules.Auth --context AuthDbContext` and verify migration files in `Infrastructure/Persistence/Migrations/`
+- [X] T043 [P] Create `IRefreshTokenService.cs` interface: `IssueAsync(string userId) → (rawToken, RefreshToken)`, `ValidateAsync(string rawToken) → RefreshToken?`, `RotateAsync(RefreshToken existing) → (rawToken, RefreshToken)`, `RevokeAsync(string userId)` in `backend/src/FinanceSentry.Modules.Auth/Application/Interfaces/IRefreshTokenService.cs`
+- [X] T044 Create `RefreshTokenService.cs` implementing `IRefreshTokenService`: SHA-256 hash storage, 30-day rolling expiry, rotation invalidates previous token, `RevokeAsync` marks all user tokens revoked in `backend/src/FinanceSentry.Modules.Auth/Infrastructure/Services/RefreshTokenService.cs`
+- [X] T045 Register `IRefreshTokenService → RefreshTokenService` as scoped in `backend/src/FinanceSentry.API/Program.cs`
+
+---
+
+## Phase 10: US3 — Session Persistence (Backend Refresh & Logout Endpoints)
+
+**Goal**: `POST /auth/refresh` issues new access + refresh tokens; `POST /auth/logout` revokes the refresh token server-side.
+
+**Independent Test**: `POST /api/v1/auth/refresh` with valid httpOnly cookie → 200 + new JWT + new cookie; `POST /api/v1/auth/logout` → 204 + cookie cleared.
+
+### Contract Tests for Phase 10
+
+- [X] T046 [P] Contract test — `POST /auth/refresh` happy path (200 + `AuthResponse` schema + Set-Cookie), invalid/expired cookie (401 + `INVALID_REFRESH_TOKEN`) in `backend/tests/FinanceSentry.Tests.Integration/Auth/RefreshContractTests.cs`
+- [X] T047 [P] Contract test — `POST /auth/logout` with valid token → 204 and cookie revoked in `backend/tests/FinanceSentry.Tests.Integration/Auth/LogoutContractTests.cs`
+
+### Implementation for Phase 10
+
+- [X] T048 Create `RefreshCommand.cs` (reads `fs_refresh_token` cookie value) and `RefreshCommandHandler.cs` (validates token, rotates, returns `AuthResponse` + new raw token) in `backend/src/FinanceSentry.Modules.Auth/Application/Commands/`
+- [X] T049 Create `LogoutCommand.cs` (UserId) and `LogoutCommandHandler.cs` (calls `IRefreshTokenService.RevokeAsync`) in `backend/src/FinanceSentry.Modules.Auth/Application/Commands/`
+- [X] T050 Add `POST /auth/refresh` to `AuthController.cs`: read `fs_refresh_token` cookie, dispatch `RefreshCommand`, set new httpOnly `fs_refresh_token` cookie, return 200 with `AuthResponse`; return 401 on failure in `backend/src/FinanceSentry.Modules.Auth/API/Controllers/AuthController.cs`
+- [X] T051 Add `POST /auth/logout` to `AuthController.cs`: dispatch `LogoutCommand`, delete `fs_refresh_token` cookie, return 204 in `backend/src/FinanceSentry.Modules.Auth/API/Controllers/AuthController.cs`
+
+---
+
+## Phase 11: US1/US2 — Login & Register Issue Refresh Token Cookie
+
+**Goal**: Successful login and register responses also set the `fs_refresh_token` httpOnly cookie.
+
+- [X] T052 Update `LoginCommandHandler.cs` to also call `IRefreshTokenService.IssueAsync()` and return the raw refresh token alongside `AuthResponse` in `backend/src/FinanceSentry.Modules.Auth/Application/Commands/LoginCommandHandler.cs`; create `AuthResult.cs` DTO wrapping `AuthResponse` + `RawRefreshToken` in `Application/DTOs/`
+- [X] T053 Update `RegisterCommandHandler.cs` same as T052 in `backend/src/FinanceSentry.Modules.Auth/Application/Commands/RegisterCommandHandler.cs`
+- [X] T054 Update `AuthController.cs` Login and Register actions to read `RawRefreshToken` from `AuthResult` and set `fs_refresh_token` as an httpOnly, SameSite=Strict, Secure cookie via `Response.Cookies.Append` in `backend/src/FinanceSentry.Modules.Auth/API/Controllers/AuthController.cs`
+
+---
+
+## Phase 12: Frontend — Interceptor Refresh & Service Updates
+
+**Goal**: On 401, the interceptor silently refreshes the access token and retries once. Logout calls the server endpoint.
+
+- [ ] T055 Add `refresh(): Observable<AuthResponse>` to `auth.service.ts` that calls `POST /api/v1/auth/refresh` (no body — browser sends the httpOnly cookie automatically); on success stores the new access token in `frontend/src/app/modules/auth/services/auth.service.ts`
+- [ ] T056 Update `logout(): void` in `auth.service.ts` to call `POST /api/v1/auth/logout` before clearing localStorage and navigating to `/login` in `frontend/src/app/modules/auth/services/auth.service.ts`
+- [ ] T057 Update `auth.interceptor.ts`: on `HttpErrorResponse` 401, call `authService.refresh()`, clone and retry the original request with the new token exactly once; if refresh fails (error or another 401) call `authService.logout()` instead of logging out immediately in `frontend/src/app/modules/auth/interceptors/auth.interceptor.ts`
+
+---
+
 ## Notes
 
 - [P] tasks = different files, no dependency on an incomplete sibling

@@ -1,20 +1,17 @@
 using FinanceSentry.Modules.Auth.Application.Commands;
 using FinanceSentry.Modules.Auth.Application.DTOs;
 using MediatR;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace FinanceSentry.Modules.Auth.API.Controllers;
 
 [ApiController]
 [Route("api/v1/auth")]
-public class AuthController : ControllerBase
+public class AuthController(IMediator mediator) : ControllerBase
 {
-    private readonly IMediator _mediator;
-
-    public AuthController(IMediator mediator)
-    {
-        _mediator = mediator;
-    }
+    private const string RefreshTokenCookie = "fs_refresh_token";
 
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] AuthRequest request)
@@ -35,8 +32,9 @@ public class AuthController : ControllerBase
 
         try
         {
-            var response = await _mediator.Send(new LoginCommand(request.Email, request.Password));
-            return Ok(response);
+            var result = await mediator.Send(new LoginCommand(request.Email, request.Password));
+            SetRefreshTokenCookie(result.RawRefreshToken);
+            return Ok(result.Response);
         }
         catch (UnauthorizedAccessException)
         {
@@ -67,8 +65,9 @@ public class AuthController : ControllerBase
 
         try
         {
-            var response = await _mediator.Send(new RegisterCommand(request.Email, request.Password));
-            return Created(string.Empty, response);
+            var result = await mediator.Send(new RegisterCommand(request.Email, request.Password));
+            SetRefreshTokenCookie(result.RawRefreshToken);
+            return Created(string.Empty, result.Response);
         }
         catch (InvalidOperationException ex) when (ex.Message == "DUPLICATE_EMAIL")
         {
@@ -88,5 +87,61 @@ public class AuthController : ControllerBase
                 details
             });
         }
+    }
+
+    [HttpPost("refresh")]
+    public async Task<IActionResult> Refresh()
+    {
+        var rawToken = Request.Cookies[RefreshTokenCookie];
+        if (string.IsNullOrWhiteSpace(rawToken))
+            return Unauthorized(new { error = "Refresh token missing.", errorCode = "INVALID_REFRESH_TOKEN" });
+
+        try
+        {
+            var result = await mediator.Send(new RefreshCommand(rawToken));
+            SetRefreshTokenCookie(result.RawRefreshToken);
+            return Ok(result.Response);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            DeleteRefreshTokenCookie();
+            return Unauthorized(new { error = "Refresh token invalid or expired.", errorCode = "INVALID_REFRESH_TOKEN" });
+        }
+    }
+
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout()
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                  ?? User.FindFirst("sub")?.Value;
+
+        if (!string.IsNullOrWhiteSpace(userId))
+            await mediator.Send(new LogoutCommand(userId));
+
+        DeleteRefreshTokenCookie();
+        return NoContent();
+    }
+
+    private void SetRefreshTokenCookie(string rawToken)
+    {
+        Response.Cookies.Append(RefreshTokenCookie, rawToken, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            Expires = DateTimeOffset.UtcNow.AddDays(30),
+            Path = "/"
+        });
+    }
+
+    private void DeleteRefreshTokenCookie()
+    {
+        Response.Cookies.Delete(RefreshTokenCookie, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            Path = "/"
+        });
     }
 }

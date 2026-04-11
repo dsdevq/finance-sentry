@@ -43,17 +43,18 @@ A new user can create an account by providing their email and password. On succe
 
 ### User Story 3 - Session Persistence (Priority: P3)
 
-A logged-in user closes the browser tab and reopens the app. They should still be authenticated without having to log in again.
+A logged-in user closes the browser tab and reopens the app. They should still be authenticated without having to log in again, even if the short-lived access token has expired — the app silently refreshes it using the stored refresh token.
 
 **Why this priority**: Without persistence, every page refresh forces re-login, making the app unusable. Depends on token storage from P1.
 
-**Independent Test**: Log in, close and reopen the browser, navigate to a protected page — user should see their data without being redirected to login.
+**Independent Test**: Log in, close and reopen the browser, navigate to a protected page — user should see their data without being redirected to login, even after the access token has expired.
 
 **Acceptance Scenarios**:
 
 1. **Given** the user is logged in, **When** they refresh the page or reopen the browser, **Then** they remain authenticated and protected pages are accessible.
-2. **Given** the user's stored token has expired, **When** they reopen the app, **Then** they are redirected to the login page.
-3. **Given** the user clicks "Log out", **When** the action completes, **Then** the stored token is removed and subsequent navigation to protected pages redirects to login.
+2. **Given** the user's access token has expired but the refresh token is still valid, **When** they make an API call, **Then** the app transparently obtains a new access token and retries the request without any user interaction.
+3. **Given** the user's refresh token has expired (after 30 days), **When** they reopen the app, **Then** they are redirected to the login page.
+4. **Given** the user clicks "Log out", **When** the action completes, **Then** the stored access token and refresh token cookie are both cleared and subsequent navigation to protected pages redirects to login.
 
 ---
 
@@ -68,7 +69,8 @@ Every API request made by the app automatically includes the stored Bearer token
 **Acceptance Scenarios**:
 
 1. **Given** the user is logged in, **When** any page makes an API call, **Then** the request includes a valid Authorization header and the server returns data.
-2. **Given** the user is not logged in, **When** the app attempts an API call, **Then** the request is either blocked before sending or the resulting 401 triggers a redirect to the login page.
+2. **Given** the user's access token is expired but refresh token is valid, **When** an API call returns 401, **Then** the interceptor automatically refreshes the access token and retries the original request exactly once.
+3. **Given** the user is not logged in, **When** the app attempts an API call, **Then** the user is redirected to the login page.
 
 ---
 
@@ -91,10 +93,11 @@ Any page that requires authentication redirects unauthenticated users to the log
 ### Edge Cases
 
 - What happens when the API is unreachable during login (network error)?
-- How does the app handle a token that is syntactically valid but rejected by the server (revoked or signed with a different key)?
-- What happens if the user's token expires mid-session while they are actively using the app?
+- What happens if the refresh token is valid but the server rejects it (e.g., server-side revocation)?
+- What happens if the user opens the app in two tabs and both simultaneously attempt a token refresh?
 - What happens if local storage is unavailable (e.g., private browsing with storage restrictions)?
 - What happens when the user submits the login form multiple times rapidly before the first response arrives?
+- What happens if a refresh attempt itself fails with a network error — should the user be logged out or shown a retry option?
 
 ## Requirements *(mandatory)*
 
@@ -102,23 +105,27 @@ Any page that requires authentication redirects unauthenticated users to the log
 
 - **FR-001**: The system MUST provide a login page where users can authenticate with email and password.
 - **FR-002**: The system MUST provide a register page where new users can create an account with email and password.
-- **FR-003**: On successful login or registration, the system MUST store the returned JWT so it persists across page refreshes.
-- **FR-004**: The system MUST automatically attach the stored JWT as a Bearer token on every outgoing API request while the token remains valid.
+- **FR-003**: On successful login or registration, the system MUST store the returned JWT access token so it persists across page refreshes, and the refresh token MUST be stored in an httpOnly cookie set by the server.
+- **FR-004**: The system MUST automatically attach the stored JWT access token as a Bearer token on every outgoing API request while the token remains valid.
 - **FR-005**: The system MUST redirect unauthenticated users to the login page when they attempt to access any protected route.
 - **FR-006**: After a successful login following a redirect, the system MUST return the user to the originally requested page.
 - **FR-007**: The system MUST display clear, user-friendly error messages for failed login attempts, registration failures, and network errors.
 - **FR-008**: The system MUST validate required fields client-side before submitting credentials to the server.
-- **FR-009**: The system MUST provide a logout action that clears the stored token and redirects to the login page.
+- **FR-009**: The system MUST provide a logout action that clears the stored access token, invalidates the refresh token server-side, and redirects to the login page.
 - **FR-010**: Password fields MUST mask input by default, with an option to reveal the password.
 - **FR-011**: The system MUST enforce minimum password requirements during registration and communicate them clearly to the user.
-- **FR-012**: If a stored token is expired or invalid, the system MUST treat the user as unauthenticated and redirect to login.
+- **FR-012**: If an API call returns 401 and a valid refresh token cookie exists, the system MUST automatically call the refresh endpoint to obtain a new access token and retry the original request exactly once. If the refresh also fails, the user is redirected to login.
 - **FR-013**: A user who is already authenticated MUST be redirected away from the login and register pages.
+- **FR-014**: The server MUST issue a new refresh token on every successful refresh (token rotation), immediately invalidating the previous one.
+- **FR-015**: Refresh tokens MUST expire after 30 days of inactivity. Each successful refresh resets the 30-day window.
+- **FR-016**: The server MUST store refresh tokens (or their hashes) to support server-side validation and rotation. A used or expired refresh token MUST be rejected.
 
 ### Key Entities
 
-- **User Session**: Represents an authenticated user's active state — includes the JWT and any decoded claims (expiry, user identity). Not persisted server-side; derived from the stored token on each page load.
+- **User Session**: Represents an authenticated user's active state — includes the JWT access token and any decoded claims (expiry, user identity). Not persisted server-side; derived from the stored token on each page load.
 - **Credentials**: Email and password pair submitted at login or registration. Never retained by the client beyond the single request.
-- **JWT (JSON Web Token)**: The credential returned by the server on successful authentication. Proves identity for all subsequent API requests. Contains an expiry claim used to determine session validity.
+- **Access Token (JWT)**: Short-lived credential returned by the server on successful authentication or token refresh. Proves identity for all subsequent API requests. Contains an expiry claim used to determine session validity.
+- **Refresh Token**: Long-lived credential (30-day rolling window) stored in an httpOnly cookie. Used exclusively to obtain new access tokens without re-entering credentials. Rotated on every use — each refresh issues a new refresh token and invalidates the previous one.
 
 ## Success Criteria *(mandatory)*
 
@@ -126,26 +133,37 @@ Any page that requires authentication redirects unauthenticated users to the log
 
 - **SC-001**: A returning user can go from landing on the login page to viewing their accounts list in under 30 seconds.
 - **SC-002**: A new user can complete account registration and reach the accounts page in under 2 minutes.
-- **SC-003**: After login, 100% of API requests succeed (no 401 responses) for a session with a valid, non-expired token.
+- **SC-003**: After login, 100% of API requests succeed (no 401 responses) for a session with a valid, non-expired access token.
 - **SC-004**: Navigating to any protected URL without a valid session redirects to login within 1 second, with no partial page content visible.
-- **SC-005**: A logged-in user who refreshes the page or reopens the browser tab remains authenticated without re-entering credentials, as long as their token has not expired.
+- **SC-005**: A logged-in user who refreshes the page or reopens the browser remains authenticated without re-entering credentials, for up to 30 days since their last activity.
 - **SC-006**: Logout completes and the user is on the login page within 1 second of triggering the action.
+- **SC-007**: When an access token expires mid-session, the app transparently refreshes it and continues without any visible interruption to the user.
 
 ## Assumptions
 
 - Password minimum requirements (e.g., 8+ characters) are enforced server-side; the frontend surfaces server validation messages for anything beyond basic non-empty checks.
-- Token storage uses the browser's local storage. If storage is unavailable (e.g., blocked by browser policy), the session will be in-memory only for that tab — no silent fallback is required.
+- Token storage: access token uses the browser's local storage; refresh token is set as an httpOnly cookie by the server. If local storage is unavailable (e.g., blocked by browser policy), the access token session will be in-memory only for that tab — no silent fallback is required.
 - The backend login and register endpoints exist or will be built as part of this feature's implementation phase. The spec covers the full auth flow end to end.
 - Email uniqueness validation is enforced server-side; the frontend relays the error message returned by the API.
 - This is a single-user app (Denys); the register page does not need to be publicly discoverable but must exist and function correctly.
-- The app is not exposed to the public internet, so local storage token storage is an acceptable trade-off.
+- The app is not exposed to the public internet, so local storage for access tokens is an acceptable trade-off.
+- The refresh token cookie is scoped to the API domain and sent automatically by the browser on requests to the refresh endpoint.
 
 ## Notes
 
-- [DECISION] Token storage: Local storage chosen over session storage so the session survives browser restarts, which suits a daily-use personal finance app. XSS risk is acceptable given the app is not public-facing.
-- [DECISION] Interceptor scope: The HTTP interceptor attaches the token only to requests targeting the app's API base URL. Requests to other origins are not modified.
-- [DECISION] Token expiry handling: When a stored token is expired or the server returns 401, the user is redirected to login. No automatic token refresh in this iteration.
-- [OUT OF SCOPE] Refresh tokens: Token rotation deferred. Expired sessions require re-login.
+- [DECISION] Token storage: Access token in local storage so the session survives browser restarts. Refresh token in httpOnly cookie (server-set) so it is inaccessible to JavaScript — mitigates XSS risk for the long-lived credential.
+- [DECISION] Interceptor scope: The HTTP interceptor attaches the access token only to requests targeting the app's API base URL. Requests to other origins are not modified.
+- [DECISION] Token expiry handling: When an API call returns 401, the interceptor attempts a silent refresh using the httpOnly refresh token cookie. If the refresh succeeds, the original request is retried once. If the refresh fails (refresh token expired or invalid), the user is redirected to login.
+- [DECISION] Token rotation: Refresh tokens rotate on every use. Each refresh call invalidates the previous refresh token and issues a new one. This limits the damage window if a cookie is ever compromised.
+- [DECISION] Refresh token lifetime: 30-day rolling window. Each successful refresh resets the expiry. After 30 days of inactivity the user must log in again.
 - [OUT OF SCOPE] Forgot password / email verification: Deferred to a future feature.
 - [OUT OF SCOPE] Multi-factor authentication: Out of scope for this iteration.
-- [DEFERRED] Auth interceptor error recovery (auto-retry after token refresh): Deferred until refresh tokens are implemented.
+- [OUT OF SCOPE] OAuth / social login: Deferred to feature 004-adopt-oauth.
+
+## Clarifications
+
+### Session 2026-04-11
+
+- Q: Where should refresh tokens be stored? → A: httpOnly cookie (server-set, inaccessible to JavaScript)
+- Q: Should refresh tokens rotate on every use? → A: Yes — each refresh issues a new token and invalidates the old one
+- Q: How long should refresh tokens remain valid? → A: 30 days (rolling window, reset on each successful refresh)

@@ -128,6 +128,19 @@ From the cross-artifact analysis of `specs/001-bank-account-sync/`:
 
 ---
 
+## Frontend ESLint — mandatory gate
+
+After writing or modifying **any** Angular `.ts` file, run `npx eslint <file>` from `frontend/` and fix all errors before moving on. Non-negotiable rules (see constitution § II for the full list):
+- `inject()` only — no constructor parameter injection
+- `ChangeDetectionStrategy.OnPush` on every component
+- Selector prefix: `fns-` (e.g. `fns-login`, `fns-dashboard`)
+- Explicit access modifiers on all class members (`public`/`private`)
+- No magic numbers — extract to named constants
+- camelCase class properties, no underscore prefix
+- Run `eslint --fix` after writing imports (auto-sorts + auto-formats)
+
+---
+
 ## Collaboration Style
 
 - Responses must be short and direct. No trailing summaries — Denys can read the diff.

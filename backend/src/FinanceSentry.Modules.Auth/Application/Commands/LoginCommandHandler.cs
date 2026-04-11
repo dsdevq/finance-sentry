@@ -6,26 +6,22 @@ using Microsoft.AspNetCore.Identity;
 
 namespace FinanceSentry.Modules.Auth.Application.Commands;
 
-public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponse>
+public class LoginCommandHandler(
+    UserManager<ApplicationUser> userManager,
+    ITokenService tokenService,
+    IRefreshTokenService refreshTokenService) : IRequestHandler<LoginCommand, AuthResult>
 {
-    private readonly UserManager<ApplicationUser> _userManager;
-    private readonly ITokenService _tokenService;
-
-    public LoginCommandHandler(UserManager<ApplicationUser> userManager, ITokenService tokenService)
+    public async Task<AuthResult> Handle(LoginCommand request, CancellationToken cancellationToken)
     {
-        _userManager = userManager;
-        _tokenService = tokenService;
-    }
-
-    public async Task<AuthResponse> Handle(LoginCommand request, CancellationToken cancellationToken)
-    {
-        var user = await _userManager.FindByEmailAsync(request.Email);
-        if (user is null || !await _userManager.CheckPasswordAsync(user, request.Password))
+        var user = await userManager.FindByEmailAsync(request.Email);
+        if (user is null || !await userManager.CheckPasswordAsync(user, request.Password))
             throw new UnauthorizedAccessException("INVALID_CREDENTIALS");
 
-        var token = _tokenService.GenerateToken(user);
+        var accessToken = tokenService.GenerateToken(user);
         var expiresAt = DateTime.UtcNow.AddMinutes(60);
 
-        return new AuthResponse(token, expiresAt, user.Id);
+        var (rawRefreshToken, _) = await refreshTokenService.IssueAsync(user.Id, cancellationToken);
+
+        return new AuthResult(new AuthResponse(accessToken, expiresAt, user.Id), rawRefreshToken);
     }
 }

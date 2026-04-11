@@ -95,6 +95,7 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 
 // ── Token service ────────────────────────────────────────────────────────────
 builder.Services.AddSingleton<ITokenService, JwtTokenService>();
+builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
 
 // ── Repositories ─────────────────────────────────────────────────────────────
 builder.Services.AddScoped<IBankAccountRepository, BankAccountRepository>();

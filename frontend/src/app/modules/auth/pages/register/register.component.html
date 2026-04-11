@@ -50,13 +50,11 @@
         <div class="error-banner">{{ errorMessage }}</div>
       }
 
-      <button type="submit" [disabled]="loading || form.invalid">
+      <button [disabled]="loading || form.invalid" type="submit">
         {{ loading ? 'Creating account…' : 'Create Account' }}
       </button>
     </form>
 
-    <p class="login-link">
-      Already have an account? <a routerLink="/login">Sign in</a>
-    </p>
+    <p class="login-link">Already have an account? <a routerLink="/login">Sign in</a></p>
   </div>
 </div>

@@ -50,6 +50,22 @@ StyleCop + code analyzers, zero-warning builds. Frontend: Angular linting (stric
 tsconfig strict: true, CSS linting. All commits fail pre-commit hooks if standards
 violated. No exceptions in pull requests—violations block merge until resolved.
 
+**Frontend ESLint — mandatory before any code is committed:**
+Every Angular TypeScript file written or modified by the agent MUST pass `npx eslint <path>` with zero errors before the task is marked complete. Key rules enforced by `eslint.config.mjs`:
+- `@angular-eslint/prefer-inject` — use `inject()` function, never constructor parameter injection
+- `@angular-eslint/prefer-on-push-component-change-detection` — all components must set `ChangeDetectionStrategy.OnPush`
+- `@angular-eslint/component-selector` — selector prefix is `fns`, style is `kebab-case`
+- `@typescript-eslint/explicit-member-accessibility` — all class members need an explicit access modifier (`public`, `private`, `protected`); constructors use `no-public`
+- `@typescript-eslint/no-magic-numbers` — extract numeric literals to named constants (exceptions: 0, 1, -1, array indexes, readonly class properties)
+- `@typescript-eslint/naming-convention` — class properties: `camelCase` (no underscore prefix); static properties: `UPPER_CASE`; module-level variables: `UPPER_CASE` or `camelCase`
+- `@typescript-eslint/no-use-before-define` — declare module-level functions before they are referenced
+- `@typescript-eslint/no-unsafe-enum-comparison` — cast the non-enum side to the enum type before comparing
+- `@typescript-eslint/no-unsafe-member-access` — type-narrow or cast `unknown`/`any` before accessing properties
+- `simple-import-sort/imports` — run `eslint --fix` after writing imports to auto-sort; or order: third-party → `@angular/*` → project absolute → project relative
+- `prettier/prettier` — run `eslint --fix` to auto-apply formatting; do not hand-format multi-line ternaries
+
+**Workflow**: after writing each TypeScript file, run `npx eslint <file>` and fix all errors before proceeding.
+
 ### III. Multi-Source Financial Integration
 
 The system MUST reliably aggregate data from multiple financial sources: bank APIs,
