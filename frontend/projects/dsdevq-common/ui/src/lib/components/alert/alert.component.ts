@@ -1,6 +1,6 @@
 import {ChangeDetectionStrategy, Component, computed, input, output} from '@angular/core';
 
-import {IconComponent} from '../icon/icon.component';
+import {type LucideIconName, IconComponent} from '../icon/icon.component';
 
 export type AlertVariant = 'info' | 'success' | 'warning' | 'error';
 
@@ -18,11 +18,11 @@ const VARIANT_ICON_COLOR: Record<AlertVariant, string> = {
   error: 'var(--color-status-error)',
 };
 
-const VARIANT_ICON_NAME: Record<AlertVariant, string> = {
-  info: 'info',
-  success: 'circle-check',
-  warning: 'triangle-alert',
-  error: 'circle-alert',
+const VARIANT_ICON_NAME: Record<AlertVariant, LucideIconName> = {
+  info: 'Info',
+  success: 'CircleCheck',
+  warning: 'TriangleAlert',
+  error: 'CircleAlert',
 };
 
 const VARIANT_ROLE: Record<AlertVariant, string> = {
@@ -55,7 +55,7 @@ const VARIANT_ROLE: Record<AlertVariant, string> = {
           class="ml-cmn-2 -mt-0.5 -mr-0.5 inline-flex items-center justify-center rounded-cmn-sm p-0.5 hover:bg-black/10 focus:outline-none focus:ring-2 focus:ring-border-focus"
           aria-label="Dismiss"
         >
-          <cmn-icon name="x" size="sm" aria-hidden="true" />
+          <cmn-icon name="X" size="sm" aria-hidden="true" />
         </button>
       }
     </div>

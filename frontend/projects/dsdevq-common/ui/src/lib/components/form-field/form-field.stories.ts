@@ -1,5 +1,5 @@
 import {ChangeDetectionStrategy, Component} from '@angular/core';
-import {FormControl, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
+import {FormsModule, FormControl, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
 import type {Meta, StoryObj} from '@storybook/angular';
 
 import {ButtonComponent} from '../button/button.component';
@@ -16,8 +16,11 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+const FORM_IMPORTS = [FormFieldComponent, InputComponent];
+
 export const Default: Story = {
   render: () => ({
+    moduleMetadata: {imports: FORM_IMPORTS},
     template: `
       <cmn-form-field label="Email">
         <cmn-input type="email" placeholder="you@example.com" />
@@ -28,6 +31,7 @@ export const Default: Story = {
 
 export const WithHint: Story = {
   render: () => ({
+    moduleMetadata: {imports: FORM_IMPORTS},
     template: `
       <cmn-form-field label="Email" hint="We will never share your email with anyone.">
         <cmn-input type="email" placeholder="you@example.com" />
@@ -38,6 +42,7 @@ export const WithHint: Story = {
 
 export const WithError: Story = {
   render: () => ({
+    moduleMetadata: {imports: FORM_IMPORTS},
     template: `
       <cmn-form-field label="Email" errorMessage="Please enter a valid email address.">
         <cmn-input type="email" [hasError]="true" placeholder="you@example.com" />
@@ -48,6 +53,7 @@ export const WithError: Story = {
 
 export const Required: Story = {
   render: () => ({
+    moduleMetadata: {imports: FORM_IMPORTS},
     template: `
       <cmn-form-field label="Password" [required]="true" hint="At least 8 characters.">
         <cmn-input type="password" placeholder="••••••••" />
@@ -58,6 +64,7 @@ export const Required: Story = {
 
 export const Disabled: Story = {
   render: () => ({
+    moduleMetadata: {imports: [...FORM_IMPORTS, FormsModule]},
     template: `
       <cmn-form-field label="Username">
         <cmn-input type="text" [disabled]="true" [ngModel]="'john.doe'" />

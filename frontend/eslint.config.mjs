@@ -19,7 +19,7 @@ import prettier from 'eslint-plugin-prettier';
 
 export default defineConfig(
   {
-    ignores: ['.angular/**', 'coverage/**', 'dist/**', 'codegen.ts'],
+    ignores: ['.angular/**', 'coverage/**', 'dist/**', 'codegen.ts', 'projects/**'],
   },
   {
     files: ['**/*.ts'],

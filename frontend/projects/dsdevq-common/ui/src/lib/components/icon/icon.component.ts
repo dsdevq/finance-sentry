@@ -2,6 +2,7 @@ import {ChangeDetectionStrategy, Component, computed, effect, input} from '@angu
 import {icons, LUCIDE_ICONS, LucideAngularModule, LucideIconProvider} from 'lucide-angular';
 
 export type IconSize = 'sm' | 'md' | 'lg';
+export type LucideIconName = keyof typeof icons;
 
 const SIZE_PX: Record<IconSize, number> = {
   sm: 16,
@@ -42,17 +43,16 @@ const SIZE_PX: Record<IconSize, number> = {
   `,
 })
 export class IconComponent {
-  public readonly name = input.required<string>();
+  public readonly name = input.required<LucideIconName>();
   public readonly size = input<IconSize>('md');
   public readonly color = input<string>('currentColor');
   public readonly ariaLabel = input<string>('');
 
   public readonly resolvedSize = computed(() => SIZE_PX[this.size()]);
 
-  public readonly isKnown = computed(() => {
-    const pascal = this.toPascalCase(this.name());
-    return Object.prototype.hasOwnProperty.call(icons, pascal);
-  });
+  public readonly isKnown = computed(() =>
+    Object.prototype.hasOwnProperty.call(icons, this.name())
+  );
 
   constructor() {
     effect(() => {
@@ -60,12 +60,5 @@ export class IconComponent {
         console.warn(`[cmn-icon] Unknown icon name: "${this.name()}"`);
       }
     });
-  }
-
-  private toPascalCase(str: string): string {
-    return str
-      .split('-')
-      .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-      .join('');
   }
 }

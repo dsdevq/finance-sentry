@@ -41,7 +41,7 @@ const DISABLED_CLASSES = 'opacity-50 pointer-events-none cursor-not-allowed';
     >
       @if (loading()) {
         <span class="animate-spin inline-flex">
-          <cmn-icon name="loader-circle" size="sm" />
+          <cmn-icon name="LoaderCircle" size="sm" />
         </span>
       }
       <ng-content />

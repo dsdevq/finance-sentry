@@ -30,6 +30,8 @@ echo "Writing .env..."
 } > "$ENV_FILE"
 
 echo "Re-registering Stitch MCP with Claude (user scope)..."
+claude mcp remove stitch 2>/dev/null || true
+
 claude mcp add stitch \
   --transport http https://stitch.googleapis.com/mcp \
   --header "Authorization: Bearer $TOKEN" \

@@ -74,13 +74,9 @@ export class InputComponent implements ControlValueAccessor {
   protected readonly inputId = signal<string>('');
 
   // Private callbacks (function-type properties treated as methods by member-ordering — must follow all fields)
-  private onChange: (value: string) => void = (_: string) => {
-    // noop — replaced when registerOnChange is called
-  };
+  private onChange: (value: string) => void = (_: string) => void 0;
 
-  private onTouched: () => void = () => {
-    // noop — replaced when registerOnTouched is called
-  };
+  private onTouched: () => void = () => void 0;
 
   public writeValue(value: string | null | undefined): void {
     this.value.set(value ?? '');
