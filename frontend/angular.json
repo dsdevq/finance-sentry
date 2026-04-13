@@ -56,6 +56,10 @@
               "extractLicenses": false,
               "sourceMap": true,
               "namedChunks": true
+            },
+            "storybook": {
+              "assets": [],
+              "tsConfig": "projects/dsdevq-common/ui/tsconfig.storybook.json"
             }
           },
           "defaultConfiguration": "production"
@@ -165,6 +169,7 @@
           "builder": "@storybook/angular:start-storybook",
           "options": {
             "configDir": "projects/dsdevq-common/ui/.storybook",
+            "browserTarget": "finance-sentry:build:storybook",
             "tsConfig": "projects/dsdevq-common/ui/tsconfig.storybook.json",
             "port": 6006,
             "compodoc": false,
@@ -177,6 +182,7 @@
           "builder": "@storybook/angular:build-storybook",
           "options": {
             "configDir": "projects/dsdevq-common/ui/.storybook",
+            "browserTarget": "finance-sentry:build:storybook",
             "tsConfig": "projects/dsdevq-common/ui/tsconfig.storybook.json",
             "outputDir": "projects/dsdevq-common/ui/storybook-static",
             "compodoc": false,
