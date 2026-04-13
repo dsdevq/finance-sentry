@@ -1,0 +1,96 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Light theme (default) ─────────────────────────────────────────────── */
+:root,
+[data-theme="light"] {
+  /* Surface */
+  --color-surface-bg:       #f8f9fa;
+  --color-surface-card:     #ffffff;
+  --color-surface-raised:   #f3f4f5;
+
+  /* Text */
+  --color-text-primary:     #191c1d;
+  --color-text-secondary:   #444651;
+  --color-text-disabled:    #9a9aaa;
+  --color-text-inverse:     #ffffff;
+
+  /* Accent — 11-stop brand navy palette */
+  --color-accent-100:       #eef1ff;
+  --color-accent-200:       #dce1ff;
+  --color-accent-300:       #b6c4ff;
+  --color-accent-400:       #90a8ff;
+  --color-accent-500:       #5570d0;
+  --color-accent-600:       #4059aa;
+  --color-accent-700:       #264191;
+  --color-accent-800:       #1e3a8a;
+  --color-accent-900:       #00236f;
+  --color-accent-1000:      #00164e;
+
+  /* Accent — semantic aliases */
+  --color-accent-default:   #1e3a8a;
+  --color-accent-hover:     #264191;
+  --color-accent-active:    #00236f;
+  --color-accent-subtle:    #dce1ff;
+
+  /* Dynamic accent (runtime override via ThemeService / chroma-js) */
+  --cmn-accent-100:  var(--color-accent-100);
+  --cmn-accent-200:  var(--color-accent-200);
+  --cmn-accent-300:  var(--color-accent-300);
+  --cmn-accent-400:  var(--color-accent-400);
+  --cmn-accent-500:  var(--color-accent-500);
+  --cmn-accent-600:  var(--color-accent-600);
+  --cmn-accent-700:  var(--color-accent-700);
+  --cmn-accent-800:  var(--color-accent-800);
+  --cmn-accent-900:  var(--color-accent-900);
+  --cmn-accent-1000: var(--color-accent-1000);
+
+  /* Status */
+  --color-status-info:      #4059aa;
+  --color-status-success:   #4d7c0f;
+  --color-status-warning:   #b45309;
+  --color-status-error:     #ba1a1a;
+
+  /* Border */
+  --color-border-default:   #c5c5d3;
+  --color-border-strong:    #757682;
+  --color-border-focus:     #1e3a8a;
+}
+
+/* ─── Dark theme ─────────────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --color-surface-bg:       #0e1120;
+  --color-surface-card:     #1a1f35;
+  --color-surface-raised:   #1e2438;
+
+  --color-text-primary:     #e2e3e4;
+  --color-text-secondary:   #c5c5d3;
+  --color-text-disabled:    #6b6b7d;
+  --color-text-inverse:     #00164e;
+
+  --color-accent-100:       #001155;
+  --color-accent-200:       #00236f;
+  --color-accent-300:       #264191;
+  --color-accent-400:       #4059aa;
+  --color-accent-500:       #5570d0;
+  --color-accent-600:       #90a8ff;
+  --color-accent-700:       #b6c4ff;
+  --color-accent-800:       #dce1ff;
+  --color-accent-900:       #eef1ff;
+  --color-accent-1000:      #f5f7ff;
+
+  --color-accent-default:   #b6c4ff;
+  --color-accent-hover:     #dce1ff;
+  --color-accent-active:    #90a8ff;
+  --color-accent-subtle:    #264191;
+
+  --color-status-info:      #bdc5eb;
+  --color-status-success:   #a3e635;
+  --color-status-warning:   #fbbf24;
+  --color-status-error:     #ffdad6;
+
+  --color-border-default:   #2e3452;
+  --color-border-strong:    #757682;
+  --color-border-focus:     #b6c4ff;
+}

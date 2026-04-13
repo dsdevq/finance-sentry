@@ -1,0 +1,71 @@
+import {ChangeDetectionStrategy, Component, computed, effect, input} from '@angular/core';
+import {icons, LUCIDE_ICONS, LucideAngularModule, LucideIconProvider} from 'lucide-angular';
+
+export type IconSize = 'sm' | 'md' | 'lg';
+
+const SIZE_PX: Record<IconSize, number> = {
+  sm: 16,
+  md: 20,
+  lg: 24,
+};
+
+@Component({
+  selector: 'cmn-icon',
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [LucideAngularModule],
+  providers: [
+    {
+      provide: LUCIDE_ICONS,
+      multi: true,
+      useValue: new LucideIconProvider(icons),
+    },
+  ],
+  template: `
+    @if (isKnown()) {
+      <lucide-icon
+        [name]="name()"
+        [size]="resolvedSize()"
+        [color]="color()"
+        [attr.aria-hidden]="ariaLabel() ? null : 'true'"
+        [attr.aria-label]="ariaLabel() || null"
+      />
+    } @else {
+      <span
+        [style.display]="'inline-block'"
+        [style.width.px]="resolvedSize()"
+        [style.height.px]="resolvedSize()"
+        [attr.aria-hidden]="ariaLabel() ? null : 'true'"
+        [attr.aria-label]="ariaLabel() || null"
+      ></span>
+    }
+  `,
+})
+export class IconComponent {
+  public readonly name = input.required<string>();
+  public readonly size = input<IconSize>('md');
+  public readonly color = input<string>('currentColor');
+  public readonly ariaLabel = input<string>('');
+
+  public readonly resolvedSize = computed(() => SIZE_PX[this.size()]);
+
+  public readonly isKnown = computed(() => {
+    const pascal = this.toPascalCase(this.name());
+    return Object.prototype.hasOwnProperty.call(icons, pascal);
+  });
+
+  constructor() {
+    effect(() => {
+      if (!this.isKnown()) {
+        console.warn(`[cmn-icon] Unknown icon name: "${this.name()}"`);
+      }
+    });
+  }
+
+  private toPascalCase(str: string): string {
+    return str
+      .split('-')
+      .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+      .join('');
+  }
+}

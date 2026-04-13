@@ -122,12 +122,76 @@
           }
         }
       }
+    },
+    "@dsdevq-common/ui": {
+      "projectType": "library",
+      "root": "projects/dsdevq-common/ui",
+      "sourceRoot": "projects/dsdevq-common/ui/src",
+      "prefix": "cmn",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/dsdevq-common/ui/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/dsdevq-common/ui/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "projects/dsdevq-common/ui/tsconfig.spec.json",
+            "coverage": true,
+            "browsers": [
+              "chromium"
+            ]
+          }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "eslintConfig": "projects/dsdevq-common/ui/eslint.config.mjs",
+            "lintFilePatterns": [
+              "projects/dsdevq-common/ui/src/**/*.ts",
+              "projects/dsdevq-common/ui/src/**/*.html"
+            ]
+          }
+        },
+        "storybook": {
+          "builder": "@storybook/angular:start-storybook",
+          "options": {
+            "configDir": "projects/dsdevq-common/ui/.storybook",
+            "tsConfig": "projects/dsdevq-common/ui/tsconfig.storybook.json",
+            "port": 6006,
+            "compodoc": false,
+            "styles": [
+              "projects/dsdevq-common/ui/src/styles/theme.css"
+            ]
+          }
+        },
+        "build-storybook": {
+          "builder": "@storybook/angular:build-storybook",
+          "options": {
+            "configDir": "projects/dsdevq-common/ui/.storybook",
+            "tsConfig": "projects/dsdevq-common/ui/tsconfig.storybook.json",
+            "outputDir": "projects/dsdevq-common/ui/storybook-static",
+            "compodoc": false,
+            "styles": [
+              "projects/dsdevq-common/ui/src/styles/theme.css"
+            ]
+          }
+        }
+      }
     }
   },
   "cli": {
     "analytics": false,
     "schematicCollections": [
-      "@angular/schematics",
+      "@schematics/angular",
       "playwright-ng-schematics"
     ],
     "packageManager": "npm"
