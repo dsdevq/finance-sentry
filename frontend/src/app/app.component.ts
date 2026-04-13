@@ -9,13 +9,21 @@ import {ThemeService} from '@dsdevq-common/ui';
     <div class="fns-container">
       <header class="fns-header">
         <h1>Finance Sentry</h1>
-        <button
-          [attr.aria-label]="'Switch to ' + (isDark ? 'light' : 'dark') + ' theme'"
-          (click)="toggleTheme()"
-          class="theme-toggle"
-        >
-          {{ isDark ? '☀️ Light' : '🌙 Dark' }}
-        </button>
+        <div class="header-controls">
+          <button
+            [attr.aria-label]="'Switch to ' + (isDark ? 'light' : 'dark') + ' theme'"
+            (click)="toggleTheme()"
+            class="theme-toggle"
+          >
+            {{ isDark ? '☀️ Light' : '🌙 Dark' }}
+          </button>
+          <button (click)="setTestAccent()" class="theme-toggle" aria-label="Set red accent">
+            Accent: Red
+          </button>
+          <button (click)="resetAccent()" class="theme-toggle" aria-label="Reset accent">
+            Reset Accent
+          </button>
+        </div>
       </header>
       <main class="fns-main">
         <router-outlet />
@@ -36,6 +44,11 @@ import {ThemeService} from '@dsdevq-common/ui';
         display: flex;
         align-items: center;
         justify-content: space-between;
+      }
+      .header-controls {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
       }
       .theme-toggle {
         background: rgba(255, 255, 255, 0.15);
@@ -65,5 +78,13 @@ export class AppComponent {
 
   public toggleTheme(): void {
     this.themeService.setTheme(this.isDark ? 'light' : 'dark');
+  }
+
+  public setTestAccent(): void {
+    this.themeService.setAccent('#e11d48');
+  }
+
+  public resetAccent(): void {
+    this.themeService.resetAccent();
   }
 }

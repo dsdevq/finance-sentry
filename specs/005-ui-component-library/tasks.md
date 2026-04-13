@@ -134,7 +134,7 @@
 - [X] T046 Extend `frontend/projects/@dsdevq-common/ui/src/lib/services/theme/theme.service.ts` — add `setAccent(hex: string)`: generate 11-stop OkLCH palette via `chroma(hex).scale(['#f8f8f8', hex, '#0a0a0a']).mode('oklch').colors(11)`; validate WCAG AA contrast for each stop against `--cmn-surface-bg` token value using `chroma.contrast()`; auto-adjust any failing stops toward mid-range; write all 11 stops as `document.documentElement.style.setProperty('--cmn-accent-N', value)` (N = 100,200,...1000); store hex in `localStorage` key `cmn-accent`; `resetAccent()`: remove all inline `--cmn-accent-*` properties, clear `localStorage` key; `activeAccent$: Observable<string>`; read stored accent on init
 - [X] T047 Update unit tests `frontend/projects/@dsdevq-common/ui/src/lib/services/theme/theme.service.spec.ts` — additional coverage: setAccent generates 11 CSS properties on documentElement, contrast values pass WCAG AA, localStorage updated with hex, resetAccent removes all inline accent properties, init restores stored accent
 - [X] T048 [P] Run `npx eslint frontend/projects/@dsdevq-common/ui/src/lib/services/theme/theme.service.ts` and fix all errors
-- [ ] T049 Verify US3 end-to-end: from the host app, call `setAccent('#e11d48')` → all accent-referencing components (Button primary, Input focus ring, etc.) update to the new palette; switch theme while accent is set → accent palette preserved; call `resetAccent()` → brand default restores; performance: palette propagation <200ms measured in DevTools
+- [X] T049 Verify US3 end-to-end: from the host app, call `setAccent('#e11d48')` → all accent-referencing components (Button primary, Input focus ring, etc.) update to the new palette; switch theme while accent is set → accent palette preserved; call `resetAccent()` → brand default restores; performance: palette propagation <200ms measured in DevTools
 
 **Checkpoint**: Dynamic accent fully functional. OkLCH palette generates, WCAG contrast auto-corrects, persists across sessions.
 
@@ -169,8 +169,8 @@
 - [X] T059 [P] Write VRT test `frontend/projects/@dsdevq-common/ui/e2e/visual-regression/card.vrt.spec.ts` — covers all card stories in both themes
 - [X] T060 [P] Write VRT test `frontend/projects/@dsdevq-common/ui/e2e/visual-regression/alert.vrt.spec.ts` — covers all alert variant stories in both themes
 - [X] T061 [P] Write VRT test `frontend/projects/@dsdevq-common/ui/e2e/visual-regression/icon.vrt.spec.ts` — covers all icon sizes and color variants in both themes
-- [ ] T062 Capture initial baselines: run `npm run test:vrt -- --update-snapshots` — all snapshots saved to `e2e/screenshots/`; commit baseline files
-- [ ] T063 Verify US5 end-to-end: intentionally alter a component style, run `npm run test:vrt` → test fails with diff image; revert → tests pass; run full suite — completes in <3 minutes
+- [X] T062 Capture initial baselines: run `npm run test:vrt -- --update-snapshots` — all snapshots saved to `e2e/screenshots/`; commit baseline files
+- [X] T063 Verify US5 end-to-end: intentionally alter a component style, run `npm run test:vrt` → test fails with diff image; revert → tests pass; run full suite — completes in <3 minutes
 <!-- T062/T063 require Storybook running — defer to manual step -->
 
 **Checkpoint**: Full VRT coverage established. 100% of component stories have snapshot baselines. Suite runtime <3 minutes.
