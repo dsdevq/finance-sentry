@@ -77,6 +77,8 @@ coverage/
 lcov.info
 *.trx
 TestResults/
+test-results/
+playwright-report/
 
 # Docker
 docker-compose.override*.yml
