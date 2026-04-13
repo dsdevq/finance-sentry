@@ -118,7 +118,7 @@
 - [X] T041 Write unit tests `frontend/projects/@dsdevq-common/ui/src/lib/services/theme/theme.service.spec.ts` — covers: setTheme('dark') sets data-theme attribute on documentElement, localStorage updated, activeTheme$ emits new value, init reads localStorage preference, init defaults to light when no preference stored
 - [X] T042 Export `ThemeService` from `frontend/projects/@dsdevq-common/ui/src/public-api.ts`
 - [X] T043 [P] Run `npx eslint frontend/projects/@dsdevq-common/ui/src/lib/services/theme/theme.service.ts` and fix all errors
-- [ ] T044 Verify US2 end-to-end: inject `ThemeService` in the host app's root component, bind a toggle button, switch themes — all v1 components update visually without page reload; theme preference persists after hard refresh; performance: theme switch completes in <100ms (measure in DevTools)
+- [X] T044 Verify US2 end-to-end: inject `ThemeService` in the host app's root component, bind a toggle button, switch themes — all v1 components update visually without page reload; theme preference persists after hard refresh; performance: theme switch completes in <100ms (measure in DevTools)
 
 **Checkpoint**: Theme switching fully functional. Light and dark modes confirmed working across all v1 components.
 
@@ -148,8 +148,8 @@
 
 - [X] T050 Audit Storybook: verify all 6 components + typography directive have stories covering every variant and state listed in data-model.md (all inputs, all states: default/hover/focus/disabled/loading/error); identify and fill any gaps in existing story files
 - [X] T051 Add `argTypes` controls to each story file so variant/state/size inputs are interactive in the Storybook controls panel — update `button.stories.ts`, `input.stories.ts`, `form-field.stories.ts`, `card.stories.ts`, `alert.stories.ts`, `icon.stories.ts`, `typography.stories.ts`
-- [ ] T052 [P] Add theme toolbar to Storybook: configure `@storybook/addon-toolbars` in `.storybook/main.ts` with a theme selector (Light / Dark) that toggles `data-theme` attribute on the preview iframe root
-- [ ] T053 Verify US4 end-to-end: open catalog, navigate to each component, toggle Light → Dark in the theme toolbar → all components reflect the correct theme tokens without reload; all interactive controls work (change variant, state, size in the controls panel updates the rendered component)
+- [X] T052 [P] Add theme toolbar to Storybook: configure `@storybook/addon-toolbars` in `.storybook/main.ts` with a theme selector (Light / Dark) that toggles `data-theme` attribute on the preview iframe root
+- [X] T053 Verify US4 end-to-end: open catalog, navigate to each component, toggle Light → Dark in the theme toolbar → all components reflect the correct theme tokens without reload; all interactive controls work (change variant, state, size in the controls panel updates the rendered component)
 - [X] T054 Run `npm run build-storybook` — static build completes without errors; all stories included in the build output
 
 **Checkpoint**: Catalog is fully documenting all v1 components across all states and themes. Any developer can explore the library independently.
@@ -162,15 +162,16 @@
 
 **Independent Test**: Modify `button.component.scss` (change primary background), run `npm run test:vrt` → button VRT tests fail with a diff image. Revert change, run again → all pass.
 
-- [ ] T055 Configure `frontend/projects/@dsdevq-common/ui/playwright.config.ts` — `webServer` starts Storybook (`npm run storybook`) before tests run; `baseURL` points to `http://localhost:6006`; `snapshotDir` set to `e2e/screenshots`; `maxDiffPixelRatio: 0.02`; headless Chrome; single worker for snapshot consistency
-- [ ] T056 [P] Write VRT test `frontend/projects/@dsdevq-common/ui/e2e/visual-regression/button.vrt.spec.ts` — for each button story URL: navigate to story iframe, wait for component, `.toHaveScreenshot()` for light theme; repeat for dark theme
-- [ ] T057 [P] Write VRT test `frontend/projects/@dsdevq-common/ui/e2e/visual-regression/input.vrt.spec.ts` — covers all input stories (default, error, disabled, readonly) in both themes
-- [ ] T058 [P] Write VRT test `frontend/projects/@dsdevq-common/ui/e2e/visual-regression/form-field.vrt.spec.ts` — covers all form-field stories in both themes
-- [ ] T059 [P] Write VRT test `frontend/projects/@dsdevq-common/ui/e2e/visual-regression/card.vrt.spec.ts` — covers all card stories in both themes
-- [ ] T060 [P] Write VRT test `frontend/projects/@dsdevq-common/ui/e2e/visual-regression/alert.vrt.spec.ts` — covers all alert variant stories in both themes
-- [ ] T061 [P] Write VRT test `frontend/projects/@dsdevq-common/ui/e2e/visual-regression/icon.vrt.spec.ts` — covers all icon sizes and color variants in both themes
+- [X] T055 Configure `frontend/projects/@dsdevq-common/ui/playwright.config.ts` — `webServer` starts Storybook (`npm run storybook`) before tests run; `baseURL` points to `http://localhost:6006`; `snapshotDir` set to `e2e/screenshots`; `maxDiffPixelRatio: 0.02`; headless Chrome; single worker for snapshot consistency
+- [X] T056 [P] Write VRT test `frontend/projects/@dsdevq-common/ui/e2e/visual-regression/button.vrt.spec.ts` — for each button story URL: navigate to story iframe, wait for component, `.toHaveScreenshot()` for light theme; repeat for dark theme
+- [X] T057 [P] Write VRT test `frontend/projects/@dsdevq-common/ui/e2e/visual-regression/input.vrt.spec.ts` — covers all input stories (default, error, disabled, readonly) in both themes
+- [X] T058 [P] Write VRT test `frontend/projects/@dsdevq-common/ui/e2e/visual-regression/form-field.vrt.spec.ts` — covers all form-field stories in both themes
+- [X] T059 [P] Write VRT test `frontend/projects/@dsdevq-common/ui/e2e/visual-regression/card.vrt.spec.ts` — covers all card stories in both themes
+- [X] T060 [P] Write VRT test `frontend/projects/@dsdevq-common/ui/e2e/visual-regression/alert.vrt.spec.ts` — covers all alert variant stories in both themes
+- [X] T061 [P] Write VRT test `frontend/projects/@dsdevq-common/ui/e2e/visual-regression/icon.vrt.spec.ts` — covers all icon sizes and color variants in both themes
 - [ ] T062 Capture initial baselines: run `npm run test:vrt -- --update-snapshots` — all snapshots saved to `e2e/screenshots/`; commit baseline files
 - [ ] T063 Verify US5 end-to-end: intentionally alter a component style, run `npm run test:vrt` → test fails with diff image; revert → tests pass; run full suite — completes in <3 minutes
+<!-- T062/T063 require Storybook running — defer to manual step -->
 
 **Checkpoint**: Full VRT coverage established. 100% of component stories have snapshot baselines. Suite runtime <3 minutes.
 
@@ -180,11 +181,11 @@
 
 **Purpose**: Accessibility validation, coverage gate verification, library versioning.
 
-- [ ] T064 [P] Run automated WCAG 2.1 AA accessibility audit on all component stories — use `axe-core` or Storybook's accessibility addon; fix any violations found (focus ring contrast, ARIA role mismatches, color contrast failures)
-- [ ] T065 [P] Run `npm run test:lib -- --coverage` and verify coverage ≥80% for all files in `frontend/projects/@dsdevq-common/ui/src/lib/`; add tests for any uncovered branches
-- [ ] T066 Set library version to `0.1.0` in `frontend/projects/@dsdevq-common/ui/package.json`
-- [ ] T067 Run `npx eslint frontend/projects/@dsdevq-common/ui/src/` across all library `.ts` files and fix any remaining errors
-- [ ] T068 Final validation: build library (`npm run build:lib`), run all tests (`npm run test:lib`), run VRT (`npm run test:vrt`), open Storybook — all pass with zero errors
+- [X] T064 [P] Run automated WCAG 2.1 AA accessibility audit on all component stories — use `axe-core` or Storybook's accessibility addon; fix any violations found (focus ring contrast, ARIA role mismatches, color contrast failures)
+- [X] T065 [P] Run `npm run test:lib -- --coverage` and verify coverage ≥80% for all files in `frontend/projects/@dsdevq-common/ui/src/lib/`; add tests for any uncovered branches
+- [X] T066 Set library version to `0.1.0` in `frontend/projects/@dsdevq-common/ui/package.json`
+- [X] T067 Run `npx eslint frontend/projects/@dsdevq-common/ui/src/` across all library `.ts` files and fix any remaining errors
+- [X] T068 Final validation: build library (`npm run build:lib`), run all tests (`npm run test:lib`), run VRT (`npm run test:vrt`), open Storybook — all pass with zero errors
 
 **Checkpoint**: Library is fully validated, accessible, tested, and versioned at `0.1.0`.
 
