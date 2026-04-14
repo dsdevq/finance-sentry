@@ -23,8 +23,8 @@
 - [X] T003 [P] Add path alias to `frontend/tsconfig.json` paths: `"@dsdevq-common/ui": ["projects/@dsdevq-common/ui/src/public-api.ts"]`
 - [X] T004 [P] Add npm scripts to `frontend/package.json`: `build:lib`, `build:lib:watch`, `storybook`, `build-storybook`, `test:lib`, `test:vrt`
 - [X] T005 Create `frontend/projects/@dsdevq-common/ui/eslint.config.mjs` — scoped ESLint config extending workspace root, overriding `@angular-eslint/component-selector` to prefix `cmn`
-- [X] T006 Install Tailwind CSS v4 in `frontend/`: `npm install tailwindcss @tailwindcss/vite` (or PostCSS equivalent); verify Tailwind processes CSS in the Angular build pipeline
-- [X] T006b Scaffold empty barrel and Tailwind entry: `frontend/projects/@dsdevq-common/ui/src/public-api.ts` (empty), `src/styles/theme.css` (with `@import "tailwindcss"` and empty `@theme {}` block)
+- [X] T006 Install Tailwind CSS v3 (3.4.x) in `frontend/`: `npm install tailwindcss@3.4.x postcss autoprefixer`; configure `postcss.config.js` with `tailwindcss` and `autoprefixer` plugins; configure `tailwind.config.js` with `content` paths covering library + host app and `darkMode: ['selector', '[data-theme="dark"]']`; verify Tailwind processes CSS in the Angular build pipeline
+- [X] T006b Scaffold empty barrel and Tailwind entry: `frontend/projects/@dsdevq-common/ui/src/public-api.ts` (empty), `src/styles/theme.css` (with `@tailwind base;`, `@tailwind components;`, `@tailwind utilities;` directives and empty `:root {}` and `[data-theme="dark"] {}` CSS custom property blocks)
 - [X] T007 Verify setup: `npm run build:lib` succeeds with zero errors; host app can `import {} from '@dsdevq-common/ui'` without TypeScript error
 
 **Checkpoint**: Library project exists, builds, and is importable from the host app.
@@ -37,14 +37,14 @@
 
 **⚠️ CRITICAL**: Components use Tailwind utility classes that reference theme tokens. Those tokens must be defined in `styles/theme.css` and compiled by Tailwind before any component is built or tested.
 
-- [X] T008 Use Stitch MCP (`mcp__stitch__create_design_system`) to define the Finance Sentry design system: color palette (light + dark), spacing scale (7 stops), typography scale (8 stops), shadow scale (3 stops), border-radius scale (4 stops), and component specs for Button, Input, Form Field, Card, Alert, Icon — Stitch outputs a Tailwind CSS v4 theme config
-- [X] T009 Populate `frontend/projects/@dsdevq-common/ui/src/styles/theme.css` from Stitch output — add `@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *))` for attribute-based dark mode; paste Stitch-generated `@theme` block covering all token namespaces per data-model.md: color (surface, text, accent 11-stop, status, border), spacing, typography, radius, shadow
+- [X] T008 Use Stitch MCP (`mcp__stitch__create_design_system`) to define the Finance Sentry design system: color palette (light + dark), spacing scale (7 stops), typography scale (8 stops), shadow scale (3 stops), border-radius scale (4 stops), and component specs for Button, Input, Form Field, Card, Alert, Icon — Stitch informs all visual decisions; token values are hand-implemented in `tailwind.config.js` (`theme.extend`) and `styles/theme.css` (CSS custom properties) — not auto-generated
+- [X] T009 Populate `frontend/projects/@dsdevq-common/ui/src/styles/theme.css` from Stitch output — CSS custom properties in `:root` (light) and `[data-theme="dark"]` blocks covering all token namespaces per data-model.md: color (surface, text, accent 11-stop, status, border), spacing, typography, radius, shadow; dark mode handled via `darkMode: ['selector', '[data-theme="dark"]']` in `tailwind.config.js` (already set in T006)
 - [X] T010 [P] Verify typography token classes resolve in Tailwind output — confirm utility classes for all 10 type levels (display, h1–h4, body, small, caption, label, code) exist in the compiled CSS; add any missing custom utilities to `@theme` if Stitch did not generate them
 - [X] T011 Set default theme in `frontend/src/index.html` — add `data-theme="light"` attribute to `<html>` element
 - [X] T012 Configure `frontend/projects/@dsdevq-common/ui/ng-package.json` — declare `styles/theme.css` as an exported asset so consumers can add it to their `angular.json` styles array; configure PostCSS or Vite plugin so Tailwind processes the CSS during `ng build @dsdevq-common/ui`
 - [X] T013 Install Storybook 10: run `npx storybook@latest init` from `frontend/` targeting the library project; install `@storybook/angular@10.x`
 - [X] T014 Configure `frontend/projects/@dsdevq-common/ui/.storybook/main.ts` — Angular builder target, story glob `../../src/**/*.stories.ts`, no `.mdx` addons (avoids Angular 21 MDX bug per research.md)
-- [X] T015 Configure `frontend/projects/@dsdevq-common/ui/.storybook/preview.ts` — import `styles/theme.css` globally (Tailwind entry — provides all design token utility classes), add `data-theme` toggle decorator that sets the attribute on the story root element
+- [X] T015 Configure `frontend/projects/@dsdevq-common/ui/.storybook/preview.ts` — import `styles/theme.css` globally (`@tailwind` directives + CSS custom properties — provides all design tokens and Tailwind utility classes), add `data-theme` toggle decorator that sets the attribute on the story root element
 - [X] T016 Verify: `npm run storybook` starts Storybook at `http://localhost:6006` with no errors; theme toggle switches `data-theme` attribute; Tailwind token utility classes (e.g., `bg-surface-bg`, `text-primary`) resolve correctly in browser DevTools
 
 **Checkpoint**: Design tokens complete in Stitch + `styles/theme.css`. Tailwind utility classes resolve. Storybook runs with theme toggle. All component phases may now begin.
@@ -184,6 +184,7 @@
 - [X] T064 [P] Run automated WCAG 2.1 AA accessibility audit on all component stories — use `axe-core` or Storybook's accessibility addon; fix any violations found (focus ring contrast, ARIA role mismatches, color contrast failures)
 - [X] T065 [P] Run `npm run test:lib -- --coverage` and verify coverage ≥80% for all files in `frontend/projects/@dsdevq-common/ui/src/lib/`; add tests for any uncovered branches
 - [X] T066 Set library version to `0.1.0` in `frontend/projects/@dsdevq-common/ui/package.json`
+- [X] T066b Bump `frontend/package.json` version (MINOR: `0.2.0` → `0.3.0`) — required by constitution Versioning Policy because T011 modifies `frontend/src/index.html` and T038 adds a test page under `frontend/src/`; commit the bump in the same branch as the library integration changes
 - [X] T067 Run `npx eslint frontend/projects/@dsdevq-common/ui/src/` across all library `.ts` files and fix any remaining errors
 - [X] T068 Final validation: build library (`npm run build:lib`), run all tests (`npm run test:lib`), run VRT (`npm run test:vrt`), open Storybook — all pass with zero errors
 
@@ -298,6 +299,6 @@ Parallel (T056–T061): All 6 component VRT test files
 - Storybook uses `.stories.ts` format only — no `.mdx` files (Angular 21 MDX bug per research.md)
 - Playwright VRT baselines must be committed — they are not gitignored
 - Library version (`0.1.0`) is independent of host app version (`0.2.0` in `frontend/package.json`)
-- Tailwind CSS v4 is the sole styling mechanism; no hand-authored CSS values in components — all values come from Tailwind theme utilities derived from `styles/theme.css`
+- Tailwind CSS v3 (3.4.x) is the sole styling mechanism; no hand-authored CSS values in components — all values come from Tailwind theme utilities defined in `tailwind.config.js` (`theme.extend`) and CSS custom properties in `styles/theme.css`
 - Component `.html` templates use Tailwind utility classes; `.scss` files are removed or kept empty (only for complex pseudo-selectors not expressible with utilities)
-- Stitch outputs Tailwind theme config directly — paste into `@theme` block in `styles/theme.css` with no manual translation
+- Stitch informs design token values — hand-implement in `tailwind.config.js` `theme.extend` and `styles/theme.css` CSS custom properties; no direct paste of Stitch output into code
