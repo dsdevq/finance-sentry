@@ -132,7 +132,7 @@
 - [X] T043 [P] Run full ESLint pass over all modified files from `frontend/`: `npx eslint src/app/app.component.ts src/app/modules/auth/pages/login/login.component.ts src/app/modules/auth/pages/register/register.component.ts src/app/modules/bank-sync/pages/dashboard/dashboard.component.ts src/app/modules/bank-sync/pages/accounts-list/accounts-list.component.ts` — fix any remaining errors
 - [X] T044 [P] Audit all migrated component `.scss` files for any remaining hardcoded hex/rgb color, hardcoded `px` spacing (that should be a token), or hardcoded font-size values — replace or remove per SC-004
 - [X] T045 Manually verify in browser that Storybook catalog (if running) still shows library components correctly — confirms library was not inadvertently modified
-- [ ] T046 Create git tag `frontend-v0.4.0` after all tasks complete and branch is merged to main (constitution requires tag after version bump)
+- [X] T046 Create git tag `frontend-v0.4.0` after all tasks complete and branch is merged to main (constitution requires tag after version bump)
 
 ---
 
