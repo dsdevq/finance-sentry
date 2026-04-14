@@ -1,14 +1,26 @@
-import {CommonModule} from '@angular/common';
 import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
 import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
 import {ActivatedRoute, Router, RouterLink} from '@angular/router';
+import {
+  AlertComponent,
+  ButtonComponent,
+  FormFieldComponent,
+  InputComponent,
+} from '@dsdevq-common/ui';
 
 import {AuthService} from '../../services/auth.service';
 
 @Component({
   selector: 'fns-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    AlertComponent,
+    ButtonComponent,
+    FormFieldComponent,
+    InputComponent,
+  ],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -24,6 +36,31 @@ export class LoginComponent {
   });
   public errorMessage = '';
   public loading = false;
+
+  public get emailError(): string {
+    const ctrl = this.form.get('email');
+    if (!ctrl?.touched) {
+      return '';
+    }
+    if (ctrl.hasError('required')) {
+      return 'Email is required.';
+    }
+    if (ctrl.hasError('email')) {
+      return 'Enter a valid email address.';
+    }
+    return '';
+  }
+
+  public get passwordError(): string {
+    const ctrl = this.form.get('password');
+    if (!ctrl?.touched) {
+      return '';
+    }
+    if (ctrl.hasError('required')) {
+      return 'Password is required.';
+    }
+    return '';
+  }
 
   public onSubmit(): void {
     if (this.form.invalid) {

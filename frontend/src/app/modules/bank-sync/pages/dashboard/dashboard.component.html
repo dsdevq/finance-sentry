@@ -5,12 +5,12 @@
     <div class="loading">Loading dashboard...</div>
   }
   @if (errorMessage) {
-    <div class="error">{{ errorMessage }}</div>
+    <cmn-alert variant="error">{{ errorMessage }}</cmn-alert>
   }
 
   @if (dashboardData && !isLoading) {
     <!-- Balance cards -->
-    <section class="balance-section">
+    <cmn-card class="dashboard-section">
       <h2>Total Balance</h2>
       <div class="balance-cards">
         @for (entry of getCurrencyEntries(); track entry[0]) {
@@ -21,10 +21,10 @@
         }
       </div>
       <p class="account-count">{{ dashboardData.accountCount }} account(s) connected</p>
-    </section>
+    </cmn-card>
 
     <!-- Account breakdown by type -->
-    <section class="account-types">
+    <cmn-card class="dashboard-section">
       <h2>Accounts by Type</h2>
       <ul>
         @for (entry of getAccountTypeEntries(); track entry[0]) {
@@ -35,24 +35,24 @@
           </li>
         }
       </ul>
-    </section>
+    </cmn-card>
 
     <!-- Monthly flow -->
-    <section class="monthly-flow">
+    <cmn-card class="dashboard-section">
       <h2>Monthly Flow (Last 6 Months)</h2>
       <fns-money-flow-chart [monthlyFlowData]="dashboardData.monthlyFlow" />
-    </section>
+    </cmn-card>
 
     <!-- Top categories -->
-    <section class="top-categories">
+    <cmn-card class="dashboard-section">
       <h2>Top Spending Categories</h2>
       <fns-category-breakdown-chart [topCategoriesData]="dashboardData.topCategories" />
-    </section>
+    </cmn-card>
 
     <!-- Last sync -->
-    <section class="last-sync">
+    <cmn-card class="dashboard-section">
       <p>Last synced: {{ getRelativeTime(dashboardData.lastSyncTimestamp) }}</p>
       <a routerLink="/accounts">View Accounts</a>
-    </section>
+    </cmn-card>
   }
 </div>

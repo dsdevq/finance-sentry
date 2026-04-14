@@ -152,6 +152,8 @@ After writing or modifying **any** Angular `.ts` file, run `npx eslint <file>` f
 - PostgreSQL 14 — shared database, separate `AuthDbContext : IdentityDbContext<ApplicationUser>` with independent migrations (003-auth-flow)
 - TypeScript 5.3 / Angular 21.2 + Angular CDK (behavior primitives), ng-packagr (library build), Tailwind CSS v3 3.4.x (design tokens via `tailwind.config.js` + CSS custom properties in `styles/theme.css`), Storybook 10 (`@storybook/angular`), chroma-js 3.x (runtime palette generation), Lucide Icons (icon set), Vitest 4 (unit tests), Playwright (visual regression) (005-ui-component-library)
 - `localStorage` (theme + accent persistence only) (005-ui-component-library)
+- TypeScript 5.3 / Angular 21.2 (strict mode) + `@dsdevq-common/ui` (local library, feature 005), Angular `ReactiveFormsModule`, Angular CLI (006-ui-library-adoption)
+- `localStorage` (ThemeService — already implemented in feature 005) (006-ui-library-adoption)
 
 ## Recent Changes
 - 003-auth-flow: Added C# 13 / .NET 9 (backend) · TypeScript 5.x strict (frontend) + ASP.NET Core 9, EF Core 9, MediatR, ASP.NET Core Identity (`Microsoft.AspNetCore.Identity.EntityFrameworkCore`), Npgsql.EF Core (backend) · Angular 20, RxJS, Angular standalone routing (frontend)

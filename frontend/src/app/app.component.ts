@@ -1,28 +1,22 @@
 import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
 import {RouterOutlet} from '@angular/router';
-import {ThemeService} from '@dsdevq-common/ui';
+import {ButtonComponent, ThemeService} from '@dsdevq-common/ui';
 
 @Component({
   selector: 'fns-root',
-  imports: [RouterOutlet],
+  imports: [RouterOutlet, ButtonComponent],
   template: `
     <div class="fns-container">
       <header class="fns-header">
         <h1>Finance Sentry</h1>
         <div class="header-controls">
-          <button
+          <cmn-button
             [attr.aria-label]="'Switch to ' + (isDark ? 'light' : 'dark') + ' theme'"
-            (click)="toggleTheme()"
-            class="theme-toggle"
+            (clicked)="toggleTheme()"
+            variant="secondary"
+            size="sm"
+            >{{ isDark ? '☀ Light' : '🌙 Dark' }}</cmn-button
           >
-            {{ isDark ? '☀️ Light' : '🌙 Dark' }}
-          </button>
-          <button (click)="setTestAccent()" class="theme-toggle" aria-label="Set red accent">
-            Accent: Red
-          </button>
-          <button (click)="resetAccent()" class="theme-toggle" aria-label="Reset accent">
-            Reset Accent
-          </button>
         </div>
       </header>
       <main class="fns-main">
@@ -38,8 +32,8 @@ import {ThemeService} from '@dsdevq-common/ui';
         flex-direction: column;
       }
       .fns-header {
-        background-color: #1976d2;
-        color: white;
+        background-color: var(--color-accent-800);
+        color: var(--color-text-inverse);
         padding: 1rem;
         display: flex;
         align-items: center;
@@ -49,15 +43,6 @@ import {ThemeService} from '@dsdevq-common/ui';
         display: flex;
         gap: 0.5rem;
         align-items: center;
-      }
-      .theme-toggle {
-        background: rgba(255, 255, 255, 0.15);
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        color: white;
-        padding: 0.25rem 0.75rem;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 0.875rem;
       }
       .fns-main {
         flex: 1;
@@ -78,13 +63,5 @@ export class AppComponent {
 
   public toggleTheme(): void {
     this.themeService.setTheme(this.isDark ? 'light' : 'dark');
-  }
-
-  public setTestAccent(): void {
-    this.themeService.setAccent('#e11d48');
-  }
-
-  public resetAccent(): void {
-    this.themeService.resetAccent();
   }
 }

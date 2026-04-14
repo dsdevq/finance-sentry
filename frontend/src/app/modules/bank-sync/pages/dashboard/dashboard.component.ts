@@ -1,4 +1,4 @@
-import {CommonModule} from '@angular/common';
+import {DecimalPipe, TitleCasePipe} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
@@ -8,6 +8,7 @@ import {
   OnInit,
 } from '@angular/core';
 import {RouterLink} from '@angular/router';
+import {AlertComponent, CardComponent} from '@dsdevq-common/ui';
 
 import {CategoryBreakdownChartComponent} from '../../components/category-breakdown-chart/category-breakdown-chart.component';
 import {MoneyFlowChartComponent} from '../../components/money-flow-chart/money-flow-chart.component';
@@ -16,7 +17,15 @@ import {BankSyncService, DashboardData} from '../../services/bank-sync.service';
 @Component({
   selector: 'fns-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, MoneyFlowChartComponent, CategoryBreakdownChartComponent],
+  imports: [
+    RouterLink,
+    AlertComponent,
+    CardComponent,
+    DecimalPipe,
+    MoneyFlowChartComponent,
+    CategoryBreakdownChartComponent,
+    TitleCasePipe,
+  ],
   templateUrl: './dashboard.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

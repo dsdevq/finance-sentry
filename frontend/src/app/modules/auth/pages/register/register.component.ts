@@ -1,4 +1,3 @@
-import {CommonModule} from '@angular/common';
 import {HttpErrorResponse} from '@angular/common/http';
 import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
 import {
@@ -9,6 +8,12 @@ import {
   Validators,
 } from '@angular/forms';
 import {Router, RouterLink} from '@angular/router';
+import {
+  AlertComponent,
+  ButtonComponent,
+  FormFieldComponent,
+  InputComponent,
+} from '@dsdevq-common/ui';
 
 import {AuthService} from '../../services/auth.service';
 
@@ -23,7 +28,14 @@ function passwordsMatch(group: AbstractControl): ValidationErrors | null {
 @Component({
   selector: 'fns-register',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    AlertComponent,
+    ButtonComponent,
+    FormFieldComponent,
+    InputComponent,
+  ],
   templateUrl: './register.component.html',
   styleUrls: ['./register.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -42,6 +54,48 @@ export class RegisterComponent {
   );
   public errorMessage = '';
   public loading = false;
+
+  public get emailError(): string {
+    const ctrl = this.form.get('email');
+    if (!ctrl?.touched) {
+      return '';
+    }
+    if (ctrl.hasError('required')) {
+      return 'Email is required.';
+    }
+    if (ctrl.hasError('email')) {
+      return 'Enter a valid email address.';
+    }
+    return '';
+  }
+
+  public get passwordError(): string {
+    const ctrl = this.form.get('password');
+    if (!ctrl?.touched) {
+      return '';
+    }
+    if (ctrl.hasError('required')) {
+      return 'Password is required.';
+    }
+    if (ctrl.hasError('minlength')) {
+      return `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`;
+    }
+    return '';
+  }
+
+  public get confirmPasswordError(): string {
+    const ctrl = this.form.get('confirmPassword');
+    if (!ctrl?.touched) {
+      return '';
+    }
+    if (ctrl.hasError('required')) {
+      return 'Please confirm your password.';
+    }
+    if (this.form.hasError('passwordsMismatch')) {
+      return 'Passwords do not match.';
+    }
+    return '';
+  }
 
   public onSubmit(): void {
     if (this.form.invalid) {

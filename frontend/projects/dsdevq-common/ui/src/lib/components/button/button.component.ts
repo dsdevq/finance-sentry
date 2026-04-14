@@ -38,6 +38,7 @@ const DISABLED_CLASSES = 'opacity-50 pointer-events-none cursor-not-allowed';
       [attr.aria-busy]="loading() ? true : null"
       [attr.aria-disabled]="disabled() ? true : null"
       [class]="classes()"
+      (click)="clicked.emit($event)"
     >
       @if (loading()) {
         <span class="animate-spin inline-flex">

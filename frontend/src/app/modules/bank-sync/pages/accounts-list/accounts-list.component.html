@@ -1,7 +1,7 @@
 <div class="accounts-list">
   <div class="accounts-header">
     <h2>Connected Accounts</h2>
-    <button (click)="connectAccount()" class="btn-primary">Connect Account</button>
+    <cmn-button (clicked)="connectAccount()" variant="primary">Connect Account</cmn-button>
   </div>
 
   @if (isLoading) {
@@ -11,18 +11,20 @@
   }
 
   @if (errorMessage) {
-    <div class="error-state" role="alert">
-      <p class="error-message">{{ errorMessage }}</p>
-      <button (click)="loadAccounts()" class="btn-secondary">Retry</button>
-    </div>
+    <cmn-alert variant="error" class="state-alert">
+      {{ errorMessage }}
+      <cmn-button (clicked)="loadAccounts()" variant="secondary" size="sm">Retry</cmn-button>
+    </cmn-alert>
   }
 
   @if (!isLoading && !errorMessage) {
     @if (accounts.length === 0) {
-      <div class="empty-state">
-        <p>No accounts connected yet.</p>
-        <button (click)="connectAccount()" class="btn-primary">Connect Your First Account</button>
-      </div>
+      <cmn-card class="empty-card">
+        <cmn-alert variant="info">No accounts connected yet.</cmn-alert>
+        <cmn-button (clicked)="connectAccount()" variant="primary" class="empty-action">
+          Connect Your First Account
+        </cmn-button>
+      </cmn-card>
     } @else {
       <table class="accounts-table" aria-label="Connected bank accounts">
         <thead>

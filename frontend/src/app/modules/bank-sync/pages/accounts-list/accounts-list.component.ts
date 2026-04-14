@@ -1,6 +1,7 @@
-import {CommonModule} from '@angular/common';
+import {DatePipe, DecimalPipe} from '@angular/common';
 import {ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit} from '@angular/core';
 import {Router} from '@angular/router';
+import {AlertComponent, ButtonComponent, CardComponent} from '@dsdevq-common/ui';
 
 import {SyncStatusComponent} from '../../components/sync-status/sync-status.component';
 import {BankAccount, SyncStatus} from '../../models/bank-account.model';
@@ -9,7 +10,14 @@ import {BankSyncService} from '../../services/bank-sync.service';
 @Component({
   selector: 'fns-accounts-list',
   standalone: true,
-  imports: [CommonModule, SyncStatusComponent],
+  imports: [
+    AlertComponent,
+    ButtonComponent,
+    CardComponent,
+    DatePipe,
+    DecimalPipe,
+    SyncStatusComponent,
+  ],
   templateUrl: './accounts-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
