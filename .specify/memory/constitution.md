@@ -97,7 +97,7 @@ access. No shortcuts on security—violations require explicit team lead approva
 **Message Queue/Async**: RabbitMQ or built-in hosted service (if monolith only)
 **Containerization**: Docker for all services; Docker Compose for local development
 **AI/LLM**: OpenAI API or compatible; documented prompts and request patterns
-**Testing**: xUnit/.NET test framework for backend, Jasmine/Karma for frontend
+**Testing**: xUnit/.NET test framework for backend, Vitest + Playwright for frontend
 **Monitoring**: ELK (Elasticsearch, Logstash, Kibana) or Application Insights for
 structured logging
 
@@ -243,16 +243,6 @@ and version/tagging compliance.
 Rollback procedure documented and tested monthly. **Rollback includes tag management**:
 if reverting commits, delete associated version tags and recreate if necessary.
 
-## Issue Tracker Sync
-
-All features developed via the speckit toolchain MUST be mirrored to Jira before implementation begins:
-
-- **Trigger (pre-implement)**: After `speckit.tasks` completes and `tasks.md` is finalized, every task MUST have a corresponding Jira issue in the `SCRUM` project on `denyssychovdev.atlassian.net`. Implementation MUST NOT start until all issues exist.
-- **Trigger (post-merge)**: After a feature branch is merged to `main`, all Jira issues for that feature MUST be transitioned to **Done**. This is mandatory — not optional.
-- **Issue type mapping**: One Epic per feature → one Story per User Story / phase → individual tasks as Tasks or Subtasks under their parent Story.
-- **Sync method**: Use the Atlassian MCP tools (`mcp__atlassian__createJiraIssue`, `mcp__atlassian__transitionJiraIssue`) directly. Create Epic first, then Stories, then transition all to Done after merge.
-- **Updates**: If tasks.md changes after sync (e.g., follow-up tasks added), Jira must be updated in the same session before the next implement run.
-
 ## Governance
 
 The constitution supersedes all other development practices. Amendments require
@@ -278,4 +268,4 @@ and tag creation. Missing version bump or tag blocks PR merge.
 - Each version change increments **Last Amended** date (ISO format)
 - Applies to both constitution versioning and feature versioning (frontend/backend)
 
-**Version**: 1.2.0 | **Ratified**: 2026-03-21 | **Last Amended**: 2026-04-11
+**Version**: 1.2.1 | **Ratified**: 2026-03-21 | **Last Amended**: 2026-04-12

@@ -77,6 +77,8 @@ coverage/
 lcov.info
 *.trx
 TestResults/
+test-results/
+playwright-report/
 
 # Docker
 docker-compose.override*.yml
@@ -86,6 +88,7 @@ frontend/dist/
 frontend/.angular/
 frontend/**/*.spec.ts
 !frontend/tests/**/*.spec.ts
+!frontend/projects/dsdevq-common/ui/e2e/**/*.spec.ts
 
 # Backend
 backend/bin/

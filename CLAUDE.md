@@ -119,18 +119,6 @@ From the cross-artifact analysis of `specs/001-bank-account-sync/`:
 
 ---
 
-## Jira
-
-- **Site**: `denyssychovdev.atlassian.net` (cloud ID: `d9132aff-8b45-41b5-ab9e-b23bc406543b`)
-- **Project**: Finance Sentry — key `SCRUM`
-- **Issue types**: Epic, Story, Feature, Task, Bug, Subtask
-- **Sync rule (pre-implement)**: after `speckit.tasks` runs, all tasks must be mirrored to Jira before implementation starts
-- **Sync rule (post-merge)**: after merging to `main`, transition all feature Jira issues to **Done** — mandatory, not optional
-- **Issue hierarchy**: 1 Epic per feature → 1 Story per User Story/phase → Tasks under each Story
-- **How**: use Atlassian MCP tools directly (`mcp__atlassian__createJiraIssue`, `mcp__atlassian__transitionJiraIssue`); create Epic first, then Stories, then transition all to Done
-
----
-
 ## Frontend ESLint — mandatory gate
 
 After writing or modifying **any** Angular `.ts` file, run `npx eslint <file>` from `frontend/` and fix all errors before moving on. Non-negotiable rules (see constitution § II for the full list):
@@ -141,6 +129,12 @@ After writing or modifying **any** Angular `.ts` file, run `npx eslint <file>` f
 - No magic numbers — extract to named constants
 - camelCase class properties, no underscore prefix
 - Run `eslint --fix` after writing imports (auto-sorts + auto-formats)
+
+---
+
+## UI Component Library Rule
+
+**Any new UI component MUST be created in `@dsdevq-common/ui` first.** Components are never built directly in the host Angular app (`frontend/`). This applies to all future features, starting with 005-ui-component-library. The `cmn-` selector prefix is reserved for library components.
 
 ---
 
@@ -156,6 +150,8 @@ After writing or modifying **any** Angular `.ts` file, run `npx eslint <file>` f
 ## Active Technologies
 - C# 13 / .NET 9 (backend) · TypeScript 5.x strict (frontend) + ASP.NET Core 9, EF Core 9, MediatR, ASP.NET Core Identity (`Microsoft.AspNetCore.Identity.EntityFrameworkCore`), Npgsql.EF Core (backend) · Angular 20, RxJS, Angular standalone routing (frontend) (003-auth-flow)
 - PostgreSQL 14 — shared database, separate `AuthDbContext : IdentityDbContext<ApplicationUser>` with independent migrations (003-auth-flow)
+- TypeScript 5.3 / Angular 21.2 + Angular CDK (behavior primitives), ng-packagr (library build), Tailwind CSS v3 3.4.x (design tokens via `tailwind.config.js` + CSS custom properties in `styles/theme.css`), Storybook 10 (`@storybook/angular`), chroma-js 3.x (runtime palette generation), Lucide Icons (icon set), Vitest 4 (unit tests), Playwright (visual regression) (005-ui-component-library)
+- `localStorage` (theme + accent persistence only) (005-ui-component-library)
 
 ## Recent Changes
 - 003-auth-flow: Added C# 13 / .NET 9 (backend) · TypeScript 5.x strict (frontend) + ASP.NET Core 9, EF Core 9, MediatR, ASP.NET Core Identity (`Microsoft.AspNetCore.Identity.EntityFrameworkCore`), Npgsql.EF Core (backend) · Angular 20, RxJS, Angular standalone routing (frontend)
