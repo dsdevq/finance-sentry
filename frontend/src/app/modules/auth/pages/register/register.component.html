@@ -4,55 +4,45 @@
     <p class="subtitle">Finance Sentry</p>
 
     <form [formGroup]="form" (ngSubmit)="onSubmit()">
-      <div class="field">
-        <label for="email">Email</label>
-        <input
-          id="email"
-          type="email"
-          formControlName="email"
-          autocomplete="email"
-          placeholder="you@example.com"
-        />
-        @if (form.get('email')?.invalid && form.get('email')?.touched) {
-          <span class="field-error">Enter a valid email address.</span>
-        }
-      </div>
+      <cmn-form-field
+        [errorMessage]="emailError"
+        formControlName="email"
+        label="Email"
+        class="field"
+      >
+        <cmn-input type="email" placeholder="you@example.com" />
+      </cmn-form-field>
 
-      <div class="field">
-        <label for="password">Password</label>
-        <input
-          id="password"
-          type="password"
-          formControlName="password"
-          autocomplete="new-password"
-          placeholder="Min 8 characters"
-        />
-        @if (form.get('password')?.invalid && form.get('password')?.touched) {
-          <span class="field-error">Password must be at least 8 characters.</span>
-        }
-      </div>
+      <cmn-form-field
+        [errorMessage]="passwordError"
+        formControlName="password"
+        label="Password"
+        class="field"
+      >
+        <cmn-input type="password" placeholder="Min 8 characters" />
+      </cmn-form-field>
 
-      <div class="field">
-        <label for="confirmPassword">Confirm Password</label>
-        <input
-          id="confirmPassword"
-          type="password"
-          formControlName="confirmPassword"
-          autocomplete="new-password"
-          placeholder="Repeat password"
-        />
-        @if (form.errors?.['passwordsMismatch'] && form.get('confirmPassword')?.touched) {
-          <span class="field-error">Passwords do not match.</span>
-        }
-      </div>
+      <cmn-form-field
+        [errorMessage]="confirmPasswordError"
+        formControlName="confirmPassword"
+        label="Confirm Password"
+        class="field"
+      >
+        <cmn-input type="password" placeholder="Repeat password" />
+      </cmn-form-field>
 
       @if (errorMessage) {
-        <div class="error-banner">{{ errorMessage }}</div>
+        <cmn-alert variant="error" class="error-alert">{{ errorMessage }}</cmn-alert>
       }
 
-      <button [disabled]="loading || form.invalid" type="submit">
-        {{ loading ? 'Creating account…' : 'Create Account' }}
-      </button>
+      <cmn-button
+        [disabled]="loading || form.invalid"
+        [loading]="loading"
+        type="submit"
+        variant="primary"
+        class="submit-btn"
+        >{{ loading ? 'Creating account…' : 'Create Account' }}</cmn-button
+      >
     </form>
 
     <p class="login-link">Already have an account? <a routerLink="/login">Sign in</a></p>
