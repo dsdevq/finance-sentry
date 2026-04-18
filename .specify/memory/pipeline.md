@@ -96,6 +96,8 @@ speckit toolchain (Claude)          Qwen (via MCP)
 | Clarify spec | `/speckit.clarify` | Claude |
 | Generate plan | `/speckit.plan` | Claude |
 | Generate tasks | `/speckit.tasks` | Claude |
+| **Implement via Qwen MCP** | **`/speckit.implement-qwen`** | **Claude orchestrates, Qwen generates** |
+| Implement directly (no Qwen) | `/speckit.implement` | Claude |
 | Post-implementation analysis | `/speckit.analyze` | Claude |
 | Generate checklist | `/speckit.checklist` | Claude |
 
