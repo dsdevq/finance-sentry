@@ -1,104 +1,130 @@
-# Implementation Plan: [FEATURE]
+# Implementation Plan: Google OAuth Sign-In
 
-**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
-**Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
+**Branch**: `004-adopt-oauth` | **Date**: 2026-04-18 | **Spec**: [spec.md](spec.md)
+**Input**: Feature specification from `specs/004-adopt-oauth/spec.md`
 
-**Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/plan-template.md` for the execution workflow.
+---
 
 ## Summary
 
-[Extract from feature spec: primary requirement + technical approach from research]
+Add Google OAuth 2.0 Authorization Code (server-side) sign-in alongside the existing email/password flow. The backend owns the full OAuth dance — Angular redirects to `/api/v1/auth/google/login`, Google calls back to `/api/v1/auth/google/callback`, and the backend issues the same JWT + httpOnly refresh cookie as email/password login, then redirects to `/auth/callback?token=<jwt>`. Existing auth (003-auth-flow) is fully preserved.
+
+---
 
 ## Technical Context
 
-<!--
-  ACTION REQUIRED: Replace the content in this section with the technical details
-  for the project. The structure here is presented in advisory capacity to guide
-  the iteration process.
--->
+**Language/Version**: C# 13 / .NET 9 (backend); TypeScript 5.x strict / Angular 20+ (frontend)
+**Primary Dependencies**: ASP.NET Core 9, EF Core 9 + Npgsql, MediatR 12, ASP.NET Identity (backend); Angular 20 standalone components, RxJS (frontend). No new packages needed — `IHttpClientFactory` handles Google HTTP calls.
+**Storage**: PostgreSQL 14 via `AuthDbContext` — two schema changes: `GoogleId` column on `AspNetUsers`, new `OAuthStates` table (migrations M007 + M008).
+**Testing**: xUnit + `WebApplicationFactory` for backend contract/integration tests; Vitest for frontend unit tests.
+**Target Platform**: Docker Compose (dev), Linux container (prod)
+**Project Type**: Web service (ASP.NET) + SPA (Angular)
+**Performance Goals**: Standard auth latency — Google roundtrip adds ~200–500ms to sign-in; not a bottleneck for a personal app.
+**Constraints**: Google credentials must NOT appear in version-controlled files. Redirect URI must be registered in Google Cloud Console.
+**Scale/Scope**: Single user; low volume. OAuthState cleanup via Hangfire deferred to future task.
 
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
-**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
-**Project Type**: [e.g., library/cli/web-service/mobile-app/compiler/desktop-app or NEEDS CLARIFICATION]  
-**Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
-**Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
-**Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
+---
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+| Principle | Status | Notes |
+|---|---|---|
+| I. Modular Monolith | ✅ PASS | `IGoogleOAuthService` interface defined; concrete in Infrastructure; never referenced directly from business logic |
+| II. Code Quality | ✅ PASS | ESLint enforced on all Angular files; zero-warning .NET build |
+| III. Multi-Source Integration | N/A | Not a financial data integration |
+| IV. AI Analytics | N/A | Not in scope |
+| V. Security-First | ✅ PASS | Credentials in env vars only; state CSRF protection; httpOnly cookie; no tokens in logs; `GoogleId` match before email match |
+| Branching | ✅ PASS | Single feature branch `004-adopt-oauth` |
+| Versioning | ✅ PASS | Backend `0.2.0 → 0.3.0` (new endpoints); Frontend `0.3.0 → 0.4.0` (new components) — T020 |
+| Contract Tests | ✅ PASS | `GoogleOAuthContractTests.cs` covers both new endpoints — T009 |
+| Test-First | ✅ PASS | T009 (contract tests) written before T010–T013 (implementation) per task order |
 
-[Gates determined based on constitution file]
+**Constitution version referenced**: 1.2.1
+
+---
 
 ## Project Structure
 
 ### Documentation (this feature)
 
 ```text
-specs/[###-feature]/
-├── plan.md              # This file (/speckit.plan command output)
-├── research.md          # Phase 0 output (/speckit.plan command)
-├── data-model.md        # Phase 1 output (/speckit.plan command)
-├── quickstart.md        # Phase 1 output (/speckit.plan command)
-├── contracts/           # Phase 1 output (/speckit.plan command)
-└── tasks.md             # Phase 2 output (/speckit.tasks command - NOT created by /speckit.plan)
+specs/004-adopt-oauth/
+├── plan.md          # This file
+├── spec.md          # Feature specification
+├── research.md      # Phase 0 — OAuth flow + account linking decisions
+├── data-model.md    # Phase 1 — ApplicationUser + OAuthState schema
+├── quickstart.md    # Phase 1 — Local testing guide
+├── contracts/
+│   └── google-oauth.md  # REST contract for /auth/google/login + /callback
+└── tasks.md         # Implementation tasks (21 tasks across 5 phases)
 ```
 
-### Source Code (repository root)
-<!--
-  ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
-  for this feature. Delete unused options and expand the chosen structure with
-  real paths (e.g., apps/admin, packages/something). The delivered plan must
-  not include Option labels.
--->
+### Source Code (affected paths)
 
 ```text
-# [REMOVE IF UNUSED] Option 1: Single project (DEFAULT)
-src/
-├── models/
-├── services/
-├── cli/
-└── lib/
-
-tests/
-├── contract/
-├── integration/
-└── unit/
-
-# [REMOVE IF UNUSED] Option 2: Web application (when "frontend" + "backend" detected)
 backend/
-├── src/
-│   ├── models/
-│   ├── services/
-│   └── api/
-└── tests/
+  src/
+    FinanceSentry.Modules.Auth/
+      Domain/Entities/
+        ApplicationUser.cs              # + GoogleId : string?
+        OAuthState.cs                   # NEW
+      Application/
+        Interfaces/
+          IGoogleOAuthService.cs        # NEW
+        Queries/
+          InitiateGoogleLoginQuery.cs   # NEW
+          InitiateGoogleLoginQueryHandler.cs  # NEW
+        Commands/
+          HandleGoogleCallbackCommand.cs      # NEW
+          HandleGoogleCallbackCommandHandler.cs  # NEW
+          LoginCommandHandler.cs        # MODIFIED (+GOOGLE_ACCOUNT_ONLY guard)
+      Infrastructure/
+        Persistence/
+          AuthDbContext.cs              # + OAuthStates DbSet
+          Migrations/
+            M007_GoogleId.*            # NEW
+            M008_GoogleOAuth.*         # NEW
+        Services/
+          GoogleOAuthOptions.cs        # NEW
+          GoogleOAuthService.cs        # NEW
+      API/Controllers/
+        AuthController.cs              # + /google/login + /google/callback actions
+    FinanceSentry.API/
+      Program.cs                       # + GoogleOAuth DI registrations
+      appsettings.json                 # + "GoogleOAuth" section (empty defaults)
 
-frontend/
-├── src/
-│   ├── components/
-│   ├── pages/
-│   └── services/
-└── tests/
+  tests/
+    FinanceSentry.Tests.Integration/Auth/
+      GoogleOAuthContractTests.cs      # NEW
 
-# [REMOVE IF UNUSED] Option 3: Mobile + API (when "iOS/Android" detected)
-api/
-└── [same as backend above]
+docker/
+  docker-compose.dev.yml               # + GOOGLEOAUTH__ env vars
 
-ios/ or android/
-└── [platform-specific structure: feature modules, UI flows, platform tests]
+frontend/src/app/modules/auth/
+  services/auth.service.ts             # + googleLogin() + handleOAuthCallback()
+  pages/
+    oauth-callback/                    # NEW — OAuthCallbackComponent
+    login/                             # MODIFIED — Google button + error messages
+    register/                          # MODIFIED — Google button
+  auth.routes.ts                       # + /auth/google/callback route
 ```
 
-**Structure Decision**: [Document the selected structure and reference the real
-directories captured above]
+**Structure Decision**: Web application (backend + frontend). All OAuth backend logic lives in `FinanceSentry.Modules.Auth` following the existing modular monolith pattern.
 
-## Complexity Tracking
+---
 
-> **Fill ONLY if Constitution Check has violations that must be justified**
+## Phase 0: Research
 
-| Violation | Why Needed | Simpler Alternative Rejected Because |
-|-----------|------------|-------------------------------------|
-| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
+See [research.md](research.md). All decisions resolved:
+- Authorization Code flow (server-side) — no new packages
+- CSRF via server-side `OAuthState` entity
+- Account linking: `GoogleId` match first, email fallback
+- Frontend: query-param callback pattern reusing existing `AuthService` token storage
+
+---
+
+## Phase 1: Design & Contracts
+
+- **Data model**: [data-model.md](data-model.md) — `ApplicationUser` + `GoogleId`, new `OAuthState` entity
+- **REST contracts**: [contracts/google-oauth.md](contracts/google-oauth.md) — GET /auth/google/login + /callback
+- **Quickstart**: [quickstart.md](quickstart.md) — local setup, env vars, test flows
