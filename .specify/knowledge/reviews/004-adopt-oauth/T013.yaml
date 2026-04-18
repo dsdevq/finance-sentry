@@ -3,7 +3,7 @@ feature: "004-adopt-oauth"
 reviewed_at: "2026-04-18"
 approved: true
 files_changed:
-  - "backend/src/FinanceSentry.Modules.Auth/API/Controllers/AuthController.cs"
+  - "backend/src/FinanceSentry.Modules.Auth/Application/Commands/VerifyGoogleCredentialCommand.cs (created)"
 violations: []
 new_rules: []
-next_task_notes: "/api/v1/auth already exempt in JwtAuthenticationMiddleware — no change needed there."
+next_task_notes: "Clean output. Matches LoginCommand pattern exactly."
