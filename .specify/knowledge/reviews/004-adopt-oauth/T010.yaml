@@ -3,8 +3,8 @@ feature: "004-adopt-oauth"
 reviewed_at: "2026-04-18"
 approved: true
 files_changed:
-  - "backend/src/FinanceSentry.Modules.Auth/Application/Queries/InitiateGoogleLoginQuery.cs"
-  - "backend/src/FinanceSentry.Modules.Auth/Application/Queries/InitiateGoogleLoginQueryHandler.cs"
+  - "frontend/package.json (added @types/google.accounts ^0.0.14 devDependency)"
+  - "frontend/src/index.html (added GSI script tag + updated CSP for accounts.google.com)"
 violations: []
 new_rules: []
-next_task_notes: ""
+next_task_notes: "npm install ran successfully. CSP updated to allow GSI script/frame/connect origins."

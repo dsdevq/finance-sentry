@@ -8,8 +8,9 @@
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self' http://localhost:5050; script-src 'self' cdn.plaid.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' http://localhost:5050 https://cdn.plaid.com; frame-src https://cdn.plaid.com;"
+      content="default-src 'self' http://localhost:5050; script-src 'self' cdn.plaid.com https://accounts.google.com/gsi/; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/; img-src 'self' data: https://lh3.googleusercontent.com; connect-src 'self' http://localhost:5050 https://cdn.plaid.com https://accounts.google.com/; frame-src https://cdn.plaid.com https://accounts.google.com/;"
     />
+    <script src="https://accounts.google.com/gsi/client" async></script>
   </head>
   <body>
     <fns-root></fns-root>

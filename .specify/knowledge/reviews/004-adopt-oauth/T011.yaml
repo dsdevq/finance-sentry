@@ -3,8 +3,9 @@ feature: "004-adopt-oauth"
 reviewed_at: "2026-04-18"
 approved: true
 files_changed:
-  - "backend/src/FinanceSentry.Modules.Auth/Application/Commands/HandleGoogleCallbackCommand.cs"
-  - "backend/src/FinanceSentry.Modules.Auth/Application/Commands/HandleGoogleCallbackCommandHandler.cs"
+  - "backend/src/FinanceSentry.API/appsettings.json (stripped GoogleOAuth to ClientId only)"
+  - "docker/docker-compose.dev.yml (removed CLIENTSECRET, REDIRECTURI, FRONTENDURL env vars)"
+  - "frontend/src/environments/environment.ts (added googleClientId field)"
 violations: []
 new_rules: []
-next_task_notes: "Uses InvalidOperationException(INVALID_OAUTH_STATE) matching existing controller exception-catch pattern."
+next_task_notes: "Config simplified. googleClientId uses the real Google client ID from docker/.env."
