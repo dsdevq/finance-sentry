@@ -1,0 +1,9 @@
+task_id: "T013"
+feature: "004-adopt-oauth"
+reviewed_at: "2026-04-18"
+approved: true
+files_changed:
+  - "backend/src/FinanceSentry.Modules.Auth/API/Controllers/AuthController.cs"
+violations: []
+new_rules: []
+next_task_notes: "/api/v1/auth already exempt in JwtAuthenticationMiddleware — no change needed there."

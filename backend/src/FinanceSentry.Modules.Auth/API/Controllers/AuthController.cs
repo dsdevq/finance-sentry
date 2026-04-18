@@ -1,17 +1,21 @@
 using FinanceSentry.Modules.Auth.Application.Commands;
 using FinanceSentry.Modules.Auth.Application.DTOs;
+using FinanceSentry.Modules.Auth.Application.Queries;
+using FinanceSentry.Modules.Auth.Infrastructure.Services;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using System.Security.Claims;
 
 namespace FinanceSentry.Modules.Auth.API.Controllers;
 
 [ApiController]
 [Route("auth")]
-public class AuthController(IMediator mediator) : ControllerBase
+public class AuthController(IMediator mediator, IOptions<GoogleOAuthOptions> googleOAuthOptions) : ControllerBase
 {
     private const string RefreshTokenCookie = "fs_refresh_token";
+    private readonly GoogleOAuthOptions _googleOAuthOptions = googleOAuthOptions.Value;
 
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] AuthRequest request)
@@ -35,6 +39,14 @@ public class AuthController(IMediator mediator) : ControllerBase
             var result = await mediator.Send(new LoginCommand(request.Email, request.Password));
             SetRefreshTokenCookie(result.RawRefreshToken);
             return Ok(result.Response);
+        }
+        catch (InvalidOperationException ex) when (ex.Message == "GOOGLE_ACCOUNT_ONLY")
+        {
+            return Unauthorized(new
+            {
+                error = "This account uses Google sign-in. Please use 'Continue with Google'.",
+                errorCode = "GOOGLE_ACCOUNT_ONLY"
+            });
         }
         catch (UnauthorizedAccessException)
         {
@@ -106,6 +118,44 @@ public class AuthController(IMediator mediator) : ControllerBase
         {
             DeleteRefreshTokenCookie();
             return Unauthorized(new { error = "Refresh token invalid or expired.", errorCode = "INVALID_REFRESH_TOKEN" });
+        }
+    }
+
+    [HttpGet("google/login")]
+    public async Task<IActionResult> GoogleLogin()
+    {
+        var authorizationUrl = await mediator.Send(new InitiateGoogleLoginQuery());
+        return Redirect(authorizationUrl);
+    }
+
+    [HttpGet("google/callback")]
+    public async Task<IActionResult> GoogleCallback(
+        [FromQuery] string? code,
+        [FromQuery] string? state,
+        [FromQuery] string? error)
+    {
+        if (!string.IsNullOrEmpty(error))
+            return Redirect($"{_googleOAuthOptions.FrontendUrl}/auth/callback?error=cancelled");
+
+        try
+        {
+            var result = await mediator.Send(
+                new HandleGoogleCallbackCommand(code ?? string.Empty, state ?? string.Empty));
+
+            SetRefreshTokenCookie(result.RawRefreshToken);
+
+            var r = result.Response;
+            var expiresAt = Uri.EscapeDataString(r.ExpiresAt.ToString("o"));
+            return Redirect(
+                $"{_googleOAuthOptions.FrontendUrl}/auth/callback?token={r.Token}&userId={r.UserId}&expiresAt={expiresAt}");
+        }
+        catch (InvalidOperationException ex) when (ex.Message == "INVALID_OAUTH_STATE")
+        {
+            return BadRequest(new
+            {
+                error = "Invalid or expired OAuth state.",
+                errorCode = "INVALID_OAUTH_STATE"
+            });
         }
     }
 
