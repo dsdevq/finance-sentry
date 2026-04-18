@@ -1,0 +1,47 @@
+# Claude Review Template
+# Copy this file to reviews/<feature>/<task-id>.yaml and fill in after each task.
+# Claude produces this output. Human saves it. Inject script reads new_rules.
+
+task_id: "T0.0"                       # e.g. T1.2
+feature: ""                            # e.g. 004-adopt-oauth
+reviewed_at: "YYYY-MM-DD"
+approved: false                        # true = Qwen output accepted as-is
+
+# Files changed in this task (from git diff --name-only)
+files_changed: []
+
+# Violations found in Qwen's output
+violations:
+  - rule_id: "ANG-001"                 # Existing rule ID from index.yaml
+    file: ""                           # Relative path
+    line: null                         # Line number or null
+    found: ""                          # What Qwen actually wrote
+    fix: ""                            # What it should be
+
+# Rules that should be added to index.yaml based on this review
+# Leave empty if no new rules discovered
+new_rules:
+  - id: ""                             # Next available ID in category (e.g. ANG-011)
+    category: []                       # e.g. [angular]
+    text: ""                           # One-line summary for index.yaml injection
+    detail: ""                         # Longer explanation for rules/<category>.md
+
+# Anti-patterns to document (goes into anti-patterns/)
+new_anti_patterns:
+  - id: ""                             # e.g. AP-001
+    title: ""
+    wrong: ""                          # Code snippet showing the wrong approach
+    correct: ""                        # Code snippet showing the correct approach
+    rule_ref: ""                       # Related rule ID
+
+# Examples to preserve (goes into examples/)
+# Use when Qwen produced a particularly clean implementation worth referencing
+new_examples:
+  - id: ""                             # e.g. EX-001
+    title: ""
+    description: ""
+    file: ""                           # File path in codebase
+    rule_ref: ""                       # Related rule ID
+
+# Notes for the next task brief (injected into QWEN.md before next task)
+next_task_notes: ""

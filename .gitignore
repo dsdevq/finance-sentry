@@ -1,3 +1,6 @@
+# MCP server config (local only)
+.mcp.json
+
 # Build outputs
 bin/
 obj/

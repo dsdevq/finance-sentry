@@ -1,0 +1,289 @@
+# Knowledge Store Index
+# Machine-readable index of all rules.
+# Used by inject-knowledge script to populate QWEN.md before task execution.
+#
+# Fields:
+#   id:           Unique rule identifier
+#   category:     One or more of: angular, backend, testing, versioning, architecture, security
+#   text:         One-line summary injected into QWEN.md
+#   source_file:  Path to full rule definition (relative to .specify/knowledge/)
+#   added:        ISO date rule was created
+#   enabled:      Set to false to disable without deleting
+#   fire_count:   Times this rule was violated (updated manually after reviews)
+#   last_fired:   ISO date of last violation (updated manually after reviews)
+
+rules:
+  # Angular
+  - id: ANG-001
+    category: [angular]
+    text: "Use inject() function for DI — never constructor parameter injection"
+    source_file: rules/angular.md
+    added: "2026-04-18"
+    enabled: true
+    fire_count: 0
+    last_fired: null
+
+  - id: ANG-002
+    category: [angular]
+    text: "All components must declare ChangeDetectionStrategy.OnPush"
+    source_file: rules/angular.md
+    added: "2026-04-18"
+    enabled: true
+    fire_count: 0
+    last_fired: null
+
+  - id: ANG-003
+    category: [angular]
+    text: "Host-app selector prefix is fns- (kebab-case); library components use cmn-"
+    source_file: rules/angular.md
+    added: "2026-04-18"
+    enabled: true
+    fire_count: 0
+    last_fired: null
+
+  - id: ANG-004
+    category: [angular]
+    text: "All class members need explicit public/private/protected modifier"
+    source_file: rules/angular.md
+    added: "2026-04-18"
+    enabled: true
+    fire_count: 0
+    last_fired: null
+
+  - id: ANG-005
+    category: [angular]
+    text: "No magic numbers — extract numeric literals to named constants"
+    source_file: rules/angular.md
+    added: "2026-04-18"
+    enabled: true
+    fire_count: 0
+    last_fired: null
+
+  - id: ANG-006
+    category: [angular]
+    text: "Properties camelCase (no underscore); static UPPER_CASE; module-level UPPER_CASE or camelCase"
+    source_file: rules/angular.md
+    added: "2026-04-18"
+    enabled: true
+    fire_count: 0
+    last_fired: null
+
+  - id: ANG-007
+    category: [angular]
+    text: "Run `cd frontend && npx eslint <file>` after every Angular .ts file — fix all errors before proceeding"
+    source_file: rules/angular.md
+    added: "2026-04-18"
+    enabled: true
+    fire_count: 0
+    last_fired: null
+
+  - id: ANG-008
+    category: [angular]
+    text: "New UI components go in @dsdevq-common/ui first — never build directly in frontend/"
+    source_file: rules/angular.md
+    added: "2026-04-18"
+    enabled: true
+    fire_count: 0
+    last_fired: null
+
+  - id: ANG-009
+    category: [angular]
+    text: "No NgModules — Angular 20 uses standalone components exclusively (standalone: true)"
+    source_file: rules/angular.md
+    added: "2026-04-18"
+    enabled: true
+    fire_count: 0
+    last_fired: null
+
+  - id: ANG-010
+    category: [angular]
+    text: "Import order: third-party → @angular/* → project absolute → project relative (run eslint --fix to auto-sort)"
+    source_file: rules/angular.md
+    added: "2026-04-18"
+    enabled: true
+    fire_count: 0
+    last_fired: null
+
+  # Backend
+  - id: BE-001
+    category: [backend, architecture]
+    text: "External integrations must go through domain interfaces (IBankProvider, IBrokerAdapter) — no concrete adapters in business logic"
+    source_file: rules/backend.md
+    added: "2026-04-18"
+    enabled: true
+    fire_count: 0
+    last_fired: null
+
+  - id: BE-002
+    category: [backend, architecture]
+    text: "No cross-module direct coupling — communicate through service boundaries only"
+    source_file: rules/backend.md
+    added: "2026-04-18"
+    enabled: true
+    fire_count: 0
+    last_fired: null
+
+  - id: BE-003
+    category: [backend]
+    text: "Each integration module owns its own sync, error handling, and retry logic"
+    source_file: rules/backend.md
+    added: "2026-04-18"
+    enabled: true
+    fire_count: 0
+    last_fired: null
+
+  - id: BE-004
+    category: [backend, security]
+    text: "Financial data encrypted at rest (AES-256) and in transit (TLS) — no plaintext in logs or DB"
+    source_file: rules/backend.md
+    added: "2026-04-18"
+    enabled: true
+    fire_count: 0
+    last_fired: null
+
+  - id: BE-005
+    category: [backend, security]
+    text: "Auth enforced on all endpoints except: /health, /api/v1/health, /swagger, /api/webhook, /hangfire"
+    source_file: rules/backend.md
+    added: "2026-04-18"
+    enabled: true
+    fire_count: 0
+    last_fired: null
+
+  - id: BE-006
+    category: [backend, security]
+    text: "All DB queries, cache keys, and reports must be filtered by authenticated user ID"
+    source_file: rules/backend.md
+    added: "2026-04-18"
+    enabled: true
+    fire_count: 0
+    last_fired: null
+
+  - id: BE-007
+    category: [backend, security]
+    text: "Secrets (API keys, tokens, passwords, account numbers) must never appear in logs"
+    source_file: rules/backend.md
+    added: "2026-04-18"
+    enabled: true
+    fire_count: 0
+    last_fired: null
+
+  # Testing
+  - id: TEST-001
+    category: [testing]
+    text: "Unit tests required for all business logic — >80% coverage target (xUnit backend, Vitest frontend)"
+    source_file: rules/testing.md
+    added: "2026-04-18"
+    enabled: true
+    fire_count: 0
+    last_fired: null
+
+  - id: TEST-002
+    category: [testing]
+    text: "Integration tests required for all inter-module contracts and API boundaries"
+    source_file: rules/testing.md
+    added: "2026-04-18"
+    enabled: true
+    fire_count: 0
+    last_fired: null
+
+  - id: TEST-003
+    category: [testing]
+    text: "Contract tests required for every external API integration (Plaid, IB, Binance)"
+    source_file: rules/testing.md
+    added: "2026-04-18"
+    enabled: true
+    fire_count: 0
+    last_fired: null
+
+  - id: TEST-004
+    category: [testing]
+    text: "Contract test required for every new REST endpoint — must ship in the same PR"
+    source_file: rules/testing.md
+    added: "2026-04-18"
+    enabled: true
+    fire_count: 0
+    last_fired: null
+
+  - id: TEST-005
+    category: [testing]
+    text: "TDD — write tests first, watch them fail, then implement"
+    source_file: rules/testing.md
+    added: "2026-04-18"
+    enabled: true
+    fire_count: 0
+    last_fired: null
+
+  # Versioning
+  - id: VER-001
+    category: [versioning]
+    text: "Bump frontend/package.json version for any Angular component/service/model change"
+    source_file: rules/versioning.md
+    added: "2026-04-18"
+    enabled: true
+    fire_count: 0
+    last_fired: null
+
+  - id: VER-002
+    category: [versioning]
+    text: "Bump FinanceSentry.API.csproj <Version> for any REST API contract change"
+    source_file: rules/versioning.md
+    added: "2026-04-18"
+    enabled: true
+    fire_count: 0
+    last_fired: null
+
+  - id: VER-003
+    category: [versioning]
+    text: "Create GitHub tag after merge to main (frontend-vX.Y.Z or backend-vX.Y.Z)"
+    source_file: rules/versioning.md
+    added: "2026-04-18"
+    enabled: true
+    fire_count: 0
+    last_fired: null
+
+  # Architecture
+  - id: ARCH-001
+    category: [architecture]
+    text: "Modular monolith with DDD layers: Domain / Application (MediatR) / Infrastructure / API"
+    source_file: rules/architecture.md
+    added: "2026-04-18"
+    enabled: true
+    fire_count: 0
+    last_fired: null
+
+  - id: ARCH-002
+    category: [architecture]
+    text: "Modules independently testable — shared code in shared kernel, not in any single module"
+    source_file: rules/architecture.md
+    added: "2026-04-18"
+    enabled: true
+    fire_count: 0
+    last_fired: null
+
+  - id: ARCH-003
+    category: [architecture]
+    text: "CQRS via MediatR — controllers dispatch only, zero business logic in controllers"
+    source_file: rules/architecture.md
+    added: "2026-04-18"
+    enabled: true
+    fire_count: 0
+    last_fired: null
+
+  - id: ARCH-004
+    category: [architecture]
+    text: "Never change Host=postgres to localhost - fix Docker instead. Never modify connection strings as workarounds."
+    source_file: rules/architecture.md
+    added: "2026-04-18"
+    enabled: true
+    fire_count: 0
+    last_fired: null
+
+  - id: ARCH-005
+    category: [architecture]
+    text: "No markdown files at repo root except README.md and CLAUDE.md"
+    source_file: rules/architecture.md
+    added: "2026-04-18"
+    enabled: true
+    fire_count: 0
+    last_fired: null

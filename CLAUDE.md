@@ -138,6 +138,21 @@ After writing or modifying **any** Angular `.ts` file, run `npx eslint <file>` f
 
 ---
 
+## AI Development Pipeline
+
+This project uses a two-model pipeline. See [`.specify/memory/pipeline.md`](.specify/memory/pipeline.md) for full details.
+
+**Claude** = planner + orchestrator + reviewer (this session).
+**Qwen2.5-coder:14b** (local Ollama) = implementer, called via the `qwen-code` MCP server.
+
+- MCP config: `.mcp.json` + `.claude/settings.json` → `enabledMcpjsonServers: ["qwen-code"]`
+- MCP is only active in **new sessions** — check `/mcp` to confirm it loaded
+- Knowledge rules live in `.specify/knowledge/index.yaml` (30 rules); inject into QWEN.md with `py .specify/integrations/qwen/scripts/inject-knowledge.py`
+- Per-task loop: Claude calls Qwen MCP → reads diff → reviews inline → approves or requests fix → commits → next task
+- Reviews saved to `.specify/knowledge/reviews/<feature>/<task>.yaml`
+
+---
+
 ## Collaboration Style
 
 - Responses must be short and direct. No trailing summaries — Denys can read the diff.
