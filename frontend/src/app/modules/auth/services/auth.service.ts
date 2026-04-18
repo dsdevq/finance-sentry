@@ -67,6 +67,17 @@ export class AuthService {
     }
   }
 
+  public googleLogin(): void {
+    window.location.href = '/api/v1/auth/google/login';
+  }
+
+  public handleOAuthCallback(token: string, userId: string, expiresAt: string): void {
+    this.storeToken(token);
+    localStorage.setItem('fs_user_id', userId);
+    localStorage.setItem('fs_token_expires_at', expiresAt);
+    void this.router.navigate(['/accounts']);
+  }
+
   public logout(): void {
     this.http
       .post(`${this.apiUrl}/logout`, null, {withCredentials: true})
