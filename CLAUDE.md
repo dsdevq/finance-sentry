@@ -155,6 +155,23 @@ This project uses a two-model pipeline. See [`.specify/memory/pipeline.md`](.spe
 
 ---
 
+## QA — End-to-End Testing After Implementation
+
+After **all tasks in a feature are complete**, act as a QA engineer: spin up the app and test the feature through the browser using Playwright MCP.
+
+**Steps (mandatory):**
+1. Ensure the full Docker stack is running: `cd docker && docker compose -f docker-compose.dev.yml up -d`
+2. Wait for health check: `GET http://localhost:5000/api/v1/health` → `{"status":"healthy"}`
+3. Open `http://localhost:4200` via Playwright
+4. Navigate the golden path of the feature as a real user would — click buttons, fill forms, follow redirects
+5. Also test key error/edge cases (invalid input, cancelled flows, etc.)
+6. Report findings: what passed, what failed, screenshots of any broken state
+7. If bugs are found, fix them (via Qwen) before declaring the feature done
+
+**Tools:** Use `mcp__plugin_playwright_playwright__browser_*` tools — snapshot first, screenshot only when visual proof is needed.
+
+---
+
 ## Collaboration Style
 
 - Responses must be short and direct. No trailing summaries — Denys can read the diff.
