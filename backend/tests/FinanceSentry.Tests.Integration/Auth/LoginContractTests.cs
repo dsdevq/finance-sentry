@@ -138,6 +138,10 @@ public class AuthApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Jwt:Secret",
             "test-jwt-secret-key-for-integration-tests-minimum-32-chars");
         builder.UseSetting("Jwt:ExpiryMinutes", "60");
+        builder.UseSetting("GoogleOAuth:ClientId", "test-client-id");
+        builder.UseSetting("GoogleOAuth:ClientSecret", "test-client-secret");
+        builder.UseSetting("GoogleOAuth:RedirectUri", "http://localhost:5000/api/v1/auth/google/callback");
+        builder.UseSetting("GoogleOAuth:FrontendUrl", "http://localhost:4200");
     }
 
     public async Task EnsureUserExistsAsync(string email, string password)
