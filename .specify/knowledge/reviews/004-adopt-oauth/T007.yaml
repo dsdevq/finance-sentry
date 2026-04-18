@@ -1,0 +1,9 @@
+task_id: "T007"
+feature: "004-adopt-oauth"
+reviewed_at: "2026-04-18"
+approved: true
+files_changed:
+  - "backend/src/FinanceSentry.Modules.Auth/Infrastructure/Services/GoogleOAuthService.cs"
+violations: []
+new_rules: []
+next_task_notes: "Qwen connection error — written directly. Build succeeded."
