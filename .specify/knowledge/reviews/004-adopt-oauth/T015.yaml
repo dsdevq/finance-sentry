@@ -1,0 +1,10 @@
+task_id: "T015"
+feature: "004-adopt-oauth"
+reviewed_at: "2026-04-18"
+approved: true
+files_changed:
+  - "frontend/src/app/modules/auth/pages/oauth-callback/oauth-callback.component.ts"
+  - "frontend/src/app/modules/auth/pages/oauth-callback/oauth-callback.component.html"
+violations: []
+new_rules: []
+next_task_notes: ""
