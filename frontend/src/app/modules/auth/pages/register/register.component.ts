@@ -97,6 +97,10 @@ export class RegisterComponent {
     return '';
   }
 
+  public googleLogin(): void {
+    this.authService.googleLogin();
+  }
+
   public onSubmit(): void {
     if (this.form.invalid) {
       return;
