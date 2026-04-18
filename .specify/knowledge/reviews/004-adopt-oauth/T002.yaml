@@ -1,0 +1,9 @@
+task_id: "T002"
+feature: "004-adopt-oauth"
+reviewed_at: "2026-04-18"
+approved: true
+files_changed:
+  - "backend/src/FinanceSentry.Modules.Auth/Domain/Entities/OAuthState.cs"
+violations: []
+new_rules: []
+next_task_notes: "Qwen generated constructor-based State auto-generation; overridden to public setters for EF Core compatibility — T010 generates state externally."
