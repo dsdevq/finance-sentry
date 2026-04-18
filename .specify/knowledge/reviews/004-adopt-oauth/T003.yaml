@@ -1,0 +1,14 @@
+task_id: "T003"
+feature: "004-adopt-oauth"
+reviewed_at: "2026-04-18"
+approved: true
+files_changed:
+  - "backend/src/FinanceSentry.Modules.Auth/Infrastructure/Persistence/AuthDbContext.cs"
+violations:
+  - rule_id: "EF-CORE-API"
+    file: "AuthDbContext.cs"
+    line: 0
+    found: "HasDatabaseGeneratedOption(DatabaseGeneratedOption.None) — EF6 API, does not exist in EF Core"
+    fix: "Use entity.Property(s => s.State).HasMaxLength(64).IsRequired() + entity.HasIndex(s => s.State).IsUnique()"
+new_rules: []
+next_task_notes: "Qwen used EF6 HasDatabaseGeneratedOption; corrected to EF Core API."
