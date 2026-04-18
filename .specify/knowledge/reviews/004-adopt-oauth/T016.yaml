@@ -1,0 +1,11 @@
+task_id: "T016"
+feature: "004-adopt-oauth"
+reviewed_at: "2026-04-18"
+approved: true
+files_changed:
+  - "frontend/src/app/modules/auth/pages/login/login.component.ts"
+  - "frontend/src/app/modules/auth/pages/login/login.component.html"
+  - "frontend/src/assets/icons/google.svg"
+violations: []
+new_rules: []
+next_task_notes: ""
