@@ -1,0 +1,9 @@
+task_id: "T018"
+feature: "004-adopt-oauth"
+reviewed_at: "2026-04-18"
+approved: true
+files_changed:
+  - "frontend/src/app/app.routes.ts"
+violations: []
+new_rules: []
+next_task_notes: "No separate auth.routes.ts exists — route added directly to app.routes.ts. No auth guard — correct (it IS the auth landing)."
