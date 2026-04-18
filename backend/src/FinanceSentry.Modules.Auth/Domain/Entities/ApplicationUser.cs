@@ -4,4 +4,5 @@ namespace FinanceSentry.Modules.Auth.Domain.Entities;
 
 public class ApplicationUser : IdentityUser
 {
+    public string? GoogleId { get; set; }
 }
