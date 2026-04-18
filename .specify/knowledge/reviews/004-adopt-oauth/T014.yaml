@@ -3,7 +3,7 @@ feature: "004-adopt-oauth"
 reviewed_at: "2026-04-18"
 approved: true
 files_changed:
-  - "frontend/src/app/modules/auth/services/auth.service.ts"
+  - "backend/src/FinanceSentry.Modules.Auth/Infrastructure/Persistence/AuthDbContext.cs (modified)"
 violations: []
 new_rules: []
-next_task_notes: "ESLint rule /^_$/u requires single underscore for unused args — can't have two. Resolved by storing userId + expiresAt in localStorage."
+next_task_notes: "OAuthStates DbSet and entity config removed. RefreshTokens unchanged."
