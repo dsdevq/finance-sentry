@@ -1,0 +1,9 @@
+task_id: "T008"
+feature: "004-adopt-oauth"
+reviewed_at: "2026-04-18"
+approved: true
+files_changed:
+  - "backend/src/FinanceSentry.API/Program.cs"
+violations: []
+new_rules: []
+next_task_notes: ""

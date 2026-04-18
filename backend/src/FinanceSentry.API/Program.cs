@@ -99,6 +99,11 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 builder.Services.AddSingleton<ITokenService, JwtTokenService>();
 builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
 
+// ── Google OAuth ─────────────────────────────────────────────────────────────
+builder.Services.Configure<GoogleOAuthOptions>(builder.Configuration.GetSection("GoogleOAuth"));
+builder.Services.AddHttpClient("google");
+builder.Services.AddScoped<IGoogleOAuthService, GoogleOAuthService>();
+
 // ── Repositories ─────────────────────────────────────────────────────────────
 builder.Services.AddScoped<IBankAccountRepository, BankAccountRepository>();
 builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
