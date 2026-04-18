@@ -1,0 +1,11 @@
+task_id: "T004"
+feature: "004-adopt-oauth"
+reviewed_at: "2026-04-18"
+approved: true
+files_changed:
+  - "backend/src/FinanceSentry.Modules.Auth/Infrastructure/Persistence/Migrations/20260418201027_M008_GoogleOAuth.cs"
+  - "backend/src/FinanceSentry.Modules.Auth/Infrastructure/Persistence/Migrations/20260418201027_M008_GoogleOAuth.Designer.cs"
+  - "backend/src/FinanceSentry.Modules.Auth/Infrastructure/Persistence/Migrations/AuthDbContextModelSnapshot.cs"
+violations: []
+new_rules: []
+next_task_notes: ""
