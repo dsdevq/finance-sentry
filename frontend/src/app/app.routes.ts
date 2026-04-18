@@ -17,13 +17,6 @@ export const APP_ROUTES: Routes = [
     canActivate: [guestGuard],
   },
   {
-    path: 'auth/callback',
-    loadComponent: () =>
-      import('./modules/auth/pages/oauth-callback/oauth-callback.component').then(
-        m => m.OAuthCallbackComponent
-      ),
-  },
-  {
     path: 'accounts',
     loadChildren: () =>
       import('./modules/bank-sync/bank-sync.routes').then(({BANK_SYNC_ROUTES}) => BANK_SYNC_ROUTES),

@@ -1,0 +1,19 @@
+task_id: "T001-T008"
+feature: "004-adopt-oauth"
+reviewed_at: "2026-04-18"
+approved: true
+files_changed:
+  - "backend/src/FinanceSentry.Modules.Auth/Domain/Entities/OAuthState.cs (deleted)"
+  - "backend/src/FinanceSentry.Modules.Auth/Application/Interfaces/IGoogleOAuthService.cs (deleted)"
+  - "backend/src/FinanceSentry.Modules.Auth/Infrastructure/Services/GoogleOAuthOptions.cs (deleted)"
+  - "backend/src/FinanceSentry.Modules.Auth/Infrastructure/Services/GoogleOAuthService.cs (deleted)"
+  - "backend/src/FinanceSentry.Modules.Auth/Application/Queries/InitiateGoogleLoginQuery.cs (deleted)"
+  - "backend/src/FinanceSentry.Modules.Auth/Application/Queries/InitiateGoogleLoginQueryHandler.cs (deleted)"
+  - "backend/src/FinanceSentry.Modules.Auth/Application/Commands/HandleGoogleCallbackCommand.cs (deleted)"
+  - "backend/src/FinanceSentry.Modules.Auth/Application/Commands/HandleGoogleCallbackCommandHandler.cs (deleted)"
+  - "backend/tests/FinanceSentry.Tests.Integration/Auth/GoogleOAuthContractTests.cs (deleted)"
+  - "frontend/src/app/modules/auth/pages/oauth-callback/ (deleted)"
+  - "frontend/src/app/app.routes.ts (modified)"
+violations: []
+new_rules: []
+next_task_notes: "All Phase 1 cleanup complete. Build will fail until Phase 2 resolves dangling references in AuthController, Program.cs, and AuthDbContext."
