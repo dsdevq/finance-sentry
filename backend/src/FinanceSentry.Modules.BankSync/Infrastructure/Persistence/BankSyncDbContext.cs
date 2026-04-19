@@ -32,7 +32,7 @@ public class BankSyncDbContext(DbContextOptions<BankSyncDbContext> options) : Db
 
         bankAccountBuilder.Property(ba => ba.PlaidItemId)
             .IsRequired()
-            .HasMaxLength(24);
+            .HasMaxLength(64);
 
         bankAccountBuilder.Property(ba => ba.BankName)
             .IsRequired()

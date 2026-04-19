@@ -1,8 +1,14 @@
 import {Injectable} from '@angular/core';
 
+export interface PlaidSuccessMetadata {
+  institution: {name: string; institution_id: string} | null;
+  accounts: {id: string; name: string; mask: string; type: string; subtype: string}[];
+  link_session_id: string;
+}
+
 export interface PlaidLinkOptions {
   token: string;
-  onSuccess: (publicToken: string, metadata: unknown) => void;
+  onSuccess: (publicToken: string, metadata: PlaidSuccessMetadata) => void;
   onExit?: (err: unknown, metadata: unknown) => void;
   onLoad?: () => void;
   onEvent?: (eventName: string, metadata: unknown) => void;

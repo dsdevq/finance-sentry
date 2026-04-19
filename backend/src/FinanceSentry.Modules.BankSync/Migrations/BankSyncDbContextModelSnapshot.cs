@@ -124,8 +124,8 @@ namespace FinanceSentry.Modules.BankSync.Migrations
 
                     b.Property<string>("PlaidItemId")
                         .IsRequired()
-                        .HasMaxLength(24)
-                        .HasColumnType("character varying(24)");
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.Property<string>("SyncStatus")
                         .IsRequired()

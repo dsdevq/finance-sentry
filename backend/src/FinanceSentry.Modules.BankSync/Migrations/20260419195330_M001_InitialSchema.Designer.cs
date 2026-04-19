@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FinanceSentry.Modules.BankSync.Migrations
 {
     [DbContext(typeof(BankSyncDbContext))]
-    [Migration("20260411200154_M007_PendingModelSync")]
-    partial class M007_PendingModelSync
+    [Migration("20260419195330_M001_InitialSchema")]
+    partial class M001_InitialSchema
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -127,8 +127,8 @@ namespace FinanceSentry.Modules.BankSync.Migrations
 
                     b.Property<string>("PlaidItemId")
                         .IsRequired()
-                        .HasMaxLength(24)
-                        .HasColumnType("character varying(24)");
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.Property<string>("SyncStatus")
                         .IsRequired()
@@ -194,6 +194,9 @@ namespace FinanceSentry.Modules.BankSync.Migrations
 
                     b.Property<DateTime?>("LastUsedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PlaidSyncCursor")
+                        .HasColumnType("text");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");

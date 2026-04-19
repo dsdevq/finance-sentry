@@ -54,9 +54,13 @@ export class BankSyncService {
     return this.http.post<ConnectResponse>(`${this.baseUrl}/connect`, {});
   }
 
-  public exchangePublicToken(publicToken: string): Observable<LinkAccountResponse> {
+  public exchangePublicToken(
+    publicToken: string,
+    institutionName: string
+  ): Observable<LinkAccountResponse> {
     return this.http.post<LinkAccountResponse>(`${this.baseUrl}/link`, {
       publicToken,
+      institutionName,
     });
   }
 

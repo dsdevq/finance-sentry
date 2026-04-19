@@ -10,7 +10,11 @@ import {
 import {Router} from '@angular/router';
 
 import {BankSyncService} from '../../services/bank-sync.service';
-import {PlaidHandler, PlaidLinkService} from '../../services/plaid-link.service';
+import {
+  PlaidHandler,
+  PlaidLinkService,
+  PlaidSuccessMetadata,
+} from '../../services/plaid-link.service';
 
 @Component({
   selector: 'fns-connect-account',
@@ -55,7 +59,7 @@ export class ConnectAccountComponent implements OnInit, OnDestroy {
         next: res => {
           this.plaidHandler = this.plaidLinkService.create({
             token: res.linkToken,
-            onSuccess: publicToken => this.onPlaidSuccess(publicToken),
+            onSuccess: (publicToken, metadata) => this.onPlaidSuccess(publicToken, metadata),
             onExit: err => this.onPlaidExit(err),
           });
           this.isLoading = false;
@@ -79,12 +83,13 @@ export class ConnectAccountComponent implements OnInit, OnDestroy {
     this.plaidHandler?.open();
   }
 
-  private onPlaidSuccess(publicToken: string): void {
+  private onPlaidSuccess(publicToken: string, metadata: PlaidSuccessMetadata): void {
     this.isSyncing = true;
     this.statusMessage = 'Linking your account...';
     this.cdr.markForCheck();
 
-    this.bankSyncService.exchangePublicToken(publicToken).subscribe({
+    const institutionName = metadata.institution?.name ?? 'Unknown';
+    this.bankSyncService.exchangePublicToken(publicToken, institutionName).subscribe({
       next: () => {
         this.statusMessage = 'Account linked! Syncing transaction history...';
         this.cdr.markForCheck();
