@@ -42,6 +42,12 @@ public class EncryptedCredential : Entity
     public DateTime? LastUsedAt { get; set; }
 
     /// <summary>
+    /// Plaid /transactions/sync cursor — null means never synced (will do full initial sync).
+    /// Updated after each successful sync page.
+    /// </summary>
+    public string? PlaidSyncCursor { get; set; }
+
+    /// <summary>
     /// Navigation property to parent account.
     /// </summary>
     public BankAccount? Account { get; set; }

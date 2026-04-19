@@ -1,5 +1,6 @@
 namespace FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
 
+using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -30,13 +31,13 @@ public class PlaidHttpClient(HttpClient http, IConfiguration config) : IPlaidCli
             user = new { client_user_id = userId },
             client_name = "Finance Sentry",
             products = new[] { "transactions" },
-            country_codes = new[] { "IE", "UA", "GB", "US" },
+            country_codes = new[] { "US" },
             language = "en"
         };
 
         var response = await PostAsync<PlaidLinkTokenRaw>("/link/token/create", body, ct);
-        return new PlaidLinkTokenResponse(response.LinkToken, response.RequestId,
-            DateTime.UtcNow.AddMinutes(30));
+        var expiration = DateTime.Parse(response.Expiration, null, DateTimeStyles.RoundtripKind);
+        return new PlaidLinkTokenResponse(response.LinkToken, response.RequestId, expiration);
     }
 
     public async Task<PlaidExchangeTokenResponse> ExchangePublicTokenAsync(string publicToken, CancellationToken ct = default)
@@ -54,32 +55,48 @@ public class PlaidHttpClient(HttpClient http, IConfiguration config) : IPlaidCli
             a.AccountId, a.Name, a.OfficialName ?? a.Name,
             a.Type, a.Subtype ?? a.Type, a.Mask ?? "0000",
             a.Balances?.Current, a.Balances?.Available,
-            a.Balances?.IsoCurrencyCode ?? "EUR")).ToList();
+            a.Balances?.IsoCurrencyCode ?? "USD")).ToList();
         return new PlaidAccountsResponse(accounts, response.RequestId);
     }
 
-    public async Task<PlaidTransactionsResponse> GetTransactionsAsync(
-        string accessToken, DateTime startDate, DateTime endDate,
-        int offset = 0, int count = 500, CancellationToken ct = default)
+    /// <summary>
+    /// Fetches all incremental changes via /transactions/sync.
+    /// Paginates automatically until has_more = false, collecting all added/modified/removed.
+    /// Pass null cursor for the initial full sync.
+    /// </summary>
+    public async Task<PlaidSyncResponse> SyncTransactionsAsync(
+        string accessToken, string? cursor = null, int count = 500, CancellationToken ct = default)
     {
-        var body = new
+        var allAdded = new List<PlaidTransaction>();
+        var allModified = new List<PlaidTransaction>();
+        var allRemoved = new List<string>();
+        var nextCursor = cursor ?? string.Empty;
+        string requestId = string.Empty;
+
+        bool hasMore;
+        do
         {
-            client_id = _clientId,
-            secret = _secret,
-            access_token = accessToken,
-            start_date = startDate.ToString("yyyy-MM-dd"),
-            end_date = endDate.ToString("yyyy-MM-dd"),
-            options = new { offset, count }
-        };
-        var response = await PostAsync<PlaidTransactionsRaw>("/transactions/get", body, ct);
-        var txns = response.Transactions.Select(t => new PlaidTransaction(
-            t.TransactionId, t.AccountId, t.Amount,
-            t.IsoCurrencyCode, t.Name, t.MerchantName,
-            t.PersonalFinanceCategory?.Primary,
-            DateTime.Parse(t.Date),
-            t.AuthorizedDate != null ? DateTime.Parse(t.AuthorizedDate) : null,
-            t.Pending)).ToList();
-        return new PlaidTransactionsResponse(txns, response.TotalTransactions, response.RequestId);
+            var body = new
+            {
+                client_id = _clientId,
+                secret = _secret,
+                access_token = accessToken,
+                cursor = string.IsNullOrEmpty(nextCursor) ? null : nextCursor,
+                count
+            };
+
+            var page = await PostAsync<PlaidSyncRaw>("/transactions/sync", body, ct);
+            requestId = page.RequestId;
+            nextCursor = page.NextCursor;
+            hasMore = page.HasMore;
+
+            allAdded.AddRange(page.Added.Select(MapTransaction));
+            allModified.AddRange(page.Modified.Select(MapTransaction));
+            allRemoved.AddRange(page.Removed.Select(r => r.TransactionId));
+        }
+        while (hasMore);
+
+        return new PlaidSyncResponse(allAdded, allModified, allRemoved, nextCursor, false, requestId);
     }
 
     public async Task RevokeAccessAsync(string accessToken, CancellationToken ct = default)
@@ -87,6 +104,14 @@ public class PlaidHttpClient(HttpClient http, IConfiguration config) : IPlaidCli
         var body = new { client_id = _clientId, secret = _secret, access_token = accessToken };
         await PostAsync<PlaidRevokeRaw>("/item/remove", body, ct);
     }
+
+    private static PlaidTransaction MapTransaction(PlaidTransactionRaw t) => new(
+        t.TransactionId, t.AccountId, t.Amount,
+        t.IsoCurrencyCode, t.Name, t.MerchantName,
+        t.PersonalFinanceCategory?.Primary,
+        DateTime.Parse(t.Date, null, DateTimeStyles.AssumeUniversal),
+        t.AuthorizedDate != null ? DateTime.Parse(t.AuthorizedDate, null, DateTimeStyles.AssumeUniversal) : null,
+        t.Pending);
 
     private async Task<T> PostAsync<T>(string path, object body, CancellationToken ct)
     {
@@ -104,10 +129,11 @@ public class PlaidHttpClient(HttpClient http, IConfiguration config) : IPlaidCli
         return (await response.Content.ReadFromJsonAsync<T>(JsonOpts, ct))!;
     }
 
-    // ── Raw Plaid JSON shapes (snake_case from API) ──────────────────────────
+    // ── Raw Plaid JSON shapes ────────────────────────────────────────────────
 
     private record PlaidLinkTokenRaw(
         [property: JsonPropertyName("link_token")] string LinkToken,
+        [property: JsonPropertyName("expiration")] string Expiration,
         [property: JsonPropertyName("request_id")] string RequestId);
 
     private record PlaidExchangeRaw(
@@ -133,10 +159,16 @@ public class PlaidHttpClient(HttpClient http, IConfiguration config) : IPlaidCli
         [property: JsonPropertyName("available")] decimal? Available,
         [property: JsonPropertyName("iso_currency_code")] string? IsoCurrencyCode);
 
-    private record PlaidTransactionsRaw(
-        [property: JsonPropertyName("transactions")] List<PlaidTransactionRaw> Transactions,
-        [property: JsonPropertyName("total_transactions")] int TotalTransactions,
+    private record PlaidSyncRaw(
+        [property: JsonPropertyName("added")] List<PlaidTransactionRaw> Added,
+        [property: JsonPropertyName("modified")] List<PlaidTransactionRaw> Modified,
+        [property: JsonPropertyName("removed")] List<PlaidRemovedRaw> Removed,
+        [property: JsonPropertyName("next_cursor")] string NextCursor,
+        [property: JsonPropertyName("has_more")] bool HasMore,
         [property: JsonPropertyName("request_id")] string RequestId);
+
+    private record PlaidRemovedRaw(
+        [property: JsonPropertyName("transaction_id")] string TransactionId);
 
     private record PlaidTransactionRaw(
         [property: JsonPropertyName("transaction_id")] string TransactionId,

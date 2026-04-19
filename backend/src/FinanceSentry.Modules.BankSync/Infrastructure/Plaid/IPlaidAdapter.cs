@@ -19,11 +19,13 @@ public interface IPlaidAdapter
         string accessToken, CancellationToken ct = default);
 
     /// <summary>
-    /// Returns transaction candidates for a given account + user, ready for deduplication.
+    /// Fetches incremental transaction changes for an account via /transactions/sync.
+    /// Returns new candidates (added + modified mapped to domain) and the updated cursor to persist.
+    /// Pass null cursor for the initial full sync.
     /// </summary>
-    Task<IReadOnlyList<TransactionCandidate>> GetTransactionsAsync(
+    Task<(IReadOnlyList<TransactionCandidate> Candidates, string NextCursor)> SyncTransactionsAsync(
         string accessToken, Guid accountId, Guid userId,
-        DateTime startDate, DateTime endDate, CancellationToken ct = default);
+        string? cursor, CancellationToken ct = default);
 
     /// <summary>Revokes access — called when user disconnects their bank account.</summary>
     Task RevokeAccessAsync(string accessToken, CancellationToken ct = default);

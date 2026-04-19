@@ -44,28 +44,33 @@ public class PlaidAdapter(IPlaidClient client) : IPlaidAdapter
     }
 
     /// <summary>
-    /// Returns transaction candidates for a given account + user, ready for deduplication.
-    /// Handles pending/posted distinction per TransactionDeduplicationService contract.
+    /// Fetches incremental transaction changes via /transactions/sync.
+    /// Plaid amount sign: positive = outflow (debit), negative = inflow (credit).
+    /// Returns mapped candidates plus the next cursor to persist for future incremental syncs.
     /// </summary>
-    public async Task<IReadOnlyList<TransactionCandidate>> GetTransactionsAsync(
+    public async Task<(IReadOnlyList<TransactionCandidate> Candidates, string NextCursor)> SyncTransactionsAsync(
         string accessToken, Guid accountId, Guid userId,
-        DateTime startDate, DateTime endDate, CancellationToken ct = default)
+        string? cursor, CancellationToken ct = default)
     {
-        var response = await _client.GetTransactionsAsync(accessToken, startDate, endDate, 0, 500, ct);
-        return response.Transactions
+        var response = await _client.SyncTransactionsAsync(accessToken, cursor, ct: ct);
+
+        // added + modified both map to upsert candidates; removed are handled by dedup (ignored if not persisted)
+        var candidates = response.Added.Concat(response.Modified)
             .Select(t => new TransactionCandidate(
                 AccountId: accountId,
                 UserId: userId,
-                Amount: Math.Abs(t.Amount), // Plaid uses negative for debits
+                Amount: Math.Abs(t.Amount),
                 TransactionDate: t.AuthorizedDate ?? t.Date,
                 PostedDate: t.Pending ? null : t.Date,
                 Description: t.Name,
                 IsPending: t.Pending,
-                TransactionType: t.Amount < 0 ? "debit" : "credit",
+                TransactionType: t.Amount > 0 ? "debit" : "credit",
                 MerchantName: t.MerchantName,
                 MerchantCategory: t.PersonalFinanceCategory,
                 PlaidTransactionId: t.TransactionId))
             .ToList();
+
+        return (candidates, response.NextCursor);
     }
 
     /// <summary>Revokes access — called when user disconnects their bank account.</summary>

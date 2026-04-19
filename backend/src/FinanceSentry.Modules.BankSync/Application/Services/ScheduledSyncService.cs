@@ -88,15 +88,9 @@ public class ScheduledSyncService(
             var accessToken = _encryption.Decrypt(cred.EncryptedData, cred.Iv, cred.AuthTag, cred.KeyVersion);
             _logger.CredentialAccessed(job.CorrelationId ?? job.Id.ToString(), accountId);
 
-            // 5. Determine date range: since last sync or last 30 days
-            var latestJob = await _syncJobs.GetLatestByAccountIdAsync(accountId, ct);
-            var since = latestJob?.LastTransactionDate?.AddDays(-1)  // overlap by 1 day for safety
-                        ?? DateTime.UtcNow.AddDays(-30);
-            var until = DateTime.UtcNow;
-
-            // 6. Fetch transactions from Plaid
-            var candidates = await _plaid.GetTransactionsAsync(
-                accessToken, accountId, account.UserId, since, until, ct);
+            // 5. Fetch incremental changes from Plaid using /transactions/sync cursor
+            var (candidates, nextCursor) = await _plaid.SyncTransactionsAsync(
+                accessToken, accountId, account.UserId, cred.PlaidSyncCursor, ct);
 
             // 7. Load existing hashes for deduplication
             var existing = (await _transactions.GetByAccountIdAsync(accountId, ct))
@@ -109,6 +103,11 @@ public class ScheduledSyncService(
             // 8. Bulk insert new transactions
             if (entities.Count > 0)
                 await _transactions.AddRangeAsync(entities, ct);
+
+            // 8b. Persist updated sync cursor so next run is incremental
+            cred.PlaidSyncCursor = nextCursor;
+            cred.UpdateLastUsedAt();
+            await _credentials.UpdateAsync(cred, ct);
 
             // 9. Fetch updated balance and mark account active
             var accounts = await _plaid.GetAccountsWithBalanceAsync(accessToken, ct);

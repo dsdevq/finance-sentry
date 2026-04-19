@@ -65,13 +65,10 @@ public class BankAccountConnectedEventHandler(
                 credential.EncryptedData, credential.Iv, credential.AuthTag, credential.KeyVersion);
             credential.UpdateLastUsedAt();
 
-            // Fetch 12 months of history
-            var endDate = DateTime.UtcNow.Date;
-            var startDate = endDate.AddMonths(-12);
-
-            var candidates = (await _plaid.GetTransactionsAsync(
-                accessToken, account.Id, notification.UserId,
-                startDate, endDate, cancellationToken)).ToList();
+            // Initial full sync — no cursor yet, Plaid returns all available history
+            var (candidatesRaw, nextCursor) = await _plaid.SyncTransactionsAsync(
+                accessToken, account.Id, notification.UserId, null, cancellationToken);
+            var candidates = candidatesRaw.ToList();
 
             // Deduplicate: fetch existing hashes, filter candidates
             var existingHashes = (await _transactions.GetByAccountIdAsync(account.Id, cancellationToken))
@@ -86,6 +83,11 @@ public class BankAccountConnectedEventHandler(
                 var entities = newCandidates.Select(_deduplication.ToEntity).ToList();
                 await _transactions.AddRangeAsync(entities, cancellationToken);
             }
+
+            // Persist cursor so future syncs are incremental
+            credential.PlaidSyncCursor = nextCursor;
+            credential.UpdateLastUsedAt();
+            await _credentials.UpdateAsync(credential, cancellationToken);
 
             // Mark account active with latest balance from Plaid
             var plaidAccounts = await _plaid.GetAccountsWithBalanceAsync(accessToken, cancellationToken);

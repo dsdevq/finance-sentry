@@ -140,9 +140,9 @@ public class PlaidAdapterTests
         var end = new DateTime(2026, 1, 31);
 
         _clientMock
-            .Setup(c => c.GetTransactionsAsync(accessToken, start, end, 0, 500, default))
-            .ReturnsAsync(new PlaidTransactionsResponse(
-                Transactions:
+            .Setup(c => c.SyncTransactionsAsync(accessToken, null, 500, default))
+            .ReturnsAsync(new PlaidSyncResponse(
+                Added:
                 [
                     new PlaidTransaction(
                         TransactionId: "txn_001",
@@ -156,11 +156,14 @@ public class PlaidAdapterTests
                         AuthorizedDate: new DateTime(2026, 1, 14),
                         Pending: false)
                 ],
-                TotalTransactions: 1,
+                Modified: [],
+                Removed: [],
+                NextCursor: "cursor_001",
+                HasMore: false,
                 RequestId: "req_004"));
 
         var sut = CreateSut();
-        var result = await sut.GetTransactionsAsync(accessToken, accountId, userId, start, end);
+        var (result, _) = await sut.SyncTransactionsAsync(accessToken, accountId, userId, null);
 
         result.Should().HaveCount(1);
         var tx = result[0];

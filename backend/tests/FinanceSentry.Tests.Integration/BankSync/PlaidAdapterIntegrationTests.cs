@@ -96,11 +96,12 @@ public class PlaidAdapterIntegrationTests
         var end = new DateTime(2026, 4, 10);
 
         // Build 100 Plaid transactions: mix of debit/credit, pending/posted, with categories
+        // Plaid sign convention: positive = outflow (debit), negative = inflow (credit)
         var plaidTxns = Enumerable.Range(0, 100).Select(i => new PlaidTransaction(
             TransactionId: $"txn_{i:D3}",
             AccountId: "plaid-acct-001",
-            Amount: i % 2 == 0 ? -(i + 1) * 10.00m : (i + 1) * 5.00m, // negative=debit, positive=credit
-            IsoCurrencyCode: "EUR",
+            Amount: i % 2 == 0 ? (i + 1) * 10.00m : -(i + 1) * 5.00m, // positive=debit, negative=credit
+            IsoCurrencyCode: "USD",
             Name: $"Merchant_{i}",
             MerchantName: $"Merchant_{i}",
             PersonalFinanceCategory: i % 3 == 0 ? "Groceries" : i % 3 == 1 ? "Transport" : "Entertainment",
@@ -110,11 +111,11 @@ public class PlaidAdapterIntegrationTests
         )).ToList();
 
         _clientMock
-            .Setup(c => c.GetTransactionsAsync(accessToken, start, end, 0, 500, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new PlaidTransactionsResponse(plaidTxns, 100, "req_3"));
+            .Setup(c => c.SyncTransactionsAsync(accessToken, null, 500, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PlaidSyncResponse(plaidTxns, [], [], "cursor_1", false, "req_3"));
 
         var adapter = CreateAdapter();
-        var candidates = await adapter.GetTransactionsAsync(accessToken, AccountId, UserId, start, end);
+        var (candidates, _) = await adapter.SyncTransactionsAsync(accessToken, AccountId, UserId, null);
 
         candidates.Should().HaveCount(100);
 
@@ -169,11 +170,11 @@ public class PlaidAdapterIntegrationTests
         )).ToList();
 
         _clientMock
-            .Setup(c => c.GetTransactionsAsync(accessToken, start, end, 0, 500, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new PlaidTransactionsResponse(plaidTxns, 50, "req_4"));
+            .Setup(c => c.SyncTransactionsAsync(accessToken, null, 500, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PlaidSyncResponse(plaidTxns, [], [], "cursor_1", false, "req_4"));
 
         var adapter = CreateAdapter();
-        var candidates = await adapter.GetTransactionsAsync(accessToken, AccountId, UserId, start, end);
+        var (candidates, _) = await adapter.SyncTransactionsAsync(accessToken, AccountId, UserId, null);
 
         // Build existing hashes from the same 50 transactions (simulating already stored)
         var existingHashes = candidates

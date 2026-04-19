@@ -113,10 +113,10 @@ public class ScheduledSyncServiceTests
                 "Salary", false, "credit", null, "income", "tx_002")
         };
 
-        plaid.Setup(p => p.GetTransactionsAsync(
+        plaid.Setup(p => p.SyncTransactionsAsync(
                 "access-sandbox-token", It.IsAny<Guid>(), It.IsAny<Guid>(),
-                It.IsAny<DateTime>(), It.IsAny<DateTime>(), default))
-             .ReturnsAsync(candidates);
+                It.IsAny<string?>(), default))
+             .ReturnsAsync(((IReadOnlyList<TransactionCandidate>)candidates, "cursor_1"));
 
         plaid.Setup(p => p.GetAccountsWithBalanceAsync("access-sandbox-token", default))
              .ReturnsAsync(
@@ -180,10 +180,10 @@ public class ScheduledSyncServiceTests
             new(AccountId, UserId, 100m, DateTime.UtcNow.AddDays(-2), null, "Salary", true, "credit", null, null, "tx_002")
         };
 
-        plaid.Setup(p => p.GetTransactionsAsync(
+        plaid.Setup(p => p.SyncTransactionsAsync(
                 "access-sandbox-token", It.IsAny<Guid>(), It.IsAny<Guid>(),
-                It.IsAny<DateTime>(), It.IsAny<DateTime>(), default))
-             .ReturnsAsync(allCandidates);
+                It.IsAny<string?>(), default))
+             .ReturnsAsync(((IReadOnlyList<TransactionCandidate>)allCandidates, "cursor_1"));
 
         plaid.Setup(p => p.GetAccountsWithBalanceAsync("access-sandbox-token", default))
              .ReturnsAsync(
@@ -240,9 +240,9 @@ public class ScheduledSyncServiceTests
         txRepo.Setup(r => r.GetByAccountIdAsync(It.IsAny<Guid>(), default))
               .ReturnsAsync([]);
 
-        plaid.Setup(p => p.GetTransactionsAsync(
+        plaid.Setup(p => p.SyncTransactionsAsync(
                 It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<Guid>(),
-                It.IsAny<DateTime>(), It.IsAny<DateTime>(), default))
+                It.IsAny<string?>(), default))
              .ThrowsAsync(new HttpRequestException("RATE_LIMIT_EXCEEDED: too many requests"));
 
         var result = await sut.PerformFullSyncAsync(AccountId);

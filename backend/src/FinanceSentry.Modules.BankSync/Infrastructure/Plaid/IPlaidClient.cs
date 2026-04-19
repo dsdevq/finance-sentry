@@ -16,10 +16,13 @@ public interface IPlaidClient
     /// <summary>Returns all accounts and balances for the given access token.</summary>
     Task<PlaidAccountsResponse> GetAccountsAsync(string accessToken, CancellationToken ct = default);
 
-    /// <summary>Returns paginated transactions in the given date range.</summary>
-    Task<PlaidTransactionsResponse> GetTransactionsAsync(
-        string accessToken, DateTime startDate, DateTime endDate,
-        int offset = 0, int count = 500, CancellationToken ct = default);
+    /// <summary>
+    /// Fetches incremental transaction updates via /transactions/sync.
+    /// Pass null cursor for the initial full sync; pass the previous NextCursor for incremental updates.
+    /// Automatically paginates until has_more = false.
+    /// </summary>
+    Task<PlaidSyncResponse> SyncTransactionsAsync(
+        string accessToken, string? cursor = null, int count = 500, CancellationToken ct = default);
 
     /// <summary>Revokes access token and unlinks the Plaid item.</summary>
     Task RevokeAccessAsync(string accessToken, CancellationToken ct = default);
@@ -52,9 +55,12 @@ public record PlaidAccount(
     decimal? AvailableBalance,
     string CurrencyCode);
 
-public record PlaidTransactionsResponse(
-    IReadOnlyList<PlaidTransaction> Transactions,
-    int TotalTransactions,
+public record PlaidSyncResponse(
+    IReadOnlyList<PlaidTransaction> Added,
+    IReadOnlyList<PlaidTransaction> Modified,
+    IReadOnlyList<string> Removed,
+    string NextCursor,
+    bool HasMore,
     string RequestId);
 
 public record PlaidTransaction(
