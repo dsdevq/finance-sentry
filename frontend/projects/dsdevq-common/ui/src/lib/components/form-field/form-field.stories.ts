@@ -151,3 +151,47 @@ export const FullReactiveFormExample: Story = {
     template: '<cmn-form-example />',
   }),
 };
+
+@Component({
+  selector: 'cmn-control-input-example',
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [FormFieldComponent, InputComponent, ButtonComponent, ReactiveFormsModule],
+  template: `
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-cmn-4 max-w-sm">
+      <p class="text-cmn-sm text-text-secondary">
+        No getter methods — errors auto-resolved from the registry via <code>[control]</code> input.
+      </p>
+      <cmn-form-field
+        [required]="true"
+        [control]="form.get('email')"
+        label="Email"
+      >
+        <cmn-input formControlName="email" type="email" placeholder="you@example.com" />
+      </cmn-form-field>
+      <cmn-form-field [required]="true" [control]="form.get('password')" label="Password">
+        <cmn-input formControlName="password" type="password" placeholder="••••••••" />
+      </cmn-form-field>
+      <cmn-button type="submit" variant="primary">Sign In</cmn-button>
+    </form>
+  `,
+})
+class ControlInputExampleComponent {
+  public form = new FormGroup({
+    email: new FormControl('', [Validators.required, Validators.email]),
+    password: new FormControl('', [Validators.required, Validators.minLength(MIN_PASSWORD_LENGTH)]),
+  });
+
+  public onSubmit(): void {
+    this.form.markAllAsTouched();
+  }
+}
+
+export const WithControlInput: Story = {
+  name: 'With [control] input (auto-resolved errors)',
+  render: () => ({
+    props: {},
+    moduleMetadata: {imports: [ControlInputExampleComponent]},
+    template: '<cmn-control-input-example />',
+  }),
+};

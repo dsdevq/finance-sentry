@@ -7,7 +7,6 @@
     "outDir": "../../../out-tsc/lib",
     "declaration": true,
     "declarationMap": true,
-    "composite": true,
     "types": ["google.accounts"]
   },
   "include": ["src/**/*.ts"],
