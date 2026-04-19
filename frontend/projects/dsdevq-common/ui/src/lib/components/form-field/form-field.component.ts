@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import {toObservable, toSignal} from '@angular/core/rxjs-interop';
 import {AbstractControl, ControlValueAccessor, NG_VALUE_ACCESSOR} from '@angular/forms';
-import {merge, of, switchMap} from 'rxjs';
+import {of, switchMap} from 'rxjs';
 
 import {VALIDATION_MESSAGES} from '../../tokens/validation-messages.token';
 import {InputComponent} from '../input/input.component';
@@ -72,7 +72,7 @@ export class FormFieldComponent implements ControlValueAccessor, AfterContentIni
   protected readonly inputChild = contentChild(InputComponent);
   protected readonly controlChanges = toSignal(
     toObservable(this.control).pipe(
-      switchMap(ctrl => (ctrl ? merge(ctrl.statusChanges, ctrl.valueChanges) : of(null)))
+      switchMap(ctrl => (ctrl ? ctrl.events : of(null)))
     )
   );
 
