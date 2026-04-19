@@ -25,8 +25,8 @@ services:
       ASPNETCORE_URLS: http://+:5050
       ConnectionStrings__Default: "Host=postgres;Port=5432;Database=finance_sentry;Username=finance_user;Password=finance_password;"
       Plaid__BaseUrl: https://sandbox.plaid.com
-      Plaid__ClientId: ${PLAID_CLIENT_ID:-test_client_id}
-      Plaid__Secret: ${PLAID_SECRET:-test_secret}
+      Plaid__ClientId: ${PLAID_CLIENT_ID}
+      Plaid__Secret: ${PLAID_SECRET}
       Plaid__Environment: sandbox
       Jwt__Secret: ${JWT_SECRET:-your-secret-key-change-in-production}
       Jwt__Issuer: "https://finance-sentry.local"
