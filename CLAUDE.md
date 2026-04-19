@@ -190,6 +190,8 @@ After **all tasks in a feature are complete**, act as a QA engineer: spin up the
 - `localStorage` (ThemeService — already implemented in feature 005) (006-ui-library-adoption)
 - C# 13 / .NET 9 (backend) · TypeScript 5.x strict (frontend) + ASP.NET Core 9, EF Core 9, MediatR, ASP.NET Core Identity, `Google.Apis.Auth` (new) · Angular 20, RxJS, `@types/google.accounts` (new) (004-adopt-oauth)
 - PostgreSQL 14 — `AuthDbContext : IdentityDbContext<ApplicationUser>` — `OAuthStates` table to be DROPPED via new migration (004-adopt-oauth)
+- C# 13 / .NET 9 (backend) · TypeScript 5.x strict / Angular 20 (frontend) + ASP.NET Core 9, EF Core 9, MediatR, Hangfire, `System.Net.Http` (no new NuGet packages required — Monobank API is plain REST) (007-monobank-adapter)
+- PostgreSQL 14 — existing `BankSyncDbContext`; migration M002 adds `MonobankCredentials` table and modifies `BankAccounts` (007-monobank-adapter)
 
 ## Recent Changes
 - 003-auth-flow: Added C# 13 / .NET 9 (backend) · TypeScript 5.x strict (frontend) + ASP.NET Core 9, EF Core 9, MediatR, ASP.NET Core Identity (`Microsoft.AspNetCore.Identity.EntityFrameworkCore`), Npgsql.EF Core (backend) · Angular 20, RxJS, Angular standalone routing (frontend)
