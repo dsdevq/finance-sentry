@@ -31,12 +31,12 @@ public class PlaidHttpClient(HttpClient http, IConfiguration config) : IPlaidCli
             user = new { client_user_id = userId },
             client_name = "Finance Sentry",
             products = new[] { "transactions" },
-            country_codes = new[] { "US" },
+            country_codes = new[] { "US", "IE" },
             language = "en"
         };
 
         var response = await PostAsync<PlaidLinkTokenRaw>("/link/token/create", body, ct);
-        var expiration = DateTime.Parse(response.Expiration, null, DateTimeStyles.RoundtripKind);
+        var expiration = DateTime.Parse(response.Expiration, null, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal);
         return new PlaidLinkTokenResponse(response.LinkToken, response.RequestId, expiration);
     }
 
@@ -109,8 +109,8 @@ public class PlaidHttpClient(HttpClient http, IConfiguration config) : IPlaidCli
         t.TransactionId, t.AccountId, t.Amount,
         t.IsoCurrencyCode, t.Name, t.MerchantName,
         t.PersonalFinanceCategory?.Primary,
-        DateTime.Parse(t.Date, null, DateTimeStyles.AssumeUniversal),
-        t.AuthorizedDate != null ? DateTime.Parse(t.AuthorizedDate, null, DateTimeStyles.AssumeUniversal) : null,
+        DateTime.Parse(t.Date, null, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal),
+        t.AuthorizedDate != null ? DateTime.Parse(t.AuthorizedDate, null, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal) : null,
         t.Pending);
 
     private async Task<T> PostAsync<T>(string path, object body, CancellationToken ct)
