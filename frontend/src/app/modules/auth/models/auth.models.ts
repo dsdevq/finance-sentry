@@ -8,3 +8,11 @@ export interface AuthResponse {
   expiresAt: string;
   userId: string;
 }
+
+export interface JwtPayload {
+  exp: number;
+}
+
+export interface ApiError {
+  error: {errorCode?: string};
+}

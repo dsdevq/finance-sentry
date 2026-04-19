@@ -1,14 +1,4 @@
-import {HttpErrorResponse} from '@angular/common/http';
-import {
-  AfterViewInit,
-  ChangeDetectionStrategy,
-  Component,
-  ElementRef,
-  inject,
-  NgZone,
-  OnDestroy,
-  viewChild,
-} from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
 import {
   AbstractControl,
   FormBuilder,
@@ -21,18 +11,34 @@ import {
   AlertComponent,
   ButtonComponent,
   FormFieldComponent,
+  GoogleSignInButtonComponent,
   InputComponent,
 } from '@dsdevq-common/ui';
 
 import {environment} from '../../../../../environments/environment';
+import {AppRoute} from '../../../../shared/enums/app-route.enum';
 import {AuthService} from '../../services/auth.service';
 
 const MIN_PASSWORD_LENGTH = 8;
+const DUPLICATE_EMAIL_CODE = 'DUPLICATE_EMAIL';
 
 function passwordsMatch(group: AbstractControl): ValidationErrors | null {
-  const password = group.get('password')?.value;
-  const confirm = group.get('confirmPassword')?.value;
-  return password === confirm ? null : {passwordsMismatch: true};
+  const password = group.get('password')?.value as string | undefined;
+  const confirm = group.get('confirmPassword')?.value as string | undefined;
+  const ctrl = group.get('confirmPassword');
+  if (!ctrl) {
+    return null;
+  }
+  if (password !== confirm) {
+    const existing = ctrl.errors ?? {};
+    ctrl.setErrors({...existing, passwordsMismatch: true});
+  } else if (ctrl.errors?.['passwordsMismatch']) {
+    const rest = Object.fromEntries(
+      Object.entries(ctrl.errors).filter(([key]) => key !== 'passwordsMismatch')
+    );
+    ctrl.setErrors(Object.keys(rest).length ? rest : null);
+  }
+  return null;
 }
 
 @Component({
@@ -44,17 +50,15 @@ function passwordsMatch(group: AbstractControl): ValidationErrors | null {
     AlertComponent,
     ButtonComponent,
     FormFieldComponent,
+    GoogleSignInButtonComponent,
     InputComponent,
   ],
   templateUrl: './register.component.html',
-  styleUrls: ['./register.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class RegisterComponent implements AfterViewInit, OnDestroy {
+export class RegisterComponent {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
-  private readonly zone = inject(NgZone);
-  private readonly googleBtnRef = viewChild.required<ElementRef<HTMLElement>>('googleBtn');
 
   public readonly form = inject(FormBuilder).group(
     {
@@ -64,72 +68,10 @@ export class RegisterComponent implements AfterViewInit, OnDestroy {
     },
     {validators: passwordsMatch}
   );
+  public readonly googleClientId = environment.googleClientId;
+  public readonly AppRoute = AppRoute;
   public errorMessage = '';
   public loading = false;
-
-  public ngAfterViewInit(): void {
-    google.accounts.id.initialize({
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      client_id: environment.googleClientId,
-      callback: (r: google.accounts.id.CredentialResponse) =>
-        this.zone.run(() => this.onGoogleCredential(r)),
-    });
-    google.accounts.id.renderButton(this.googleBtnRef().nativeElement, {
-      type: 'standard',
-      shape: 'rectangular',
-      theme: 'outline',
-      text: 'continue_with',
-      size: 'large',
-      width: 368,
-    });
-    google.accounts.id.prompt();
-  }
-
-  public ngOnDestroy(): void {
-    google.accounts.id.cancel();
-  }
-
-  public get emailError(): string {
-    const ctrl = this.form.get('email');
-    if (!ctrl?.touched) {
-      return '';
-    }
-    if (ctrl.hasError('required')) {
-      return 'Email is required.';
-    }
-    if (ctrl.hasError('email')) {
-      return 'Enter a valid email address.';
-    }
-    return '';
-  }
-
-  public get passwordError(): string {
-    const ctrl = this.form.get('password');
-    if (!ctrl?.touched) {
-      return '';
-    }
-    if (ctrl.hasError('required')) {
-      return 'Password is required.';
-    }
-    if (ctrl.hasError('minlength')) {
-      return `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`;
-    }
-    return '';
-  }
-
-  public get confirmPasswordError(): string {
-    const ctrl = this.form.get('confirmPassword');
-    if (!ctrl?.touched) {
-      return '';
-    }
-    if (ctrl.hasError('required')) {
-      return 'Please confirm your password.';
-    }
-    if (this.form.hasError('passwordsMismatch')) {
-      return 'Passwords do not match.';
-    }
-    return '';
-  }
 
   public onSubmit(): void {
     if (this.form.invalid) {
@@ -142,30 +84,22 @@ export class RegisterComponent implements AfterViewInit, OnDestroy {
     const {email, password} = this.form.value;
     this.authService.register({email: email ?? '', password: password ?? ''}).subscribe({
       next: () => {
-        void this.router.navigate(['/accounts']);
+        void this.router.navigate([AppRoute.Accounts]);
       },
       error: (err: unknown) => {
-        const code =
-          err instanceof HttpErrorResponse
-            ? (err.error as {errorCode?: string} | null)?.errorCode
-            : undefined;
-        this.errorMessage =
-          code === 'DUPLICATE_EMAIL'
-            ? 'Email is already registered.'
-            : 'Registration failed. Please check your details and try again.';
-        this.loading = false;
+        const code = (err as {error?: {errorCode?: string}} | null)?.error?.errorCode;
+        if (code === DUPLICATE_EMAIL_CODE) {
+          this.errorMessage = 'Email is already registered.';
+          this.loading = false;
+        }
       },
     });
   }
 
-  private onGoogleCredential(response: google.accounts.id.CredentialResponse): void {
-    this.authService.verifyGoogleCredential(response.credential).subscribe({
+  public onGoogleCredential(credential: string): void {
+    this.authService.verifyGoogleCredential(credential).subscribe({
       next: () => {
-        void this.router.navigate(['/accounts']);
-      },
-      error: () => {
-        this.errorMessage = 'Google sign-in failed. Please try again.';
-        this.loading = false;
+        void this.router.navigate([AppRoute.Accounts]);
       },
     });
   }

@@ -15,6 +15,7 @@ export interface PlaidHandler {
 
 // Plaid Link is loaded at runtime via CDN script tag.
 // The global `window.Plaid` object is injected by the script.
+// !TODO: for global types, consider creating a separate `plaid-link.d.ts` file and including it in tsconfig.app.json's "files" array. This would provide better type safety and editor support across the app without needing to import the service.
 declare global {
   interface Window {
     Plaid?: {

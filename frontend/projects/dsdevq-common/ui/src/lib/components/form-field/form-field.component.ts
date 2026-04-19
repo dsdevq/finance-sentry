@@ -2,12 +2,15 @@ import {
   AfterContentInit,
   ChangeDetectionStrategy,
   Component,
+  computed,
   contentChild,
   forwardRef,
+  inject,
   input,
 } from '@angular/core';
-import {ControlValueAccessor, NG_VALUE_ACCESSOR} from '@angular/forms';
+import {AbstractControl, ControlValueAccessor, NG_VALUE_ACCESSOR} from '@angular/forms';
 
+import {VALIDATION_MESSAGES} from '../../tokens/validation-messages.token';
 import {InputComponent} from '../input/input.component';
 
 let fieldCounter = 0;
@@ -37,35 +40,47 @@ let fieldCounter = 0;
 
       <ng-content />
 
-      @if (hint() && !errorMessage()) {
+      @if (hint() && !resolvedError()) {
         <span class="text-cmn-xs text-text-secondary">{{ hint() }}</span>
       }
 
-      @if (errorMessage()) {
+      @if (resolvedError()) {
         <span role="alert" aria-live="polite" class="text-cmn-xs text-status-error">{{
-          errorMessage()
+          resolvedError()
         }}</span>
       }
     </div>
   `,
 })
 export class FormFieldComponent implements ControlValueAccessor, AfterContentInit {
-  // Private fields first (member-ordering)
+  private readonly validationMessages = inject(VALIDATION_MESSAGES);
+
   private pendingValue: unknown = undefined;
   private pendingDisabled: boolean | undefined = undefined;
   private onChangeFn: ((v: unknown) => void) | undefined;
   private onTouchedFn: (() => void) | undefined;
 
-  // Public signal inputs
   public readonly label = input<string>('');
   public readonly hint = input<string>('');
   public readonly errorMessage = input<string>('');
   public readonly required = input<boolean>(false);
+  public readonly control = input<AbstractControl | null>(null);
 
   public readonly fieldId: string;
 
-  // Protected content child
   protected readonly inputChild = contentChild(InputComponent);
+
+  protected readonly resolvedError = computed(() => {
+    if (this.errorMessage()) {
+      return this.errorMessage();
+    }
+    const ctrl = this.control();
+    if (!ctrl?.touched || !ctrl.errors) {
+      return '';
+    }
+    const [key, params] = Object.entries(ctrl.errors)[0];
+    return this.validationMessages[key]?.(params) ?? key;
+  });
 
   constructor() {
     this.fieldId = `cmn-field-${++fieldCounter}`;

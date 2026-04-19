@@ -4,14 +4,9 @@ import {Router} from '@angular/router';
 import {Observable, tap} from 'rxjs';
 
 import {environment} from '../../../../environments/environment';
-import {AuthRequest, AuthResponse} from '../models/auth.models';
-
-const TOKEN_KEY = 'fs_auth_token';
-const MS_PER_SECOND = 1000;
-
-interface JwtPayload {
-  exp: number;
-}
+import {AppRoute} from '../../../shared/enums/app-route.enum';
+import {MS_PER_SECOND, TOKEN_KEY} from '../constants/auth.constants';
+import {AuthRequest, AuthResponse, JwtPayload} from '../models/auth.models';
 
 @Injectable({providedIn: 'root'})
 export class AuthService {
@@ -78,6 +73,6 @@ export class AuthService {
       .post(`${this.apiUrl}/logout`, null, {withCredentials: true})
       .subscribe({error: () => undefined});
     localStorage.removeItem(TOKEN_KEY);
-    void this.router.navigate(['/login']);
+    void this.router.navigate([AppRoute.Login]);
   }
 }

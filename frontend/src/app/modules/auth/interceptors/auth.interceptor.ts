@@ -8,9 +8,8 @@ import {
 import {inject} from '@angular/core';
 import {catchError, switchMap, throwError} from 'rxjs';
 
+import {AUTHORIZATION_HEADER} from '../constants/auth.constants';
 import {AuthService} from '../services/auth.service';
-
-const AUTHORIZATION_HEADER = 'Authorization';
 
 function isRefreshOrAuthRequest(req: HttpRequest<unknown>): boolean {
   return req.url.includes('/auth/refresh') || req.url.includes('/auth/logout');

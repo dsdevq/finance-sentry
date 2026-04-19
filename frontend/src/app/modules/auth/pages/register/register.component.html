@@ -1,42 +1,51 @@
-<div class="register-container">
-  <div class="register-card">
-    <h1>Create Account</h1>
-    <p class="subtitle">Finance Sentry</p>
+<div class="flex items-center justify-center min-h-screen bg-surface-bg">
+  <div class="bg-surface-card rounded-cmn-md shadow-cmn-sm p-cmn-10 w-full max-w-[400px]">
+    <h1 class="font-headline text-cmn-2xl font-bold text-text-primary mb-cmn-1">Create Account</h1>
+    <p class="text-cmn-sm text-text-secondary mb-cmn-8">Finance Sentry</p>
 
-    <div #googleBtn class="google-btn-container"></div>
+    <div class="flex justify-center mb-cmn-6">
+      <cmn-google-sign-in-button
+        [clientId]="googleClientId"
+        (credential)="onGoogleCredential($event)"
+      />
+    </div>
 
-    <div class="divider"><span>or</span></div>
+    <div class="flex items-center gap-cmn-3 mb-cmn-6">
+      <div class="flex-1 h-px bg-border-default"></div>
+      <span class="text-cmn-xs text-text-secondary">or</span>
+      <div class="flex-1 h-px bg-border-default"></div>
+    </div>
 
     <form [formGroup]="form" (ngSubmit)="onSubmit()">
       <cmn-form-field
-        [errorMessage]="emailError"
-        formControlName="email"
+        [control]="form.get('email')"
         label="Email"
-        class="field"
+        formControlName="email"
+        class="block mb-cmn-5"
       >
         <cmn-input type="email" placeholder="you@example.com" />
       </cmn-form-field>
 
       <cmn-form-field
-        [errorMessage]="passwordError"
-        formControlName="password"
+        [control]="form.get('password')"
         label="Password"
-        class="field"
+        formControlName="password"
+        class="block mb-cmn-5"
       >
         <cmn-input type="password" placeholder="Min 8 characters" />
       </cmn-form-field>
 
       <cmn-form-field
-        [errorMessage]="confirmPasswordError"
-        formControlName="confirmPassword"
+        [control]="form.get('confirmPassword')"
         label="Confirm Password"
-        class="field"
+        formControlName="confirmPassword"
+        class="block mb-cmn-6"
       >
         <cmn-input type="password" placeholder="Repeat password" />
       </cmn-form-field>
 
       @if (errorMessage) {
-        <cmn-alert variant="error" class="error-alert">{{ errorMessage }}</cmn-alert>
+        <cmn-alert variant="error" class="block mb-cmn-4">{{ errorMessage }}</cmn-alert>
       }
 
       <cmn-button
@@ -44,11 +53,18 @@
         [loading]="loading"
         type="submit"
         variant="primary"
-        class="submit-btn"
+        class="block w-full"
         >{{ loading ? 'Creating account…' : 'Create Account' }}</cmn-button
       >
     </form>
 
-    <p class="login-link">Already have an account? <a routerLink="/login">Sign in</a></p>
+    <p class="mt-cmn-6 text-center text-cmn-sm text-text-secondary">
+      Already have an account?
+      <a
+        [routerLink]="AppRoute.Login"
+        class="text-accent-default no-underline font-medium hover:underline"
+        >Sign in</a
+      >
+    </p>
   </div>
 </div>

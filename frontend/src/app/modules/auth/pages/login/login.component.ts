@@ -1,31 +1,17 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-import {
-  AfterViewInit,
-  ChangeDetectionStrategy,
-  Component,
-  ElementRef,
-  inject,
-  NgZone,
-  OnDestroy,
-  OnInit,
-  viewChild,
-} from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject, OnInit} from '@angular/core';
 import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
 import {ActivatedRoute, Router, RouterLink} from '@angular/router';
 import {
   AlertComponent,
   ButtonComponent,
   FormFieldComponent,
+  GoogleSignInButtonComponent,
   InputComponent,
 } from '@dsdevq-common/ui';
 
 import {environment} from '../../../../../environments/environment';
+import {AppRoute} from '../../../../shared/enums/app-route.enum';
 import {AuthService} from '../../services/auth.service';
-
-interface ApiError {
-  error: {errorCode?: string};
-}
 
 @Component({
   selector: 'fns-login',
@@ -36,23 +22,23 @@ interface ApiError {
     AlertComponent,
     ButtonComponent,
     FormFieldComponent,
+    GoogleSignInButtonComponent,
     InputComponent,
   ],
   templateUrl: './login.component.html',
-  styleUrls: ['./login.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
+export class LoginComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
-  private readonly zone = inject(NgZone);
-  private readonly googleBtnRef = viewChild.required<ElementRef<HTMLElement>>('googleBtn');
 
   public readonly form = inject(FormBuilder).group({
     email: ['', [Validators.required, Validators.email]],
     password: ['', Validators.required],
   });
+  public readonly googleClientId = environment.googleClientId;
+  public readonly AppRoute = AppRoute;
   public errorMessage = '';
   public infoMessage = '';
   public loading = false;
@@ -64,53 +50,6 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
     } else if (params['error'] === 'google_failed') {
       this.errorMessage = 'Google sign-in failed. Please try again.';
     }
-  }
-
-  public ngAfterViewInit(): void {
-    google.accounts.id.initialize({
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      client_id: environment.googleClientId,
-      callback: (r: google.accounts.id.CredentialResponse) =>
-        this.zone.run(() => this.onGoogleCredential(r)),
-    });
-    google.accounts.id.renderButton(this.googleBtnRef().nativeElement, {
-      type: 'standard',
-      shape: 'rectangular',
-      theme: 'outline',
-      text: 'continue_with',
-      size: 'large',
-      width: 368,
-    });
-    google.accounts.id.prompt();
-  }
-
-  public ngOnDestroy(): void {
-    google.accounts.id.cancel();
-  }
-
-  public get emailError(): string {
-    const ctrl = this.form.get('email');
-    if (!ctrl?.touched) {
-      return '';
-    }
-    if (ctrl.hasError('required')) {
-      return 'Email is required.';
-    }
-    if (ctrl.hasError('email')) {
-      return 'Enter a valid email address.';
-    }
-    return '';
-  }
-
-  public get passwordError(): string {
-    const ctrl = this.form.get('password');
-    if (!ctrl?.touched) {
-      return '';
-    }
-    if (ctrl.hasError('required')) {
-      return 'Password is required.';
-    }
-    return '';
   }
 
   public onSubmit(): void {
@@ -125,30 +64,25 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
     const {email, password} = this.form.value;
     this.authService.login({email: email ?? '', password: password ?? ''}).subscribe({
       next: () => {
-        const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') ?? '/accounts';
+        const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') ?? AppRoute.Accounts;
         void this.router.navigateByUrl(returnUrl);
       },
-      error: (err: ApiError) => {
-        if (err?.error?.errorCode === 'GOOGLE_ACCOUNT_ONLY') {
-          this.errorMessage =
-            "This account uses Google sign-in. Click 'Continue with Google' instead.";
-        } else {
-          this.errorMessage = 'Invalid email or password.';
-        }
+      error: (err: unknown) => {
+        const errorCode = (err as {error?: {errorCode?: string}} | null)?.error?.errorCode;
+        this.errorMessage =
+          errorCode === 'GOOGLE_ACCOUNT_ONLY'
+            ? "This account uses Google sign-in. Click 'Continue with Google' instead."
+            : 'Invalid email or password.';
         this.loading = false;
       },
     });
   }
 
-  private onGoogleCredential(response: google.accounts.id.CredentialResponse): void {
-    this.authService.verifyGoogleCredential(response.credential as string).subscribe({
+  public onGoogleCredential(credential: string): void {
+    this.authService.verifyGoogleCredential(credential).subscribe({
       next: () => {
-        const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') ?? '/accounts';
+        const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') ?? AppRoute.Accounts;
         void this.router.navigateByUrl(returnUrl);
-      },
-      error: () => {
-        this.errorMessage = 'Google sign-in failed. Please try again.';
-        this.loading = false;
       },
     });
   }
