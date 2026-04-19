@@ -1,0 +1,10 @@
+task_id: "T025"
+feature: "004-adopt-oauth"
+reviewed_at: "2026-04-19"
+approved: true
+files_changed:
+  - "frontend/src/app/modules/auth/pages/login/login.component.html"
+  - "frontend/src/app/modules/auth/pages/login/login.component.scss"
+violations: []
+new_rules: []
+next_task_notes: "T026+T027: Apply same GSI pattern to register.component"

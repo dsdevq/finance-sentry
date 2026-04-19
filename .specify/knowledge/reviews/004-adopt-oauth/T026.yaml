@@ -1,0 +1,9 @@
+task_id: "T026"
+feature: "004-adopt-oauth"
+reviewed_at: "2026-04-19"
+approved: true
+files_changed:
+  - "frontend/src/app/modules/auth/pages/register/register.component.ts"
+violations: []
+new_rules: []
+next_task_notes: "T027: HTML/SCSS replace button with div#googleBtn container"

@@ -1,0 +1,10 @@
+task_id: "T009"
+feature: "004-adopt-oauth"
+reviewed_at: "2026-04-18"
+approved: true
+files_changed:
+  - "backend/tests/FinanceSentry.Tests.Integration/Auth/GoogleOAuthContractTests.cs"
+  - "backend/tests/FinanceSentry.Tests.Integration/Auth/LoginContractTests.cs"
+violations: []
+new_rules: []
+next_task_notes: "Tests written TDD-style — will pass once T010-T013 (controller + handlers) are implemented. Added GoogleOAuth settings to AuthApiFactory in LoginContractTests.cs."

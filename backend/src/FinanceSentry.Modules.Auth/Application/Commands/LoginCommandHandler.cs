@@ -14,7 +14,13 @@ public class LoginCommandHandler(
     public async Task<AuthResult> Handle(LoginCommand request, CancellationToken cancellationToken)
     {
         var user = await userManager.FindByEmailAsync(request.Email);
-        if (user is null || !await userManager.CheckPasswordAsync(user, request.Password))
+        if (user is null)
+            throw new UnauthorizedAccessException("INVALID_CREDENTIALS");
+
+        if (user.PasswordHash is null)
+            throw new InvalidOperationException("GOOGLE_ACCOUNT_ONLY");
+
+        if (!await userManager.CheckPasswordAsync(user, request.Password))
             throw new UnauthorizedAccessException("INVALID_CREDENTIALS");
 
         var accessToken = tokenService.GenerateToken(user);

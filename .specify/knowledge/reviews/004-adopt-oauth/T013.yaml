@@ -1,0 +1,9 @@
+task_id: "T013"
+feature: "004-adopt-oauth"
+reviewed_at: "2026-04-18"
+approved: true
+files_changed:
+  - "backend/src/FinanceSentry.Modules.Auth/Application/Commands/VerifyGoogleCredentialCommand.cs (created)"
+violations: []
+new_rules: []
+next_task_notes: "Clean output. Matches LoginCommand pattern exactly."

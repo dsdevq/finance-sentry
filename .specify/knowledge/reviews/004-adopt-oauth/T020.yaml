@@ -1,0 +1,9 @@
+task_id: "T020"
+feature: "004-adopt-oauth"
+reviewed_at: "2026-04-18"
+approved: true
+files_changed:
+  - "backend/src/FinanceSentry.API/FinanceSentry.API.csproj"
+violations: []
+new_rules: []
+next_task_notes: "Frontend was already at 0.4.0 (bumped in a prior task) — only backend bumped 0.2.0 → 0.3.0."

@@ -3,6 +3,18 @@
     <h1>Sign In</h1>
     <p class="subtitle">Finance Sentry</p>
 
+    @if (infoMessage) {
+      <cmn-alert variant="info" class="info-alert">{{ infoMessage }}</cmn-alert>
+    }
+
+    @if (errorMessage) {
+      <cmn-alert variant="error" class="error-alert">{{ errorMessage }}</cmn-alert>
+    }
+
+    <div #googleBtn class="google-btn-container"></div>
+
+    <div class="divider"><span>or</span></div>
+
     <form [formGroup]="form" (ngSubmit)="onSubmit()">
       <cmn-form-field
         [errorMessage]="emailError"
@@ -21,10 +33,6 @@
       >
         <cmn-input type="password" placeholder="••••••••" />
       </cmn-form-field>
-
-      @if (errorMessage) {
-        <cmn-alert variant="error" class="error-alert">{{ errorMessage }}</cmn-alert>
-      }
 
       <cmn-button
         [disabled]="loading || form.invalid"

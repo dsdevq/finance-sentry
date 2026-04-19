@@ -1,0 +1,11 @@
+task_id: "T015"
+feature: "004-adopt-oauth"
+reviewed_at: "2026-04-18"
+approved: true
+files_changed:
+  - "Migrations/20260418220000_M009_DropOAuthStates.cs (created)"
+  - "Migrations/20260418220000_M009_DropOAuthStates.Designer.cs (created)"
+  - "Migrations/AuthDbContextModelSnapshot.cs (OAuthState entity block removed)"
+violations: []
+new_rules: []
+next_task_notes: "Migration verified — build succeeds. Down() faithfully recreates the M008 schema."

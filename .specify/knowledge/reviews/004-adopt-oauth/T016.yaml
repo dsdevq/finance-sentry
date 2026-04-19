@@ -1,0 +1,14 @@
+task_id: "T016"
+feature: "004-adopt-oauth"
+reviewed_at: "2026-04-18"
+approved: true
+files_changed:
+  - "backend/src/FinanceSentry.Modules.Auth/Infrastructure/Services/GoogleCredentialVerifier.cs (created)"
+violations:
+  - rule_id: "ARCH-001"
+    file: "GoogleCredentialVerifier.cs"
+    line: 11
+    found: "Qwen named method VerifyCredentialAsync"
+    fix: "Renamed to VerifyAsync to match IGoogleCredentialVerifier interface"
+new_rules: []
+next_task_notes: ""

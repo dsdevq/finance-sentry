@@ -1,0 +1,27 @@
+task_id: "T022"
+feature: "004-adopt-oauth"
+reviewed_at: "2026-04-19"
+approved: true
+files_changed:
+  - "backend/tests/FinanceSentry.Tests.Integration/Auth/GoogleVerifyContractTests.cs"
+violations:
+  - rule_id: "CS-001"
+    file: "GoogleVerifyContractTests.cs"
+    line: 1
+    found: "Block-scoped namespace from Qwen"
+    fix: "Replaced with file-scoped namespace"
+  - rule_id: "CS-002"
+    file: "GoogleVerifyContractTests.cs"
+    line: 8
+    found: "Wrong _factory type (WebApplicationFactory<Program>)"
+    fix: "Changed to AuthApiFactory"
+  - rule_id: "CS-003"
+    file: "GoogleVerifyContractTests.cs"
+    found: "EnsureUserExistsAsync called to verify DB state (wrong usage)"
+    fix: "Used UserManager scope to verify GoogleId after verify call"
+  - rule_id: "CS-004"
+    file: "GoogleVerifyContractTests.cs"
+    found: "errorCode INVALID_REQUEST for empty credential (wrong)"
+    fix: "Changed to VALIDATION_ERROR per AuthController behavior"
+new_rules: []
+next_task_notes: "T023: VerifyGoogleCredentialCommandHandler - find by GoogleId then Email, create if not found, link if email match"

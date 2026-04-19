@@ -1,0 +1,13 @@
+task_id: "T023"
+feature: "004-adopt-oauth"
+reviewed_at: "2026-04-19"
+approved: true
+files_changed:
+  - "backend/src/FinanceSentry.Modules.Auth/Application/Commands/VerifyGoogleCredentialCommandHandler.cs"
+violations:
+  - rule_id: "CS-005"
+    file: "VerifyGoogleCredentialCommandHandler.cs"
+    found: "CancellationToken passed to FindByEmailAsync, UpdateAsync, CreateAsync (Identity methods don't accept CancellationToken)"
+    fix: "Removed CancellationToken from those Identity calls"
+new_rules: []
+next_task_notes: "T024: Update login.component.ts with GSI initialize/renderButton/prompt pattern"

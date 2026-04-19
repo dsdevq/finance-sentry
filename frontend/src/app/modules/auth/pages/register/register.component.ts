@@ -1,5 +1,14 @@
 import {HttpErrorResponse} from '@angular/common/http';
-import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
+import {
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  inject,
+  NgZone,
+  OnDestroy,
+  viewChild,
+} from '@angular/core';
 import {
   AbstractControl,
   FormBuilder,
@@ -15,6 +24,7 @@ import {
   InputComponent,
 } from '@dsdevq-common/ui';
 
+import {environment} from '../../../../../environments/environment';
 import {AuthService} from '../../services/auth.service';
 
 const MIN_PASSWORD_LENGTH = 8;
@@ -40,9 +50,11 @@ function passwordsMatch(group: AbstractControl): ValidationErrors | null {
   styleUrls: ['./register.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class RegisterComponent {
+export class RegisterComponent implements AfterViewInit, OnDestroy {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly zone = inject(NgZone);
+  private readonly googleBtnRef = viewChild.required<ElementRef<HTMLElement>>('googleBtn');
 
   public readonly form = inject(FormBuilder).group(
     {
@@ -54,6 +66,28 @@ export class RegisterComponent {
   );
   public errorMessage = '';
   public loading = false;
+
+  public ngAfterViewInit(): void {
+    google.accounts.id.initialize({
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      client_id: environment.googleClientId,
+      callback: (r: google.accounts.id.CredentialResponse) =>
+        this.zone.run(() => this.onGoogleCredential(r)),
+    });
+    google.accounts.id.renderButton(this.googleBtnRef().nativeElement, {
+      type: 'standard',
+      shape: 'rectangular',
+      theme: 'outline',
+      text: 'continue_with',
+      size: 'large',
+      width: 368,
+    });
+    google.accounts.id.prompt();
+  }
+
+  public ngOnDestroy(): void {
+    google.accounts.id.cancel();
+  }
 
   public get emailError(): string {
     const ctrl = this.form.get('email');
@@ -119,6 +153,18 @@ export class RegisterComponent {
           code === 'DUPLICATE_EMAIL'
             ? 'Email is already registered.'
             : 'Registration failed. Please check your details and try again.';
+        this.loading = false;
+      },
+    });
+  }
+
+  private onGoogleCredential(response: google.accounts.id.CredentialResponse): void {
+    this.authService.verifyGoogleCredential(response.credential).subscribe({
+      next: () => {
+        void this.router.navigate(['/accounts']);
+      },
+      error: () => {
+        this.errorMessage = 'Google sign-in failed. Please try again.';
         this.loading = false;
       },
     });

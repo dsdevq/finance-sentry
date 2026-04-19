@@ -3,6 +3,10 @@
     <h1>Create Account</h1>
     <p class="subtitle">Finance Sentry</p>
 
+    <div #googleBtn class="google-btn-container"></div>
+
+    <div class="divider"><span>or</span></div>
+
     <form [formGroup]="form" (ngSubmit)="onSubmit()">
       <cmn-form-field
         [errorMessage]="emailError"

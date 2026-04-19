@@ -99,6 +99,10 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 builder.Services.AddSingleton<ITokenService, JwtTokenService>();
 builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
 
+// ── Google credential verification (GSI) ─────────────────────────────────────
+builder.Services.Configure<GoogleOAuthOptions>(builder.Configuration.GetSection("GoogleOAuth"));
+builder.Services.AddScoped<IGoogleCredentialVerifier, GoogleCredentialVerifier>();
+
 // ── Repositories ─────────────────────────────────────────────────────────────
 builder.Services.AddScoped<IBankAccountRepository, BankAccountRepository>();
 builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();

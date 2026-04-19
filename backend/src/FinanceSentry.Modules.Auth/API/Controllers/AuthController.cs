@@ -36,6 +36,14 @@ public class AuthController(IMediator mediator) : ControllerBase
             SetRefreshTokenCookie(result.RawRefreshToken);
             return Ok(result.Response);
         }
+        catch (InvalidOperationException ex) when (ex.Message == "GOOGLE_ACCOUNT_ONLY")
+        {
+            return Unauthorized(new
+            {
+                error = "This account uses Google sign-in. Please use 'Continue with Google'.",
+                errorCode = "GOOGLE_ACCOUNT_ONLY"
+            });
+        }
         catch (UnauthorizedAccessException)
         {
             return Unauthorized(new
@@ -109,6 +117,24 @@ public class AuthController(IMediator mediator) : ControllerBase
         }
     }
 
+    [HttpPost("google/verify")]
+    public async Task<IActionResult> GoogleVerify([FromBody] VerifyGoogleCredentialRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Credential))
+            return BadRequest(new { error = "Credential is required.", errorCode = "VALIDATION_ERROR" });
+
+        try
+        {
+            var result = await mediator.Send(new VerifyGoogleCredentialCommand(request.Credential));
+            SetRefreshTokenCookie(result.RawRefreshToken);
+            return Ok(result.Response);
+        }
+        catch (InvalidOperationException ex) when (ex.Message == "INVALID_GOOGLE_CREDENTIAL")
+        {
+            return BadRequest(new { error = "Invalid Google credential.", errorCode = "INVALID_GOOGLE_CREDENTIAL" });
+        }
+    }
+
     [HttpPost("logout")]
     public async Task<IActionResult> Logout()
     {
@@ -145,3 +171,5 @@ public class AuthController(IMediator mediator) : ControllerBase
         });
     }
 }
+
+public record VerifyGoogleCredentialRequest(string Credential);

@@ -67,6 +67,12 @@ export class AuthService {
     }
   }
 
+  public verifyGoogleCredential(credential: string): Observable<AuthResponse> {
+    return this.http
+      .post<AuthResponse>(`${this.apiUrl}/google/verify`, {credential})
+      .pipe(tap(res => this.storeToken(res.token)));
+  }
+
   public logout(): void {
     this.http
       .post(`${this.apiUrl}/logout`, null, {withCredentials: true})

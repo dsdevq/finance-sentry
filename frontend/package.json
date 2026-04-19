@@ -1,6 +1,6 @@
 {
   "name": "finance-sentry",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
@@ -58,6 +58,7 @@
     "@playwright/test": "1.58.2",
     "@smarttools/eslint-plugin-rxjs": "^1.0.22",
     "@storybook/angular": "^10.3.5",
+    "@types/google.accounts": "^0.0.14",
     "@types/node": "^25.5.0",
     "@vitest/browser-playwright": "^4.1.2",
     "@vitest/coverage-v8": "^4.1.2",

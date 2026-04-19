@@ -138,6 +138,40 @@ After writing or modifying **any** Angular `.ts` file, run `npx eslint <file>` f
 
 ---
 
+## AI Development Pipeline
+
+This project uses a two-model pipeline. [`.specify/memory/pipeline.md`](.specify/memory/pipeline.md) is the **source of truth** for pipeline roles, knowledge store structure, and the per-task implementation loop — read it before starting any implementation session.
+
+**Claude** = planner + orchestrator + reviewer (this session).
+**Qwen2.5-coder:14b** (local Ollama) = implementer, called via the `qwen-code` MCP server.
+
+> **Hard rule:** Qwen is the sole code producer. If a Qwen MCP call fails with a connection error, **stop immediately** and report the error — do NOT write implementation code directly as a fallback. Wait for the user to confirm Ollama is back up before retrying. Only bypass this rule if the user explicitly says so.
+
+- MCP config: `.mcp.json` + `.claude/settings.json` → `enabledMcpjsonServers: ["qwen-code"]`
+- MCP is only active in **new sessions** — check `/mcp` to confirm it loaded
+- Knowledge rules live in `.specify/knowledge/index.yaml` (30 rules); inject into QWEN.md with `py .specify/integrations/qwen/scripts/inject-knowledge.py`
+- Per-task loop: Claude calls Qwen MCP → reads diff → reviews inline → approves or requests fix → commits → next task
+- Reviews saved to `.specify/knowledge/reviews/<feature>/<task>.yaml`
+
+---
+
+## QA — End-to-End Testing After Implementation
+
+After **all tasks in a feature are complete**, act as a QA engineer: spin up the app and test the feature through the browser using Playwright MCP.
+
+**Steps (mandatory):**
+1. Ensure the full Docker stack is running: `cd docker && docker compose -f docker-compose.dev.yml up -d`
+2. Wait for health check: `GET http://localhost:5000/api/v1/health` → `{"status":"healthy"}`
+3. Open `http://localhost:4200` via Playwright
+4. Navigate the golden path of the feature as a real user would — click buttons, fill forms, follow redirects
+5. Also test key error/edge cases (invalid input, cancelled flows, etc.)
+6. Report findings: what passed, what failed, screenshots of any broken state
+7. If bugs are found, fix them (via Qwen) before declaring the feature done
+
+**Tools:** Use `mcp__plugin_playwright_playwright__browser_*` tools — snapshot first, screenshot only when visual proof is needed.
+
+---
+
 ## Collaboration Style
 
 - Responses must be short and direct. No trailing summaries — Denys can read the diff.
@@ -154,6 +188,8 @@ After writing or modifying **any** Angular `.ts` file, run `npx eslint <file>` f
 - `localStorage` (theme + accent persistence only) (005-ui-component-library)
 - TypeScript 5.3 / Angular 21.2 (strict mode) + `@dsdevq-common/ui` (local library, feature 005), Angular `ReactiveFormsModule`, Angular CLI (006-ui-library-adoption)
 - `localStorage` (ThemeService — already implemented in feature 005) (006-ui-library-adoption)
+- C# 13 / .NET 9 (backend) · TypeScript 5.x strict (frontend) + ASP.NET Core 9, EF Core 9, MediatR, ASP.NET Core Identity, `Google.Apis.Auth` (new) · Angular 20, RxJS, `@types/google.accounts` (new) (004-adopt-oauth)
+- PostgreSQL 14 — `AuthDbContext : IdentityDbContext<ApplicationUser>` — `OAuthStates` table to be DROPPED via new migration (004-adopt-oauth)
 
 ## Recent Changes
 - 003-auth-flow: Added C# 13 / .NET 9 (backend) · TypeScript 5.x strict (frontend) + ASP.NET Core 9, EF Core 9, MediatR, ASP.NET Core Identity (`Microsoft.AspNetCore.Identity.EntityFrameworkCore`), Npgsql.EF Core (backend) · Angular 20, RxJS, Angular standalone routing (frontend)

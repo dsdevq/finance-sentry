@@ -1,0 +1,14 @@
+task_id: "T012"
+feature: "004-adopt-oauth"
+reviewed_at: "2026-04-18"
+approved: true
+files_changed:
+  - "backend/src/FinanceSentry.Modules.Auth/Application/Interfaces/IGoogleCredentialVerifier.cs (created)"
+violations:
+  - rule_id: "ARCH-001"
+    file: "IGoogleCredentialVerifier.cs"
+    line: 1
+    found: "Qwen used block-scoped namespace with unnecessary using System.Threading.Tasks"
+    fix: "Applied file-scoped namespace; removed unnecessary using (implicit usings enabled)"
+new_rules: []
+next_task_notes: "Interface clean. GoogleUserInfo record + VerifyAsync(string) matches spec."

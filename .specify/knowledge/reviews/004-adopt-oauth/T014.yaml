@@ -1,0 +1,9 @@
+task_id: "T014"
+feature: "004-adopt-oauth"
+reviewed_at: "2026-04-18"
+approved: true
+files_changed:
+  - "backend/src/FinanceSentry.Modules.Auth/Infrastructure/Persistence/AuthDbContext.cs (modified)"
+violations: []
+new_rules: []
+next_task_notes: "OAuthStates DbSet and entity config removed. RefreshTokens unchanged."

@@ -1,0 +1,9 @@
+task_id: "T028"
+feature: "004-adopt-oauth"
+reviewed_at: "2026-04-19"
+approved: true
+files_changed:
+  - "frontend/package.json"
+violations: []
+new_rules: []
+next_task_notes: "T029: Bump backend version 0.3.0 → 0.4.0"

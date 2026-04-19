@@ -1,0 +1,9 @@
+task_id: "T021"
+feature: "004-adopt-oauth"
+reviewed_at: "2026-04-19"
+approved: true
+files_changed:
+  - "frontend/src/app/modules/auth/services/auth.service.ts"
+violations: []
+new_rules: []
+next_task_notes: "T022: Create GoogleVerifyContractTests.cs with 6 contract tests using AuthApiFactory mock"
