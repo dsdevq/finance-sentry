@@ -1,110 +1,86 @@
-# REST Contracts: Google OAuth Endpoints (004-adopt-oauth)
+# REST Contracts: Google Sign-In via GSI (004-adopt-oauth)
 
-**Base path**: `/api/v1/auth/google` — exempt from `JwtAuthenticationMiddleware`
+**Base path**: `/api/v1/auth` — Google endpoints exempt from `JwtAuthenticationMiddleware`
+
+**Revision note**: `GET /google/login` and `GET /google/callback` are **removed**. Replaced by `POST /google/verify`.
 
 ---
 
-## GET /api/v1/auth/google/login
+## REMOVED: GET /api/v1/auth/google/login
 
-**Purpose**: Initiate Google OAuth Authorization Code flow. Generates CSRF state, stores it, returns a redirect to Google's consent screen.
+Deleted — server-side redirect flow is no longer used.
 
-**Auth**: None required (public endpoint)
+## REMOVED: GET /api/v1/auth/google/callback
+
+Deleted — no callback needed; credential is sent directly from the browser.
+
+---
+
+## NEW: POST /api/v1/auth/google/verify
+
+**Purpose**: Verify a Google-signed ID token credential received from the GSI client-side library. Creates or authenticates the user and issues a Finance Sentry JWT.
+
+**Auth**: None required (public endpoint, added to `JwtAuthenticationMiddleware` exempt list)
 
 **Request**
 ```
-GET /api/v1/auth/google/login
-```
-No query parameters. No request body.
-
-**Success Response**
-```
-HTTP 302 Found
-Location: https://accounts.google.com/o/oauth2/v2/auth
-          ?client_id=<CLIENT_ID>
-          &redirect_uri=http%3A%2F%2Flocalhost%3A5000%2Fapi%2Fv1%2Fauth%2Fgoogle%2Fcallback
-          &response_type=code
-          &scope=openid%20email%20profile
-          &state=<random_base64_44chars>
-          &access_type=offline
-          &prompt=consent
-```
-
-**Error Response** (config missing)
-```
-HTTP 500 Internal Server Error
-```
-
-**Contract Test Coverage**: Verify 302, Location starts with `https://accounts.google.com/o/oauth2/v2/auth`, `state` query param is present.
-
----
-
-## GET /api/v1/auth/google/callback
-
-**Purpose**: Google redirects here after user approves/denies consent. Handles the complete OAuth flow: validate state, exchange code, find/create user, issue JWT + refresh token, redirect to frontend.
-
-**Auth**: None required (public endpoint)
-
-**Request — Success path**
-```
-GET /api/v1/auth/google/callback?code=<authorization_code>&state=<nonce>
-```
-
-**Success Response**
-```
-HTTP 302 Found
-Location: http://localhost:4200/auth/callback?token=<jwt>&userId=<guid>&expiresAt=<iso8601>
-Set-Cookie: fs_refresh_token=<token>; HttpOnly; Secure; SameSite=Strict; Path=/; Expires=<30_days>
-```
-
-**Request — User cancelled (error=access_denied)**
-```
-GET /api/v1/auth/google/callback?error=access_denied&state=<nonce>
-```
-
-**Cancelled Response**
-```
-HTTP 302 Found
-Location: http://localhost:4200/auth/callback?error=cancelled
-```
-
-**Request — Missing/invalid state**
-```
-GET /api/v1/auth/google/callback?code=<code>
-(no state param, or state not found in DB, or state expired/used)
-```
-
-**Invalid State Response**
-```
-HTTP 400 Bad Request
+POST /api/v1/auth/google/verify
 Content-Type: application/json
 
-{ "error": "Invalid or expired OAuth state.", "errorCode": "INVALID_OAUTH_STATE" }
+{ "credential": "<google_id_token>" }
+```
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `credential` | `string` | Yes | Google-signed ID token (JWT) from `google.accounts.id` callback |
+
+**Success Response — user authenticated or created**
+```
+HTTP 200 OK
+Content-Type: application/json
+Set-Cookie: fs_refresh_token=<token>; HttpOnly; Secure; SameSite=Strict; Path=/; Expires=<30_days>
+
+{
+  "token": "<jwt_access_token>",
+  "userId": "<guid>",
+  "expiresAt": "<iso8601>"
+}
+```
+
+**Error Response — missing credential**
+```
+HTTP 400 Bad Request
+{ "error": "Credential is required.", "errorCode": "VALIDATION_ERROR" }
+```
+
+**Error Response — invalid/expired credential**
+```
+HTTP 400 Bad Request
+{ "error": "Invalid Google credential.", "errorCode": "INVALID_GOOGLE_CREDENTIAL" }
 ```
 
 **Contract Test Coverage**:
-- `GET /callback?error=access_denied&state=<valid>` → 302 to `{FrontendUrl}/auth/callback?error=cancelled`
-- `GET /callback` (no state) → 400 with `INVALID_OAUTH_STATE`
-- `GET /callback?code=<x>&state=<expired>` → 400
-- `GET /login` → 302 Location starts with `https://accounts.google.com`
+- `POST /google/verify` with valid mock credential → 200 + `{ token, userId, expiresAt }`
+- `POST /google/verify` with empty body → 400 `VALIDATION_ERROR`
+- `POST /google/verify` with verifier throwing → 400 `INVALID_GOOGLE_CREDENTIAL`
+- New user (no existing account) → account created, 200
+- Existing Google user → authenticated, 200
+- Existing email/password user with matching email → linked + authenticated, 200
 
 ---
 
 ## Unchanged Auth Endpoints
 
-All existing endpoints remain unchanged:
-
-| Endpoint | Change |
+| Endpoint | Status |
 |---|---|
-| `POST /api/v1/auth/login` | Updated: returns `GOOGLE_ACCOUNT_ONLY` error if user has no password |
+| `POST /api/v1/auth/login` | Unchanged — `GOOGLE_ACCOUNT_ONLY` guard already in place |
 | `POST /api/v1/auth/register` | No change |
 | `POST /api/v1/auth/refresh` | No change |
 | `POST /api/v1/auth/logout` | No change |
 
 ---
 
-## Modified Endpoint: POST /api/v1/auth/login (error case)
-
-When a Google-only user attempts password login:
+## Modified Endpoint: POST /api/v1/auth/login (GOOGLE_ACCOUNT_ONLY — unchanged)
 
 ```
 POST /api/v1/auth/login

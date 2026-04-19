@@ -1,4 +1,16 @@
-import {ChangeDetectionStrategy, Component, inject, OnInit} from '@angular/core';
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+import {
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  inject,
+  NgZone,
+  OnDestroy,
+  OnInit,
+  viewChild,
+} from '@angular/core';
 import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
 import {ActivatedRoute, Router, RouterLink} from '@angular/router';
 import {
@@ -8,6 +20,7 @@ import {
   InputComponent,
 } from '@dsdevq-common/ui';
 
+import {environment} from '../../../../../environments/environment';
 import {AuthService} from '../../services/auth.service';
 
 interface ApiError {
@@ -29,10 +42,12 @@ interface ApiError {
   styleUrls: ['./login.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class LoginComponent implements OnInit {
+export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly zone = inject(NgZone);
+  private readonly googleBtnRef = viewChild.required<ElementRef<HTMLElement>>('googleBtn');
 
   public readonly form = inject(FormBuilder).group({
     email: ['', [Validators.required, Validators.email]],
@@ -49,6 +64,28 @@ export class LoginComponent implements OnInit {
     } else if (params['error'] === 'google_failed') {
       this.errorMessage = 'Google sign-in failed. Please try again.';
     }
+  }
+
+  public ngAfterViewInit(): void {
+    google.accounts.id.initialize({
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      client_id: environment.googleClientId,
+      callback: (r: google.accounts.id.CredentialResponse) =>
+        this.zone.run(() => this.onGoogleCredential(r)),
+    });
+    google.accounts.id.renderButton(this.googleBtnRef().nativeElement, {
+      type: 'standard',
+      shape: 'rectangular',
+      theme: 'outline',
+      text: 'continue_with',
+      size: 'large',
+      width: 368,
+    });
+    google.accounts.id.prompt();
+  }
+
+  public ngOnDestroy(): void {
+    google.accounts.id.cancel();
   }
 
   public get emailError(): string {
@@ -76,10 +113,6 @@ export class LoginComponent implements OnInit {
     return '';
   }
 
-  public googleLogin(): void {
-    this.authService.googleLogin();
-  }
-
   public onSubmit(): void {
     if (this.form.invalid) {
       return;
@@ -102,6 +135,19 @@ export class LoginComponent implements OnInit {
         } else {
           this.errorMessage = 'Invalid email or password.';
         }
+        this.loading = false;
+      },
+    });
+  }
+
+  private onGoogleCredential(response: google.accounts.id.CredentialResponse): void {
+    this.authService.verifyGoogleCredential(response.credential as string).subscribe({
+      next: () => {
+        const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') ?? '/accounts';
+        void this.router.navigateByUrl(returnUrl);
+      },
+      error: () => {
+        this.errorMessage = 'Google sign-in failed. Please try again.';
         this.loading = false;
       },
     });

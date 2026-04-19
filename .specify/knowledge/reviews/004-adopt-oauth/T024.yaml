@@ -1,0 +1,17 @@
+task_id: "T024"
+feature: "004-adopt-oauth"
+reviewed_at: "2026-04-19"
+approved: true
+files_changed:
+  - "frontend/src/app/modules/auth/pages/login/login.component.ts"
+violations:
+  - rule_id: "TS-001"
+    file: "login.component.ts"
+    found: "Qwen abbreviated method bodies with { ... }"
+    fix: "Wrote complete file manually preserving all original method bodies"
+  - rule_id: "TS-002"
+    file: "login.component.ts"
+    found: "NgZone missing from imports in Qwen output"
+    fix: "Added NgZone to @angular/core imports"
+new_rules: []
+next_task_notes: "T025: HTML/SCSS replace button with div#googleBtn container"

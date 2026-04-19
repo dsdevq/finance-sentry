@@ -4,8 +4,10 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text;
+using FinanceSentry.Modules.Auth.Application.Interfaces;
 using FinanceSentry.Modules.Auth.Domain.Entities;
 using FinanceSentry.Modules.Auth.Infrastructure.Persistence;
+using Moq;
 using FinanceSentry.Modules.BankSync.Infrastructure.Persistence;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
@@ -123,6 +125,22 @@ public class AuthApiFactory : WebApplicationFactory<Program>
                     [1] = "dGVzdGtleS10ZXN0a2V5LXRlc3RrZXktdGVzdGtleTA="
                 };
             });
+
+            var mockVerifier = new Mock<IGoogleCredentialVerifier>();
+            mockVerifier
+                .Setup(v => v.VerifyAsync("valid-test-credential"))
+                .ReturnsAsync(new GoogleUserInfo("google-sub-123", "google@test.com", "Test User"));
+            mockVerifier
+                .Setup(v => v.VerifyAsync("new-user-credential"))
+                .ReturnsAsync(new GoogleUserInfo("google-sub-new", "newgoogle@test.com", "New User"));
+            mockVerifier
+                .Setup(v => v.VerifyAsync("link-credential"))
+                .ReturnsAsync(new GoogleUserInfo("google-sub-link", "link@test.com", "Link User"));
+            mockVerifier
+                .Setup(v => v.VerifyAsync("invalid-credential"))
+                .ThrowsAsync(new InvalidOperationException("INVALID_GOOGLE_CREDENTIAL"));
+            services.RemoveAll<IGoogleCredentialVerifier>();
+            services.AddScoped(_ => mockVerifier.Object);
         });
 
         builder.UseEnvironment("Testing");
@@ -139,9 +157,6 @@ public class AuthApiFactory : WebApplicationFactory<Program>
             "test-jwt-secret-key-for-integration-tests-minimum-32-chars");
         builder.UseSetting("Jwt:ExpiryMinutes", "60");
         builder.UseSetting("GoogleOAuth:ClientId", "test-client-id");
-        builder.UseSetting("GoogleOAuth:ClientSecret", "test-client-secret");
-        builder.UseSetting("GoogleOAuth:RedirectUri", "http://localhost:5000/api/v1/auth/google/callback");
-        builder.UseSetting("GoogleOAuth:FrontendUrl", "http://localhost:4200");
     }
 
     public async Task EnsureUserExistsAsync(string email, string password)

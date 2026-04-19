@@ -1,6 +1,6 @@
-# Data Model: Google OAuth Sign-In (004-adopt-oauth)
+# Data Model: Google Sign-In via Identity Services (004-adopt-oauth)
 
-**Branch**: `004-adopt-oauth` | **Date**: 2026-04-18
+**Branch**: `004-adopt-oauth` | **Date**: 2026-04-18 (revised — GSI rewrite)
 
 ---
 
@@ -8,73 +8,44 @@
 
 **Location**: `backend/src/FinanceSentry.Modules.Auth/Domain/Entities/ApplicationUser.cs`
 
-**Change**: Add one nullable property. No other modifications to the existing Identity schema.
+**Change**: Retains the `GoogleId` property added in M007. No additional schema changes needed.
 
 ```
 ApplicationUser (extends IdentityUser)
 ├── [existing Identity columns — unchanged]
-└── GoogleId : string?   # Google account sub claim. Null if user registered via email/password.
+└── GoogleId : string?   # Google account sub claim. Null if user has no Google link.
 ```
 
 | Field | Type | Nullable | Constraint | Notes |
 |---|---|---|---|---|
-| `GoogleId` | `nvarchar(255)` | Yes | No unique index (Google sub is globally unique but users may share a DB row for tests) | Populated on first Google sign-in; never overwritten once set |
-
-**Migration**: M007_GoogleId (adds `GoogleId` column to `AspNetUsers`)
+| `GoogleId` | `nvarchar(255)` | Yes | — | Populated on first Google sign-in via GSI; stable identifier |
 
 ---
 
-## New Entity: OAuthState
+## Removed Entity: OAuthState *(dropped in this feature)*
 
-**Location**: `backend/src/FinanceSentry.Modules.Auth/Domain/Entities/OAuthState.cs`
-
-```
-OAuthState
-├── Id        : Guid           # PK
-├── State     : string         # Cryptographically random nonce (Base64, 32 bytes → 44 chars)
-├── ExpiresAt : DateTimeOffset # UtcNow + 10 minutes at creation
-├── IsUsed    : bool           # True after the callback has consumed this state
-└── CreatedAt : DateTimeOffset # Audit field
-```
-
-| Field | Type | Nullable | Constraint |
-|---|---|---|---|
-| `Id` | `uuid` | No | PK |
-| `State` | `nvarchar(64)` | No | UNIQUE index (fast lookup on callback) |
-| `ExpiresAt` | `timestamptz` | No | Index (for cleanup queries) |
-| `IsUsed` | `bool` | No | Default `false` |
-| `CreatedAt` | `timestamptz` | No | Set on insert |
-
-**Lifecycle**:
-1. Created in `InitiateGoogleLoginQueryHandler` when user clicks "Continue with Google"
-2. Validated + marked `IsUsed = true` in `HandleGoogleCallbackCommandHandler` on callback
-3. Expired/used rows accumulate — acceptable for v1; future Hangfire job can purge them
-
-**Migration**: M008_GoogleOAuth (adds `OAuthStates` table)
+The `OAuthState` table (added by M008) is dropped because GSI handles CSRF protection client-side. The `OAuthState.cs` entity file and all associated code are deleted.
 
 ---
 
 ## AuthDbContext Changes
 
 ```
-AuthDbContext
-├── [existing] RefreshTokens  : DbSet<RefreshToken>
-└── [new]      OAuthStates    : DbSet<OAuthState>
+AuthDbContext (after this feature)
+└── [existing] RefreshTokens : DbSet<RefreshToken>    ← unchanged
+    [REMOVED]  OAuthStates                            ← dropped by M009
 ```
-
-Configuration in `OnModelCreating`:
-- Unique index on `OAuthState.State`
-- Index on `OAuthState.ExpiresAt`
 
 ---
 
 ## Migration Sequence
 
-| # | Name | Change |
-|---|---|---|
-| M005 | IdentitySchema | ASP.NET Identity tables |
-| M006 | RefreshTokens | RefreshTokens table |
-| M007 | GoogleId | `GoogleId` column on `AspNetUsers` |
-| M008 | GoogleOAuth | `OAuthStates` table |
+| # | Name | Change | Status |
+|---|---|---|---|
+| M005 | IdentitySchema | ASP.NET Identity tables | existing |
+| M006 | RefreshTokens | RefreshTokens table | existing |
+| M007 | GoogleId | `GoogleId` column on `AspNetUsers` | existing — kept |
+| M008 | GoogleOAuth | `OAuthStates` table | existing — superseded |
+| M009 | DropOAuthStates | Drops `OAuthStates` table | **new in this feature** |
 
-**Note**: M007 and M008 are separate migrations matching the task sequence (T001 → T004).
+**Note**: M008 and M009 are inverse migrations — M008 creates the table, M009 drops it. Both are preserved in migration history for auditability.

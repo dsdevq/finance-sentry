@@ -3,8 +3,12 @@ feature: "004-adopt-oauth"
 reviewed_at: "2026-04-18"
 approved: true
 files_changed:
-  - "docker/docker-compose.dev.yml"
-  - "backend/src/FinanceSentry.API/appsettings.json"
-violations: []
+  - "backend/src/FinanceSentry.Modules.Auth/API/Controllers/AuthController.cs (GoogleLogin/GoogleCallback removed; GoogleVerify added)"
+violations:
+  - rule_id: "ARCH-003"
+    file: "AuthController.cs"
+    line: 0
+    found: "Qwen abbreviated method bodies with { ... } placeholders"
+    fix: "Manually restored all original method bodies from prior version"
 new_rules: []
-next_task_notes: ""
+next_task_notes: "Build succeeds. All 4 existing endpoints + new google/verify endpoint present."

@@ -11,10 +11,7 @@
       <cmn-alert variant="error" class="error-alert">{{ errorMessage }}</cmn-alert>
     }
 
-    <button type="button" class="google-btn" (click)="googleLogin()">
-      <img src="/assets/icons/google.svg" alt="Google" class="google-icon" />
-      Continue with Google
-    </button>
+    <div #googleBtn class="google-btn-container"></div>
 
     <div class="divider"><span>or</span></div>
 

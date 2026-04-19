@@ -1,112 +1,118 @@
-# Feature Specification: Google OAuth Sign-In
+# Feature Specification: Google Sign-In via Identity Services
 
 **Feature Branch**: `004-adopt-oauth`
 **Created**: 2026-04-15
+**Revised**: 2026-04-18
 **Status**: Draft
-**Input**: User description: "I want you to implement OAuth sign in and sign up. Want to be able to login with my gmail. Make it clean, using best practices and so on. Take into account the existing sign in signup as I want to keep it as well."
+**Input**: Switch Google OAuth from server-side Authorization Code flow to Google Identity Services (GSI) client-side credential flow.
 
 ## User Scenarios & Testing *(mandatory)*
 
-### User Story 1 - Google Sign-In for Existing Users (Priority: P1)
+### User Story 1 - Google Sign-In / Sign-Up (Priority: P1)
 
-A registered user (whether originally registered via email/password or Google) clicks "Continue with Google" on the login page, is redirected to Google's consent screen, and on approval lands on the accounts page authenticated. No additional form-filling required.
+A user clicks "Continue with Google" on the login or register page. A Google account picker appears (no full-page redirect). The user selects their account, and within moments they are authenticated and land on the accounts page — whether they are a returning user or a first-timer.
 
-**Why this priority**: Google sign-in is the primary new capability. Existing users should be able to link their Google account to their existing Finance Sentry account so they aren't forced to create a duplicate account.
+**Why this priority**: The core deliverable. One interaction covers both sign-in and sign-up, reducing friction to a single click for anyone with a Google account.
 
-**Independent Test**: Create an account with email/password, then log out, click "Continue with Google" using the same Gmail address — user lands on accounts page with existing data intact.
-
-**Acceptance Scenarios**:
-
-1. **Given** a user is on the login page, **When** they click "Continue with Google" and approve the Google consent screen, **Then** they are authenticated and redirected to the accounts page.
-2. **Given** a user previously registered with email/password using the same Gmail address, **When** they sign in with Google, **Then** their existing account is matched and they see their existing data (accounts are merged/linked, not duplicated).
-3. **Given** a user clicks "Continue with Google" but cancels or denies the Google consent screen, **When** they are returned to the app, **Then** they see the login page with a clear message that sign-in was cancelled and no error state is shown.
-4. **Given** a user is already logged in, **When** they navigate to `/login`, **Then** they are redirected to the accounts page.
-
----
-
-### User Story 2 - Google Sign-Up for New Users (Priority: P2)
-
-A first-time user clicks "Continue with Google" on the register page (or login page), approves Google consent, and their Finance Sentry account is automatically created using their Google profile data (name, email). They land on the accounts page ready to use the app.
-
-**Why this priority**: New users should be able to onboard with one click rather than filling out a registration form, reducing friction and drop-off.
-
-**Independent Test**: Use a Gmail account that has never registered — click "Continue with Google", approve, and verify a new Finance Sentry account is created and the user lands on the accounts page.
+**Independent Test**: Click "Continue with Google" on the login page with a Google account that has never used Finance Sentry — a new account is created and the user lands on the accounts page. Repeat with the same account — the user is signed back into the existing account.
 
 **Acceptance Scenarios**:
 
-1. **Given** a first-time user with no Finance Sentry account, **When** they click "Continue with Google" and approve consent, **Then** a new account is created using their Google profile data and they are signed in and redirected to the accounts page.
-2. **Given** a new user signs up via Google, **When** their account is created, **Then** no password is required and their display name and email are pre-filled from their Google profile.
-3. **Given** a new user signs up via Google, **When** they later visit the login page, **Then** "Continue with Google" signs them back in without needing a password.
+1. **Given** a user is on the login or register page, **When** they click "Continue with Google" and select their Google account, **Then** they are authenticated and redirected to the accounts page within 5 seconds.
+2. **Given** a first-time user with no Finance Sentry account, **When** they complete Google sign-in, **Then** a new Finance Sentry account is created using their Google profile email and display name — no registration form required.
+3. **Given** a returning user who previously signed in with Google, **When** they click "Continue with Google" and select the same account, **Then** they are signed back into their existing account with all data intact.
+4. **Given** a user previously registered with email/password using the same Gmail address, **When** they sign in with Google, **Then** their existing account is matched by email and they see their existing data — no duplicate account is created.
+5. **Given** a user dismisses the Google account picker without selecting an account, **When** they are returned to the login page, **Then** a non-alarming message confirms sign-in was cancelled and no error state is shown.
 
 ---
 
-### User Story 3 - Email/Password Auth Preserved (Priority: P3)
+### User Story 2 - Email/Password Auth Preserved (Priority: P2)
 
-Existing email/password registration and login flows remain fully functional alongside Google OAuth. A user can choose either method.
+Existing email/password registration and login flows remain fully functional alongside Google Sign-In. A user can choose either method independently.
 
-**Why this priority**: The existing auth flow (003-auth-flow) must not be broken. Users who registered with email/password should never be forced to use Google.
+**Why this priority**: The existing auth flow (003-auth-flow) must not regress. Users who registered with email/password must never be forced to switch to Google.
 
 **Independent Test**: Register a new account with email/password, log out, log back in with email/password — full flow works identically to before this feature was added.
 
 **Acceptance Scenarios**:
 
 1. **Given** a user registered with email/password, **When** they log in via the email/password form, **Then** they are authenticated and redirected to the accounts page as before.
-2. **Given** the login page, **When** displayed, **Then** both the email/password form and the "Continue with Google" button are visible and usable.
-3. **Given** a user who signed up with Google, **When** they try to log in with email/password using the same email, **Then** they see a clear message indicating their account uses Google sign-in and they should use that method.
+2. **Given** the login page is displayed, **Then** both the email/password form and the "Continue with Google" button are visible and functional.
+3. **Given** a user who signed up with Google only (no password), **When** they attempt email/password login with their Google email, **Then** they see a clear message indicating their account uses Google sign-in and directing them to use that method.
+
+---
+
+### User Story 3 - One Tap Sign-In (Priority: P3)
+
+A returning user who is already signed into Google in the browser sees a One Tap prompt — a non-intrusive overlay showing their Google account. Clicking it signs them in instantly without any interaction with the login page.
+
+**Why this priority**: Significant UX improvement for returning users. Optional for v1 but included naturally by the GSI library.
+
+**Independent Test**: Clear Finance Sentry session, navigate to any protected page, verify One Tap appears and completes sign-in on a single click.
+
+**Acceptance Scenarios**:
+
+1. **Given** a logged-out user who is signed into Google in the browser, **When** they navigate to the login page, **Then** a One Tap overlay appears showing their Google account.
+2. **Given** the One Tap overlay is shown, **When** the user clicks it, **Then** they are authenticated and redirected to the accounts page without any other interaction.
+3. **Given** the user dismisses the One Tap overlay, **When** they return to the login page, **Then** the standard "Continue with Google" button remains available as a fallback.
 
 ---
 
 ### Edge Cases
 
-- What happens when Google returns an email that is already linked to a different Google account (e.g., account takeover attempt)? → Each Google `sub` ID is unique; match by Google account ID first, email second.
-- What happens if Google's servers are unavailable during sign-in? → User sees an error message and can fall back to email/password.
-- What happens if the user revokes Finance Sentry's Google permissions after signing in? → On next sign-in attempt via Google, they are prompted to re-approve. Existing session remains valid until it expires naturally.
-- What happens if a user signs up via Google with an email that has no Google account linked but an email/password account exists? → Accounts are linked by email (with a confirmation step if needed to prevent hijack).
+- What happens when Google's account picker is dismissed without selecting an account? → User stays on login page, a soft informational message is shown, no error state.
+- What happens if the Google credential returned by the browser fails server-side verification? → User sees a generic "Google sign-in failed, please try again" message; no partial session is created.
+- What happens if a Google email matches an existing email/password account? → Accounts are linked automatically by email on first Google sign-in; no duplicate is created.
+- What happens if the same Google `sub` ID is presented but with a different email (rare Google account change)? → Match by `sub` first; email is updated on the user record if it has changed.
+- What happens if Google's Identity Services script fails to load (ad-blockers, network issues)? → The button renders as a standard styled button; clicking it falls back gracefully or shows an error.
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: The login page MUST display a "Continue with Google" button alongside the existing email/password form.
-- **FR-002**: The register page MUST display a "Continue with Google" button alongside the existing registration form.
-- **FR-003**: Clicking "Continue with Google" MUST initiate a Google OAuth 2.0 authorization flow and redirect the user to Google's consent screen.
-- **FR-004**: On successful Google authorization, the system MUST either create a new user account (if no matching account exists) or authenticate the existing user (if a matching account exists by Google ID or email).
-- **FR-005**: The system MUST link a Google sign-in to an existing email/password account when the Google email matches the registered email, preventing duplicate accounts.
-- **FR-006**: The system MUST issue the same JWT access and refresh tokens for Google-authenticated users as it does for email/password users, so all downstream app behaviour is identical.
-- **FR-007**: A user who signed up via Google and has no password MUST NOT be able to log in via the email/password form; they MUST see guidance to use "Continue with Google" instead.
-- **FR-008**: The existing email/password registration and login flows MUST continue to work without modification.
-- **FR-009**: If the user cancels or denies the Google consent screen, the system MUST return them to the login page with a non-alarming informational message.
-- **FR-010**: The system MUST store the Google account identifier (`sub`) against the user record to support future sign-ins without relying solely on email matching.
+- **FR-001**: The login page MUST display a "Continue with Google" button using Google's official branded appearance.
+- **FR-002**: The register page MUST display a "Continue with Google" button using Google's official branded appearance.
+- **FR-003**: Clicking "Continue with Google" MUST trigger Google's account picker in the browser without a full-page redirect; the user selects their account and the app receives a signed credential directly.
+- **FR-004**: The app MUST send the Google-issued credential to the backend for server-side verification before creating a session.
+- **FR-005**: On successful credential verification, the backend MUST either create a new user account or authenticate the existing user (matched by Google account ID or email).
+- **FR-006**: The system MUST link a Google sign-in to an existing email/password account when the Google email matches the registered email, preventing duplicate accounts.
+- **FR-007**: The system MUST issue the same JWT access and refresh tokens for Google-authenticated users as for email/password users, so all downstream behaviour is identical.
+- **FR-008**: A user who signed up via Google and has no password MUST NOT be able to log in via the email/password form; they MUST see guidance to use "Continue with Google" instead.
+- **FR-009**: The existing email/password registration and login flows MUST continue to work without modification.
+- **FR-010**: The system MUST store the Google account identifier against the user record to support reliable future sign-ins independent of email changes.
+- **FR-011**: The One Tap sign-in overlay SHOULD appear for users who are already signed into Google in the browser, completing authentication on a single user interaction.
 
 ### Key Entities
 
-- **User**: Existing entity — gains optional `googleId` field and a flag indicating whether a password is set (`hasPassword`).
-- **OAuthState**: Short-lived server-side state token used to prevent CSRF during the OAuth redirect flow. Tied to a session/nonce, expires after one use.
+- **User**: Existing entity — gains an optional Google account identifier field and a flag indicating whether a password is set.
 
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
 
-- **SC-001**: A new user can complete Google sign-up (from clicking the button to landing on the accounts page) in under 30 seconds, assuming they are already signed into Google in the browser.
-- **SC-002**: An existing email/password user can link their Google account and sign in via Google without losing any existing data (0% data loss).
-- **SC-003**: The email/password login and register flows continue to work at the same success rate as before this feature — no regression.
-- **SC-004**: Google sign-in failure (network error, denial, cancelled) results in a user-visible message within 3 seconds of returning to the app; no blank screen or unhandled error.
-- **SC-005**: 100% of Google sign-in attempts that result in account creation produce a valid, usable Finance Sentry account on first attempt.
+- **SC-001**: A user can complete Google sign-in (from clicking the button to landing on the accounts page) in under 10 seconds, assuming they are already signed into Google in the browser.
+- **SC-002**: An existing email/password user can sign in via Google without losing any data — 0% data loss on account linking.
+- **SC-003**: The email/password login and register flows continue to work at the same success rate as before — no regression.
+- **SC-004**: Google sign-in failure (network error, credential rejection, dismissal) always results in a user-visible message within 3 seconds; no blank screen or unhandled error.
+- **SC-005**: 100% of successful Google sign-ins that result in a new account produce a valid, usable Finance Sentry account on the first attempt.
+- **SC-006**: One Tap sign-in completes authentication in a single click for eligible returning users.
 
 ## Assumptions
 
-- The app has a publicly reachable redirect URI that Google can call back to (or `localhost` for development, registered in Google Cloud Console).
-- Google OAuth 2.0 with the Authorization Code flow (server-side) is used — not implicit flow, which is deprecated.
-- A single Google Cloud project with an OAuth 2.0 client ID and secret will be configured (credentials stored as environment variables, not hardcoded).
-- Users have a Google/Gmail account they are willing to use; no other OAuth providers (GitHub, Apple, etc.) are in scope for this feature.
+- Google Identity Services (`accounts.google.com/gsi/client`) script is loaded by the frontend.
+- Google Cloud Console is configured with a valid OAuth 2.0 client ID; the client secret is not required by this flow (the backend verifies the credential using Google's public keys, not by exchanging a secret).
+- The backend verifies the Google-issued credential against Google's public key endpoint — no secret-based token exchange is needed.
 - Account linking is automatic by email match (no manual linking UI required for v1).
-- The Google "Continue with Google" button follows Google's branding guidelines (logo + text).
+- One Tap is enabled by default but users can dismiss it; it does not block access to the standard button.
+- No other OAuth providers (GitHub, Apple, Microsoft) are in scope for this feature.
 
 ## Notes
 
-- [DECISION] Auth strategy: Keep the existing email/password auth (003-auth-flow) fully intact. Add Google OAuth as an additional sign-in method. Both produce the same JWT tokens. This is the "unified auth" pattern — one user table, multiple credential types.
-- [DECISION] Account linking: When a Google email matches an existing email/password account, automatically link them (add `googleId` to the existing record) on first Google sign-in. No manual linking step required for v1.
-- [DECISION] No-password users: Users who only signed up via Google have no password hash stored. Attempting email/password login with their email returns a specific error guiding them to use Google.
+- [DECISION] Auth mechanism: Replace server-side Authorization Code flow with Google Identity Services (GSI) client-side credential flow. The frontend receives a signed ID token directly from Google; the backend verifies it cryptographically. This eliminates CSRF state management (OAuthState entity), the code exchange step, and the backend-to-Google HTTP calls for token exchange.
+- [DECISION] One Tap included: GSI provides One Tap at zero additional cost. It is in scope for this feature as it directly improves returning-user UX.
+- [DECISION] Account linking: When a Google email matches an existing email/password account, automatically link them on first Google sign-in. No manual linking step required for v1.
+- [DECISION] No-password users: Users who signed up via Google have no password hash stored. Attempting email/password login returns a specific error guiding them to Google.
+- [DECISION] Client secret not required: The GSI credential flow uses Google's public keys for verification — no client secret is needed in the backend, simplifying secrets management.
+- [OUT OF SCOPE] Server-side Authorization Code flow — replaced entirely by this feature.
 - [OUT OF SCOPE] Other OAuth providers (GitHub, Apple, Microsoft) — deferred to a future feature.
-- [OUT OF SCOPE] Allowing users to unlink their Google account from the profile settings page — deferred.
-- [OUT OF SCOPE] Google One Tap sign-in widget — standard redirect flow only for v1.
+- [OUT OF SCOPE] Allowing users to unlink their Google account from profile settings — deferred.

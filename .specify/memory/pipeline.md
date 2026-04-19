@@ -1,6 +1,8 @@
 # AI-Assisted Development Pipeline
 
-**Version**: 1.0 | **Established**: 2026-04-18
+**Version**: 1.1 | **Established**: 2026-04-18 | **Updated**: 2026-04-19
+
+> **Source of truth** for the two-model implementation pipeline. When `CLAUDE.md`, skill definitions, or other docs conflict with this file, this file wins.
 
 ---
 
@@ -34,7 +36,7 @@ Lives in `.specify/knowledge/`. Grows automatically as reviews are run.
 
 ```
 .specify/knowledge/
-├── index.yaml              # Machine-readable rule index (30 rules, id/category/enabled/fire_count)
+├── index.yaml              # Machine-readable rule index (id/category/enabled/fire_count/last_fired)
 ├── review-template.yaml    # YAML schema for review output
 ├── rules/
 │   ├── angular.md          # ANG-001..010 — Angular/TypeScript rules
@@ -43,6 +45,10 @@ Lives in `.specify/knowledge/`. Grows automatically as reviews are run.
 │   ├── versioning.md       # VER-001..003 — version bump rules
 │   ├── architecture.md     # ARCH-001..005 — modular monolith rules
 │   └── generated.md        # Auto-generated rules from reviews (may not exist yet)
+├── anti-patterns/
+│   └── <category>.md       # Auto-generated when a rule's fire_count reaches 2; bad/good code pairs
+├── examples/
+│   └── <category>.md       # Auto-generated on task approval; positive reference snippets
 └── reviews/
     └── <feature>/          # One YAML review file per task, e.g. 004-adopt-oauth/t001.yaml
 ```
@@ -60,12 +66,16 @@ Run via: `py .specify/integrations/qwen/scripts/inject-knowledge.py`
 For each task in `tasks.md` marked `- [ ]`:
 
 ```
-1. Claude calls Qwen MCP tool with the task description + relevant rules
+1. Claude calls Qwen MCP tool with the task description + all enabled rules + any relevant anti-patterns
 2. Qwen returns generated code as text (MCP is text-in, text-out only)
 3. Claude writes/edits the files using Edit/Write tools
 4. Claude reviews the changes against knowledge rules (inline)
-5a. APPROVED  → Claude marks task [x] in tasks.md, commits, moves to next task
-5b. VIOLATIONS → Claude shows violations, feeds correction back to Qwen, repeats from step 2
+4b. fire_count + last_fired updated in index.yaml for each violated rule;
+    if fire_count reaches 2 → anti-pattern entry auto-written to anti-patterns/<category>.md
+5a. APPROVED  → positive example written to examples/<category>.md;
+               Claude marks task [x] in tasks.md, commits, moves to next task
+5b. VIOLATIONS → Claude shows violations + injects matching anti-patterns into correction prompt,
+               feeds back to Qwen, repeats from step 2
 ```
 
 Reviews are saved to `.specify/knowledge/reviews/<feature>/<task-id>.yaml`.

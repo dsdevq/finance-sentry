@@ -67,15 +67,10 @@ export class AuthService {
     }
   }
 
-  public googleLogin(): void {
-    window.location.href = '/api/v1/auth/google/login';
-  }
-
-  public handleOAuthCallback(token: string, userId: string, expiresAt: string): void {
-    this.storeToken(token);
-    localStorage.setItem('fs_user_id', userId);
-    localStorage.setItem('fs_token_expires_at', expiresAt);
-    void this.router.navigate(['/accounts']);
+  public verifyGoogleCredential(credential: string): Observable<AuthResponse> {
+    return this.http
+      .post<AuthResponse>(`${this.apiUrl}/google/verify`, {credential})
+      .pipe(tap(res => this.storeToken(res.token)));
   }
 
   public logout(): void {

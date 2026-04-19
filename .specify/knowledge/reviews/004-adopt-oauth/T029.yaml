@@ -1,0 +1,9 @@
+task_id: "T029"
+feature: "004-adopt-oauth"
+reviewed_at: "2026-04-19"
+approved: true
+files_changed:
+  - "backend/src/FinanceSentry.API/FinanceSentry.API.csproj"
+violations: []
+new_rules: []
+next_task_notes: "T030: ESLint --fix on modified Angular TS files"

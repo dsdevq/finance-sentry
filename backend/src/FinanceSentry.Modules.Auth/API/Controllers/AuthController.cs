@@ -1,21 +1,17 @@
 using FinanceSentry.Modules.Auth.Application.Commands;
 using FinanceSentry.Modules.Auth.Application.DTOs;
-using FinanceSentry.Modules.Auth.Application.Queries;
-using FinanceSentry.Modules.Auth.Infrastructure.Services;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
 using System.Security.Claims;
 
 namespace FinanceSentry.Modules.Auth.API.Controllers;
 
 [ApiController]
 [Route("auth")]
-public class AuthController(IMediator mediator, IOptions<GoogleOAuthOptions> googleOAuthOptions) : ControllerBase
+public class AuthController(IMediator mediator) : ControllerBase
 {
     private const string RefreshTokenCookie = "fs_refresh_token";
-    private readonly GoogleOAuthOptions _googleOAuthOptions = googleOAuthOptions.Value;
 
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] AuthRequest request)
@@ -121,41 +117,21 @@ public class AuthController(IMediator mediator, IOptions<GoogleOAuthOptions> goo
         }
     }
 
-    [HttpGet("google/login")]
-    public async Task<IActionResult> GoogleLogin()
+    [HttpPost("google/verify")]
+    public async Task<IActionResult> GoogleVerify([FromBody] VerifyGoogleCredentialRequest request)
     {
-        var authorizationUrl = await mediator.Send(new InitiateGoogleLoginQuery());
-        return Redirect(authorizationUrl);
-    }
-
-    [HttpGet("google/callback")]
-    public async Task<IActionResult> GoogleCallback(
-        [FromQuery] string? code,
-        [FromQuery] string? state,
-        [FromQuery] string? error)
-    {
-        if (!string.IsNullOrEmpty(error))
-            return Redirect($"{_googleOAuthOptions.FrontendUrl}/auth/callback?error=cancelled");
+        if (string.IsNullOrWhiteSpace(request.Credential))
+            return BadRequest(new { error = "Credential is required.", errorCode = "VALIDATION_ERROR" });
 
         try
         {
-            var result = await mediator.Send(
-                new HandleGoogleCallbackCommand(code ?? string.Empty, state ?? string.Empty));
-
+            var result = await mediator.Send(new VerifyGoogleCredentialCommand(request.Credential));
             SetRefreshTokenCookie(result.RawRefreshToken);
-
-            var r = result.Response;
-            var expiresAt = Uri.EscapeDataString(r.ExpiresAt.ToString("o"));
-            return Redirect(
-                $"{_googleOAuthOptions.FrontendUrl}/auth/callback?token={r.Token}&userId={r.UserId}&expiresAt={expiresAt}");
+            return Ok(result.Response);
         }
-        catch (InvalidOperationException ex) when (ex.Message == "INVALID_OAUTH_STATE")
+        catch (InvalidOperationException ex) when (ex.Message == "INVALID_GOOGLE_CREDENTIAL")
         {
-            return BadRequest(new
-            {
-                error = "Invalid or expired OAuth state.",
-                errorCode = "INVALID_OAUTH_STATE"
-            });
+            return BadRequest(new { error = "Invalid Google credential.", errorCode = "INVALID_GOOGLE_CREDENTIAL" });
         }
     }
 
@@ -195,3 +171,5 @@ public class AuthController(IMediator mediator, IOptions<GoogleOAuthOptions> goo
         });
     }
 }
+
+public record VerifyGoogleCredentialRequest(string Credential);

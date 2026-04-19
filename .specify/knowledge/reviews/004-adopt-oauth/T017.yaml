@@ -3,8 +3,7 @@ feature: "004-adopt-oauth"
 reviewed_at: "2026-04-18"
 approved: true
 files_changed:
-  - "frontend/src/app/modules/auth/pages/register/register.component.ts"
-  - "frontend/src/app/modules/auth/pages/register/register.component.html"
+  - "backend/src/FinanceSentry.Modules.Auth/Infrastructure/Services/GoogleOAuthOptions.cs (created - stripped to ClientId only)"
 violations: []
 new_rules: []
 next_task_notes: ""

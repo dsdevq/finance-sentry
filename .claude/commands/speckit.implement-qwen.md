@@ -18,7 +18,7 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 3. Load implementation context:
    - **REQUIRED**: Read `tasks.md` for the full task list
-   - **REQUIRED**: Read `.specify/knowledge/index.yaml` for active rules (these go into every Qwen prompt)
+   - **REQUIRED**: Read `.specify/knowledge/index.yaml` — extract ALL rules where `enabled: true` into a numbered list. Store this list. It MUST appear verbatim in every Qwen prompt. If `index.yaml` is missing or has zero enabled rules, STOP and warn the user.
    - **IF EXISTS**: Read `plan.md`, `data-model.md`, `contracts/`, `research.md` for additional context
 
 4. **Check for extension hooks** under `hooks.before_implement` in `.specify/extensions.yml` and execute any enabled mandatory hooks before proceeding.
@@ -38,6 +38,11 @@ Construct a prompt containing:
 - Relevant file paths mentioned in the task description
 - Any context from `plan.md` / `data-model.md` / `contracts/` that directly applies to this task
 - Explicit instruction: *"Implement only this task. Output the complete file contents for each file that must be created or modified. Do not implement any other tasks."*
+
+**Before calling Qwen, verify the prompt contains:**
+- [ ] At least one rule from index.yaml (if none present, STOP — do not call Qwen)
+- [ ] The exact rule texts, not just rule IDs
+- [ ] "Output complete file contents" instruction
 
 ### Step 2 — Call Qwen MCP
 
@@ -81,7 +86,48 @@ Save the review to `.specify/knowledge/reviews/<feature>/<task-id>.yaml`.
 
 If any **new rules** are proposed, append them to `.specify/knowledge/index.yaml` and `.specify/knowledge/rules/generated.md`.
 
+### Step 4b — Update fire counts (always runs after review)
+
+For each violation found in the review:
+1. Find the matching rule in `.specify/knowledge/index.yaml` by `rule_id`
+2. Increment its `fire_count` by 1
+3. Set `last_fired` to today's ISO date
+4. Save the updated `index.yaml`
+
+Then for each rule whose `fire_count` just reached **2** (i.e. was 1, now 2):
+- Determine the rule's primary category (first entry in its `category` list)
+- Append an anti-pattern entry to `.specify/knowledge/anti-patterns/<category>.md` (create the file if it doesn't exist) using this format:
+
+  ```markdown
+  ## <rule_id> — <rule text>
+
+  **Triggered**: <task_id> (<feature>), <today_iso>
+  **fire_count**: 2
+
+  ### What Qwen wrote (BAD)
+  ```
+  <found value from the review violation>
+  ```
+
+  ### What it should be (GOOD)
+  ```
+  <fix value from the review violation>
+  ```
+  ```
+
 ### Step 5a — APPROVED (zero violations)
+
+- **Extract positive example**: For each file changed in this task, append an example entry to `.specify/knowledge/examples/<category>.md` (infer category from file extension: `.ts` → `angular`, `.cs` → `backend`, `.spec.ts` → `testing`). Create the file if it doesn't exist. Format:
+
+  ```markdown
+  ## <task_id> — <short description>
+
+  **Source**: <file path> (<feature>, <today_iso>)
+
+  ```<language>
+  <relevant snippet — the key pattern this task demonstrates, max 30 lines>
+  ```
+  ```
 
 - Mark the task complete in `tasks.md`: change `- [ ]` to `- [x]`
 - Commit:
@@ -98,6 +144,7 @@ If any **new rules** are proposed, append them to `.specify/knowledge/index.yaml
 - Build a correction prompt for Qwen:
   - Include the original task description
   - List every violation with the required fix
+  - **Include any anti-pattern entries** from `.specify/knowledge/anti-patterns/` that match the violated rule categories
   - Instruction: *"Fix only the listed violations. Do not change anything else."*
 - Call Qwen MCP again (Step 2) with the correction prompt
 - Apply the returned fixes (Step 3)

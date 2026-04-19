@@ -140,7 +140,7 @@ After writing or modifying **any** Angular `.ts` file, run `npx eslint <file>` f
 
 ## AI Development Pipeline
 
-This project uses a two-model pipeline. See [`.specify/memory/pipeline.md`](.specify/memory/pipeline.md) for full details.
+This project uses a two-model pipeline. [`.specify/memory/pipeline.md`](.specify/memory/pipeline.md) is the **source of truth** for pipeline roles, knowledge store structure, and the per-task implementation loop — read it before starting any implementation session.
 
 **Claude** = planner + orchestrator + reviewer (this session).
 **Qwen2.5-coder:14b** (local Ollama) = implementer, called via the `qwen-code` MCP server.
@@ -188,6 +188,8 @@ After **all tasks in a feature are complete**, act as a QA engineer: spin up the
 - `localStorage` (theme + accent persistence only) (005-ui-component-library)
 - TypeScript 5.3 / Angular 21.2 (strict mode) + `@dsdevq-common/ui` (local library, feature 005), Angular `ReactiveFormsModule`, Angular CLI (006-ui-library-adoption)
 - `localStorage` (ThemeService — already implemented in feature 005) (006-ui-library-adoption)
+- C# 13 / .NET 9 (backend) · TypeScript 5.x strict (frontend) + ASP.NET Core 9, EF Core 9, MediatR, ASP.NET Core Identity, `Google.Apis.Auth` (new) · Angular 20, RxJS, `@types/google.accounts` (new) (004-adopt-oauth)
+- PostgreSQL 14 — `AuthDbContext : IdentityDbContext<ApplicationUser>` — `OAuthStates` table to be DROPPED via new migration (004-adopt-oauth)
 
 ## Recent Changes
 - 003-auth-flow: Added C# 13 / .NET 9 (backend) · TypeScript 5.x strict (frontend) + ASP.NET Core 9, EF Core 9, MediatR, ASP.NET Core Identity (`Microsoft.AspNetCore.Identity.EntityFrameworkCore`), Npgsql.EF Core (backend) · Angular 20, RxJS, Angular standalone routing (frontend)

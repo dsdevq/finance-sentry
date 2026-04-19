@@ -1,8 +1,140 @@
-# Research: Google OAuth Sign-In (004-adopt-oauth)
+# Research: Google Sign-In via Identity Services (004-adopt-oauth)
 
-**Branch**: `004-adopt-oauth` | **Date**: 2026-04-18
+**Branch**: `004-adopt-oauth` | **Date**: 2026-04-18 (revised — GSI rewrite)
 
 ---
+
+## 1. GSI Credential Flow — How It Works
+
+**Decision**: Use `google.accounts.id.initialize()` + `renderButton()` + `prompt()` (One Tap).
+
+**Flow**:
+1. Frontend loads `https://accounts.google.com/gsi/client` script (async, in `index.html`)
+2. On auth page init: call `google.accounts.id.initialize({ client_id, callback })`
+3. Call `google.accounts.id.renderButton(element, config)` to render the official branded button
+4. Optionally call `google.accounts.id.prompt()` for One Tap overlay (returns silently if no eligible session)
+5. User selects account → Google calls the JS `callback` with `{ credential: <id_token> }`
+6. Frontend POSTs `{ credential }` to `POST /api/v1/auth/google/verify`
+7. Backend verifies the ID token → finds/creates user → returns JWT + refresh token
+
+**Why this over Authorization Code flow**:
+- No CSRF state management, no server-to-server token exchange
+- Official Google-rendered button (branding compliance automatic)
+- One Tap included at zero extra cost
+- Google deprecated implicit flow; GSI is the current recommended approach for SPAs
+
+**Alternatives considered**:
+- Server-side Authorization Code flow — rejected (already implemented, being replaced; more complex, requires client secret)
+- Firebase Auth — rejected (adds a full Firebase dependency for a single auth method)
+
+---
+
+## 2. Backend: Google ID Token Verification
+
+**Decision**: Use `Google.Apis.Auth` NuGet package (`GoogleJsonWebSignature.ValidateAsync`).
+
+**How verification works**:
+- `Google.Apis.Auth` fetches Google's public JWKS at `https://www.googleapis.com/oauth2/v3/certs`, caches it
+- Validates: RS256 signature, `aud` == client ID, `iss` ∈ `{accounts.google.com, https://accounts.google.com}`, `exp` not expired
+- Returns a `Payload` with: `Subject` (= stable Google user ID), `Email`, `Name`, `EmailVerified`
+- No client secret needed
+
+**Package**: `Google.Apis.Auth` — official Google client library, well-maintained, widely used in .NET
+
+**Alternatives considered**:
+- Manual JWT verification using `System.IdentityModel.Tokens.Jwt` — rejected (more code, same outcome)
+- `Microsoft.Identity.Web` — rejected (designed for AAD/Entra, not Google)
+
+**Validation settings to enforce**:
+```csharp
+new GoogleJsonWebSignature.ValidationSettings { Audience = new[] { clientId } }
+```
+
+---
+
+## 3. Domain Interface: IGoogleCredentialVerifier
+
+**Decision**: Define `IGoogleCredentialVerifier` in the Application layer; implement `GoogleCredentialVerifier` in Infrastructure.
+
+**Why**: Constitution Principle I mandates domain-defined interfaces for all external integrations.
+
+```csharp
+// Application/Interfaces/IGoogleCredentialVerifier.cs
+public record GoogleUserInfo(string GoogleId, string Email, string? DisplayName);
+
+public interface IGoogleCredentialVerifier
+{
+    Task<GoogleUserInfo> VerifyAsync(string credential);
+}
+```
+
+---
+
+## 4. Frontend: Angular GSI Integration Pattern
+
+**Decision**: Wrap GSI in `AuthService` methods called from login/register component `ngOnInit`. Use `renderButton()` for the official button; call `prompt()` for One Tap.
+
+**Type declarations**: Add `@types/google.accounts` dev dependency.
+
+**Angular-specific considerations**:
+- GSI callback fires outside Angular's zone → must call `NgZone.run()` to trigger change detection
+- Component stores `@ViewChild` ref for the button container div
+- One Tap: call `google.accounts.id.cancel()` in `ngOnDestroy`
+
+**Button rendering config**:
+```typescript
+google.accounts.id.renderButton(divRef.nativeElement, {
+  type: 'standard', shape: 'rectangular',
+  theme: 'outline', text: 'continue_with',
+  size: 'large', width: 368
+});
+```
+
+---
+
+## 5. Migration Strategy: Drop OAuthStates Table
+
+**Decision**: Generate `M009_DropOAuthStates` EF Core migration. Previous migration files are preserved.
+
+Steps: remove `DbSet<OAuthState>` + entity config → run `dotnet ef migrations add M009_DropOAuthStates`.
+
+---
+
+## 6. Endpoint Design
+
+**Removed**: `GET /auth/google/login`, `GET /auth/google/callback`
+
+**New**: `POST /api/v1/auth/google/verify`
+- Request: `{ "credential": "<google_id_token>" }`
+- 200: `{ token, userId, expiresAt }` (same shape as login/register)
+- 400: `{ "error": "Invalid Google credential" }`
+
+Must be added to `JwtAuthenticationMiddleware` exempt paths.
+
+---
+
+## 7. Configuration Simplification
+
+**Before**: `ClientId`, `ClientSecret`, `RedirectUri`, `FrontendUrl`
+**After**: `ClientId` only
+
+Frontend also needs `ClientId` — added to Angular `environment.ts`.
+
+---
+
+## 8. Contract Tests Strategy
+
+**Deleted**: `GoogleOAuthContractTests.cs`
+
+**New** `GoogleVerifyContractTests.cs`:
+- Valid mock credential → 200 + AuthResponse
+- Missing credential → 400
+- Invalid credential (verifier throws) → 400
+- New user → account created, 200
+- Existing Google user → authenticated, 200
+- Email matches existing email/password user → linked, 200
+
+`IGoogleCredentialVerifier` mocked in `AuthApiFactory`; no real Google calls.
 
 ## Decision 1: OAuth Flow Type — Authorization Code (Server-Side)
 

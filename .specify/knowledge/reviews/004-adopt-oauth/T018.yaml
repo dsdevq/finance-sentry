@@ -3,7 +3,7 @@ feature: "004-adopt-oauth"
 reviewed_at: "2026-04-18"
 approved: true
 files_changed:
-  - "frontend/src/app/app.routes.ts"
+  - "backend/src/FinanceSentry.API/Program.cs (removed IGoogleOAuthService, AddHttpClient; added IGoogleCredentialVerifier)"
 violations: []
 new_rules: []
-next_task_notes: "No separate auth.routes.ts exists — route added directly to app.routes.ts. No auth guard — correct (it IS the auth landing)."
+next_task_notes: ""

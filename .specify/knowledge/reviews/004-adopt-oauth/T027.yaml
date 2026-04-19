@@ -1,0 +1,10 @@
+task_id: "T027"
+feature: "004-adopt-oauth"
+reviewed_at: "2026-04-19"
+approved: true
+files_changed:
+  - "frontend/src/app/modules/auth/pages/register/register.component.html"
+  - "frontend/src/app/modules/auth/pages/register/register.component.scss"
+violations: []
+new_rules: []
+next_task_notes: "T028-T029: Version bumps; T030: ESLint"
