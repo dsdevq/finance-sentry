@@ -192,6 +192,8 @@ After **all tasks in a feature are complete**, act as a QA engineer: spin up the
 - PostgreSQL 14 — `AuthDbContext : IdentityDbContext<ApplicationUser>` — `OAuthStates` table to be DROPPED via new migration (004-adopt-oauth)
 - C# 13 / .NET 9 (backend) · TypeScript 5.x strict / Angular 20 (frontend) + ASP.NET Core 9, EF Core 9, MediatR, Hangfire, `System.Net.Http` (no new NuGet packages required — Monobank API is plain REST) (007-monobank-adapter)
 - PostgreSQL 14 — existing `BankSyncDbContext`; migration M002 adds `MonobankCredentials` table and modifies `BankAccounts` (007-monobank-adapter)
+- C# 13 / .NET 9 (backend only — no frontend changes) + ASP.NET Core 9, EF Core 9, MediatR (existing — no new NuGet packages) (008-wealth-aggregation-api)
+- PostgreSQL 14 — read-only queries against existing `BankAccounts` and `Transactions` tables; no new columns or migrations (008-wealth-aggregation-api)
 
 ## Recent Changes
 - 003-auth-flow: Added C# 13 / .NET 9 (backend) · TypeScript 5.x strict (frontend) + ASP.NET Core 9, EF Core 9, MediatR, ASP.NET Core Identity (`Microsoft.AspNetCore.Identity.EntityFrameworkCore`), Npgsql.EF Core (backend) · Angular 20, RxJS, Angular standalone routing (frontend)
