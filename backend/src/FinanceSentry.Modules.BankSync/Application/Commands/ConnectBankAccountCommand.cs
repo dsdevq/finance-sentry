@@ -62,7 +62,7 @@ public class ConnectBankAccountCommandHandler(
         // 3. Create domain entity — starts in 'pending' state
         var account = new BankAccount(
             userId: request.UserId,
-            plaidItemId: exchange.ItemId,
+            externalAccountId: exchange.ItemId,
             bankName: request.InstitutionName,
             accountType: primary.AccountType,
             accountNumberLast4: primary.AccountNumberLast4.Length >= 4

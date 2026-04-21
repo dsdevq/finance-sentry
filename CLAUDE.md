@@ -136,6 +136,18 @@ After writing or modifying **any** Angular `.ts` file, run `npx eslint <file>` f
 
 **Any new UI component MUST be created in `@dsdevq-common/ui` first.** Components are never built directly in the host Angular app (`frontend/`). This applies to all future features, starting with 005-ui-component-library. The `cmn-` selector prefix is reserved for library components.
 
+**Before writing any Angular template or UI element**, always check `frontend/projects/dsdevq-common/ui/src/lib/components/` first. Use `cmn-button`, `cmn-input`, `cmn-form-field`, `cmn-alert`, `cmn-card`, etc. — never raw `<input>`, `<button>`, or `<div class="error">` when the library already has the component.
+
+---
+
+## File Organisation Rule (Frontend)
+
+In Angular modules, each concept lives in its own file — no mixing:
+- **Interfaces / types** → `models/*.model.ts` or `models/*.types.ts`
+- **Constants** → `*.constants.ts` next to the consumer, or a shared `models/*.constants.ts`
+- **Component class** → `*.component.ts` (no inline interface or constant definitions)
+- **Service class** → `*.service.ts` (no inline interface definitions — import from model files)
+
 ---
 
 ## AI Development Pipeline

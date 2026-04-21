@@ -1,30 +1,66 @@
 <div class="connect-account">
   <h2>Connect Your Bank Account</h2>
 
-  @if (isLoading) {
-    <div class="loading-state" role="status" aria-live="polite">
-      <p>Preparing secure connection...</p>
-    </div>
-  }
-
-  @if (errorMessage) {
-    <div class="error-state" role="alert">
-      <p class="error-message">{{ errorMessage }}</p>
-      <button (click)="initPlaid()" class="btn-secondary">Retry</button>
-    </div>
-  }
-
   @if (isSyncing) {
     <div class="syncing-state" role="status" aria-live="polite">
       <p class="status-message">{{ statusMessage }}</p>
       <p class="hint">This may take a minute. Please wait...</p>
     </div>
-  }
-
-  @if (!isLoading && !isSyncing && !errorMessage) {
-    <div class="connect-prompt">
-      <p>Connect your bank account to start tracking your finances securely.</p>
-      <button (click)="openPlaidLink()" class="btn-primary">Connect Bank Account</button>
+  } @else {
+    <div class="provider-tabs" role="tablist">
+      <cmn-button
+        role="tab"
+        [attr.aria-selected]="selectedProvider === 'plaid'"
+        [variant]="selectedProvider === 'plaid' ? 'primary' : 'secondary'"
+        (clicked)="selectProvider('plaid')">
+        🇺🇸 Plaid (US/CA/EU)
+      </cmn-button>
+      <cmn-button
+        role="tab"
+        [attr.aria-selected]="selectedProvider === 'monobank'"
+        [variant]="selectedProvider === 'monobank' ? 'primary' : 'secondary'"
+        (clicked)="selectProvider('monobank')">
+        🇺🇦 Monobank
+      </cmn-button>
     </div>
+
+    @if (errorMessage) {
+      <cmn-alert variant="error">{{ errorMessage }}</cmn-alert>
+    }
+
+    @if (selectedProvider === 'plaid') {
+      @if (isLoading) {
+        <div class="loading-state" role="status" aria-live="polite">
+          <p>Preparing secure connection...</p>
+        </div>
+      } @else {
+        <div class="connect-prompt">
+          <p>Connect your bank account via Plaid to start tracking your finances securely.</p>
+          <cmn-button (clicked)="openPlaidLink()">Connect with Plaid</cmn-button>
+        </div>
+      }
+    }
+
+    @if (selectedProvider === 'monobank') {
+      <div class="monobank-connect">
+        <p>Enter your Monobank personal token to connect all your cards.</p>
+        <p class="hint">
+          Get your token at
+          <a href="https://api.monobank.ua" target="_blank" rel="noopener noreferrer">api.monobank.ua</a>.
+        </p>
+        <cmn-form-field
+          label="Personal token"
+          hint="Your token from api.monobank.ua"
+          [required]="true"
+          [control]="monobankToken">
+          <cmn-input
+            type="password"
+            placeholder="u…"
+            [formControl]="monobankToken"
+            [hasError]="monobankToken.touched && monobankToken.invalid" />
+        </cmn-form-field>
+        <cmn-button (clicked)="connectMonobank()">Connect Monobank</cmn-button>
+      </div>
+    }
   }
 </div>

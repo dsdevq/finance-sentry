@@ -35,7 +35,7 @@ public class BankAccountTests
     public void Constructor_EmptyPlaidItemId_ThrowsArgumentException(string plaidItemId)
     {
         var act = () => new BankAccount(UserId, plaidItemId, "Bank", "checking", "1234", "John", "EUR", CreatorId);
-        act.Should().Throw<ArgumentException>().WithMessage("*PlaidItemId*");
+        act.Should().Throw<ArgumentException>().WithMessage("*ExternalAccountId*");
     }
 
     [Theory]
