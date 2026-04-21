@@ -13,6 +13,7 @@ using FinanceSentry.Modules.BankSync.Infrastructure.FeatureFlags;
 using FinanceSentry.Modules.BankSync.Infrastructure.Performance;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
 using FinanceSentry.Modules.BankSync.Application.Services;
+using FinanceSentry.Modules.BankSync.Domain.Services;
 using FinanceSentry.Modules.BankSync.API.Middleware;
 using FinanceSentry.Infrastructure;
 using FinanceSentry.Infrastructure.Encryption;
@@ -165,6 +166,7 @@ builder.Services.AddScoped<IMoneyFlowStatisticsService, MoneyFlowStatisticsServi
 builder.Services.AddScoped<IMerchantCategoryStatisticsService, MerchantCategoryStatisticsService>();
 builder.Services.AddScoped<IDashboardQueryService, DashboardQueryService>();
 builder.Services.AddScoped<ITransferDetectionService, TransferDetectionService>();
+builder.Services.AddScoped<IWealthAggregationService, WealthAggregationService>();
 
 // ── Hangfire background jobs (T303, T304) ────────────────────────────────────
 builder.Services.AddHangfireServices(builder.Configuration);

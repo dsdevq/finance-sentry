@@ -21,9 +21,9 @@
 
 **⚠️ CRITICAL**: T004–T005 (foundational tests) must pass before user story phases begin.
 
-- [ ] T001 Create `IWealthAggregationService` domain interface (methods: `GetWealthSummaryAsync`, `GetTransactionSummaryAsync`) in `backend/src/FinanceSentry.Modules.BankSync/Domain/Services/IWealthAggregationService.cs`
-- [ ] T002 [P] Implement `ProviderCategoryMapper` static class with provider-to-category dictionary (`plaid`→`banking`, `monobank`→`banking`, `binance`→`crypto`, `ibkr`→`brokerage`, `null`/unknown→`other`) in `backend/src/FinanceSentry.Modules.BankSync/Application/Services/ProviderCategoryMapper.cs`
-- [ ] T003 [P] Implement `CurrencyConverter` static class with USD rate table (`USD`=1.00, `EUR`=1.08, `GBP`=1.27, `UAH`=0.024; unknown currencies pass through at 1.00) in `backend/src/FinanceSentry.Modules.BankSync/Application/Services/CurrencyConverter.cs`
+- [X] T001 Create `IWealthAggregationService` domain interface (methods: `GetWealthSummaryAsync`, `GetTransactionSummaryAsync`) in `backend/src/FinanceSentry.Modules.BankSync/Domain/Services/IWealthAggregationService.cs`
+- [X] T002 [P] Implement `ProviderCategoryMapper` static class with provider-to-category dictionary (`plaid`→`banking`, `monobank`→`banking`, `binance`→`crypto`, `ibkr`→`brokerage`, `null`/unknown→`other`) in `backend/src/FinanceSentry.Modules.BankSync/Application/Services/ProviderCategoryMapper.cs`
+- [X] T003 [P] Implement `CurrencyConverter` static class with USD rate table (`USD`=1.00, `EUR`=1.08, `GBP`=1.27, `UAH`=0.024; unknown currencies pass through at 1.00) in `backend/src/FinanceSentry.Modules.BankSync/Application/Services/CurrencyConverter.cs`
 
 ---
 
@@ -33,8 +33,8 @@
 
 **⚠️ CRITICAL**: No user story work can begin until Phase 2 tests pass.
 
-- [ ] T004 [P] Unit-test `ProviderCategoryMapper`: known providers (`plaid`, `monobank`, `binance`, `ibkr`), null input, and unknown string all map to correct categories in `backend/tests/FinanceSentry.Tests/Wealth/ProviderCategoryMapperTests.cs`
-- [ ] T005 [P] Unit-test `CurrencyConverter`: USD passthrough, UAH→USD, EUR→USD, GBP→USD, and unknown currency passthrough in `backend/tests/FinanceSentry.Tests/Wealth/CurrencyConverterTests.cs`
+- [X] T004 [P] Unit-test `ProviderCategoryMapper`: known providers (`plaid`, `monobank`, `binance`, `ibkr`), null input, and unknown string all map to correct categories in `backend/tests/FinanceSentry.Tests.Unit/BankSync/Wealth/ProviderCategoryMapperTests.cs`
+- [X] T005 [P] Unit-test `CurrencyConverter`: USD passthrough, UAH→USD, EUR→USD, GBP→USD, and unknown currency passthrough in `backend/tests/FinanceSentry.Tests.Unit/BankSync/Wealth/CurrencyConverterTests.cs`
 
 **Checkpoint**: Static utilities verified — user story phases can now proceed.
 
@@ -48,16 +48,16 @@
 
 ### Tests for User Story 1
 
-- [ ] T006 [P] [US1] Contract test for `GET /api/v1/wealth/summary` (no filters): 200 with full snapshot shape, 401 without JWT, 200 with empty categories when user has no accounts — in `backend/tests/FinanceSentry.Tests/Wealth/WealthSummaryContractTests.cs`
-- [ ] T007 [P] [US1] Unit-test `WealthAggregationService.GetWealthSummaryAsync`: correct USD total from mixed-currency accounts, null-balance accounts included in list but excluded from total, empty account list returns zero total — in `backend/tests/FinanceSentry.Tests/Wealth/WealthAggregationServiceTests.cs`
+- [X] T006 [P] [US1] Contract test for `GET /api/v1/wealth/summary` (no filters): 200 with full snapshot shape, 401 without JWT, 200 with empty categories when user has no accounts — in `backend/tests/FinanceSentry.Tests.Integration/Wealth/WealthContractTests.cs`
+- [X] T007 [P] [US1] Unit-test `WealthAggregationService.GetWealthSummaryAsync`: correct USD total from mixed-currency accounts, null-balance accounts included in list but excluded from total, empty account list returns zero total — in `backend/tests/FinanceSentry.Tests.Unit/BankSync/Wealth/WealthAggregationServiceTests.cs`
 
 ### Implementation for User Story 1
 
-- [ ] T008 [US1] Create `WealthSummaryResponse`, `CategorySummaryDto`, `AccountBalanceDto`, and `AppliedFiltersDto` record types inside `backend/src/FinanceSentry.Modules.BankSync/Application/Queries/GetWealthSummaryQuery.cs`
-- [ ] T009 [US1] Implement `WealthAggregationService` class with `GetWealthSummaryAsync`: load all `BankAccount` rows for the user, group by `ProviderCategoryMapper`, convert balances via `CurrencyConverter`, build response — in `backend/src/FinanceSentry.Modules.BankSync/Application/Services/WealthAggregationService.cs` (depends on T002, T003, T008)
-- [ ] T010 [US1] Implement `GetWealthSummaryQuery` (MediatR `IRequest<WealthSummaryResponse>`) and its handler that calls `IWealthAggregationService.GetWealthSummaryAsync` in `backend/src/FinanceSentry.Modules.BankSync/Application/Queries/GetWealthSummaryQuery.cs` (depends on T001, T009)
-- [ ] T011 [US1] Create `WealthController` with `GET /api/v1/wealth/summary` action (sends `GetWealthSummaryQuery` via MediatR, reads user ID from JWT `sub` claim) in `backend/src/FinanceSentry.Modules.BankSync/API/Controllers/WealthController.cs` (depends on T010)
-- [ ] T012 [US1] Register `IWealthAggregationService` → `WealthAggregationService` (scoped) in `backend/src/FinanceSentry.API/Program.cs`
+- [X] T008 [US1] Create `WealthSummaryResponse`, `CategorySummaryDto`, `AccountBalanceDto`, and `AppliedFiltersDto` record types inside `backend/src/FinanceSentry.Modules.BankSync/Application/Queries/GetWealthSummaryQuery.cs`
+- [X] T009 [US1] Implement `WealthAggregationService` class with `GetWealthSummaryAsync`: load all `BankAccount` rows for the user, group by `ProviderCategoryMapper`, convert balances via `CurrencyConverter`, build response — in `backend/src/FinanceSentry.Modules.BankSync/Application/Services/WealthAggregationService.cs` (depends on T002, T003, T008)
+- [X] T010 [US1] Implement `GetWealthSummaryQuery` (MediatR `IRequest<WealthSummaryResponse>`) and its handler that calls `IWealthAggregationService.GetWealthSummaryAsync` in `backend/src/FinanceSentry.Modules.BankSync/Application/Queries/GetWealthSummaryQuery.cs` (depends on T001, T009)
+- [X] T011 [US1] Create `WealthController` with `GET /api/v1/wealth/summary` action (sends `GetWealthSummaryQuery` via MediatR, reads user ID from JWT `sub` claim) in `backend/src/FinanceSentry.Modules.BankSync/API/Controllers/WealthController.cs` (depends on T010)
+- [X] T012 [US1] Register `IWealthAggregationService` → `WealthAggregationService` (scoped) in `backend/src/FinanceSentry.API/Program.cs`
 
 **Checkpoint**: `GET /api/v1/wealth/summary` returns a full wealth snapshot for an authenticated user.
 
@@ -71,14 +71,14 @@
 
 ### Tests for User Story 2
 
-- [ ] T013 [P] [US2] Add filter contract tests to `backend/tests/FinanceSentry.Tests/Wealth/WealthSummaryContractTests.cs`: `category=banking` returns only banking accounts, `provider=monobank` returns only Monobank, `category=crypto` with no crypto accounts returns 200 with empty categories, invalid `category` value returns 400 `INVALID_FILTER`
-- [ ] T014 [P] [US2] Add filter unit tests to `backend/tests/FinanceSentry.Tests/Wealth/WealthAggregationServiceTests.cs`: `category` filter excludes non-matching accounts, `provider` filter takes precedence over `category` when both supplied, unknown provider returns empty result
+- [X] T013 [P] [US2] Add filter contract tests to `backend/tests/FinanceSentry.Tests.Integration/Wealth/WealthContractTests.cs`: `category=banking` returns only banking accounts, `provider=monobank` returns only Monobank, `category=crypto` with no crypto accounts returns 200 with empty categories, invalid `category` value returns 400 `INVALID_FILTER`
+- [X] T014 [P] [US2] Add filter unit tests to `backend/tests/FinanceSentry.Tests.Unit/BankSync/Wealth/WealthAggregationServiceTests.cs`: `category` filter excludes non-matching accounts, `provider` filter takes precedence over `category` when both supplied, unknown provider returns empty result
 
 ### Implementation for User Story 2
 
-- [ ] T015 [US2] Add `Category` and `Provider` optional properties to `GetWealthSummaryQuery`; update handler to pass filters to `IWealthAggregationService` in `backend/src/FinanceSentry.Modules.BankSync/Application/Queries/GetWealthSummaryQuery.cs` (depends on T010)
-- [ ] T016 [US2] Add category/provider filter logic to `WealthAggregationService.GetWealthSummaryAsync`: filter by provider string if `Provider` set (takes precedence); filter by mapped category if `Category` set; validate `Category` against allowed values (`banking`, `crypto`, `brokerage`, `other`) — in `backend/src/FinanceSentry.Modules.BankSync/Application/Services/WealthAggregationService.cs` (depends on T009, T015)
-- [ ] T017 [US2] Add query-parameter binding and `category` validation (return 400 `INVALID_FILTER` for unrecognised category) to `GET /api/v1/wealth/summary` in `backend/src/FinanceSentry.Modules.BankSync/API/Controllers/WealthController.cs` (depends on T011, T015)
+- [X] T015 [US2] Add `Category` and `Provider` optional properties to `GetWealthSummaryQuery`; update handler to pass filters to `IWealthAggregationService` in `backend/src/FinanceSentry.Modules.BankSync/Application/Queries/GetWealthSummaryQuery.cs` (depends on T010)
+- [X] T016 [US2] Add category/provider filter logic to `WealthAggregationService.GetWealthSummaryAsync`: filter by provider string if `Provider` set (takes precedence); filter by mapped category if `Category` set; validate `Category` against allowed values (`banking`, `crypto`, `brokerage`, `other`) — in `backend/src/FinanceSentry.Modules.BankSync/Application/Services/WealthAggregationService.cs` (depends on T009, T015)
+- [X] T017 [US2] Add query-parameter binding and `category` validation (return 400 `INVALID_FILTER` for unrecognised category) to `GET /api/v1/wealth/summary` in `backend/src/FinanceSentry.Modules.BankSync/API/Controllers/WealthController.cs` (depends on T011, T015)
 
 **Checkpoint**: Filtered wealth summary works; invalid filters rejected; unknown values return empty — not errors.
 
@@ -92,15 +92,15 @@
 
 ### Tests for User Story 3
 
-- [ ] T018 [P] [US3] Contract test for `GET /api/v1/wealth/transactions/summary`: 200 with correct shape, missing `from`/`to` → 400 `MISSING_DATE_RANGE`, `from > to` → 400 `INVALID_DATE_RANGE`, empty window → 200 with zero totals, 401 without JWT — in `backend/tests/FinanceSentry.Tests/Wealth/TransactionSummaryContractTests.cs`
-- [ ] T019 [P] [US3] Unit-test `WealthAggregationService.GetTransactionSummaryAsync`: debit/credit split is correct, category grouping is correct, empty window returns zeros, provider filter scopes transactions — in `backend/tests/FinanceSentry.Tests/Wealth/WealthAggregationServiceTests.cs`
+- [X] T018 [P] [US3] Contract test for `GET /api/v1/wealth/transactions/summary`: 200 with correct shape, missing `from`/`to` → 400 `MISSING_DATE_RANGE`, `from > to` → 400 `INVALID_DATE_RANGE`, empty window → 200 with zero totals, 401 without JWT — in `backend/tests/FinanceSentry.Tests.Integration/Wealth/WealthContractTests.cs`
+- [X] T019 [P] [US3] Unit-test `WealthAggregationService.GetTransactionSummaryAsync`: debit/credit split is correct, category grouping is correct, empty window returns zeros, provider filter scopes transactions — in `backend/tests/FinanceSentry.Tests.Unit/BankSync/Wealth/WealthAggregationServiceTests.cs`
 
 ### Implementation for User Story 3
 
-- [ ] T020 [US3] Create `TransactionSummaryResponse`, `TransactionCategoryDto`, and `GetTransactionSummaryQuery` (`IRequest<TransactionSummaryResponse>`) record types in `backend/src/FinanceSentry.Modules.BankSync/Application/Queries/GetTransactionSummaryQuery.cs`
-- [ ] T021 [US3] Implement `WealthAggregationService.GetTransactionSummaryAsync`: join `Transaction` to its `BankAccount` for provider info; filter by `PostedDate` (fall back to `TransactionDate`) within `[from, to]`; split by `TransactionType` (debit/credit); group by `ProviderCategoryMapper`; apply optional `category`/`provider` filters; sum without currency conversion — in `backend/src/FinanceSentry.Modules.BankSync/Application/Services/WealthAggregationService.cs` (depends on T009)
-- [ ] T022 [US3] Implement `GetTransactionSummaryQuery` handler that calls `IWealthAggregationService.GetTransactionSummaryAsync` in `backend/src/FinanceSentry.Modules.BankSync/Application/Queries/GetTransactionSummaryQuery.cs` (depends on T020, T021)
-- [ ] T023 [US3] Add `GET /api/v1/wealth/transactions/summary` action to `WealthController`: validate `from`/`to` presence (400 `MISSING_DATE_RANGE`) and order (`from ≤ to`, 400 `INVALID_DATE_RANGE`); parse dates; send `GetTransactionSummaryQuery` — in `backend/src/FinanceSentry.Modules.BankSync/API/Controllers/WealthController.cs` (depends on T011, T022)
+- [X] T020 [US3] Create `TransactionSummaryResponse`, `TransactionCategoryDto`, and `GetTransactionSummaryQuery` (`IRequest<TransactionSummaryResponse>`) record types in `backend/src/FinanceSentry.Modules.BankSync/Application/Queries/GetTransactionSummaryQuery.cs`
+- [X] T021 [US3] Implement `WealthAggregationService.GetTransactionSummaryAsync`: join `Transaction` to its `BankAccount` for provider info; filter by `PostedDate` (fall back to `TransactionDate`) within `[from, to]`; split by `TransactionType` (debit/credit); group by `ProviderCategoryMapper`; apply optional `category`/`provider` filters; sum without currency conversion — in `backend/src/FinanceSentry.Modules.BankSync/Application/Services/WealthAggregationService.cs` (depends on T009)
+- [X] T022 [US3] Implement `GetTransactionSummaryQuery` handler that calls `IWealthAggregationService.GetTransactionSummaryAsync` in `backend/src/FinanceSentry.Modules.BankSync/Application/Queries/GetTransactionSummaryQuery.cs` (depends on T020, T021)
+- [X] T023 [US3] Add `GET /api/v1/wealth/transactions/summary` action to `WealthController`: validate `from`/`to` presence (400 `MISSING_DATE_RANGE`) and order (`from ≤ to`, 400 `INVALID_DATE_RANGE`); parse dates; send `GetTransactionSummaryQuery` — in `backend/src/FinanceSentry.Modules.BankSync/API/Controllers/WealthController.cs` (depends on T011, T022)
 
 **Checkpoint**: All three user stories are independently functional.
 
@@ -110,7 +110,7 @@
 
 **Purpose**: Version bump, smoke-test all quickstart scenarios.
 
-- [ ] T024 Bump API version from `0.4.0` → `0.5.0` in `backend/src/FinanceSentry.API/FinanceSentry.API.csproj`
+- [X] T024 Bump API version from `0.4.0` → `0.5.0` in `backend/src/FinanceSentry.API/FinanceSentry.API.csproj`
 - [ ] T025 Validate all 7 scenarios in `specs/008-wealth-aggregation-api/quickstart.md` pass against the running Docker stack
 
 ---
