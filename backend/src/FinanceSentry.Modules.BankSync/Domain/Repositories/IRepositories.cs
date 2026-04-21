@@ -213,3 +213,13 @@ public interface IEncryptedCredentialRepository
     /// </summary>
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
+
+public interface IMonobankCredentialRepository
+{
+    Task<MonobankCredential> AddAsync(MonobankCredential credential, CancellationToken cancellationToken = default);
+    Task<MonobankCredential?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<MonobankCredential?> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<MonobankCredential> UpdateAsync(MonobankCredential credential, CancellationToken cancellationToken = default);
+    Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+}

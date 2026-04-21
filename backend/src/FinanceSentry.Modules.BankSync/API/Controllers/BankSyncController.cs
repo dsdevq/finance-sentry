@@ -10,10 +10,6 @@ using Hangfire;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
-/// <summary>
-/// REST endpoints for Bank Account Sync (US1 + US2).
-/// All endpoints are user-scoped — FR-009. userId is extracted from the JWT claim `sub`.
-/// </summary>
 [ApiController]
 [Route("accounts")]
 public class BankSyncController(
@@ -42,7 +38,6 @@ public class BankSyncController(
 
     // ── POST /api/accounts/connect ── T205 ───────────────────────────────────
 
-    /// <summary>Step 1: Get a Plaid Link token to open Plaid Link in the frontend.</summary>
     [HttpPost("connect")]
     public async Task<IActionResult> Connect(CancellationToken ct)
     {
@@ -61,7 +56,6 @@ public class BankSyncController(
 
     // ── POST /api/accounts/link ── T206 ──────────────────────────────────────
 
-    /// <summary>Step 2: Exchange public token and store encrypted access token.</summary>
     [HttpPost("link")]
     public async Task<IActionResult> Link([FromBody] LinkRequest request, CancellationToken ct)
     {
@@ -86,7 +80,6 @@ public class BankSyncController(
 
     // ── GET /api/accounts ── T207 ────────────────────────────────────────────
 
-    /// <summary>Returns all accounts for the authenticated user. FR-009: scoped to userId from JWT.</summary>
     [HttpGet]
     public async Task<IActionResult> GetAccounts(
         [FromQuery] string? status = null,
@@ -110,7 +103,6 @@ public class BankSyncController(
 
     // ── GET /api/accounts/{accountId}/transactions ── T208 ───────────────────
 
-    /// <summary>Returns paginated transactions for an account. FR-009: 404 if not owned by user.</summary>
     [HttpGet("{accountId:guid}/transactions")]
     public async Task<IActionResult> GetTransactions(
         Guid accountId,
@@ -124,7 +116,6 @@ public class BankSyncController(
         if (userId is null)
             return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
 
-        // FR-009: verify ownership before returning data
         var account = await _accounts.GetByIdAsync(accountId, ct);
         if (account == null || account.UserId != userId.Value)
             return NotFound(new { error = "Account not found." });
@@ -153,11 +144,6 @@ public class BankSyncController(
 
     // ── POST /api/accounts/{accountId}/sync ── T308 ──────────────────────────
 
-    /// <summary>
-    /// Manually triggers an asynchronous sync for the given account.
-    /// Returns 202 Accepted with the Hangfire job ID.
-    /// Returns 409 Conflict if a sync is already running.
-    /// </summary>
     [HttpPost("{accountId:guid}/sync")]
     public async Task<IActionResult> TriggerSync(
         Guid accountId,
@@ -167,12 +153,10 @@ public class BankSyncController(
         if (userId is null)
             return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
 
-        // FR-009: ownership check
         var account = await _accounts.GetByIdAsync(accountId, ct);
         if (account == null || account.UserId != userId.Value)
             return NotFound(new { error = "Account not found." });
 
-        // Idempotency: reject if sync already running
         if (await _syncJobs.HasRunningJobAsync(accountId, ct))
             return Conflict(new { error = "A sync is already in progress for this account." });
 
@@ -188,9 +172,6 @@ public class BankSyncController(
 
     // ── GET /api/accounts/{accountId}/sync-status ── T309 ───────────────────
 
-    /// <summary>
-    /// Returns the latest sync job status for the given account.
-    /// </summary>
     [HttpGet("{accountId:guid}/sync-status")]
     public async Task<IActionResult> GetSyncStatus(
         Guid accountId,
@@ -200,7 +181,6 @@ public class BankSyncController(
         if (userId is null)
             return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
 
-        // FR-009: ownership check
         var account = await _accounts.GetByIdAsync(accountId, ct);
         if (account == null || account.UserId != userId.Value)
             return NotFound(new { error = "Account not found." });
@@ -223,10 +203,6 @@ public class BankSyncController(
 
     // ── DELETE /api/accounts/{accountId} ── T309-A ───────────────────────────
 
-    /// <summary>
-    /// Soft-deletes the bank account and all associated transactions.
-    /// Account and transactions are marked IsActive=false for audit trail preservation.
-    /// </summary>
     [HttpDelete("{accountId:guid}")]
     public async Task<IActionResult> DeleteAccount(
         Guid accountId,
@@ -236,21 +212,50 @@ public class BankSyncController(
         if (userId is null)
             return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
 
-        // FR-009: ownership check
         var account = await _accounts.GetByIdAsync(accountId, ct);
         if (account == null || account.UserId != userId.Value)
             return NotFound(new { error = "Account not found." });
 
-        // Soft-delete all transactions for the account
         await _transactions.SoftDeleteByAccountIdAsync(accountId, ct);
-
-        // Soft-delete the account itself
         await _accounts.DeleteAsync(accountId, ct);
 
         return NoContent();
+    }
+
+    // ── POST /api/accounts/monobank/connect ── T019 ──────────────────────────
+
+    [HttpPost("monobank/connect")]
+    public async Task<IActionResult> ConnectMonobank(
+        [FromBody] ConnectMonobankRequest request, CancellationToken ct)
+    {
+        var userId = GetUserIdFromClaims();
+        if (userId is null)
+            return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
+
+        if (string.IsNullOrWhiteSpace(request.Token) || request.Token.Length > 64)
+            return BadRequest(new { error = "Token must be non-empty and at most 64 characters.", errorCode = "VALIDATION_ERROR" });
+
+        try
+        {
+            var result = await _mediator.Send(
+                new ConnectMonobankAccountCommand(userId.Value, request.Token), ct);
+
+            return StatusCode(201, new { accounts = result.Accounts });
+        }
+        catch (Infrastructure.Monobank.MonobankException ex)
+        {
+            return ex.ErrorCode switch
+            {
+                "MONOBANK_TOKEN_INVALID" => BadRequest(new { error = ex.Message, errorCode = ex.ErrorCode }),
+                "MONOBANK_TOKEN_DUPLICATE" => Conflict(new { error = ex.Message, errorCode = ex.ErrorCode }),
+                "MONOBANK_RATE_LIMITED" => StatusCode(429, new { error = ex.Message, errorCode = ex.ErrorCode }),
+                _ => StatusCode(500, new { error = ex.Message, errorCode = ex.ErrorCode })
+            };
+        }
     }
 }
 
 // ── Request DTOs ─────────────────────────────────────────────────────────────
 
 public record LinkRequest(string PublicToken, string InstitutionName);
+public record ConnectMonobankRequest(string Token);

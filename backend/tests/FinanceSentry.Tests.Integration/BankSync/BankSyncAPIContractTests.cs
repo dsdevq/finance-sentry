@@ -88,7 +88,7 @@ public class BankSyncAPIContractTests(BankSyncApiFactory factory) : IClassFixtur
             .Setup(r => r.GetByIdAsync(accountId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Modules.BankSync.Domain.BankAccount(
                 userId: Guid.NewGuid(), // different user
-                plaidItemId: "item_xxx",
+                externalAccountId: "item_xxx",
                 bankName: "AIB",
                 accountType: "checking",
                 accountNumberLast4: "1234",
@@ -113,7 +113,7 @@ public class BankSyncAPIContractTests(BankSyncApiFactory factory) : IClassFixtur
             .Setup(r => r.GetByIdAsync(accountId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new Modules.BankSync.Domain.BankAccount(
                 userId: userId, // same user as JWT sub
-                plaidItemId: "item_abc",
+                externalAccountId: "item_abc",
                 bankName: "Revolut",
                 accountType: "checking",
                 accountNumberLast4: "5678",

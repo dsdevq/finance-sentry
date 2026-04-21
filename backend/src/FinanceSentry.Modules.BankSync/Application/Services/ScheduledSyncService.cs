@@ -3,6 +3,7 @@ namespace FinanceSentry.Modules.BankSync.Application.Services;
 using FinanceSentry.Infrastructure.Encryption;
 using FinanceSentry.Infrastructure.Logging;
 using FinanceSentry.Modules.BankSync.Domain;
+using FinanceSentry.Modules.BankSync.Domain.Interfaces;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
 using FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
 
@@ -18,13 +19,11 @@ public record SyncResult(
 
 /// <summary>
 /// Drives the full transaction sync lifecycle for a single account:
-/// create job → decrypt token → fetch from Plaid → deduplicate → persist → update account state.
+/// create job → decrypt token → fetch from provider → deduplicate → persist → update account state.
+/// Supports both Plaid (cursor-based) and Monobank (timestamp-based) providers.
 /// </summary>
 public interface IScheduledSyncService
 {
-    /// <summary>
-    /// Performs a full sync for the given account.
-    /// </summary>
     Task<SyncResult> PerformFullSyncAsync(
         Guid accountId,
         bool webhookTriggered = false,
@@ -40,7 +39,9 @@ public class ScheduledSyncService(
     ICredentialEncryptionService encryption,
     IPlaidAdapter plaid,
     ITransactionDeduplicationService dedup,
-    IBankSyncLogger logger) : IScheduledSyncService
+    IBankSyncLogger logger,
+    IBankProviderFactory providerFactory,
+    IMonobankCredentialRepository monobankCredentials) : IScheduledSyncService
 {
     private readonly IBankAccountRepository _accounts = accounts;
     private readonly ITransactionRepository _transactions = transactions;
@@ -50,6 +51,8 @@ public class ScheduledSyncService(
     private readonly IPlaidAdapter _plaid = plaid;
     private readonly ITransactionDeduplicationService _dedup = dedup;
     private readonly IBankSyncLogger _logger = logger;
+    private readonly IBankProviderFactory _providerFactory = providerFactory;
+    private readonly IMonobankCredentialRepository _monobankCredentials = monobankCredentials;
 
     /// <inheritdoc />
     public async Task<SyncResult> PerformFullSyncAsync(
@@ -59,12 +62,10 @@ public class ScheduledSyncService(
     {
         var startedAt = DateTime.UtcNow;
 
-        // 1. Load account
         var account = await _accounts.GetByIdAsync(accountId, ct);
         if (account == null)
             return new SyncResult(false, 0, 0, "ACCOUNT_NOT_FOUND", "Account not found.");
 
-        // 2. Create and persist a running SyncJob
         var job = new SyncJob(accountId, account.UserId)
         {
             Status = "running",
@@ -77,76 +78,31 @@ public class ScheduledSyncService(
 
         try
         {
-            // 3. Transition account to syncing state (BeginSync allows active/failed/pending/reauth_required)
             account.BeginSync();
             await _accounts.UpdateAsync(account, ct);
 
-            // 4. Load and decrypt access token
-            var cred = await _credentials.GetByAccountIdAsync(accountId, ct)
-                ?? throw new InvalidOperationException($"No credential found for account {accountId}.");
+            SyncResult result;
 
-            var accessToken = _encryption.Decrypt(cred.EncryptedData, cred.Iv, cred.AuthTag, cred.KeyVersion);
-            _logger.CredentialAccessed(job.CorrelationId ?? job.Id.ToString(), accountId);
+            if (account.Provider == "monobank")
+                result = await SyncMonobankAsync(account, job, startedAt, ct);
+            else
+                result = await SyncPlaidAsync(account, job, webhookTriggered, startedAt, ct);
 
-            // 5. Fetch incremental changes from Plaid using /transactions/sync cursor
-            var (candidates, nextCursor) = await _plaid.SyncTransactionsAsync(
-                accessToken, accountId, account.UserId, cred.PlaidSyncCursor, ct);
-
-            // 7. Load existing hashes for deduplication
-            var existing = (await _transactions.GetByAccountIdAsync(accountId, ct))
-                .Select(t => t.UniqueHash)
-                .ToHashSet();
-
-            var newCandidates = _dedup.FilterDuplicates(candidates, existing);
-            var entities = newCandidates.Select(_dedup.ToEntity).ToList();
-
-            // 8. Bulk insert new transactions
-            if (entities.Count > 0)
-                await _transactions.AddRangeAsync(entities, ct);
-
-            // 8b. Persist updated sync cursor so next run is incremental
-            cred.PlaidSyncCursor = nextCursor;
-            cred.UpdateLastUsedAt();
-            await _credentials.UpdateAsync(cred, ct);
-
-            // 9. Fetch updated balance and mark account active
-            var accounts = await _plaid.GetAccountsWithBalanceAsync(accessToken, ct);
-            var balance = accounts.FirstOrDefault()?.CurrentBalance ?? 0m;
-
-            account.MarkActive(balance);
-            await _accounts.UpdateAsync(account, ct);
-
-            // 10. Determine last transaction date
-            var lastTxDate = entities.Count > 0
-                ? entities.Max(t => t.PostedDate ?? t.TransactionDate)
-                : (DateTime?)null;
-
-            // 11. Mark job success
-            job.MarkSuccess(candidates.Count, entities.Count, lastTxDate);
-            await _syncJobs.UpdateAsync(job, ct);
-
-            var durationMs = (long)(DateTime.UtcNow - startedAt).TotalMilliseconds;
-            _logger.SyncCompleted(job.CorrelationId ?? job.Id.ToString(), accountId,
-                candidates.Count, entities.Count, durationMs);
-
-            return new SyncResult(true, candidates.Count, entities.Count, null, null);
+            return result;
         }
         catch (Exception ex)
         {
-            // Derive a safe error code from the exception message when possible
-            var errorCode = ExtractErrorCode(ex.Message);
+            var errorCode = ExtractErrorCode(ex.Message, account.Provider);
 
-            // Mark job failed
             job.MarkFailed(ex.Message, errorCode);
             await _syncJobs.UpdateAsync(job, ct);
 
-            // Update account state
             try
             {
                 var freshAccount = await _accounts.GetByIdAsync(accountId, ct);
                 if (freshAccount != null)
                 {
-                    if (errorCode == "ITEM_LOGIN_REQUIRED")
+                    if (errorCode is "ITEM_LOGIN_REQUIRED" or "MONOBANK_TOKEN_INVALID")
                         freshAccount.MarkReauthRequired();
                     else if (freshAccount.SyncStatus == "syncing")
                         freshAccount.MarkFailed(errorCode);
@@ -156,7 +112,7 @@ public class ScheduledSyncService(
             }
             catch
             {
-                // Best-effort — don't mask the original exception
+                // best-effort
             }
 
             _logger.SyncFailed(job.CorrelationId ?? job.Id.ToString(), accountId,
@@ -166,9 +122,112 @@ public class ScheduledSyncService(
         }
     }
 
-    private static string? ExtractErrorCode(string message)
+    private async Task<SyncResult> SyncPlaidAsync(
+        Domain.BankAccount account, SyncJob job, bool webhookTriggered, DateTime startedAt, CancellationToken ct)
     {
-        // Common Plaid error codes that may surface in exception messages
+        var cred = await _credentials.GetByAccountIdAsync(account.Id, ct)
+            ?? throw new InvalidOperationException($"No Plaid credential found for account {account.Id}.");
+
+        var accessToken = _encryption.Decrypt(cred.EncryptedData, cred.Iv, cred.AuthTag, cred.KeyVersion);
+        _logger.CredentialAccessed(job.CorrelationId ?? job.Id.ToString(), account.Id);
+
+        var (candidates, nextCursor) = await _plaid.SyncTransactionsAsync(
+            accessToken, account.Id, account.UserId, cred.PlaidSyncCursor, ct);
+
+        var existing = (await _transactions.GetByAccountIdAsync(account.Id, ct))
+            .Select(t => t.UniqueHash)
+            .ToHashSet();
+
+        var newCandidates = _dedup.FilterDuplicates(candidates, existing);
+        var entities = newCandidates.Select(_dedup.ToEntity).ToList();
+
+        if (entities.Count > 0)
+            await _transactions.AddRangeAsync(entities, ct);
+
+        cred.PlaidSyncCursor = nextCursor;
+        cred.UpdateLastUsedAt();
+        await _credentials.UpdateAsync(cred, ct);
+
+        var plaidAccounts = await _plaid.GetAccountsWithBalanceAsync(accessToken, ct);
+        var balance = plaidAccounts.FirstOrDefault()?.CurrentBalance ?? 0m;
+
+        account.MarkActive(balance);
+        await _accounts.UpdateAsync(account, ct);
+
+        var lastTxDate = entities.Count > 0
+            ? entities.Max(t => t.PostedDate ?? t.TransactionDate)
+            : (DateTime?)null;
+
+        job.MarkSuccess(candidates.Count, entities.Count, lastTxDate);
+        await _syncJobs.UpdateAsync(job, ct);
+
+        var durationMs = (long)(DateTime.UtcNow - startedAt).TotalMilliseconds;
+        _logger.SyncCompleted(job.CorrelationId ?? job.Id.ToString(), account.Id,
+            candidates.Count, entities.Count, durationMs);
+
+        return new SyncResult(true, candidates.Count, entities.Count, null, null);
+    }
+
+    private async Task<SyncResult> SyncMonobankAsync(
+        Domain.BankAccount account, SyncJob job, DateTime startedAt, CancellationToken ct)
+    {
+        if (account.MonobankCredentialId is null)
+            throw new InvalidOperationException($"Monobank account {account.Id} has no credential id.");
+
+        var cred = await _monobankCredentials.GetByIdAsync(account.MonobankCredentialId.Value, ct)
+            ?? throw new InvalidOperationException($"Monobank credential {account.MonobankCredentialId} not found.");
+
+        var plainToken = _encryption.Decrypt(cred.EncryptedToken, cred.Iv, cred.AuthTag, cred.KeyVersion);
+        _logger.CredentialAccessed(job.CorrelationId ?? job.Id.ToString(), account.Id);
+
+        var provider = _providerFactory.Resolve("monobank");
+
+        var since = cred.LastSyncAt;
+        var (candidates, _) = await provider.SyncTransactionsAsync(
+            plainToken, account.ExternalAccountId, account.Id, account.UserId, since, ct);
+
+        var existing = (await _transactions.GetByAccountIdAsync(account.Id, ct))
+            .Select(t => t.UniqueHash)
+            .ToHashSet();
+
+        var newCandidates = _dedup.FilterDuplicates(candidates, existing);
+        var entities = newCandidates.Select(_dedup.ToEntity).ToList();
+
+        if (entities.Count > 0)
+            await _transactions.AddRangeAsync(entities, ct);
+
+        // T031: update last sync timestamp on credential
+        cred.LastSyncAt = DateTime.UtcNow;
+        await _monobankCredentials.UpdateAsync(cred, ct);
+
+        account.MarkActive(0m);
+        await _accounts.UpdateAsync(account, ct);
+
+        var lastTxDate = entities.Count > 0
+            ? entities.Max(t => t.PostedDate ?? t.TransactionDate)
+            : (DateTime?)null;
+
+        job.MarkSuccess(candidates.Count, entities.Count, lastTxDate);
+        await _syncJobs.UpdateAsync(job, ct);
+
+        var durationMs = (long)(DateTime.UtcNow - startedAt).TotalMilliseconds;
+        _logger.SyncCompleted(job.CorrelationId ?? job.Id.ToString(), account.Id,
+            candidates.Count, entities.Count, durationMs);
+
+        return new SyncResult(true, candidates.Count, entities.Count, null, null);
+    }
+
+    private static string? ExtractErrorCode(string message, string provider)
+    {
+        if (provider == "monobank")
+        {
+            if (message.Contains("MONOBANK_TOKEN_INVALID", StringComparison.OrdinalIgnoreCase))
+                return "MONOBANK_TOKEN_INVALID";
+            if (message.Contains("MONOBANK_RATE_LIMITED", StringComparison.OrdinalIgnoreCase))
+                return "MONOBANK_RATE_LIMITED";
+            return null;
+        }
+
         string[] knownCodes =
         [
             "ITEM_LOGIN_REQUIRED",

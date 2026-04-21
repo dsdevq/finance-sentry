@@ -30,7 +30,7 @@ public class BankAccountRepository(BankSyncDbContext context) : IBankAccountRepo
     {
         return await _context.BankAccounts
             .Include(ba => ba.EncryptedCredential)
-            .FirstOrDefaultAsync(ba => ba.PlaidItemId == plaidItemId && ba.IsActive, cancellationToken);
+            .FirstOrDefaultAsync(ba => ba.ExternalAccountId == plaidItemId && ba.IsActive, cancellationToken);
     }
 
     public async Task<IEnumerable<BankAccount>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
@@ -329,4 +329,41 @@ public class EncryptedCredentialRepository(BankSyncDbContext context) : IEncrypt
     {
         return await _context.SaveChangesAsync(cancellationToken);
     }
+}
+
+public class MonobankCredentialRepository(BankSyncDbContext context) : IMonobankCredentialRepository
+{
+    private readonly BankSyncDbContext _context = context;
+
+    public async Task<MonobankCredential> AddAsync(MonobankCredential credential, CancellationToken cancellationToken = default)
+    {
+        await _context.MonobankCredentials.AddAsync(credential, cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
+        return credential;
+    }
+
+    public async Task<MonobankCredential?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        => await _context.MonobankCredentials.FirstOrDefaultAsync(mc => mc.Id == id, cancellationToken);
+
+    public async Task<MonobankCredential?> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+        => await _context.MonobankCredentials.FirstOrDefaultAsync(mc => mc.UserId == userId, cancellationToken);
+
+    public async Task<MonobankCredential> UpdateAsync(MonobankCredential credential, CancellationToken cancellationToken = default)
+    {
+        _context.MonobankCredentials.Update(credential);
+        await _context.SaveChangesAsync(cancellationToken);
+        return credential;
+    }
+
+    public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var mc = await _context.MonobankCredentials.FirstOrDefaultAsync(m => m.Id == id, cancellationToken);
+        if (mc == null) return false;
+        _context.MonobankCredentials.Remove(mc);
+        await _context.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        => await _context.SaveChangesAsync(cancellationToken);
 }
