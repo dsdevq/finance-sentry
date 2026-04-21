@@ -4,51 +4,26 @@ import {Observable, timer} from 'rxjs';
 import {shareReplay, switchMap, takeWhile} from 'rxjs/operators';
 
 import {environment} from '../../../../environments/environment';
-import {AccountsResponse, ConnectResponse, LinkAccountResponse} from '../models/bank-account.model';
+import {
+  AccountsResponse,
+  ConnectMonobankResponse,
+  ConnectResponse,
+  LinkAccountResponse,
+} from '../models/bank-account.model';
+import {DashboardData} from '../models/dashboard.model';
+import {SyncStatusResponse, TriggerSyncResponse} from '../models/sync.model';
 import {TransactionListResponse, TransactionQueryParams} from '../models/transaction.model';
 
-export interface MonthlyFlow {
-  month: string;
-  currency: string;
-  inflow: number;
-  outflow: number;
-  net: number;
-}
-
-export interface CategoryStat {
-  category: string;
-  totalSpend: number;
-  percentOfTotal: number;
-}
-
-export interface DashboardData {
-  aggregatedBalance: Record<string, number>;
-  accountCount: number;
-  accountsByType: Record<string, number>;
-  monthlyFlow: MonthlyFlow[];
-  topCategories: CategoryStat[];
-  lastSyncTimestamp: string | null;
-}
-
-export interface SyncStatusResponse {
-  status: 'pending' | 'running' | 'success' | 'failed';
-  transactionCountFetched: number;
-  transactionCountDeduped: number;
-  errorMessage: string | null;
-  lastSyncTimestamp: string | null;
-  startedAt: string | null;
-  completedAt: string | null;
-}
-
-export interface TriggerSyncResponse {
-  jobId: string;
-  message: string;
-}
+export type {DashboardData, SyncStatusResponse, TriggerSyncResponse};
 
 @Injectable({providedIn: 'root'})
 export class BankSyncService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiBaseUrl}/accounts`;
+
+  public connectMonobank(token: string): Observable<ConnectMonobankResponse> {
+    return this.http.post<ConnectMonobankResponse>(`${this.baseUrl}/monobank/connect`, {token});
+  }
 
   public getLinkToken(): Observable<ConnectResponse> {
     return this.http.post<ConnectResponse>(`${this.baseUrl}/connect`, {});

@@ -1,6 +1,8 @@
 using Serilog;
 using FinanceSentry.API.Conventions;
 using FinanceSentry.Modules.BankSync;
+using FinanceSentry.Modules.BankSync.Domain.Interfaces;
+using FinanceSentry.Modules.BankSync.Infrastructure.Monobank;
 using FinanceSentry.Modules.BankSync.Infrastructure.Persistence.Repositories;
 using FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
 using FinanceSentry.Modules.BankSync.Infrastructure.Security;
@@ -108,6 +110,7 @@ builder.Services.AddScoped<IBankAccountRepository, BankAccountRepository>();
 builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
 builder.Services.AddScoped<ISyncJobRepository, SyncJobRepository>();
 builder.Services.AddScoped<IEncryptedCredentialRepository, EncryptedCredentialRepository>();
+builder.Services.AddScoped<IMonobankCredentialRepository, MonobankCredentialRepository>();
 
 // ── Encryption (AES-256-GCM, T101) ──────────────────────────────────────────
 builder.Services.Configure<EncryptionOptions>(
@@ -126,8 +129,20 @@ builder.Services.AddHttpClient<IPlaidClient, PlaidHttpClient>(client =>
     client.BaseAddress = new Uri(builder.Configuration["Plaid:BaseUrl"] ?? "https://sandbox.plaid.com");
 });
 builder.Services.AddScoped<PlaidAdapter>();
-builder.Services.AddScoped<IPlaidAdapter>(
-    sp => sp.GetRequiredService<PlaidAdapter>());
+builder.Services.AddScoped<IPlaidAdapter>(sp => sp.GetRequiredService<PlaidAdapter>());
+builder.Services.AddScoped<IBankProvider>(sp => sp.GetRequiredService<PlaidAdapter>());
+
+// ── Monobank integration ─────────────────────────────────────────────────────
+builder.Services.AddHttpClient<MonobankHttpClient>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["Monobank:BaseUrl"] ?? "https://api.monobank.ua");
+});
+builder.Services.AddScoped<IMonobankAdapter, MonobankAdapter>();
+builder.Services.AddScoped<MonobankAdapter>();
+builder.Services.AddScoped<IBankProvider>(sp => sp.GetRequiredService<MonobankAdapter>());
+
+// ── Bank provider factory (resolves by BankAccount.Provider) ─────────────────
+builder.Services.AddScoped<IBankProviderFactory, BankProviderFactory>();
 
 // ── Infrastructure services ──────────────────────────────────────────────────
 builder.Services.AddSingleton<CorrelationIdAccessor>();

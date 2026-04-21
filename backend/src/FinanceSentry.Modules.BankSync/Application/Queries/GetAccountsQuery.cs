@@ -39,7 +39,8 @@ public record BankAccountDto(
     decimal? AvailableBalance,
     string SyncStatus,
     DateTime? LastSyncTimestamp,
-    DateTime CreatedAt
+    DateTime CreatedAt,
+    string Provider
 );
 
 // ──────────────────────────────────────────────
@@ -73,10 +74,11 @@ public class GetAccountsQueryHandler(IBankAccountRepository accounts) : IRequest
             a.AccountNumberLast4,
             a.Currency,
             a.CurrentBalance,
-            null, // AvailableBalance — added in Phase 5 aggregation
+            null,
             a.SyncStatus,
-            null, // LastSyncTimestamp — added in Phase 4 SyncJob tracking
-            a.CreatedAt
+            null,
+            a.CreatedAt,
+            a.Provider
         )).ToList();
 
         // Aggregate current balances by currency (only accounts with known balance)

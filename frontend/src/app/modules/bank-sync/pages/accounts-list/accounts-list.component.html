@@ -47,7 +47,12 @@
               role="button"
               tabindex="0"
             >
-              <td>{{ account.bankName }}</td>
+              <td>
+                {{ account.bankName }}
+                <span class="provider-badge provider-badge--{{ account.provider }}">
+                  {{ account.provider }}
+                </span>
+              </td>
               <td>•••• {{ account.accountNumberLast4 }}</td>
               <td>{{ account.currentBalance | number: '1.2-2' }}</td>
               <td>{{ account.currency }}</td>

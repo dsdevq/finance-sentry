@@ -1,5 +1,7 @@
 export type SyncStatus = 'pending' | 'syncing' | 'active' | 'failed' | 'reauth_required';
 
+export type Provider = 'plaid' | 'monobank';
+
 export interface BankAccount {
   accountId: string;
   bankName: string;
@@ -13,6 +15,7 @@ export interface BankAccount {
   lastSyncTimestamp: string | null;
   lastSyncDurationMs: number | null;
   createdAt: string;
+  provider: string;
 }
 
 export interface AccountsResponse {
@@ -26,6 +29,22 @@ export interface ConnectResponse {
   expiresIn: number;
   expiresAt: string;
   requestId: string;
+}
+
+export interface ConnectedMonobankAccount {
+  id: string;
+  bankName: string;
+  accountType: string;
+  accountNumberLast4: string;
+  ownerName: string;
+  currency: string;
+  currentBalance: number | null;
+  syncStatus: string;
+  provider: string;
+}
+
+export interface ConnectMonobankResponse {
+  accounts: ConnectedMonobankAccount[];
 }
 
 export interface LinkAccountResponse {

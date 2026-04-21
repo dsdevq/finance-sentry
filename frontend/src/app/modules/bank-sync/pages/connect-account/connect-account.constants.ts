@@ -1,0 +1,1 @@
+export const MONOBANK_TOKEN_MAX_LENGTH = 64;

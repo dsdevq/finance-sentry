@@ -22,16 +22,16 @@ No new project or dependency setup required. Monobank API is called via plain `H
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T001 Create `IBankProvider` and `IBankProviderFactory` interfaces in `backend/src/FinanceSentry.Modules.BankSync/Domain/Interfaces/IBankProvider.cs`
-- [ ] T002 Create `MonobankCredential` domain entity in `backend/src/FinanceSentry.Modules.BankSync/Domain/MonobankCredential.cs`
-- [ ] T003 Modify `BankAccount` entity: rename `PlaidItemId` → `ExternalAccountId`; add `Provider` (string, default `"plaid"`); add nullable `MonobankCredentialId` (Guid?) and navigation property in `backend/src/FinanceSentry.Modules.BankSync/Domain/BankAccount.cs`
-- [ ] T004 Add `IMonobankCredentialRepository` to `backend/src/FinanceSentry.Modules.BankSync/Domain/Repositories/IRepositories.cs`
-- [ ] T005 Update `BankSyncDbContext`: add `DbSet<MonobankCredential>`, configure `MonobankCredentials` table (indexes, FK, encrypted column constraints), rename `PlaidItemId` → `ExternalAccountId` in fluent config in `backend/src/FinanceSentry.Modules.BankSync/Infrastructure/Persistence/BankSyncDbContext.cs`
-- [ ] T006 Add EF Core migration `M002_MonobankProvider` covering: rename column, add `Provider` + `MonobankCredentialId` columns to `BankAccounts`, create `MonobankCredentials` table, FK, indexes in `backend/src/FinanceSentry.Modules.BankSync/Migrations/`
-- [ ] T007 Implement `MonobankCredentialRepository` in `backend/src/FinanceSentry.Modules.BankSync/Infrastructure/Persistence/Repositories/Repositories.cs`
-- [ ] T008 Modify `PlaidAdapter` to implement `IBankProvider` (add `ProviderName`, `GetAccountsAsync`, `SyncTransactionsAsync`, `DisconnectAsync` delegating to existing methods) in `backend/src/FinanceSentry.Modules.BankSync/Infrastructure/Plaid/PlaidAdapter.cs`
-- [ ] T009 Implement `BankProviderFactory` in `backend/src/FinanceSentry.Modules.BankSync/Application/Services/BankProviderFactory.cs` that resolves `IBankProvider` by `BankAccount.Provider` string
-- [ ] T010 Register `IBankProviderFactory`, `BankProviderFactory`, `IMonobankCredentialRepository`, `MonobankCredentialRepository` in `backend/src/FinanceSentry.API/Program.cs`
+- [X] T001 Create `IBankProvider` and `IBankProviderFactory` interfaces in `backend/src/FinanceSentry.Modules.BankSync/Domain/Interfaces/IBankProvider.cs`
+- [X] T002 Create `MonobankCredential` domain entity in `backend/src/FinanceSentry.Modules.BankSync/Domain/MonobankCredential.cs`
+- [X] T003 Modify `BankAccount` entity: rename `PlaidItemId` → `ExternalAccountId`; add `Provider` (string, default `"plaid"`); add nullable `MonobankCredentialId` (Guid?) and navigation property in `backend/src/FinanceSentry.Modules.BankSync/Domain/BankAccount.cs`
+- [X] T004 Add `IMonobankCredentialRepository` to `backend/src/FinanceSentry.Modules.BankSync/Domain/Repositories/IRepositories.cs`
+- [X] T005 Update `BankSyncDbContext`: add `DbSet<MonobankCredential>`, configure `MonobankCredentials` table (indexes, FK, encrypted column constraints), rename `PlaidItemId` → `ExternalAccountId` in fluent config in `backend/src/FinanceSentry.Modules.BankSync/Infrastructure/Persistence/BankSyncDbContext.cs`
+- [X] T006 Add EF Core migration `M002_MonobankProvider` covering: rename column, add `Provider` + `MonobankCredentialId` columns to `BankAccounts`, create `MonobankCredentials` table, FK, indexes in `backend/src/FinanceSentry.Modules.BankSync/Migrations/`
+- [X] T007 Implement `MonobankCredentialRepository` in `backend/src/FinanceSentry.Modules.BankSync/Infrastructure/Persistence/Repositories/Repositories.cs`
+- [X] T008 Modify `PlaidAdapter` to implement `IBankProvider` (add `ProviderName`, `GetAccountsAsync`, `SyncTransactionsAsync`, `DisconnectAsync` delegating to existing methods) in `backend/src/FinanceSentry.Modules.BankSync/Infrastructure/Plaid/PlaidAdapter.cs`
+- [X] T009 Implement `BankProviderFactory` in `backend/src/FinanceSentry.Modules.BankSync/Application/Services/BankProviderFactory.cs` that resolves `IBankProvider` by `BankAccount.Provider` string
+- [X] T010 Register `IBankProviderFactory`, `BankProviderFactory`, `IMonobankCredentialRepository`, `MonobankCredentialRepository` in `backend/src/FinanceSentry.API/Program.cs`
 
 **Checkpoint**: Domain interfaces exist; DB schema updated; PlaidAdapter is IBankProvider-compliant; factory resolves Plaid.
 
@@ -50,16 +50,16 @@ No new project or dependency setup required. Monobank API is called via plain `H
 
 ### Implementation for User Story 1
 
-- [ ] T013 [P] [US1] Create `MonobankException` in `backend/src/FinanceSentry.Modules.BankSync/Infrastructure/Monobank/MonobankException.cs`
-- [ ] T014 [P] [US1] Create `MonobankAdapterModels.cs` with `MonobankAccountInfo` and `MonobankClientInfo` records in `backend/src/FinanceSentry.Modules.BankSync/Infrastructure/Monobank/MonobankAdapterModels.cs`
-- [ ] T015 [P] [US1] Create `IMonobankAdapter` interface (connect, getAccounts, getStatements) in `backend/src/FinanceSentry.Modules.BankSync/Infrastructure/Monobank/IMonobankAdapter.cs`
-- [ ] T016 [US1] Implement `MonobankHttpClient` covering `GET /personal/client-info` and `GET /personal/statement/{account}/{from}/{to}` with `X-Token` auth, ISO 4217 numeric→alphabetic currency mapping, amount÷100 conversion, and HTTP 429/401 error handling in `backend/src/FinanceSentry.Modules.BankSync/Infrastructure/Monobank/MonobankHttpClient.cs`
-- [ ] T017 [US1] Implement `MonobankAdapter.ConnectAsync` and `MonobankAdapter.GetAccountsAsync` (validate token, map client-info accounts to `MonobankAccountInfo`, implement `IBankProvider.GetAccountsAsync`) in `backend/src/FinanceSentry.Modules.BankSync/Infrastructure/Monobank/MonobankAdapter.cs`
-- [ ] T018 [US1] Create `ConnectMonobankAccountCommand` MediatR command + handler: validate token via `IMonobankAdapter.ConnectAsync`, create/update `MonobankCredential`, create `BankAccount` rows with `Provider="monobank"`, return account list in `backend/src/FinanceSentry.Modules.BankSync/Application/Commands/ConnectMonobankAccountCommand.cs`
-- [ ] T019 [US1] Add `POST /api/v1/accounts/monobank/connect` endpoint to `BankSyncController` dispatching `ConnectMonobankAccountCommand`; return 201/400/409/429 per contract in `backend/src/FinanceSentry.Modules.BankSync/API/Controllers/BankSyncController.cs`
-- [ ] T020 [US1] Register `IMonobankAdapter`, `MonobankAdapter`, `MonobankHttpClient` (via `AddHttpClient`) in `backend/src/FinanceSentry.API/Program.cs`; add `Monobank:BaseUrl` config key (default `https://api.monobank.ua`)
-- [ ] T021 [US1] Add `connectMonobank(token: string)` method to frontend `BankSyncService` calling `POST /api/v1/accounts/monobank/connect` in `frontend/src/app/modules/bank-sync/services/bank-sync.service.ts`
-- [ ] T022 [US1] Extend `ConnectAccountComponent` with provider selection (Plaid / Monobank) and Monobank token input form; Monobank flow calls `connectMonobank()` and navigates to accounts list on success in `frontend/src/app/modules/bank-sync/pages/connect-account/connect-account.component.ts` and `.html`
+- [X] T013 [P] [US1] Create `MonobankException` in `backend/src/FinanceSentry.Modules.BankSync/Infrastructure/Monobank/MonobankException.cs`
+- [X] T014 [P] [US1] Create `MonobankAdapterModels.cs` with `MonobankAccountInfo` and `MonobankClientInfo` records in `backend/src/FinanceSentry.Modules.BankSync/Infrastructure/Monobank/MonobankAdapterModels.cs`
+- [X] T015 [P] [US1] Create `IMonobankAdapter` interface (connect, getAccounts, getStatements) in `backend/src/FinanceSentry.Modules.BankSync/Infrastructure/Monobank/IMonobankAdapter.cs`
+- [X] T016 [US1] Implement `MonobankHttpClient` covering `GET /personal/client-info` and `GET /personal/statement/{account}/{from}/{to}` with `X-Token` auth, ISO 4217 numeric→alphabetic currency mapping, amount÷100 conversion, and HTTP 429/401 error handling in `backend/src/FinanceSentry.Modules.BankSync/Infrastructure/Monobank/MonobankHttpClient.cs`
+- [X] T017 [US1] Implement `MonobankAdapter.ConnectAsync` and `MonobankAdapter.GetAccountsAsync` (validate token, map client-info accounts to `MonobankAccountInfo`, implement `IBankProvider.GetAccountsAsync`) in `backend/src/FinanceSentry.Modules.BankSync/Infrastructure/Monobank/MonobankAdapter.cs`
+- [X] T018 [US1] Create `ConnectMonobankAccountCommand` MediatR command + handler: validate token via `IMonobankAdapter.ConnectAsync`, create/update `MonobankCredential`, create `BankAccount` rows with `Provider="monobank"`, return account list in `backend/src/FinanceSentry.Modules.BankSync/Application/Commands/ConnectMonobankAccountCommand.cs`
+- [X] T019 [US1] Add `POST /api/v1/accounts/monobank/connect` endpoint to `BankSyncController` dispatching `ConnectMonobankAccountCommand`; return 201/400/409/429 per contract in `backend/src/FinanceSentry.Modules.BankSync/API/Controllers/BankSyncController.cs`
+- [X] T020 [US1] Register `IMonobankAdapter`, `MonobankAdapter`, `MonobankHttpClient` (via `AddHttpClient`) in `backend/src/FinanceSentry.API/Program.cs`; add `Monobank:BaseUrl` config key (default `https://api.monobank.ua`)
+- [X] T021 [US1] Add `connectMonobank(token: string)` method to frontend `BankSyncService` calling `POST /api/v1/accounts/monobank/connect` in `frontend/src/app/modules/bank-sync/services/bank-sync.service.ts`
+- [X] T022 [US1] Extend `ConnectAccountComponent` with provider selection (Plaid / Monobank) and Monobank token input form; Monobank flow calls `connectMonobank()` and navigates to accounts list on success in `frontend/src/app/modules/bank-sync/pages/connect-account/connect-account.component.ts` and `.html`
 
 **Checkpoint**: User can connect a Monobank account; accounts appear in the list with balance and `provider: monobank` label.
 
@@ -77,12 +77,12 @@ No new project or dependency setup required. Monobank API is called via plain `H
 
 ### Implementation for User Story 2
 
-- [ ] T024 [P] [US2] Add `MonobankTransaction` record to `MonobankAdapterModels.cs` with all statement entry fields in `backend/src/FinanceSentry.Modules.BankSync/Infrastructure/Monobank/MonobankAdapterModels.cs`
-- [ ] T025 [US2] Implement `MonobankAdapter.SyncTransactionsAsync`: fetch statement window `[since, now]`; for initial sync (since=null) paginate three 31-day windows covering 90 days; map `MonobankTransaction` → `TransactionCandidate`; return candidates + next sync timestamp in `backend/src/FinanceSentry.Modules.BankSync/Infrastructure/Monobank/MonobankAdapter.cs`
-- [ ] T026 [US2] Trigger initial 90-day import after connect: in `ConnectMonobankAccountCommand` handler, enqueue a Hangfire sync job for each created `BankAccount` in `backend/src/FinanceSentry.Modules.BankSync/Application/Commands/ConnectMonobankAccountCommand.cs`
-- [ ] T027 [US2] Update `TransactionSyncCoordinator` to resolve the correct `IBankProvider` via `IBankProviderFactory` based on `BankAccount.Provider` instead of directly injecting `IPlaidAdapter` in `backend/src/FinanceSentry.Modules.BankSync/Application/Services/TransactionSyncCoordinator.cs`
-- [ ] T028 [US2] Add `provider` field to the accounts list API response DTO and map it from `BankAccount.Provider` in `backend/src/FinanceSentry.Modules.BankSync/API/Controllers/BankSyncController.cs`
-- [ ] T029 [US2] Add provider badge to frontend accounts list component (shows "Monobank" or "Plaid" label) in `frontend/src/app/modules/bank-sync/pages/accounts-list/accounts-list.component.ts` and `.html`
+- [X] T024 [P] [US2] Add `MonobankTransaction` record to `MonobankAdapterModels.cs` with all statement entry fields in `backend/src/FinanceSentry.Modules.BankSync/Infrastructure/Monobank/MonobankAdapterModels.cs`
+- [X] T025 [US2] Implement `MonobankAdapter.SyncTransactionsAsync`: fetch statement window `[since, now]`; for initial sync (since=null) paginate three 31-day windows covering 90 days; map `MonobankTransaction` → `TransactionCandidate`; return candidates + next sync timestamp in `backend/src/FinanceSentry.Modules.BankSync/Infrastructure/Monobank/MonobankAdapter.cs`
+- [X] T026 [US2] Trigger initial 90-day import after connect: in `ConnectMonobankAccountCommand` handler, enqueue a Hangfire sync job for each created `BankAccount` in `backend/src/FinanceSentry.Modules.BankSync/Application/Commands/ConnectMonobankAccountCommand.cs`
+- [X] T027 [US2] Update `TransactionSyncCoordinator` to resolve the correct `IBankProvider` via `IBankProviderFactory` based on `BankAccount.Provider` instead of directly injecting `IPlaidAdapter` in `backend/src/FinanceSentry.Modules.BankSync/Application/Services/ScheduledSyncService.cs`
+- [X] T028 [US2] Add `provider` field to the accounts list API response DTO and map it from `BankAccount.Provider` in `backend/src/FinanceSentry.Modules.BankSync/Application/Queries/GetAccountsQuery.cs`
+- [X] T029 [US2] Add provider badge to frontend accounts list component (shows "Monobank" or "Plaid" label) in `frontend/src/app/modules/bank-sync/pages/accounts-list/accounts-list.component.html`
 
 **Checkpoint**: Monobank transactions are visible in the transaction list; no duplicates on re-import; Plaid transactions unaffected.
 
@@ -96,10 +96,10 @@ No new project or dependency setup required. Monobank API is called via plain `H
 
 ### Implementation for User Story 3
 
-- [ ] T030 [US3] Add retry-with-backoff for HTTP 429 in `MonobankHttpClient` (3 attempts: immediate, +60s, +120s; throws `MonobankException` on third failure) in `backend/src/FinanceSentry.Modules.BankSync/Infrastructure/Monobank/MonobankHttpClient.cs`
-- [ ] T031 [US3] Update `MonobankCredential.LastSyncAt` after each successful sync in `TransactionSyncCoordinator` or `ConnectMonobankAccountCommand` in `backend/src/FinanceSentry.Modules.BankSync/Application/Services/TransactionSyncCoordinator.cs`
-- [ ] T032 [US3] Update `ScheduledSyncJob` to iterate all active `BankAccount` rows (including provider=monobank) and resolve `IBankProvider` per account via factory in `backend/src/FinanceSentry.Modules.BankSync/Infrastructure/Jobs/ScheduledSyncJob.cs`
-- [ ] T033 [US3] Map Monobank 401 response to `MarkReauthRequired()` / `MarkFailed("MONOBANK_TOKEN_INVALID")` in `TransactionSyncCoordinator` error handling in `backend/src/FinanceSentry.Modules.BankSync/Application/Services/TransactionSyncCoordinator.cs`
+- [X] T030 [US3] Add retry-with-backoff for HTTP 429 in `MonobankHttpClient` (3 attempts: immediate, +60s, +120s; throws `MonobankException` on third failure) in `backend/src/FinanceSentry.Modules.BankSync/Infrastructure/Monobank/MonobankHttpClient.cs`
+- [X] T031 [US3] Update `MonobankCredential.LastSyncAt` after each successful sync in `ScheduledSyncService.SyncMonobankAsync` in `backend/src/FinanceSentry.Modules.BankSync/Application/Services/ScheduledSyncService.cs`
+- [X] T032 [US3] Update `ScheduledSyncJob` to iterate all active `BankAccount` rows (including provider=monobank) and resolve `IBankProvider` per account via factory — handled by `ScheduledSyncService` provider branching
+- [X] T033 [US3] Map Monobank 401 response to `MarkReauthRequired()` / `MarkFailed("MONOBANK_TOKEN_INVALID")` in `ScheduledSyncService` error handling in `backend/src/FinanceSentry.Modules.BankSync/Application/Services/ScheduledSyncService.cs`
 
 **Checkpoint**: Manual and scheduled sync both work for Monobank accounts. Token errors surface as visible account error state.
 
@@ -109,8 +109,8 @@ No new project or dependency setup required. Monobank API is called via plain `H
 
 - [ ] T034 [P] Write unit tests for `MonobankAdapter` (connect happy path, invalid token, duplicate connect, SyncTransactions amount mapping) in `backend/tests/FinanceSentry.Tests/Monobank/MonobankAdapterTests.cs`
 - [ ] T035 [P] Write unit test for `BankProviderFactory` (resolves plaid for "plaid", monobank for "monobank", throws for unknown) in `backend/tests/FinanceSentry.Tests/Monobank/BankProviderFactoryTests.cs`
-- [ ] T036 Bump backend minor version in `backend/src/FinanceSentry.API/FinanceSentry.API.csproj` (new endpoint added)
-- [ ] T037 Bump frontend minor version in `frontend/package.json` (new connect flow added)
+- [X] T036 Bump backend minor version in `backend/src/FinanceSentry.API/FinanceSentry.API.csproj` (no `<Version>` tag present — N/A)
+- [X] T037 Bump frontend minor version in `frontend/package.json` → 0.6.0
 
 ---
 

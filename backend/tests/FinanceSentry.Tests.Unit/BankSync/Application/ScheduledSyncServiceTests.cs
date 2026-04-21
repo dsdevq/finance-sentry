@@ -4,6 +4,7 @@ using FinanceSentry.Infrastructure.Encryption;
 using FinanceSentry.Infrastructure.Logging;
 using FinanceSentry.Modules.BankSync.Application.Services;
 using FinanceSentry.Modules.BankSync.Domain;
+using FinanceSentry.Modules.BankSync.Domain.Interfaces;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
 using FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
 using FluentAssertions;
@@ -58,9 +59,13 @@ public class ScheduledSyncServiceTests
         var dedup = new Mock<ITransactionDeduplicationService>();
         var logger = new Mock<IBankSyncLogger>();
 
+        var providerFactory = new Mock<IBankProviderFactory>();
+        var monobankCreds = new Mock<IMonobankCredentialRepository>();
+
         var sut = new ScheduledSyncService(
             accountRepo.Object, txRepo.Object, jobRepo.Object, credRepo.Object,
-            encryption.Object, plaid.Object, dedup.Object, logger.Object);
+            encryption.Object, plaid.Object, dedup.Object, logger.Object,
+            providerFactory.Object, monobankCreds.Object);
 
         return (sut, accountRepo, txRepo, jobRepo, credRepo, encryption, plaid, dedup, logger);
     }
