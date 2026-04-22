@@ -1,0 +1,49 @@
+using FinanceSentry.Modules.CryptoSync.Domain;
+using Microsoft.EntityFrameworkCore;
+
+namespace FinanceSentry.Modules.CryptoSync.Infrastructure.Persistence;
+
+public sealed class CryptoSyncDbContext : DbContext
+{
+    public CryptoSyncDbContext(DbContextOptions<CryptoSyncDbContext> options)
+        : base(options)
+    {
+    }
+
+    public DbSet<BinanceCredential> BinanceCredentials => Set<BinanceCredential>();
+    public DbSet<CryptoHolding> CryptoHoldings => Set<CryptoHolding>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<BinanceCredential>(entity =>
+        {
+            entity.ToTable("BinanceCredentials");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.UserId).IsUnique();
+            entity.Property(e => e.EncryptedApiKey).IsRequired();
+            entity.Property(e => e.ApiKeyIv).IsRequired();
+            entity.Property(e => e.ApiKeyAuthTag).IsRequired();
+            entity.Property(e => e.EncryptedApiSecret).IsRequired();
+            entity.Property(e => e.ApiSecretIv).IsRequired();
+            entity.Property(e => e.ApiSecretAuthTag).IsRequired();
+            entity.Property(e => e.KeyVersion).IsRequired();
+            entity.Property(e => e.IsActive).IsRequired();
+            entity.Property(e => e.CreatedAt).IsRequired();
+            entity.Property(e => e.LastSyncError).HasMaxLength(1000);
+        });
+
+        modelBuilder.Entity<CryptoHolding>(entity =>
+        {
+            entity.ToTable("CryptoHoldings");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.UserId, e.Asset }).IsUnique();
+            entity.Property(e => e.Asset).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.FreeQuantity).HasPrecision(30, 10);
+            entity.Property(e => e.LockedQuantity).HasPrecision(30, 10);
+            entity.Property(e => e.UsdValue).HasPrecision(20, 4);
+            entity.Property(e => e.Provider).IsRequired().HasMaxLength(50).HasDefaultValue("binance");
+        });
+    }
+}
