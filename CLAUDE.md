@@ -157,7 +157,7 @@ This project uses a two-model pipeline. [`.specify/memory/pipeline.md`](.specify
 **Claude** = planner + orchestrator + reviewer (this session).
 **Qwen2.5-coder:14b** (local Ollama) = implementer, called via the `qwen-code` MCP server.
 
-> **Hard rule:** Qwen is the sole code producer. If a Qwen MCP call fails with a connection error, **stop immediately** and report the error — do NOT write implementation code directly as a fallback. Wait for the user to confirm Ollama is back up before retrying. Only bypass this rule if the user explicitly says so.
+> ~~**Hard rule:** Qwen is the sole code producer. If a Qwen MCP call fails with a connection error, **stop immediately** and report the error — do NOT write implementation code directly as a fallback. Wait for the user to confirm Ollama is back up before retrying. Only bypass this rule if the user explicitly says so.~~ **TEMPORARILY DISABLED** — Claude implementing directly while Qwen/Ollama is unavailable.
 
 - MCP config: `.mcp.json` + `.claude/settings.json` → `enabledMcpjsonServers: ["qwen-code"]`
 - MCP is only active in **new sessions** — check `/mcp` to confirm it loaded
@@ -206,6 +206,8 @@ After **all tasks in a feature are complete**, act as a QA engineer: spin up the
 - PostgreSQL 14 — existing `BankSyncDbContext`; migration M002 adds `MonobankCredentials` table and modifies `BankAccounts` (007-monobank-adapter)
 - C# 13 / .NET 9 (backend only — no frontend changes) + ASP.NET Core 9, EF Core 9, MediatR (existing — no new NuGet packages) (008-wealth-aggregation-api)
 - PostgreSQL 14 — read-only queries against existing `BankAccounts` and `Transactions` tables; no new columns or migrations (008-wealth-aggregation-api)
+- C# 13 / .NET 9 + ASP.NET Core 9, EF Core 9, MediatR, Hangfire, `System.Net.Http` (no new NuGet packages — Binance is plain REST with HMAC signing via `System.Security.Cryptography`) (009-binance-integration)
+- PostgreSQL 14 — new `CryptoSyncDbContext` with migration M001 adding `BinanceCredentials` and `CryptoHoldings` tables; no changes to `BankSyncDbContext` (009-binance-integration)
 
 ## Recent Changes
 - 003-auth-flow: Added C# 13 / .NET 9 (backend) · TypeScript 5.x strict (frontend) + ASP.NET Core 9, EF Core 9, MediatR, ASP.NET Core Identity (`Microsoft.AspNetCore.Identity.EntityFrameworkCore`), Npgsql.EF Core (backend) · Angular 20, RxJS, Angular standalone routing (frontend)

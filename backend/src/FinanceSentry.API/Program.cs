@@ -1,7 +1,16 @@
 using Serilog;
 using FinanceSentry.API.Conventions;
+using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Modules.BankSync;
 using FinanceSentry.Modules.BankSync.Domain.Interfaces;
+using FinanceSentry.Modules.CryptoSync;
+using FinanceSentry.Modules.CryptoSync.Application.Services;
+using FinanceSentry.Modules.CryptoSync.Domain.Interfaces;
+using FinanceSentry.Modules.CryptoSync.Domain.Repositories;
+using FinanceSentry.Modules.CryptoSync.Infrastructure.Binance;
+using FinanceSentry.Modules.CryptoSync.Infrastructure.Jobs;
+using FinanceSentry.Modules.CryptoSync.Infrastructure.Persistence;
+using FinanceSentry.Modules.CryptoSync.Infrastructure.Persistence.Repositories;
 using FinanceSentry.Modules.BankSync.Infrastructure.Monobank;
 using FinanceSentry.Modules.BankSync.Infrastructure.Persistence.Repositories;
 using FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
@@ -72,7 +81,8 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(
     typeof(Program).Assembly,
     typeof(BankSyncModule).Assembly,
-    typeof(JwtTokenService).Assembly
+    typeof(JwtTokenService).Assembly,
+    typeof(CryptoSyncModule).Assembly
 ));
 
 // ── Database (EF Core + PostgreSQL) ─────────────────────────────────────────
@@ -83,6 +93,9 @@ builder.Services.AddDbContext<FinanceSentry.Modules.BankSync.Infrastructure.Pers
     options => options.UseNpgsql(connectionString));
 
 builder.Services.AddDbContext<AuthDbContext>(
+    options => options.UseNpgsql(connectionString));
+
+builder.Services.AddDbContext<CryptoSyncDbContext>(
     options => options.UseNpgsql(connectionString));
 
 // ── ASP.NET Core Identity ────────────────────────────────────────────────────
@@ -160,6 +173,14 @@ builder.Services.AddSingleton<IPlaidErrorMapper, PlaidErrorMapper>();
 builder.Services.AddScoped<IScheduledSyncService, ScheduledSyncService>();
 builder.Services.AddScoped<ITransactionSyncCoordinator, TransactionSyncCoordinator>();
 
+// ── CryptoSync module (009-binance-integration) ───────────────────────────────
+builder.Services.AddHttpClient<BinanceHttpClient>();
+builder.Services.AddScoped<ICryptoExchangeAdapter, BinanceAdapter>();
+builder.Services.AddScoped<IBinanceCredentialRepository, BinanceCredentialRepository>();
+builder.Services.AddScoped<ICryptoHoldingRepository, CryptoHoldingRepository>();
+builder.Services.AddScoped<ICryptoHoldingsReader, CryptoHoldingsReader>();
+builder.Services.AddScoped<BinanceSyncJob>();
+
 // ── Dashboard / aggregation services (T401–T410) ─────────────────────────────
 builder.Services.AddScoped<IAggregationService, AggregationService>();
 builder.Services.AddScoped<IMoneyFlowStatisticsService, MoneyFlowStatisticsService>();
@@ -236,6 +257,18 @@ using (var scope = app.Services.CreateScope())
     {
         app.Logger.LogError(ex, "Auth migration failed. Startup will continue.");
     }
+
+    try
+    {
+        var cryptoSyncDbContext = scope.ServiceProvider.GetRequiredService<CryptoSyncDbContext>();
+        app.Logger.LogInformation("Applying CryptoSync database migrations...");
+        cryptoSyncDbContext.Database.Migrate();
+        app.Logger.LogInformation("CryptoSync migrations applied successfully");
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, "CryptoSync migration failed. Startup will continue.");
+    }
 }
 
 // ── Middleware pipeline ───────────────────────────────────────────────────────
@@ -257,6 +290,13 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health/ready");
+
+// ── Hangfire recurring job: Binance holdings sync ────────────────────────────
+var recurringJobManager = app.Services.GetRequiredService<IRecurringJobManager>();
+recurringJobManager.AddOrUpdate<BinanceSyncJob>(
+    "binance-sync",
+    job => job.ExecuteAsync(),
+    "*/15 * * * *");
 
 app.Run();
 

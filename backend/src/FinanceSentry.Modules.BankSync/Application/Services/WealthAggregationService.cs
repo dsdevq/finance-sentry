@@ -1,5 +1,6 @@
 namespace FinanceSentry.Modules.BankSync.Application.Services;
 
+using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Modules.BankSync.Application.Queries;
 using FinanceSentry.Modules.BankSync.Domain;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
@@ -7,13 +8,15 @@ using FinanceSentry.Modules.BankSync.Domain.Services;
 
 public class WealthAggregationService(
     IBankAccountRepository accounts,
-    ITransactionRepository transactions) : IWealthAggregationService
+    ITransactionRepository transactions,
+    ICryptoHoldingsReader? cryptoHoldingsReader = null) : IWealthAggregationService
 {
     private static readonly HashSet<string> AllowedCategories =
         new(StringComparer.OrdinalIgnoreCase) { "banking", "crypto", "brokerage", "other" };
 
     private readonly IBankAccountRepository _accounts = accounts;
     private readonly ITransactionRepository _transactions = transactions;
+    private readonly ICryptoHoldingsReader? _cryptoHoldingsReader = cryptoHoldingsReader;
 
     public async Task<WealthSummaryResponse> GetWealthSummaryAsync(
         Guid userId, string? category, string? provider, CancellationToken ct = default)
@@ -39,6 +42,32 @@ public class WealthAggregationService(
                 return new CategorySummaryDto(g.Key, total, accountDtos);
             })
             .ToList();
+
+        if (_cryptoHoldingsReader is not null &&
+            (category is null || category == "crypto") &&
+            (provider is null || provider == "binance"))
+        {
+            var cryptoHoldings = await _cryptoHoldingsReader.GetHoldingsAsync(userId, ct);
+            if (cryptoHoldings.Count > 0)
+            {
+                var cryptoAccountDtos = cryptoHoldings
+                    .Select(h => new AccountBalanceDto(
+                        Guid.Empty,
+                        "Binance",
+                        "crypto",
+                        h.Asset,
+                        h.Provider,
+                        "crypto",
+                        "USD",
+                        h.FreeQuantity + h.LockedQuantity,
+                        h.UsdValue,
+                        "synced"))
+                    .ToList<AccountBalanceDto>();
+
+                var cryptoTotal = cryptoHoldings.Sum(h => h.UsdValue);
+                grouped.Add(new CategorySummaryDto("crypto", cryptoTotal, cryptoAccountDtos));
+            }
+        }
 
         var totalNetWorth = grouped.Sum(c => c.TotalInBaseCurrency);
 
