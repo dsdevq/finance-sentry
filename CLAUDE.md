@@ -208,6 +208,8 @@ After **all tasks in a feature are complete**, act as a QA engineer: spin up the
 - PostgreSQL 14 — read-only queries against existing `BankAccounts` and `Transactions` tables; no new columns or migrations (008-wealth-aggregation-api)
 - C# 13 / .NET 9 + ASP.NET Core 9, EF Core 9, MediatR, Hangfire, `System.Net.Http` (no new NuGet packages — Binance is plain REST with HMAC signing via `System.Security.Cryptography`) (009-binance-integration)
 - PostgreSQL 14 — new `CryptoSyncDbContext` with migration M001 adding `BinanceCredentials` and `CryptoHoldings` tables; no changes to `BankSyncDbContext` (009-binance-integration)
+- C# 13 / .NET 9 + ASP.NET Core 9, EF Core 9, MediatR, Hangfire, `System.Net.Http` (no new NuGet packages — IBKR Client Portal API is plain REST+JSON; no official IBKR .NET SDK exists) (010-ibkr-integration)
+- PostgreSQL 14 — new `BrokerageSyncDbContext` with migration M001 adding `IBKRCredentials` and `BrokerageHoldings` tables; no changes to `BankSyncDbContext` or `CryptoSyncDbContext` (010-ibkr-integration)
 
 ## Recent Changes
 - 003-auth-flow: Added C# 13 / .NET 9 (backend) · TypeScript 5.x strict (frontend) + ASP.NET Core 9, EF Core 9, MediatR, ASP.NET Core Identity (`Microsoft.AspNetCore.Identity.EntityFrameworkCore`), Npgsql.EF Core (backend) · Angular 20, RxJS, Angular standalone routing (frontend)

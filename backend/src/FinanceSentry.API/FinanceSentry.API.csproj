@@ -37,6 +37,7 @@
     <ProjectReference Include="..\FinanceSentry.Modules.Auth\FinanceSentry.Modules.Auth.csproj" />
     <ProjectReference Include="..\FinanceSentry.Infrastructure\FinanceSentry.Infrastructure.csproj" />
     <ProjectReference Include="..\FinanceSentry.Modules.CryptoSync\FinanceSentry.Modules.CryptoSync.csproj" />
+    <ProjectReference Include="..\FinanceSentry.Modules.BrokerageSync\FinanceSentry.Modules.BrokerageSync.csproj" />
   </ItemGroup>
 
 </Project>
