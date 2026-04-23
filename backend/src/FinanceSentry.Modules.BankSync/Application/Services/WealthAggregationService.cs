@@ -9,14 +9,17 @@ using FinanceSentry.Modules.BankSync.Domain.Services;
 public class WealthAggregationService(
     IBankAccountRepository accounts,
     ITransactionRepository transactions,
-    ICryptoHoldingsReader? cryptoHoldingsReader = null) : IWealthAggregationService
+    ICryptoHoldingsReader? cryptoHoldingsReader = null,
+    IBrokerageHoldingsReader? brokerageHoldingsReader = null) : IWealthAggregationService
 {
     private static readonly HashSet<string> AllowedCategories =
         new(StringComparer.OrdinalIgnoreCase) { "banking", "crypto", "brokerage", "other" };
+    private static readonly TimeSpan StaleThreshold = TimeSpan.FromHours(1);
 
     private readonly IBankAccountRepository _accounts = accounts;
     private readonly ITransactionRepository _transactions = transactions;
     private readonly ICryptoHoldingsReader? _cryptoHoldingsReader = cryptoHoldingsReader;
+    private readonly IBrokerageHoldingsReader? _brokerageHoldingsReader = brokerageHoldingsReader;
 
     public async Task<WealthSummaryResponse> GetWealthSummaryAsync(
         Guid userId, string? category, string? provider, CancellationToken ct = default)
@@ -66,6 +69,32 @@ public class WealthAggregationService(
 
                 var cryptoTotal = cryptoHoldings.Sum(h => h.UsdValue);
                 grouped.Add(new CategorySummaryDto("crypto", cryptoTotal, cryptoAccountDtos));
+            }
+        }
+
+        if (_brokerageHoldingsReader is not null &&
+            (category is null || category == "brokerage") &&
+            (provider is null || provider == "ibkr"))
+        {
+            var brokerageHoldings = await _brokerageHoldingsReader.GetHoldingsAsync(userId, ct);
+            if (brokerageHoldings.Count > 0)
+            {
+                var brokerageAccountDtos = brokerageHoldings
+                    .Select(h => new AccountBalanceDto(
+                        Guid.Empty,
+                        "IBKR",
+                        "brokerage",
+                        h.Symbol.Length >= 4 ? h.Symbol[..4] : h.Symbol,
+                        "ibkr",
+                        "brokerage",
+                        "USD",
+                        h.Quantity,
+                        h.UsdValue,
+                        DateTime.UtcNow - h.SyncedAt > StaleThreshold ? "stale" : "synced"))
+                    .ToList<AccountBalanceDto>();
+
+                var brokerageTotal = brokerageHoldings.Sum(h => h.UsdValue);
+                grouped.Add(new CategorySummaryDto("brokerage", brokerageTotal, brokerageAccountDtos));
             }
         }
 

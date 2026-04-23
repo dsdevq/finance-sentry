@@ -44,7 +44,7 @@
 - [x] T011 [P] Create `IBKRGatewayModels.cs` (C# records matching IB Gateway REST responses: `IBKRAuthStatusResponse` with `Authenticated` bool; `IBKRAccountsResponse` with `Accounts` string list; `IBKRPositionResponse` with `Conid`, `ContractDesc`, `AssetClass`, `Position`, `MktPrice`, `MktValue`) in `backend/src/FinanceSentry.Modules.BrokerageSync/Infrastructure/IBKR/IBKRGatewayModels.cs`
 - [x] T012 [P] Implement repository classes `IBKRCredentialRepository` and `BrokerageHoldingRepository` (EF Core, including upsert for holdings via `ExecuteUpdateAsync` or `AddOrUpdate`) in `backend/src/FinanceSentry.Modules.BrokerageSync/Infrastructure/Persistence/Repositories/Repositories.cs`
 - [x] T013 Run EF migration: `dotnet ef migrations add M001_InitialSchema --project backend/src/FinanceSentry.Modules.BrokerageSync --startup-project backend/src/FinanceSentry.API --context BrokerageSyncDbContext`; commit generated migration files in `backend/src/FinanceSentry.Modules.BrokerageSync/Migrations/`
-- [ ] T014 [P] Write external API contract tests for `IBKRAdapter` (mock `IBKRGatewayClient` HTTP responses; assert adapter correctly parses IB Gateway auth, accounts, and positions responses; assert `BrokerAuthException` thrown on auth failure; assert positions with zero `mktValue` are included with UsdValue=0) in `backend/tests/FinanceSentry.Tests.Integration/BrokerageSync/IBKRAdapterContractTests.cs`; add `FinanceSentry.Modules.BrokerageSync` project reference to `FinanceSentry.Tests.Integration.csproj`
+- [x] T014 [P] Write external API contract tests for `IBKRAdapter` (mock `IBKRGatewayClient` HTTP responses; assert adapter correctly parses IB Gateway auth, accounts, and positions responses; assert `BrokerAuthException` thrown on auth failure; assert positions with zero `mktValue` are included with UsdValue=0) in `backend/tests/FinanceSentry.Tests.Integration/BrokerageSync/IBKRAdapterContractTests.cs`; add `FinanceSentry.Modules.BrokerageSync` project reference to `FinanceSentry.Tests.Integration.csproj`
 
 **Checkpoint**: Foundation complete — all user story phases can now begin.
 
@@ -58,17 +58,17 @@
 
 ### Tests for User Story 1
 
-- [ ] T015 [P] [US1] Write REST contract test for `POST /api/v1/brokerage/ibkr/connect`: assert 201 + response shape on valid credentials (mocked adapter), 409 on duplicate, 422 on gateway rejection, 400 on missing fields, 401 on no JWT in `backend/tests/FinanceSentry.Tests.Integration/BrokerageSync/BrokerageControllerConnectContractTests.cs`
+- [x] T015 [P] [US1] Write REST contract test for `POST /api/v1/brokerage/ibkr/connect`: assert 201 + response shape on valid credentials (mocked adapter), 409 on duplicate, 422 on gateway rejection, 400 on missing fields, 401 on no JWT in `backend/tests/FinanceSentry.Tests.Integration/BrokerageSync/BrokerageControllerConnectContractTests.cs`
 
 ### Implementation for User Story 1
 
-- [ ] T016 [P] [US1] Create `IBKRAdapter.cs` implementing `IBrokerAdapter`: `AuthenticateAsync` posts credentials to gateway's `ssodh/init` and polls `auth/status`; `GetAccountIdAsync` calls `GetAccountsAsync()` and returns first account ID; `GetPositionsAsync` calls gateway positions endpoint and maps to `BrokerPosition` records (Symbol from contractDesc, InstrumentType from assetClass, Quantity from position, UsdValue from mktValue); positions with mktValue=0 included in `backend/src/FinanceSentry.Modules.BrokerageSync/Infrastructure/IBKR/IBKRAdapter.cs`
-- [ ] T017 [US1] Create `ConnectIBKRCommand.cs` (MediatR command + handler): check for existing active credential (return conflict error if found); call `IBrokerAdapter.AuthenticateAsync` (throw `BrokerAuthException` on failure → map to 422); call `IBrokerAdapter.GetAccountIdAsync` to discover AccountId; encrypt username + password separately via `ICredentialEncryptionService`; persist `IBKRCredential` with AccountId; dispatch `SyncIBKRHoldingsCommand`; return holdings count + connectedAt in `backend/src/FinanceSentry.Modules.BrokerageSync/Application/Commands/ConnectIBKRCommand.cs`
-- [ ] T018 [US1] Create `SyncIBKRHoldingsCommand.cs` (MediatR command + handler): decrypt credentials; call `IBrokerAdapter.AuthenticateAsync`; call `IBrokerAdapter.GetPositionsAsync(accountId)`; upsert each `BrokerageHolding` (UserId, Symbol, InstrumentType, Quantity, UsdValue, SyncedAt, Provider="ibkr"); update `IBKRCredential.LastSyncAt`; on exception set `LastSyncError` and rethrow in `backend/src/FinanceSentry.Modules.BrokerageSync/Application/Commands/SyncIBKRHoldingsCommand.cs`
-- [ ] T019 [US1] Create `BrokerageController.cs` with `POST /api/v1/brokerage/ibkr/connect` endpoint (reads userId from JWT claims; dispatches `ConnectIBKRCommand`; maps result to 201/409/422/400 responses) in `backend/src/FinanceSentry.Modules.BrokerageSync/API/Controllers/BrokerageController.cs`
-- [ ] T020 [US1] Register `BrokerageSync` in `Program.cs`: `AddDbContext<BrokerageSyncDbContext>`, `AddHttpClient<IBKRGatewayClient>`, `AddScoped<IBrokerAdapter, IBKRAdapter>`, `AddScoped<IIBKRCredentialRepository, IBKRCredentialRepository>`, `AddScoped<IBrokerageHoldingRepository, BrokerageHoldingRepository>`; add `BrokerageSyncModule` assembly to MediatR scan in `backend/src/FinanceSentry.API/Program.cs`
-- [ ] T021 [US1] Apply `BrokerageSyncDbContext` migrations at startup (add migration block after existing BankSync, Auth, and CryptoSync blocks) in `backend/src/FinanceSentry.API/Program.cs`
-- [ ] T022 [P] [US1] Write unit tests for `ConnectIBKRCommand`: assert conflict error when credential already exists; assert `AuthenticateAsync` called; assert encrypted password never stored in plaintext; assert `SyncIBKRHoldingsCommand` dispatched in `backend/tests/FinanceSentry.Tests.Unit/BrokerageSync/ConnectIBKRCommandTests.cs`; add `FinanceSentry.Modules.BrokerageSync` project reference to `FinanceSentry.Tests.Unit.csproj`
+- [x] T016 [P] [US1] Create `IBKRAdapter.cs` implementing `IBrokerAdapter`: `AuthenticateAsync` posts credentials to gateway's `ssodh/init` and polls `auth/status`; `GetAccountIdAsync` calls `GetAccountsAsync()` and returns first account ID; `GetPositionsAsync` calls gateway positions endpoint and maps to `BrokerPosition` records (Symbol from contractDesc, InstrumentType from assetClass, Quantity from position, UsdValue from mktValue); positions with mktValue=0 included in `backend/src/FinanceSentry.Modules.BrokerageSync/Infrastructure/IBKR/IBKRAdapter.cs`
+- [x] T017 [US1] Create `ConnectIBKRCommand.cs` (MediatR command + handler): check for existing active credential (return conflict error if found); call `IBrokerAdapter.AuthenticateAsync` (throw `BrokerAuthException` on failure → map to 422); call `IBrokerAdapter.GetAccountIdAsync` to discover AccountId; encrypt username + password separately via `ICredentialEncryptionService`; persist `IBKRCredential` with AccountId; dispatch `SyncIBKRHoldingsCommand`; return holdings count + connectedAt in `backend/src/FinanceSentry.Modules.BrokerageSync/Application/Commands/ConnectIBKRCommand.cs`
+- [x] T018 [US1] Create `SyncIBKRHoldingsCommand.cs` (MediatR command + handler): decrypt credentials; call `IBrokerAdapter.AuthenticateAsync`; call `IBrokerAdapter.GetPositionsAsync(accountId)`; upsert each `BrokerageHolding` (UserId, Symbol, InstrumentType, Quantity, UsdValue, SyncedAt, Provider="ibkr"); update `IBKRCredential.LastSyncAt`; on exception set `LastSyncError` and rethrow in `backend/src/FinanceSentry.Modules.BrokerageSync/Application/Commands/SyncIBKRHoldingsCommand.cs`
+- [x] T019 [US1] Create `BrokerageController.cs` with `POST /api/v1/brokerage/ibkr/connect` endpoint (reads userId from JWT claims; dispatches `ConnectIBKRCommand`; maps result to 201/409/422/400 responses) in `backend/src/FinanceSentry.Modules.BrokerageSync/API/Controllers/BrokerageController.cs`
+- [x] T020 [US1] Register `BrokerageSync` in `Program.cs`: `AddDbContext<BrokerageSyncDbContext>`, `AddHttpClient<IBKRGatewayClient>`, `AddScoped<IBrokerAdapter, IBKRAdapter>`, `AddScoped<IIBKRCredentialRepository, IBKRCredentialRepository>`, `AddScoped<IBrokerageHoldingRepository, BrokerageHoldingRepository>`; add `BrokerageSyncModule` assembly to MediatR scan in `backend/src/FinanceSentry.API/Program.cs`
+- [x] T021 [US1] Apply `BrokerageSyncDbContext` migrations at startup (add migration block after existing BankSync, Auth, and CryptoSync blocks) in `backend/src/FinanceSentry.API/Program.cs`
+- [x] T022 [P] [US1] Write unit tests for `ConnectIBKRCommand`: assert conflict error when credential already exists; assert `AuthenticateAsync` called; assert encrypted password never stored in plaintext; assert `SyncIBKRHoldingsCommand` dispatched in `backend/tests/FinanceSentry.Tests.Unit/BrokerageSync/ConnectIBKRCommandTests.cs`; add `FinanceSentry.Modules.BrokerageSync` project reference to `FinanceSentry.Tests.Unit.csproj`
 
 **Checkpoint**: `POST /api/v1/brokerage/ibkr/connect` works end-to-end.
 
@@ -82,15 +82,15 @@
 
 ### Tests for User Story 2
 
-- [ ] T023 [P] [US2] Write REST contract test for `GET /api/v1/brokerage/holdings`: assert 200 + response shape (provider, syncedAt, positions array, totalUsdValue); assert isStale=true when syncedAt > 1 hour ago; assert 200 with empty positions when no account connected; assert 401 on missing JWT in `backend/tests/FinanceSentry.Tests.Integration/BrokerageSync/BrokerageControllerHoldingsContractTests.cs`
+- [x] T023 [P] [US2] Write REST contract test for `GET /api/v1/brokerage/holdings`: assert 200 + response shape (provider, syncedAt, positions array, totalUsdValue); assert isStale=true when syncedAt > 1 hour ago; assert 200 with empty positions when no account connected; assert 401 on missing JWT in `backend/tests/FinanceSentry.Tests.Integration/BrokerageSync/BrokerageControllerHoldingsContractTests.cs`
 
 ### Implementation for User Story 2
 
-- [ ] T024 [P] [US2] Create `GetBrokerageHoldingsQuery.cs` (MediatR query + handler + `BrokerageHoldingsResponse` DTO + `BrokeragePositionDto`; queries `IBrokerageHoldingRepository` by userId; computes `isStale` flag from `SyncedAt > 1 hour ago` (uses most recent SyncedAt across all positions); sums `UsdValue` for totalUsdValue; returns zero-holdings response when no IBKR account exists) in `backend/src/FinanceSentry.Modules.BrokerageSync/Application/Queries/GetBrokerageHoldingsQuery.cs`
-- [ ] T025 [US2] Add `GET /api/v1/brokerage/holdings` endpoint to `BrokerageController.cs` (dispatches `GetBrokerageHoldingsQuery`; maps to 200 response) in `backend/src/FinanceSentry.Modules.BrokerageSync/API/Controllers/BrokerageController.cs`
-- [ ] T026 [US2] Create `BrokerageHoldingsReader.cs` implementing `IBrokerageHoldingsReader` (queries `IBrokerageHoldingRepository`; maps `BrokerageHolding` → `BrokerageHoldingSummary`; returns empty list when no holdings) in `backend/src/FinanceSentry.Modules.BrokerageSync/Application/Services/BrokerageHoldingsReader.cs`
-- [ ] T027 [US2] Update `WealthAggregationService.GetWealthSummaryAsync` to inject optional `IBrokerageHoldingsReader?`; after building bank and crypto categories, call `GetHoldingsAsync`; if any holdings exist, add `CategorySummaryDto("brokerage", totalUsd, accountDtos)` where each holding maps to `AccountBalanceDto` (BankName="IBKR", AccountType="brokerage", AccountNumberLast4=first-4-chars-of-symbol, Provider="ibkr", NativeBalance=Quantity, BalanceInBaseCurrency=UsdValue, SyncStatus="synced"/"stale") in `backend/src/FinanceSentry.Modules.BankSync/Application/Services/WealthAggregationService.cs`
-- [ ] T028 [US2] Register `IBrokerageHoldingsReader → BrokerageHoldingsReader` in DI (confirm scoped registration present alongside existing CryptoHoldingsReader registration) in `backend/src/FinanceSentry.API/Program.cs`
+- [x] T024 [P] [US2] Create `GetBrokerageHoldingsQuery.cs` (MediatR query + handler + `BrokerageHoldingsResponse` DTO + `BrokeragePositionDto`; queries `IBrokerageHoldingRepository` by userId; computes `isStale` flag from `SyncedAt > 1 hour ago` (uses most recent SyncedAt across all positions); sums `UsdValue` for totalUsdValue; returns zero-holdings response when no IBKR account exists) in `backend/src/FinanceSentry.Modules.BrokerageSync/Application/Queries/GetBrokerageHoldingsQuery.cs`
+- [x] T025 [US2] Add `GET /api/v1/brokerage/holdings` endpoint to `BrokerageController.cs` (dispatches `GetBrokerageHoldingsQuery`; maps to 200 response) in `backend/src/FinanceSentry.Modules.BrokerageSync/API/Controllers/BrokerageController.cs`
+- [x] T026 [US2] Create `BrokerageHoldingsReader.cs` implementing `IBrokerageHoldingsReader` (queries `IBrokerageHoldingRepository`; maps `BrokerageHolding` → `BrokerageHoldingSummary`; returns empty list when no holdings) in `backend/src/FinanceSentry.Modules.BrokerageSync/Application/Services/BrokerageHoldingsReader.cs`
+- [x] T027 [US2] Update `WealthAggregationService.GetWealthSummaryAsync` to inject optional `IBrokerageHoldingsReader?`; after building bank and crypto categories, call `GetHoldingsAsync`; if any holdings exist, add `CategorySummaryDto("brokerage", totalUsd, accountDtos)` where each holding maps to `AccountBalanceDto` (BankName="IBKR", AccountType="brokerage", AccountNumberLast4=first-4-chars-of-symbol, Provider="ibkr", NativeBalance=Quantity, BalanceInBaseCurrency=UsdValue, SyncStatus="synced"/"stale") in `backend/src/FinanceSentry.Modules.BankSync/Application/Services/WealthAggregationService.cs`
+- [x] T028 [US2] Register `IBrokerageHoldingsReader → BrokerageHoldingsReader` in DI (confirm scoped registration present alongside existing CryptoHoldingsReader registration) in `backend/src/FinanceSentry.API/Program.cs`
 
 **Checkpoint**: `GET /api/v1/brokerage/holdings` and `GET /api/v1/wealth/summary` both return IBKR holdings.
 
@@ -104,12 +104,12 @@
 
 ### Tests for User Story 3
 
-- [ ] T029 [P] [US3] Write unit tests for `IBKRSyncJob`: assert job iterates all active credentials; assert `SyncIBKRHoldingsCommand` dispatched once per credential; assert failed individual sync (throws) does not abort remaining credentials in `backend/tests/FinanceSentry.Tests.Unit/BrokerageSync/IBKRSyncJobTests.cs`
+- [x] T029 [P] [US3] Write unit tests for `IBKRSyncJob`: assert job iterates all active credentials; assert `SyncIBKRHoldingsCommand` dispatched once per credential; assert failed individual sync (throws) does not abort remaining credentials in `backend/tests/FinanceSentry.Tests.Unit/BrokerageSync/IBKRSyncJobTests.cs`
 
 ### Implementation for User Story 3
 
-- [ ] T030 [P] [US3] Create `IBKRSyncJob.cs` (Hangfire job class; injects `IIBKRCredentialRepository`, `IMediator`, `ILogger<IBKRSyncJob>`; fetches all active credentials; dispatches `SyncIBKRHoldingsCommand` per credential; catches and logs per-credential exceptions without aborting the batch) in `backend/src/FinanceSentry.Modules.BrokerageSync/Infrastructure/Jobs/IBKRSyncJob.cs`
-- [ ] T031 [US3] Register `IBKRSyncJob` as scoped service and add Hangfire recurring job (cron `*/15 * * * *`, job ID `"ibkr-sync"`) in `backend/src/FinanceSentry.API/Program.cs`
+- [x] T030 [P] [US3] Create `IBKRSyncJob.cs` (Hangfire job class; injects `IIBKRCredentialRepository`, `IMediator`, `ILogger<IBKRSyncJob>`; fetches all active credentials; dispatches `SyncIBKRHoldingsCommand` per credential; catches and logs per-credential exceptions without aborting the batch) in `backend/src/FinanceSentry.Modules.BrokerageSync/Infrastructure/Jobs/IBKRSyncJob.cs`
+- [x] T031 [US3] Register `IBKRSyncJob` as scoped service and add Hangfire recurring job (cron `*/15 * * * *`, job ID `"ibkr-sync"`) in `backend/src/FinanceSentry.API/Program.cs`
 
 **Checkpoint**: IBKR holdings update automatically every 15 minutes without user action.
 
@@ -123,12 +123,12 @@
 
 ### Tests for User Story 4
 
-- [ ] T032 [P] [US4] Write REST contract test for `DELETE /api/v1/brokerage/ibkr/disconnect`: assert 204 on success; assert 404 when no account connected; assert 401 on missing JWT in `backend/tests/FinanceSentry.Tests.Integration/BrokerageSync/BrokerageControllerDisconnectContractTests.cs`
+- [x] T032 [P] [US4] Write REST contract test for `DELETE /api/v1/brokerage/ibkr/disconnect`: assert 204 on success; assert 404 when no account connected; assert 401 on missing JWT in `backend/tests/FinanceSentry.Tests.Integration/BrokerageSync/BrokerageControllerDisconnectContractTests.cs`
 
 ### Implementation for User Story 4
 
-- [ ] T033 [P] [US4] Create `DisconnectIBKRCommand.cs` (MediatR command + handler; load credential by userId — return 404 error if not found; set `IsActive = false` on credential; call `IBrokerageHoldingRepository.DeleteByUserIdAsync`; save changes) in `backend/src/FinanceSentry.Modules.BrokerageSync/Application/Commands/DisconnectIBKRCommand.cs`
-- [ ] T034 [US4] Add `DELETE /api/v1/brokerage/ibkr/disconnect` endpoint to `BrokerageController.cs` (dispatches `DisconnectIBKRCommand`; maps to 204 / 404 responses) in `backend/src/FinanceSentry.Modules.BrokerageSync/API/Controllers/BrokerageController.cs`
+- [x] T033 [P] [US4] Create `DisconnectIBKRCommand.cs` (MediatR command + handler; load credential by userId — return 404 error if not found; set `IsActive = false` on credential; call `IBrokerageHoldingRepository.DeleteByUserIdAsync`; save changes) in `backend/src/FinanceSentry.Modules.BrokerageSync/Application/Commands/DisconnectIBKRCommand.cs`
+- [x] T034 [US4] Add `DELETE /api/v1/brokerage/ibkr/disconnect` endpoint to `BrokerageController.cs` (dispatches `DisconnectIBKRCommand`; maps to 204 / 404 responses) in `backend/src/FinanceSentry.Modules.BrokerageSync/API/Controllers/BrokerageController.cs`
 
 **Checkpoint**: Full connect → view → sync → disconnect lifecycle is functional.
 
@@ -138,8 +138,8 @@
 
 **Purpose**: Version bump and build validation.
 
-- [ ] T035 [P] Bump backend API minor version (new endpoints: connect, disconnect, holdings) in `backend/src/FinanceSentry.API/FinanceSentry.API.csproj` — increment `<Version>` MINOR field per constitution Versioning & Tagging Policy
-- [ ] T036 Run `dotnet build backend/` and fix all warnings to reach zero-warning build (StyleCop, nullable, CS* warnings)
+- [x] T035 [P] Bump backend API minor version (new endpoints: connect, disconnect, holdings) in `backend/src/FinanceSentry.API/FinanceSentry.API.csproj` — increment `<Version>` MINOR field per constitution Versioning & Tagging Policy
+- [x] T036 Run `dotnet build backend/` and fix all warnings to reach zero-warning build (StyleCop, nullable, CS* warnings)
 
 ---
 

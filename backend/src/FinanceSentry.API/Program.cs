@@ -11,6 +11,14 @@ using FinanceSentry.Modules.CryptoSync.Infrastructure.Binance;
 using FinanceSentry.Modules.CryptoSync.Infrastructure.Jobs;
 using FinanceSentry.Modules.CryptoSync.Infrastructure.Persistence;
 using FinanceSentry.Modules.CryptoSync.Infrastructure.Persistence.Repositories;
+using FinanceSentry.Modules.BrokerageSync;
+using FinanceSentry.Modules.BrokerageSync.Application.Services;
+using FinanceSentry.Modules.BrokerageSync.Domain.Interfaces;
+using FinanceSentry.Modules.BrokerageSync.Domain.Repositories;
+using FinanceSentry.Modules.BrokerageSync.Infrastructure.IBKR;
+using FinanceSentry.Modules.BrokerageSync.Infrastructure.Jobs;
+using FinanceSentry.Modules.BrokerageSync.Infrastructure.Persistence;
+using FinanceSentry.Modules.BrokerageSync.Infrastructure.Persistence.Repositories;
 using FinanceSentry.Modules.BankSync.Infrastructure.Monobank;
 using FinanceSentry.Modules.BankSync.Infrastructure.Persistence.Repositories;
 using FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
@@ -82,7 +90,8 @@ builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(
     typeof(Program).Assembly,
     typeof(BankSyncModule).Assembly,
     typeof(JwtTokenService).Assembly,
-    typeof(CryptoSyncModule).Assembly
+    typeof(CryptoSyncModule).Assembly,
+    typeof(BrokerageSyncModule).Assembly
 ));
 
 // ── Database (EF Core + PostgreSQL) ─────────────────────────────────────────
@@ -96,6 +105,9 @@ builder.Services.AddDbContext<AuthDbContext>(
     options => options.UseNpgsql(connectionString));
 
 builder.Services.AddDbContext<CryptoSyncDbContext>(
+    options => options.UseNpgsql(connectionString));
+
+builder.Services.AddDbContext<BrokerageSyncDbContext>(
     options => options.UseNpgsql(connectionString));
 
 // ── ASP.NET Core Identity ────────────────────────────────────────────────────
@@ -180,6 +192,14 @@ builder.Services.AddScoped<IBinanceCredentialRepository, BinanceCredentialReposi
 builder.Services.AddScoped<ICryptoHoldingRepository, CryptoHoldingRepository>();
 builder.Services.AddScoped<ICryptoHoldingsReader, CryptoHoldingsReader>();
 builder.Services.AddScoped<BinanceSyncJob>();
+
+// ── BrokerageSync module (010-ibkr-integration) ──────────────────────────────
+builder.Services.AddHttpClient<IBKRGatewayClient>();
+builder.Services.AddScoped<IBrokerAdapter, IBKRAdapter>();
+builder.Services.AddScoped<IIBKRCredentialRepository, IBKRCredentialRepository>();
+builder.Services.AddScoped<IBrokerageHoldingRepository, BrokerageHoldingRepository>();
+builder.Services.AddScoped<IBrokerageHoldingsReader, BrokerageHoldingsReader>();
+builder.Services.AddScoped<IBKRSyncJob>();
 
 // ── Dashboard / aggregation services (T401–T410) ─────────────────────────────
 builder.Services.AddScoped<IAggregationService, AggregationService>();
@@ -269,6 +289,18 @@ using (var scope = app.Services.CreateScope())
     {
         app.Logger.LogError(ex, "CryptoSync migration failed. Startup will continue.");
     }
+
+    try
+    {
+        var brokerageSyncDbContext = scope.ServiceProvider.GetRequiredService<BrokerageSyncDbContext>();
+        app.Logger.LogInformation("Applying BrokerageSync database migrations...");
+        brokerageSyncDbContext.Database.Migrate();
+        app.Logger.LogInformation("BrokerageSync migrations applied successfully");
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, "BrokerageSync migration failed. Startup will continue.");
+    }
 }
 
 // ── Middleware pipeline ───────────────────────────────────────────────────────
@@ -291,10 +323,14 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health/ready");
 
-// ── Hangfire recurring job: Binance holdings sync ────────────────────────────
+// ── Hangfire recurring jobs ───────────────────────────────────────────────────
 var recurringJobManager = app.Services.GetRequiredService<IRecurringJobManager>();
 recurringJobManager.AddOrUpdate<BinanceSyncJob>(
     "binance-sync",
+    job => job.ExecuteAsync(),
+    "*/15 * * * *");
+recurringJobManager.AddOrUpdate<IBKRSyncJob>(
+    "ibkr-sync",
     job => job.ExecuteAsync(),
     "*/15 * * * *");
 
