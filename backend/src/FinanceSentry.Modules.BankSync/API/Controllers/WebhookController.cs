@@ -6,6 +6,7 @@ using FinanceSentry.Modules.BankSync.Application.Services;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
 using FinanceSentry.Modules.BankSync.Infrastructure.Security;
 using Hangfire;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 
@@ -39,8 +40,9 @@ public class WebhookController(
     [HttpPost("plaid")]
     public async Task<IActionResult> HandlePlaidWebhook(CancellationToken ct)
     {
-        // Read raw body for signature validation
-        // Request.EnableBuffering();
+        // Read raw body for signature validation. EnableBuffering makes the request
+        // stream seekable so the rewind below works under both Kestrel and TestHost.
+        Request.EnableBuffering();
         using var reader = new StreamReader(Request.Body, leaveOpen: true);
         var rawBody = await reader.ReadToEndAsync(ct);
         Request.Body.Position = 0;
