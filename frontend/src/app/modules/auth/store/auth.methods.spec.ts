@@ -1,7 +1,6 @@
 import {signalState} from '@ngrx/signals';
-import {beforeEach, describe, expect, it} from 'vitest';
+import {describe, expect, it} from 'vitest';
 
-import {TOKEN_KEY} from '../constants/auth.constants';
 import {type AuthResponse} from '../models/auth.models';
 import {authMethods} from './auth.methods';
 import {initialAuthState} from './auth.state';
@@ -18,17 +17,7 @@ const SAMPLE_RESPONSE: AuthResponse = {
 };
 
 describe('authMethods', () => {
-  beforeEach(() => {
-    localStorage.clear();
-  });
-
   describe('applyAuthResponse', () => {
-    it('writes token to localStorage', () => {
-      const {methods} = makeState();
-      methods.applyAuthResponse(SAMPLE_RESPONSE);
-      expect(localStorage.getItem(TOKEN_KEY)).toBe(SAMPLE_RESPONSE.token);
-    });
-
     it('patches state with response fields and resets status/error/flow/flashMessage', () => {
       const {state, methods} = makeState();
       methods.setLoading('login');
@@ -47,13 +36,6 @@ describe('authMethods', () => {
   });
 
   describe('clearSession', () => {
-    it('removes token from localStorage', () => {
-      const {methods} = makeState();
-      localStorage.setItem(TOKEN_KEY, 'existing');
-      methods.clearSession();
-      expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
-    });
-
     it('resets auth fields but preserves flashMessage', () => {
       const {state, methods} = makeState();
       methods.applyAuthResponse(SAMPLE_RESPONSE);

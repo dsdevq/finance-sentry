@@ -5,7 +5,7 @@ import {of, Subject, throwError} from 'rxjs';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 
 import {ERROR_MESSAGES_REGISTRY} from '../../../core/errors/error-messages.registry';
-import {MS_PER_SECOND, TOKEN_KEY} from '../constants/auth.constants';
+import {MS_PER_SECOND} from '../constants/auth.constants';
 import {type AuthResponse} from '../models/auth.models';
 import {AuthService} from '../services/auth.service';
 import {AuthStore} from './auth.store';
@@ -38,54 +38,72 @@ function routerMock(url = '/login') {
   };
 }
 
+function authServiceMock(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    login: vi.fn(),
+    register: vi.fn(),
+    verifyGoogleCredential: vi.fn(),
+    refresh: vi.fn().mockReturnValue(throwError(() => new Error('no cookie'))),
+    logout: vi.fn().mockReturnValue(of(null)),
+    ...overrides,
+  };
+}
+
+function configure(authService: unknown, router = routerMock()) {
+  TestBed.configureTestingModule({
+    providers: [
+      {provide: AuthService, useValue: authService},
+      {provide: Router, useValue: router},
+      {provide: ERROR_MESSAGES, useValue: ERROR_MESSAGES_REGISTRY},
+    ],
+  });
+}
+
 describe('AuthStore (integration)', () => {
   beforeEach(() => {
-    localStorage.clear();
     TestBed.resetTestingModule();
   });
 
-  it('successful login writes token to state and localStorage', () => {
-    const authService = {
-      login: vi.fn().mockReturnValue(of(SAMPLE_RESPONSE)),
-      register: vi.fn(),
-      verifyGoogleCredential: vi.fn(),
-      refresh: vi.fn(),
-      logout: vi.fn().mockReturnValue(of(null)),
-    };
-    TestBed.configureTestingModule({
-      providers: [
-        {provide: AuthService, useValue: authService},
-        {provide: Router, useValue: routerMock()},
-        {provide: ERROR_MESSAGES, useValue: ERROR_MESSAGES_REGISTRY},
-      ],
-    });
+  it('silent refresh on init hydrates token when the refresh cookie is valid', () => {
+    const authService = authServiceMock({refresh: vi.fn().mockReturnValue(of(SAMPLE_RESPONSE))});
+    configure(authService);
+
+    const store = TestBed.inject(AuthStore);
+
+    expect(authService.refresh).toHaveBeenCalled();
+    expect(store.token()).toBe(SAMPLE_RESPONSE.token);
+    expect(store.isAuthenticated()).toBe(true);
+  });
+
+  it('silent refresh failure on init leaves the store unauthenticated', () => {
+    const authService = authServiceMock();
+    configure(authService);
+
+    const store = TestBed.inject(AuthStore);
+
+    expect(store.token()).toBeNull();
+    expect(store.isAuthenticated()).toBe(false);
+  });
+
+  it('successful login stores the token in state', () => {
+    const authService = authServiceMock({login: vi.fn().mockReturnValue(of(SAMPLE_RESPONSE))});
+    configure(authService);
 
     const store = TestBed.inject(AuthStore);
     store.login({email: 'a@b.c', password: 'pw'});
 
     expect(store.token()).toBe(SAMPLE_RESPONSE.token);
     expect(store.isAuthenticated()).toBe(true);
-    expect(localStorage.getItem(TOKEN_KEY)).toBe(SAMPLE_RESPONSE.token);
     expect(store.errorMessage()).toBe('');
   });
 
   it('failed login maps error code through errorMessage computed', () => {
-    const authService = {
+    const authService = authServiceMock({
       login: vi
         .fn()
         .mockReturnValue(throwError(() => ({error: {errorCode: 'GOOGLE_ACCOUNT_ONLY'}}))),
-      register: vi.fn(),
-      verifyGoogleCredential: vi.fn(),
-      refresh: vi.fn(),
-      logout: vi.fn().mockReturnValue(of(null)),
-    };
-    TestBed.configureTestingModule({
-      providers: [
-        {provide: AuthService, useValue: authService},
-        {provide: Router, useValue: routerMock()},
-        {provide: ERROR_MESSAGES, useValue: ERROR_MESSAGES_REGISTRY},
-      ],
     });
+    configure(authService);
 
     const store = TestBed.inject(AuthStore);
     store.login({email: 'a@b.c', password: 'pw'});
@@ -94,31 +112,18 @@ describe('AuthStore (integration)', () => {
     expect(store.errorMessage()).toContain('Continue with Google');
   });
 
-  it('logout clears token in state and localStorage and navigates', () => {
-    const authService = {
-      login: vi.fn().mockReturnValue(of(SAMPLE_RESPONSE)),
-      register: vi.fn(),
-      verifyGoogleCredential: vi.fn(),
-      refresh: vi.fn(),
-      logout: vi.fn().mockReturnValue(of(null)),
-    };
+  it('logout clears the token in state and navigates', () => {
+    const authService = authServiceMock({login: vi.fn().mockReturnValue(of(SAMPLE_RESPONSE))});
     const router = routerMock();
-    TestBed.configureTestingModule({
-      providers: [
-        {provide: AuthService, useValue: authService},
-        {provide: Router, useValue: router},
-        {provide: ERROR_MESSAGES, useValue: ERROR_MESSAGES_REGISTRY},
-      ],
-    });
+    configure(authService, router);
 
     const store = TestBed.inject(AuthStore);
     store.login({email: 'a@b.c', password: 'pw'});
-    expect(localStorage.getItem(TOKEN_KEY)).toBe(SAMPLE_RESPONSE.token);
+    expect(store.token()).toBe(SAMPLE_RESPONSE.token);
 
     store.logout();
 
     expect(store.token()).toBeNull();
-    expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
     expect(router.navigate).toHaveBeenCalled();
   });
 });

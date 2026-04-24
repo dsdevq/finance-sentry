@@ -91,6 +91,12 @@ export function authEffects(store: EffectsStore) {
 
 export function authHooks(store: EffectsStore): void {
   const router = inject(Router);
+  const authService = inject(AuthService);
+
+  authService.refresh().subscribe({
+    next: res => store.applyAuthResponse(res),
+    error: () => undefined,
+  });
 
   router.events
     .pipe(

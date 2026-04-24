@@ -17,7 +17,7 @@ Sole developer: Denys. Spec-driven development via the **speckit** toolchain (co
 | Backend | ASP.NET Core 9, EF Core, PostgreSQL 14, MediatR (CQRS), Hangfire, Serilog |
 | Frontend | Angular 21.2, TypeScript strict, standalone components, NgRx SignalStore (`@ngrx/signals`), lazy-loaded modules |
 | UI library | `@dsdevq-common/ui` (local, ng-packagr) — components, `ToastService`, `ErrorMessageService`, `ThemeService` |
-| Auth | Custom `JwtAuthenticationMiddleware` (backend) + `AuthStore` signal store + functional `authInterceptor` (frontend) |
+| Auth | Custom `JwtAuthenticationMiddleware` (backend) + `AuthStore` signal store + functional `authInterceptor` (frontend). Access token lives **in memory only** (store signal); refresh token is an httpOnly/Secure/SameSite=Strict cookie set by the backend. Silent refresh fires on app init. |
 | Infra | Docker Compose (single file for full stack) |
 
 ---
@@ -111,7 +111,7 @@ docker/
 **What works:**
 - Full Docker stack runs and all three containers are healthy
 - API health check: `GET /api/v1/health` → `{"status":"healthy"}`
-- Auth: login/register/Google sign-in, JWT in localStorage, `authInterceptor` attaches `Bearer` + refreshes on 401, `authGuard`/`guestGuard` protect routes
+- Auth: login/register/Google sign-in. Access token is held in-memory by `AuthStore` (no localStorage); refresh token is an httpOnly cookie. `authInterceptor` attaches `Bearer` from the store and refreshes on 401. Silent refresh on app init hydrates the session from the cookie. `authGuard`/`guestGuard` protect routes.
 - State: `AuthStore`, `DashboardStore`, `AccountsStore` built as NgRx SignalStores with feature-file split (state/computed/methods/effects/store)
 - Vitest unit tests covering the signal stores (run with `npx ng test --watch=false`)
 - All bank-sync pages render (accounts list, connect, transactions, dashboard)

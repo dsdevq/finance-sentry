@@ -85,6 +85,15 @@ API boundary and per-module. User data isolation is absolute—queries, caching,
 reports must be user-scoped. Secrets are never logged. Audit logs record all data
 access. No shortcuts on security—violations require explicit team lead approval.
 
+**Token storage (non-negotiable):** The access token MUST live only in application
+memory (the `AuthStore` signal). It MUST NOT be written to `localStorage`,
+`sessionStorage`, or any other JS-readable persistence. The refresh token MUST be
+delivered as an httpOnly, Secure, SameSite=Strict cookie set by the backend and
+never read by the frontend. App startup silently calls `/auth/refresh` to
+rehydrate the in-memory access token from the cookie. This is the minimum bar for
+XSS resistance on a financial app — any regression (e.g. reintroducing a
+`TOKEN_KEY` in `localStorage`) blocks merge.
+
 ### VI. Frontend State & Composition Discipline (NON-NEGOTIABLE)
 
 Frontend architecture enforces a strict separation between UI and business logic.

@@ -34,7 +34,7 @@ function buildService() {
     register: vi.fn(),
     verifyGoogleCredential: vi.fn(),
     logout: vi.fn().mockReturnValue(of(null)),
-    refresh: vi.fn(),
+    refresh: vi.fn().mockReturnValue(throwError(() => new Error('no cookie'))),
   };
 }
 

@@ -1,5 +1,3 @@
-import {TOKEN_KEY} from '../constants/auth.constants';
-
 export type AuthStatus = 'idle' | 'loading' | 'error';
 export type AuthFlow = 'login' | 'register' | 'google' | null;
 
@@ -19,12 +17,8 @@ export interface AuthState {
   flashMessage: FlashMessage | null;
 }
 
-function readToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
-}
-
 export const initialAuthState: AuthState = {
-  token: readToken(),
+  token: null,
   userId: null,
   expiresAt: null,
   status: 'idle',

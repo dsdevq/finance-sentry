@@ -1,21 +1,11 @@
 import {patchState, type WritableStateSource} from '@ngrx/signals';
 
-import {TOKEN_KEY} from '../constants/auth.constants';
 import {type AuthResponse} from '../models/auth.models';
 import {type AuthFlow, type AuthState, type FlashMessage} from './auth.state';
-
-function writeToken(token: string | null): void {
-  if (token) {
-    localStorage.setItem(TOKEN_KEY, token);
-  } else {
-    localStorage.removeItem(TOKEN_KEY);
-  }
-}
 
 export function authMethods(store: WritableStateSource<AuthState>) {
   return {
     applyAuthResponse(res: AuthResponse): void {
-      writeToken(res.token);
       patchState(store, {
         token: res.token,
         userId: res.userId,
@@ -27,7 +17,6 @@ export function authMethods(store: WritableStateSource<AuthState>) {
       });
     },
     clearSession(): void {
-      writeToken(null);
       patchState(store, {
         token: null,
         userId: null,
