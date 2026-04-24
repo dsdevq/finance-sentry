@@ -1,9 +1,9 @@
 <div class="transaction-list">
   <div class="transaction-header">
     <button (click)="goBack()" class="btn-back" aria-label="Back to accounts">← Back</button>
-    <h2>{{ bankName || 'Account' }} Transactions</h2>
-    @if (currency) {
-      <span class="currency-badge">{{ currency }}</span>
+    <h2>{{ store.bankName() || 'Account' }} Transactions</h2>
+    @if (store.currency()) {
+      <span class="currency-badge">{{ store.currency() }}</span>
     }
   </div>
 
@@ -15,21 +15,21 @@
     <button (click)="applyFilters()" class="btn-secondary">Apply</button>
   </div>
 
-  @if (isLoading) {
+  @if (store.isLoading()) {
     <div class="loading-state" role="status" aria-live="polite">
       <p>Loading transactions...</p>
     </div>
   }
 
-  @if (errorMessage) {
+  @if (store.errorMessage()) {
     <div class="error-state" role="alert">
-      <p class="error-message">{{ errorMessage }}</p>
-      <button (click)="loadTransactions()" class="btn-secondary">Retry</button>
+      <p class="error-message">{{ store.errorMessage() }}</p>
+      <button (click)="retry()" class="btn-secondary">Retry</button>
     </div>
   }
 
-  @if (!isLoading && !errorMessage) {
-    @if (transactions.length === 0) {
+  @if (!store.isLoading() && !store.errorMessage()) {
+    @if (store.transactions().length === 0) {
       <div class="empty-state">
         <p>No transactions found for the selected period.</p>
       </div>
@@ -46,7 +46,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (tx of transactions; track tx.transactionId) {
+          @for (tx of store.transactions(); track tx.transactionId) {
             <tr [class.pending]="tx.isPending">
               <td>{{ tx.postedDate ?? tx.pendingDate | date: 'mediumDate' }}</td>
               <td>{{ tx.description }}</td>
@@ -55,7 +55,7 @@
                 [class.credit]="tx.transactionType === 'credit'"
               >
                 {{ tx.transactionType === 'debit' ? '-' : '+' }}{{ tx.amount | number: '1.2-2' }}
-                {{ currency }}
+                {{ store.currency() }}
               </td>
               <td>
                 <span
@@ -79,16 +79,16 @@
 
       <div class="pagination" role="navigation" aria-label="Transaction pagination">
         <button
-          [disabled]="!hasPrevious"
+          [disabled]="!store.hasPrevious()"
           (click)="previousPage()"
           class="btn-secondary"
           aria-label="Previous page"
         >
           Previous
         </button>
-        <span class="page-info">Page {{ currentPage }} of {{ totalPages }}</span>
+        <span class="page-info">Page {{ store.currentPage() }} of {{ store.totalPages() }}</span>
         <button
-          [disabled]="!hasNext"
+          [disabled]="!store.hasNext()"
           (click)="nextPage()"
           class="btn-secondary"
           aria-label="Next page"

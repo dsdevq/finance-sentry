@@ -1,0 +1,134 @@
+import {inject} from '@angular/core';
+import {Router} from '@angular/router';
+import {rxMethod} from '@ngrx/signals/rxjs-interop';
+import {catchError, EMPTY, filter, map, pipe, race, switchMap, take, tap, timer} from 'rxjs';
+
+import {BankSyncService} from '../../services/bank-sync.service';
+import {PlaidLinkService, type PlaidSuccessMetadata} from '../../services/plaid-link.service';
+
+interface EffectsStore {
+  setInitializing: () => void;
+  setReady: () => void;
+  setSyncing: (msg: string) => void;
+  setPolling: (msg: string) => void;
+  setSuccess: () => void;
+  setError: (code: string | null) => void;
+}
+
+const POLL_INTERVAL_MS = 3000;
+const POLL_MAX_MS = 60_000;
+
+interface PlaidSuccessPayload {
+  publicToken: string;
+  metadata: PlaidSuccessMetadata;
+}
+
+function extractErrorCode(err: unknown): string | null {
+  const code = (err as {error?: {errorCode?: string}} | null)?.error?.errorCode;
+  return code ?? null;
+}
+
+export function connectEffects(store: EffectsStore) {
+  const bankSyncService = inject(BankSyncService);
+  const plaidService = inject(PlaidLinkService);
+  const router = inject(Router);
+
+  const pollForActive = rxMethod<void>(
+    pipe(
+      tap(() => store.setPolling('Syncing transaction history...')),
+      switchMap(() => {
+        const polling$ = timer(0, POLL_INTERVAL_MS).pipe(
+          switchMap(() => bankSyncService.getAccounts()),
+          filter(res => res.accounts.some(a => a.syncStatus === 'active')),
+          take(1),
+          map(() => 'active' as const)
+        );
+        const timeout$ = timer(POLL_MAX_MS).pipe(map(() => 'timeout' as const));
+        return race(polling$, timeout$).pipe(
+          tap(() => {
+            store.setSuccess();
+            void router.navigate(['/accounts']);
+          }),
+          catchError((err: unknown) => {
+            store.setError(extractErrorCode(err));
+            return EMPTY;
+          })
+        );
+      })
+    )
+  );
+
+  const exchangePlaidToken = rxMethod<PlaidSuccessPayload>(
+    pipe(
+      tap(() => store.setSyncing('Linking your account...')),
+      switchMap(({publicToken, metadata}) => {
+        const institutionName = metadata.institution?.name ?? 'Unknown';
+        return bankSyncService.exchangePublicToken(publicToken, institutionName).pipe(
+          tap(() => pollForActive()),
+          catchError((err: unknown) => {
+            store.setError(extractErrorCode(err) ?? 'PLAID_LINK_FAILED');
+            return EMPTY;
+          })
+        );
+      })
+    )
+  );
+
+  const initPlaid = rxMethod<void>(
+    pipe(
+      tap(() => store.setInitializing()),
+      switchMap(() =>
+        bankSyncService.getLinkToken().pipe(
+          switchMap(res =>
+            plaidService.prepare({
+              token: res.linkToken,
+              onSuccess: (publicToken, metadata) => exchangePlaidToken({publicToken, metadata}),
+            })
+          ),
+          tap(() => store.setReady()),
+          catchError((err: unknown) => {
+            store.setError(extractErrorCode(err));
+            return EMPTY;
+          })
+        )
+      )
+    )
+  );
+
+  const connectMonobank = rxMethod<string>(
+    pipe(
+      tap(() => store.setSyncing('Connecting your Monobank account...')),
+      switchMap(token =>
+        bankSyncService.connectMonobank(token).pipe(
+          tap(() => pollForActive()),
+          catchError((err: unknown) => {
+            store.setError(extractErrorCode(err));
+            return EMPTY;
+          })
+        )
+      )
+    )
+  );
+
+  return {
+    initPlaid,
+    openPlaid(): void {
+      plaidService.open();
+    },
+    connectMonobank,
+    exchangePlaidToken,
+    pollForActive,
+  };
+}
+
+interface HookStore {
+  initPlaid: () => void;
+}
+
+export function connectOnInit(store: HookStore): void {
+  store.initPlaid();
+}
+
+export function connectOnDestroy(): void {
+  inject(PlaidLinkService).destroy();
+}

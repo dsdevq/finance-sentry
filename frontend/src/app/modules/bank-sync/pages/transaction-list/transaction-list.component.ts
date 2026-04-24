@@ -1,12 +1,9 @@
 import {CommonModule} from '@angular/common';
-import {ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit} from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject, OnInit} from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {ActivatedRoute, Router} from '@angular/router';
 
-import {Transaction} from '../../models/transaction.model';
-import {BankSyncService} from '../../services/bank-sync.service';
-
-const PAGE_SIZE = 50;
+import {TransactionsStore} from '../../store/transactions/transactions.store';
 
 @Component({
   selector: 'fns-transaction-list',
@@ -14,99 +11,39 @@ const PAGE_SIZE = 50;
   imports: [CommonModule, FormsModule],
   templateUrl: './transaction-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  providers: [TransactionsStore],
 })
 export class TransactionListComponent implements OnInit {
-  private readonly bankSyncService = inject(BankSyncService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly cdr = inject(ChangeDetectorRef);
 
-  public accountId = '';
-  public bankName = '';
-  public currency = '';
-
-  public transactions: Transaction[] = [];
-  public isLoading = false;
-  public errorMessage: string | null = null;
-
-  public offset = 0;
-  public totalCount = 0;
-  public readonly pageSize = PAGE_SIZE;
-
+  public readonly store = inject(TransactionsStore);
   public startDate = '';
   public endDate = '';
 
-  public get currentPage(): number {
-    return Math.floor(this.offset / this.pageSize) + 1;
-  }
-
-  public get totalPages(): number {
-    return Math.max(1, Math.ceil(this.totalCount / this.pageSize));
-  }
-
-  public get hasPrevious(): boolean {
-    return this.offset > 0;
-  }
-
-  public get hasNext(): boolean {
-    return this.offset + this.pageSize < this.totalCount;
-  }
-
   public ngOnInit(): void {
-    this.accountId = this.route.snapshot.paramMap.get('accountId') ?? '';
-    this.loadTransactions();
-  }
-
-  public loadTransactions(): void {
-    if (!this.accountId) {
-      return;
-    }
-
-    this.isLoading = true;
-    this.errorMessage = null;
-
-    this.bankSyncService
-      .getTransactions(this.accountId, {
-        offset: this.offset,
-        limit: this.pageSize,
-        startDate: this.startDate || undefined,
-        endDate: this.endDate || undefined,
-        sort: 'date:desc',
-      })
-      .subscribe({
-        next: res => {
-          this.transactions = res.transactions;
-          this.totalCount = res.pagination.totalCount;
-          this.bankName = res.bankName;
-          this.currency = res.currency;
-          this.isLoading = false;
-          this.cdr.markForCheck();
-        },
-        error: () => {
-          this.errorMessage = 'Failed to load transactions. Please try again.';
-          this.isLoading = false;
-          this.cdr.markForCheck();
-        },
-      });
+    const accountId = this.route.snapshot.paramMap.get('accountId') ?? '';
+    this.store.setAccountId(accountId);
+    this.store.load();
   }
 
   public applyFilters(): void {
-    this.offset = 0;
-    this.loadTransactions();
+    this.store.setDateRange(this.startDate, this.endDate);
+    this.store.load();
   }
 
   public previousPage(): void {
-    if (this.hasPrevious) {
-      this.offset = Math.max(0, this.offset - this.pageSize);
-      this.loadTransactions();
-    }
+    this.store.previousPage();
+    this.store.load();
   }
 
   public nextPage(): void {
-    if (this.hasNext) {
-      this.offset += this.pageSize;
-      this.loadTransactions();
-    }
+    this.store.nextPage();
+    this.store.load();
+  }
+
+  public retry(): void {
+    this.store.load();
   }
 
   public goBack(): void {

@@ -1,24 +1,24 @@
 <div class="connect-account">
   <h2>Connect Your Bank Account</h2>
 
-  @if (isSyncing) {
+  @if (store.isBusy()) {
     <div class="syncing-state" role="status" aria-live="polite">
-      <p class="status-message">{{ statusMessage }}</p>
+      <p class="status-message">{{ store.statusMessage() }}</p>
       <p class="hint">This may take a minute. Please wait...</p>
     </div>
   } @else {
     <div class="provider-tabs" role="tablist">
       <cmn-button
-        [attr.aria-selected]="selectedProvider === 'plaid'"
-        [variant]="selectedProvider === 'plaid' ? 'primary' : 'secondary'"
+        [attr.aria-selected]="store.selectedProvider() === 'plaid'"
+        [variant]="store.selectedProvider() === 'plaid' ? 'primary' : 'secondary'"
         (clicked)="selectProvider('plaid')"
         role="tab"
       >
         🇺🇸 Plaid (US/CA/EU)
       </cmn-button>
       <cmn-button
-        [attr.aria-selected]="selectedProvider === 'monobank'"
-        [variant]="selectedProvider === 'monobank' ? 'primary' : 'secondary'"
+        [attr.aria-selected]="store.selectedProvider() === 'monobank'"
+        [variant]="store.selectedProvider() === 'monobank' ? 'primary' : 'secondary'"
         (clicked)="selectProvider('monobank')"
         role="tab"
       >
@@ -26,12 +26,12 @@
       </cmn-button>
     </div>
 
-    @if (errorMessage) {
-      <cmn-alert variant="error">{{ errorMessage }}</cmn-alert>
+    @if (store.errorMessage()) {
+      <cmn-alert variant="error">{{ store.errorMessage() }}</cmn-alert>
     }
 
-    @if (selectedProvider === 'plaid') {
-      @if (isLoading) {
+    @if (store.selectedProvider() === 'plaid') {
+      @if (store.isInitializing()) {
         <div class="loading-state" role="status" aria-live="polite">
           <p>Preparing secure connection...</p>
         </div>
@@ -43,7 +43,7 @@
       }
     }
 
-    @if (selectedProvider === 'monobank') {
+    @if (store.selectedProvider() === 'monobank') {
       <div class="monobank-connect">
         <p>Enter your Monobank personal token to connect all your cards.</p>
         <p class="hint">

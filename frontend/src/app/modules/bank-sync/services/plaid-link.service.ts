@@ -1,4 +1,5 @@
-import {Injectable} from '@angular/core';
+import {Injectable, signal} from '@angular/core';
+import {defer, from, Observable, of, switchMap} from 'rxjs';
 
 export interface PlaidSuccessMetadata {
   institution: {name: string; institution_id: string} | null;
@@ -19,9 +20,12 @@ export interface PlaidHandler {
   destroy: () => void;
 }
 
-// Plaid Link is loaded at runtime via CDN script tag.
-// The global `window.Plaid` object is injected by the script.
-// !TODO: for global types, consider creating a separate `plaid-link.d.ts` file and including it in tsconfig.app.json's "files" array. This would provide better type safety and editor support across the app without needing to import the service.
+export interface PreparePlaidOptions {
+  token: string;
+  onSuccess: (publicToken: string, metadata: PlaidSuccessMetadata) => void;
+  onExit?: (err: unknown) => void;
+}
+
 declare global {
   interface Window {
     Plaid?: {
@@ -30,34 +34,66 @@ declare global {
   }
 }
 
+const PLAID_SCRIPT_URL = 'https://cdn.plaid.com/link/v2/stable/link-initialize.js';
+
 @Injectable({providedIn: 'root'})
 export class PlaidLinkService {
-  private scriptLoaded = false;
-  private readonly plaidScriptUrl = 'https://cdn.plaid.com/link/v2/stable/link-initialize.js';
+  private readonly readySignal = signal(false);
+  private scriptPromise: Promise<void> | null = null;
+  private handler: PlaidHandler | null = null;
 
-  public loadScript(): Promise<void> {
-    if (this.scriptLoaded || window.Plaid) {
-      this.scriptLoaded = true;
-      return Promise.resolve();
-    }
+  public readonly ready = this.readySignal.asReadonly();
 
-    return new Promise<void>((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = this.plaidScriptUrl;
-      script.async = true;
-      script.onload = () => {
-        this.scriptLoaded = true;
-        resolve();
-      };
-      script.onerror = () => reject(new Error('Failed to load Plaid Link script'));
-      document.head.appendChild(script);
-    });
+  public prepare(options: PreparePlaidOptions): Observable<void> {
+    return defer(() => from(this.ensureScript())).pipe(
+      switchMap(() => {
+        this.destroy();
+        this.handler = this.createHandler(options);
+        this.readySignal.set(true);
+        return of(void 0);
+      })
+    );
   }
 
-  public create(options: PlaidLinkOptions): PlaidHandler {
+  public open(): void {
+    this.handler?.open();
+  }
+
+  public destroy(): void {
+    this.handler?.destroy();
+    this.handler = null;
+    this.readySignal.set(false);
+  }
+
+  private ensureScript(): Promise<void> {
+    if (window.Plaid) {
+      return Promise.resolve();
+    }
+    if (this.scriptPromise) {
+      return this.scriptPromise;
+    }
+    this.scriptPromise = new Promise<void>((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = PLAID_SCRIPT_URL;
+      script.async = true;
+      script.onload = () => resolve();
+      script.onerror = () => {
+        this.scriptPromise = null;
+        reject(new Error('Failed to load Plaid Link script'));
+      };
+      document.head.appendChild(script);
+    });
+    return this.scriptPromise;
+  }
+
+  private createHandler(options: PreparePlaidOptions): PlaidHandler {
     if (!window.Plaid) {
       throw new Error('Plaid Link script is not loaded');
     }
-    return window.Plaid.create(options);
+    return window.Plaid.create({
+      token: options.token,
+      onSuccess: options.onSuccess,
+      onExit: options.onExit ? (err): void => options.onExit?.(err) : undefined,
+    });
   }
 }
