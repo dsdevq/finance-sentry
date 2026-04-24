@@ -98,7 +98,7 @@ The user can remove their IBKR integration from Finance Sentry. On disconnect, s
 - **FR-010**: System MUST include IBKR holdings as a `"brokerage"` category in the wealth summary endpoint alongside bank and crypto data.
 - **FR-011**: System MUST automatically re-sync all active IBKR connections on a scheduled interval.
 - **FR-012**: System MUST continue syncing other users' accounts when one user's sync fails; each failure is logged per-credential without aborting the batch.
-- **FR-013**: System MUST allow an authenticated user to disconnect their IBKR account, permanently deleting stored credentials and all cached position data.
+- **FR-013**: System MUST allow an authenticated user to disconnect their IBKR account. On disconnect, all cached position data is permanently deleted and the stored credential is deactivated (`IsActive = false`) so no further syncs run and the credential is not returned by any endpoint. The encrypted credential row may be retained in the deactivated state for audit purposes.
 - **FR-014**: System MUST return 404 when a disconnect is requested for an account that is not connected (error code `NOT_FOUND`).
 - **FR-015**: System MUST enforce authentication on all endpoints; unauthenticated requests receive 401.
 
@@ -116,7 +116,7 @@ The user can remove their IBKR integration from Finance Sentry. On disconnect, s
 - **SC-003**: The wealth summary correctly reflects IBKR total value within 1% of the sum of individual position values (rounding tolerance only).
 - **SC-004**: Automatic sync keeps holdings data no more than 20 minutes stale under normal operation (assuming a 15-minute sync interval).
 - **SC-005**: A sync failure for one user does not prevent other users' holdings from being updated; 100% of non-failing accounts complete successfully in the same run.
-- **SC-006**: After disconnect, no trace of the user's IBKR credentials or position data is retrievable via any Finance Sentry endpoint.
+- **SC-006**: After disconnect, no cached IBKR position data and no active credential are retrievable via any Finance Sentry endpoint; deactivated credential rows are retained internally but are never surfaced or used for sync.
 
 ## Assumptions
 
