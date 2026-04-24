@@ -1,20 +1,27 @@
 import {HttpErrorResponse} from '@angular/common/http';
 import {type ErrorHandler, inject, Injectable} from '@angular/core';
-import {ToastService} from '@dsdevq-common/ui';
+import {ErrorMessageService, ToastService} from '@dsdevq-common/ui';
 
 const UNAUTHORIZED_STATUS = 401;
+const GENERIC_ERROR = 'An unexpected error occurred.';
+
+interface ApiErrorBody {
+  errorCode?: string;
+  message?: string;
+}
 
 @Injectable()
 export class HttpErrorHandler implements ErrorHandler {
   private readonly toastService = inject(ToastService);
+  private readonly errorMessages = inject(ErrorMessageService);
 
   public handleError(error: unknown): void {
     if (error instanceof HttpErrorResponse) {
       if (error.status === UNAUTHORIZED_STATUS) {
         return;
       }
-      const message =
-        (error.error as {message?: string} | null)?.message ?? 'An unexpected error occurred.';
+      const body = error.error as ApiErrorBody | null;
+      const message = this.errorMessages.resolve(body?.errorCode) ?? body?.message ?? GENERIC_ERROR;
       this.toastService.error(message);
     }
     console.error(error);
