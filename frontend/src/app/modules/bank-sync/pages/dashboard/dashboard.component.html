@@ -1,58 +1,55 @@
 <div class="dashboard">
   <h1>Financial Overview</h1>
 
-  @if (isLoading) {
+  @if (store.isLoading()) {
     <div class="loading">Loading dashboard...</div>
   }
-  @if (errorMessage) {
-    <cmn-alert variant="error">{{ errorMessage }}</cmn-alert>
+  @if (store.errorMessage()) {
+    <cmn-alert variant="error">{{ store.errorMessage() }}</cmn-alert>
   }
 
-  @if (dashboardData && !isLoading) {
-    <!-- Balance cards -->
-    <cmn-card class="dashboard-section">
-      <h2>Total Balance</h2>
-      <div class="balance-cards">
-        @for (entry of getCurrencyEntries(); track entry[0]) {
-          <div class="balance-card">
-            <span class="currency">{{ entry[0] }}</span>
-            <span class="amount">{{ entry[1] | number: '1.2-2' }}</span>
-          </div>
-        }
-      </div>
-      <p class="account-count">{{ dashboardData.accountCount }} account(s) connected</p>
-    </cmn-card>
+  @if (store.data(); as data) {
+    @if (!store.isLoading()) {
+      <cmn-card class="dashboard-section">
+        <h2>Total Balance</h2>
+        <div class="balance-cards">
+          @for (entry of store.currencyEntries(); track entry[0]) {
+            <div class="balance-card">
+              <span class="currency">{{ entry[0] }}</span>
+              <span class="amount">{{ entry[1] | number: '1.2-2' }}</span>
+            </div>
+          }
+        </div>
+        <p class="account-count">{{ data.accountCount }} account(s) connected</p>
+      </cmn-card>
 
-    <!-- Account breakdown by type -->
-    <cmn-card class="dashboard-section">
-      <h2>Accounts by Type</h2>
-      <ul>
-        @for (entry of getAccountTypeEntries(); track entry[0]) {
-          <li>
-            <span class="type">{{ entry[0] | titlecase }}</span
-            >:
-            <span class="count">{{ entry[1] }}</span>
-          </li>
-        }
-      </ul>
-    </cmn-card>
+      <cmn-card class="dashboard-section">
+        <h2>Accounts by Type</h2>
+        <ul>
+          @for (entry of store.accountTypeEntries(); track entry[0]) {
+            <li>
+              <span class="type">{{ entry[0] | titlecase }}</span
+              >:
+              <span class="count">{{ entry[1] }}</span>
+            </li>
+          }
+        </ul>
+      </cmn-card>
 
-    <!-- Monthly flow -->
-    <cmn-card class="dashboard-section">
-      <h2>Monthly Flow (Last 6 Months)</h2>
-      <fns-money-flow-chart [monthlyFlowData]="dashboardData.monthlyFlow" />
-    </cmn-card>
+      <cmn-card class="dashboard-section">
+        <h2>Monthly Flow (Last 6 Months)</h2>
+        <fns-money-flow-chart [monthlyFlowData]="data.monthlyFlow" />
+      </cmn-card>
 
-    <!-- Top categories -->
-    <cmn-card class="dashboard-section">
-      <h2>Top Spending Categories</h2>
-      <fns-category-breakdown-chart [topCategoriesData]="dashboardData.topCategories" />
-    </cmn-card>
+      <cmn-card class="dashboard-section">
+        <h2>Top Spending Categories</h2>
+        <fns-category-breakdown-chart [topCategoriesData]="data.topCategories" />
+      </cmn-card>
 
-    <!-- Last sync -->
-    <cmn-card class="dashboard-section">
-      <p>Last synced: {{ getRelativeTime(dashboardData.lastSyncTimestamp) }}</p>
-      <a routerLink="/accounts">View Accounts</a>
-    </cmn-card>
+      <cmn-card class="dashboard-section">
+        <p>Last synced: {{ getRelativeTime(data.lastSyncTimestamp) }}</p>
+        <a routerLink="/accounts">View Accounts</a>
+      </cmn-card>
+    }
   }
 </div>

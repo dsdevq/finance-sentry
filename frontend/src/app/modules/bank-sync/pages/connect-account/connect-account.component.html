@@ -9,17 +9,19 @@
   } @else {
     <div class="provider-tabs" role="tablist">
       <cmn-button
-        role="tab"
         [attr.aria-selected]="selectedProvider === 'plaid'"
         [variant]="selectedProvider === 'plaid' ? 'primary' : 'secondary'"
-        (clicked)="selectProvider('plaid')">
+        (clicked)="selectProvider('plaid')"
+        role="tab"
+      >
         🇺🇸 Plaid (US/CA/EU)
       </cmn-button>
       <cmn-button
-        role="tab"
         [attr.aria-selected]="selectedProvider === 'monobank'"
         [variant]="selectedProvider === 'monobank' ? 'primary' : 'secondary'"
-        (clicked)="selectProvider('monobank')">
+        (clicked)="selectProvider('monobank')"
+        role="tab"
+      >
         🇺🇦 Monobank
       </cmn-button>
     </div>
@@ -46,18 +48,22 @@
         <p>Enter your Monobank personal token to connect all your cards.</p>
         <p class="hint">
           Get your token at
-          <a href="https://api.monobank.ua" target="_blank" rel="noopener noreferrer">api.monobank.ua</a>.
+          <a href="https://api.monobank.ua" target="_blank" rel="noopener noreferrer"
+            >api.monobank.ua</a
+          >.
         </p>
         <cmn-form-field
+          [required]="true"
+          [control]="monobankToken"
           label="Personal token"
           hint="Your token from api.monobank.ua"
-          [required]="true"
-          [control]="monobankToken">
+        >
           <cmn-input
+            [formControl]="monobankToken"
+            [hasError]="monobankToken.touched && monobankToken.invalid"
             type="password"
             placeholder="u…"
-            [formControl]="monobankToken"
-            [hasError]="monobankToken.touched && monobankToken.invalid" />
+          />
         </cmn-form-field>
         <cmn-button (clicked)="connectMonobank()">Connect Monobank</cmn-button>
       </div>

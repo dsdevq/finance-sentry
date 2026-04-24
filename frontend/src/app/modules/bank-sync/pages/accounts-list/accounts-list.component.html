@@ -4,21 +4,21 @@
     <cmn-button (clicked)="connectAccount()" variant="primary">Connect Account</cmn-button>
   </div>
 
-  @if (isLoading) {
+  @if (store.isLoading()) {
     <div class="loading-state" role="status" aria-live="polite">
       <p>Loading accounts...</p>
     </div>
   }
 
-  @if (errorMessage) {
+  @if (store.errorMessage()) {
     <cmn-alert variant="error" class="state-alert">
-      {{ errorMessage }}
-      <cmn-button (clicked)="loadAccounts()" variant="secondary" size="sm">Retry</cmn-button>
+      {{ store.errorMessage() }}
+      <cmn-button (clicked)="store.load()" variant="secondary" size="sm">Retry</cmn-button>
     </cmn-alert>
   }
 
-  @if (!isLoading && !errorMessage) {
-    @if (accounts.length === 0) {
+  @if (!store.isLoading() && !store.errorMessage()) {
+    @if (store.accounts().length === 0) {
       <cmn-card class="empty-card">
         <cmn-alert variant="info">No accounts connected yet.</cmn-alert>
         <cmn-button (clicked)="connectAccount()" variant="primary" class="empty-action">
@@ -39,7 +39,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (account of accounts; track account.accountId) {
+          @for (account of store.accounts(); track account.accountId) {
             <tr
               (click)="viewTransactions(account.accountId)"
               (keydown.enter)="viewTransactions(account.accountId)"

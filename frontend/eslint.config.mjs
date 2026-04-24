@@ -372,7 +372,7 @@ export default defineConfig(
   {
     // Signal store feature factories rely on inferred return types — annotating
     // them collapses method shapes to MethodsDictionary and breaks composition.
-    files: ['**/store/*.ts'],
+    files: ['**/store/**/*.ts'],
     rules: {
       '@typescript-eslint/explicit-module-boundary-types': 'off',
     },

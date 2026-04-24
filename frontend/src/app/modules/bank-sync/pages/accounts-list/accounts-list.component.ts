@@ -1,11 +1,29 @@
 import {DatePipe, DecimalPipe} from '@angular/common';
-import {ChangeDetectionStrategy, ChangeDetectorRef, Component, inject, OnInit} from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
 import {Router} from '@angular/router';
 import {AlertComponent, ButtonComponent, CardComponent} from '@dsdevq-common/ui';
 
 import {SyncStatusComponent} from '../../components/sync-status/sync-status.component';
-import {BankAccount, SyncStatus} from '../../models/bank-account.model';
-import {BankSyncService} from '../../services/bank-sync.service';
+import {type SyncStatus} from '../../models/bank-account.model';
+import {AccountsStore} from '../../store/accounts/accounts.store';
+
+const STATUS_LABELS: Record<SyncStatus, string> = {
+  pending: 'Pending',
+  syncing: 'Syncing',
+  active: 'Active',
+  failed: 'Failed',
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  reauth_required: 'Reauth Required',
+};
+
+const STATUS_CLASSES: Record<SyncStatus, string> = {
+  pending: 'badge-secondary',
+  syncing: 'badge-warning',
+  active: 'badge-success',
+  failed: 'badge-danger',
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  reauth_required: 'badge-orange',
+};
 
 @Component({
   selector: 'fns-accounts-list',
@@ -20,56 +38,12 @@ import {BankSyncService} from '../../services/bank-sync.service';
   ],
   templateUrl: './accounts-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  providers: [AccountsStore],
 })
-export class AccountsListComponent implements OnInit {
-  private readonly bankSyncService = inject(BankSyncService);
+export class AccountsListComponent {
   private readonly router = inject(Router);
-  private readonly cdr = inject(ChangeDetectorRef);
 
-  public accounts: BankAccount[] = [];
-  public isLoading = false;
-  public errorMessage: string | null = null;
-  public syncingAccountId: string | null = null;
-
-  public readonly statusLabels: Record<SyncStatus, string> = {
-    pending: 'Pending',
-    syncing: 'Syncing',
-    active: 'Active',
-    failed: 'Failed',
-    // eslint-disable-next-line @typescript-eslint/naming-convention
-    reauth_required: 'Reauth Required',
-  };
-
-  public readonly statusClasses: Record<SyncStatus, string> = {
-    pending: 'badge-secondary',
-    syncing: 'badge-warning',
-    active: 'badge-success',
-    failed: 'badge-danger',
-    // eslint-disable-next-line @typescript-eslint/naming-convention
-    reauth_required: 'badge-orange',
-  };
-
-  public ngOnInit(): void {
-    this.loadAccounts();
-  }
-
-  public loadAccounts(): void {
-    this.isLoading = true;
-    this.errorMessage = null;
-
-    this.bankSyncService.getAccounts().subscribe({
-      next: res => {
-        this.accounts = res.accounts;
-        this.isLoading = false;
-        this.cdr.markForCheck();
-      },
-      error: () => {
-        this.errorMessage = 'Failed to load accounts. Please try again.';
-        this.isLoading = false;
-        this.cdr.markForCheck();
-      },
-    });
-  }
+  public readonly store = inject(AccountsStore);
 
   public viewTransactions(accountId: string): void {
     void this.router.navigate(['/accounts', accountId, 'transactions']);
@@ -79,16 +53,11 @@ export class AccountsListComponent implements OnInit {
     void this.router.navigate(['/accounts/connect']);
   }
 
-  public triggerSync(accountId: string): void {
-    this.syncingAccountId = accountId;
-    this.cdr.markForCheck();
-  }
-
   public getStatusLabel(status: SyncStatus): string {
-    return this.statusLabels[status] ?? status;
+    return STATUS_LABELS[status] ?? status;
   }
 
   public getStatusClass(status: SyncStatus): string {
-    return this.statusClasses[status] ?? 'badge-secondary';
+    return STATUS_CLASSES[status] ?? 'badge-secondary';
   }
 }
