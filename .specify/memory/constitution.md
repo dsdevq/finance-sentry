@@ -1,26 +1,22 @@
-<!-- SYNC IMPACT REPORT - Constitution 1.1.1
-Version: 1.1.0 → 1.1.1
-Bump Type: PATCH (Clarifications to Principles I and Testing Discipline; no new principles)
-Principles Modified:
-  - I. Modular Monolith Architecture: Added explicit adapter interface mandate
-    (external integrations MUST expose a domain-defined interface, not be consumed as concretes)
-  - Testing Discipline: Clarified "Contract Tests" to explicitly cover REST API endpoint
-    contracts in addition to external API integration contracts
-Sections Added: None
-Sections Removed: None
-Templates Updated:
-  ✅ .specify/templates/spec-template.md — Added ## Notes section for integration decisions
-  ✅ .specify/templates/tasks-template.md — Corrected "OPTIONAL" label on contract tests
-     to reflect that external API contract tests are mandatory per constitution
-  ✅ .specify/templates/plan-template.md — No changes required (generic template unaffected)
-  ✅ .specify/templates/agent-file-template.md — No changes required
+<!-- SYNC IMPACT REPORT - Constitution 1.3.0
+Version: 1.2.1 → 1.3.0
+Bump Type: MINOR (New Principle VI + supporting tech stack updates)
+Principles Modified: None
+Principles Added:
+  - VI. Frontend State & Composition Discipline (new) — mandates NgRx SignalStore
+    with state/computed/methods/effects file split, custom providers extracted as
+    provide*() EnvironmentProviders factories under core/providers/, and centralized
+    error-code→message resolution via @dsdevq-common/ui's ErrorMessageService +
+    app-owned registry. Components must be declarative: no ngOnInit fetches, no
+    setInterval, no local state holding business concerns, no inline error mapping.
+Sections Modified:
+  - Tech Stack Minimums: Added NgRx SignalStore (@ngrx/signals) to Frontend line.
 Follow-up TODOs:
-  - specs/001-bank-account-sync/spec.md: Resolve [NEEDS CLARIFICATION] webhook note
-    (decision was made in tasks.md; spec must be updated to record the decision formally)
-  - specs/001-bank-account-sync/plan.md: Update Constitution Check table to reference v1.1.1
-    and add Branching Strategy / Versioning compliance row
-  - specs/001-bank-account-sync/tasks.md: Add IBankProvider interface task (C2 from analyze)
-    and Phase 4/5 contract test tasks (C3 from analyze)
+  - Sweep remaining bank-sync components (connect-account, transaction-list,
+    sync-status) to ConnectStore / TransactionsStore per Principle VI.
+  - Repair or remove stale Playwright integration tests under
+    frontend/tests/integration/bank-sync/.
+Prior report (1.2.1 → 1.1.1 → 1.1.0) retained in git history.
 -->
 
 # Finance Sentry Constitution
@@ -89,10 +85,57 @@ API boundary and per-module. User data isolation is absolute—queries, caching,
 reports must be user-scoped. Secrets are never logged. Audit logs record all data
 access. No shortcuts on security—violations require explicit team lead approval.
 
+### VI. Frontend State & Composition Discipline (NON-NEGOTIABLE)
+
+Frontend architecture enforces a strict separation between UI and business logic.
+Components are declarative; state, side effects, and cross-cutting resolution live
+in dedicated layers. Violations block PR merge.
+
+**1. State lives in NgRx SignalStore, not components.**
+Any non-trivial feature state MUST be held in a `signalStore()` under
+`frontend/src/app/modules/<feature>/store/`. The store MUST be split across five files:
+
+- `<name>.state.ts` — state interface, literal unions, initial state
+- `<name>.computed.ts` — derivations (`isLoading`, `errorMessage`, selectors)
+- `<name>.methods.ts` — synchronous `patchState` mutations only
+- `<name>.effects.ts` — `rxMethod`s for HTTP/async and hooks for router/signal effects
+- `<name>.store.ts` — `signalStore(...)` composition
+
+Components MUST NOT hold `isLoading`/`errorMessage`/fetched-data fields, MUST NOT
+subscribe to observables, MUST NOT use `setInterval` (use `timer(...)` in an
+`rxMethod`), and MUST NOT parse query params or run `ngOnInit` side effects.
+Component responsibilities are limited to: form definitions, template bindings to
+store signals, and one-line dispatch handlers. App-scope stores use
+`{providedIn: 'root'}`; page-scope stores are provided at the component level.
+
+**2. Custom providers are extracted as `provide*()` factories.**
+Any provider beyond Angular's built-in `provideX()` helpers (custom `ErrorHandler`,
+custom injection tokens, `APP_INITIALIZER`, class-based `HTTP_INTERCEPTORS`, etc.)
+MUST be extracted to `frontend/src/app/core/providers/<name>.provider.ts` as a
+function returning `EnvironmentProviders` via `makeEnvironmentProviders(...)`. One
+concern per file. `app.config.ts` lists `provide*()` calls only — no inline entries.
+Feature-scoped providers live under `modules/<feature>/providers/`.
+
+**3. Error-code → user-message resolution is centralized.**
+The library `@dsdevq-common/ui` owns the mechanism (`ERROR_MESSAGES` injection
+token + `ErrorMessageService.resolve(code)`). The app owns the data
+(`src/app/core/errors/error-messages.registry.ts`). Components and stores MUST
+NOT contain `if/else` ladders mapping `errorCode` to messages. A new backend
+`errorCode` MUST be added to the registry in the same PR that introduces it.
+Store computeds delegate to `ErrorMessageService.resolve(code)` and fall back to
+a single feature-specific default string when the resolver returns `null`.
+
+**4. UI library discipline (existing, reinforced).**
+Any UI primitive used by the app MUST come from `@dsdevq-common/ui`. Raw `<input>`,
+`<button>`, `<div class="error">` are forbidden when a `cmn-*` equivalent exists.
+New primitives are added to the library first, never directly to `frontend/`.
+
 ## Tech Stack Minimums
 
 **Backend**: .NET Core 9+, ASP.NET with OpenAPI/Swagger documentation
-**Frontend**: Angular 20+, TypeScript with strict mode, RxJS for reactive patterns
+**Frontend**: Angular 21.2+, TypeScript with strict mode, standalone components,
+NgRx SignalStore (`@ngrx/signals`) for state, RxJS for async primitives,
+`@dsdevq-common/ui` as the sole UI primitive library
 **Database**: PostgreSQL 14+
 **Message Queue/Async**: RabbitMQ or built-in hosted service (if monolith only)
 **Containerization**: Docker for all services; Docker Compose for local development
@@ -131,13 +174,16 @@ All work MUST follow per-task feature branching discipline:
 
 ### Code Review & Compliance
 
-Every PR MUST verify compliance with Core Principles I–V. Violations block merge:
+Every PR MUST verify compliance with Core Principles I–VI. Violations block merge:
 
 - Failing linter checks → automatic block
 - Missing or incomplete tests → automatic block
 - Non-encrypted data handling → automatic block
 - Coupling between modules → automatic block
 - External integration accessed without a domain interface (Principle I) → automatic block
+- Frontend feature state held in a component, `setInterval` polling, inline error-code
+  ladders, or custom providers not extracted under `core/providers/` (Principle VI) →
+  automatic block
 - Version NOT bumped on frontend/API changes → automatic block (see Versioning & Tagging
   Policy)
 - Tag NOT created for version bump → automatic block (see Versioning & Tagging Policy)
@@ -268,4 +314,4 @@ and tag creation. Missing version bump or tag blocks PR merge.
 - Each version change increments **Last Amended** date (ISO format)
 - Applies to both constitution versioning and feature versioning (frontend/backend)
 
-**Version**: 1.2.1 | **Ratified**: 2026-03-21 | **Last Amended**: 2026-04-12
+**Version**: 1.3.0 | **Ratified**: 2026-03-21 | **Last Amended**: 2026-04-24

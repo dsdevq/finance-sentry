@@ -15,8 +15,9 @@ Sole developer: Denys. Spec-driven development via the **speckit** toolchain (co
 | Layer | Technology |
 |---|---|
 | Backend | ASP.NET Core 9, EF Core, PostgreSQL 14, MediatR (CQRS), Hangfire, Serilog |
-| Frontend | Angular 20+, TypeScript strict, RxJS, lazy-loaded modules |
-| Auth | Custom `JwtAuthenticationMiddleware` — no ASP.NET Identity |
+| Frontend | Angular 21.2, TypeScript strict, standalone components, NgRx SignalStore (`@ngrx/signals`), lazy-loaded modules |
+| UI library | `@dsdevq-common/ui` (local, ng-packagr) — components, `ToastService`, `ErrorMessageService`, `ThemeService` |
+| Auth | Custom `JwtAuthenticationMiddleware` (backend) + `AuthStore` signal store + functional `authInterceptor` (frontend) |
 | Infra | Docker Compose (single file for full stack) |
 
 ---
@@ -71,10 +72,26 @@ backend/
 
 frontend/
   src/app/
-    app.routes.ts                         # / → /accounts (lazy bank-sync module), /dashboard
-    app.config.ts                         # provideRouter + provideHttpClient (no auth interceptor yet)
+    app.routes.ts                         # / → /accounts (lazy bank-sync module), /dashboard, /login, /register
+    app.config.ts                         # provideRouter + provideHttpClient(withInterceptors([authInterceptor])) + provideErrorHandler() + provideErrorMessages()
+    core/
+      providers/                          # provide*() factories returning EnvironmentProviders (one per concern)
+      errors/error-messages.registry.ts   # app-owned Record<errorCode, message> consumed by @dsdevq-common/ui's ErrorMessageService
+      handlers/http-error.handler.ts      # global ErrorHandler → toasts
+    shared/
+      enums/app-route.enum.ts             # route literals
+      utils/                               # cross-module pure helpers (e.g. getRelativeTime)
+    modules/auth/
+      store/                              # auth.state/computed/methods/effects/store.ts + specs
+      services/auth.service.ts            # HTTP-only (no state)
+      interceptors/auth.interceptor.ts    # reads AuthStore.token(), refreshes on 401
+      guards/                             # authGuard / guestGuard — signal-based
+      pages/login · register              # declarative components bound to AuthStore signals
+      validators/password-match.validator.ts
     modules/bank-sync/
-      services/bank-sync.service.ts       # All API calls (no auth header — missing interceptor)
+      store/dashboard                     # DashboardStore (component-scoped via providers) — RxJS timer refresh
+      store/accounts                      # AccountsStore — list + disconnect
+      services/bank-sync.service.ts       # HTTP-only
       pages/                              # accounts-list, connect-account, transaction-list, dashboard
 
 docker/
@@ -94,18 +111,18 @@ docker/
 **What works:**
 - Full Docker stack runs and all three containers are healthy
 - API health check: `GET /api/v1/health` → `{"status":"healthy"}`
-- Frontend loads at http://localhost:4200, renders "Finance Sentry" header
-- All bank-sync pages exist (accounts list, connect, transactions, dashboard)
+- Auth: login/register/Google sign-in, JWT in localStorage, `authInterceptor` attaches `Bearer` + refreshes on 401, `authGuard`/`guestGuard` protect routes
+- State: `AuthStore`, `DashboardStore`, `AccountsStore` built as NgRx SignalStores with feature-file split (state/computed/methods/effects/store)
+- Vitest unit tests covering the signal stores (run with `npx ng test --watch=false`)
+- All bank-sync pages render (accounts list, connect, transactions, dashboard)
 - Backend: accounts, transactions, sync, webhook, dashboard endpoints all implemented
 
-**What's missing / broken:**
-- **No auth UI** — no login page, no register page
-- **No HTTP interceptor** — `BankSyncService` sends requests with no `Authorization` header
-- Every API call returns `401 {"error":"Authentication required.","errorCode":"UNAUTHORIZED"}`
-- Frontend shows "Failed to load accounts. Please try again." on the accounts page
-- No route guards protecting pages
+**Frontend state sweep — remaining:**
+- `connect-account.component.ts` still owns Plaid init, state, and error mapping → extract `ConnectStore`, move local errorCode ladder to `ERROR_MESSAGES_REGISTRY`
+- `transaction-list.component.ts` → `TransactionsStore`
+- `sync-status.component.ts` polling → fold into `AccountsStore` or its own store
 
-**Next up (not yet assigned):** Build the auth flow — login/register pages, token storage, HTTP interceptor to attach `Bearer` token.
+**Known broken:** integration tests in `frontend/tests/integration/bank-sync/` are stale (`BankAccount.provider` field, `exchangePublicToken` signature) — they are Playwright e2e, not part of the Vitest unit suite.
 
 ---
 
@@ -146,7 +163,57 @@ In Angular modules, each concept lives in its own file — no mixing:
 - **Interfaces / types** → `models/*.model.ts` or `models/*.types.ts`
 - **Constants** → `*.constants.ts` next to the consumer, or a shared `models/*.constants.ts`
 - **Component class** → `*.component.ts` (no inline interface or constant definitions)
-- **Service class** → `*.service.ts` (no inline interface definitions — import from model files)
+- **Service class** → `*.service.ts` (HTTP-only; no state, no inline interfaces — import from model files)
+- **State** → `<feature>/store/*.state.ts` · `*.computed.ts` · `*.methods.ts` · `*.effects.ts` · `*.store.ts` (see State Management rule)
+- **Validators** → `<feature>/validators/*.validator.ts`
+
+---
+
+## Frontend State Management — NgRx SignalStore
+
+State belongs in a `signalStore()` under `modules/<feature>/store/`, **never** in component classes. Components are declarative: form definitions, template bindings, one-line dispatch handlers. No `ngOnInit` fetches, no `effect()` in components, no local `isLoading`/`errorMessage` fields.
+
+**Mandatory file split** (per store):
+
+| File | Role |
+|---|---|
+| `<name>.state.ts` | `interface <Name>State`, literal unions, `initial<Name>State` |
+| `<name>.computed.ts` | `<name>Computed(store)` — pure derivations (`isLoading`, `errorMessage`, etc.) |
+| `<name>.methods.ts` | `<name>Methods(store)` — synchronous `patchState` mutations only |
+| `<name>.effects.ts` | `<name>Effects(store)` — `rxMethod`s for HTTP/async; `<name>Hooks(store)` for router subscriptions and signal effects |
+| `<name>.store.ts` | `signalStore(..., withState(initial), withMethods(methods), withComputed(computed), withMethods(effects), withHooks({onInit: hooks}))` |
+
+Rules:
+- **Do not annotate return types on `*Methods`, `*Computed`, `*Effects` factories** — `withMethods` composition collapses explicit interfaces to `MethodsDictionary` and breaks `inject`. The `eslint.config.mjs` override for `**/store/**/*.ts` turns off `explicit-module-boundary-types` exactly for this reason.
+- **App-wide stores** (e.g. `AuthStore`) use `{providedIn: 'root'}`. **Page-scoped stores** (e.g. `DashboardStore`) are provided on the component via `providers: [Store]` — they tear down with the route.
+- **No `setInterval`.** Periodic refresh uses `timer(ms, ms).pipe(switchMap(...))` inside an `rxMethod` in `*.effects.ts`, kicked off by `onInit`.
+- **No component subscriptions.** Components inject the store and bind `store.someSignal()` in templates. For flows, call `store.someMethod(payload)` and rely on computed signals for loading/error feedback.
+- Unit tests live next to the files (`*.spec.ts`), use `TestBed.runInInjectionContext` and `signalState(initialState)` for lightweight fixtures. Run with `npx ng test --watch=false` (Vitest via `@angular/build:unit-test`).
+
+---
+
+## Custom Providers — always extract
+
+Any provider beyond Angular's built-in `provideX()` helpers (`ErrorHandler`, custom injection tokens, `APP_INITIALIZER`, class-based `HTTP_INTERCEPTORS`, etc.) MUST be extracted to `frontend/src/app/core/providers/<name>.provider.ts`:
+
+```ts
+export function provideX(): EnvironmentProviders {
+  return makeEnvironmentProviders([{ provide: TOKEN, useValue: ... }]);
+}
+```
+
+`app.config.ts` then lists `provideX()` calls only. One provider concern per file. Feature-scoped providers live under `modules/<feature>/providers/`. The `angular-provider-extraction` skill enforces this.
+
+---
+
+## Error Message Resolution
+
+Error-code → user-message mapping is centralized. **Do not** add an `if/else` ladder in a component or store.
+
+- Mechanism lives in `@dsdevq-common/ui`: `ERROR_MESSAGES` injection token + `ErrorMessageService.resolve(code)` → `string | null`.
+- App provides the registry: `src/app/core/errors/error-messages.registry.ts` holds the flat `Record<string, string>` covering all backend `errorCode` values. Wired via `provideErrorMessages()` in `app.config.ts`.
+- Stores consume via `inject(ErrorMessageService)` inside `*.computed.ts`, falling back to a feature-specific default (`'Failed to load dashboard data.'`, `'Invalid email or password.'`, etc.) when `resolve()` returns `null`.
+- **When adding a new error code on the backend:** append the message to the registry in the same PR. The `error?.errorCode` extraction helper stays local to `*.effects.ts` (the `extractErrorCode(err)` pattern).
 
 ---
 
@@ -194,6 +261,8 @@ After **all tasks in a feature are complete**, act as a QA engineer: spin up the
 - Do not create markdown files at the repo root. Only `README.md` and `CLAUDE.md` belong there. Session artifacts, debug notes, and how-to docs do not get their own files — put relevant content in `README.md` or the appropriate `.specify/` artifact.
 
 ## Active Technologies
+
+- `@ngrx/signals` 21.1.0 (NgRx SignalStore) — pilot AuthStore 2026-04-24, extended to DashboardStore + AccountsStore same day
 - C# 13 / .NET 9 (backend) · TypeScript 5.x strict (frontend) + ASP.NET Core 9, EF Core 9, MediatR, ASP.NET Core Identity (`Microsoft.AspNetCore.Identity.EntityFrameworkCore`), Npgsql.EF Core (backend) · Angular 20, RxJS, Angular standalone routing (frontend) (003-auth-flow)
 - PostgreSQL 14 — shared database, separate `AuthDbContext : IdentityDbContext<ApplicationUser>` with independent migrations (003-auth-flow)
 - TypeScript 5.3 / Angular 21.2 + Angular CDK (behavior primitives), ng-packagr (library build), Tailwind CSS v3 3.4.x (design tokens via `tailwind.config.js` + CSS custom properties in `styles/theme.css`), Storybook 10 (`@storybook/angular`), chroma-js 3.x (runtime palette generation), Lucide Icons (icon set), Vitest 4 (unit tests), Playwright (visual regression) (005-ui-component-library)
