@@ -3,12 +3,12 @@
     <h1 class="font-headline text-cmn-2xl font-bold text-text-primary mb-cmn-1">Sign In</h1>
     <p class="text-cmn-sm text-text-secondary mb-cmn-8">Finance Sentry</p>
 
-    @if (infoMessage) {
-      <cmn-alert variant="info" class="block mb-cmn-4">{{ infoMessage }}</cmn-alert>
+    @if (flashMessage(); as flash) {
+      <cmn-alert [variant]="flash.kind" class="block mb-cmn-4">{{ flash.text }}</cmn-alert>
     }
 
-    @if (errorMessage) {
-      <cmn-alert variant="error" class="block mb-cmn-4">{{ errorMessage }}</cmn-alert>
+    @if (errorMessage()) {
+      <cmn-alert variant="error" class="block mb-cmn-4">{{ errorMessage() }}</cmn-alert>
     }
 
     <div class="flex justify-center mb-cmn-6">
@@ -44,12 +44,12 @@
       </cmn-form-field>
 
       <cmn-button
-        [disabled]="loading || form.invalid"
-        [loading]="loading"
+        [disabled]="loading() || form.invalid"
+        [loading]="loading()"
         type="submit"
         variant="primary"
         class="block w-full"
-        >{{ loading ? 'Signing in…' : 'Sign In' }}</cmn-button
+        >{{ loading() ? 'Signing in…' : 'Sign In' }}</cmn-button
       >
     </form>
 

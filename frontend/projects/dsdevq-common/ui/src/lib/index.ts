@@ -13,7 +13,9 @@ export * from './components/toast/toast.service';
 export * from './directives/typography/typography.directive';
 
 // Services
+export * from './services/error-message/error-message.service';
 export * from './services/theme/theme.service';
 
 // Tokens
+export * from './tokens/error-messages.token';
 export * from './tokens/validation-messages.token';

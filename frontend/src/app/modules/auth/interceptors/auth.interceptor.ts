@@ -10,6 +10,7 @@ import {catchError, switchMap, throwError} from 'rxjs';
 
 import {AUTHORIZATION_HEADER} from '../constants/auth.constants';
 import {AuthService} from '../services/auth.service';
+import {AuthStore} from '../store/auth.store';
 
 function isRefreshOrAuthRequest(req: HttpRequest<unknown>): boolean {
   return req.url.includes('/auth/refresh') || req.url.includes('/auth/logout');
@@ -23,8 +24,9 @@ export const authInterceptor: HttpInterceptorFn = (
   req: HttpRequest<unknown>,
   next: HttpHandlerFn
 ) => {
+  const authStore = inject(AuthStore);
   const authService = inject(AuthService);
-  const authReq = attachToken(req, authService.getToken());
+  const authReq = attachToken(req, authStore.token());
 
   return next(authReq).pipe(
     catchError((err: unknown) => {
@@ -34,16 +36,19 @@ export const authInterceptor: HttpInterceptorFn = (
 
       if (isUnauthorized && !isRefreshOrAuthRequest(req)) {
         return authService.refresh().pipe(
-          switchMap(refreshed => next(attachToken(req, refreshed.token))),
+          switchMap(refreshed => {
+            authStore.applyAuthResponse(refreshed);
+            return next(attachToken(req, refreshed.token));
+          }),
           catchError(() => {
-            authService.logout();
+            authStore.logout();
             return throwError(() => err);
           })
         );
       }
 
       if (isUnauthorized && isRefreshOrAuthRequest(req)) {
-        authService.logout();
+        authStore.logout();
       }
 
       return throwError(() => err);

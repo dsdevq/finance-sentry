@@ -89,9 +89,6 @@ docker-compose.override*.yml
 # Frontend
 frontend/dist/
 frontend/.angular/
-frontend/**/*.spec.ts
-!frontend/tests/**/*.spec.ts
-!frontend/projects/dsdevq-common/ui/e2e/**/*.spec.ts
 
 # Backend
 backend/bin/

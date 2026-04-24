@@ -44,17 +44,17 @@
         <cmn-input type="password" placeholder="Repeat password" />
       </cmn-form-field>
 
-      @if (errorMessage) {
-        <cmn-alert variant="error" class="block mb-cmn-4">{{ errorMessage }}</cmn-alert>
+      @if (errorMessage()) {
+        <cmn-alert variant="error" class="block mb-cmn-4">{{ errorMessage() }}</cmn-alert>
       }
 
       <cmn-button
-        [disabled]="loading || form.invalid"
-        [loading]="loading"
+        [disabled]="loading() || form.invalid"
+        [loading]="loading()"
         type="submit"
         variant="primary"
         class="block w-full"
-        >{{ loading ? 'Creating account…' : 'Create Account' }}</cmn-button
+        >{{ loading() ? 'Creating account…' : 'Create Account' }}</cmn-button
       >
     </form>
 
