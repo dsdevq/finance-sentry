@@ -1,4 +1,4 @@
-using System.Security.Claims;
+using FinanceSentry.Core.Auth;
 using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Modules.CryptoSync.Application.Commands;
 using FinanceSentry.Modules.CryptoSync.Application.Queries;
@@ -14,25 +14,13 @@ public sealed class CryptoController(
     ICommandHandler<DisconnectBinanceCommand, Unit> disconnectHandler,
     IQueryHandler<GetCryptoHoldingsQuery, CryptoHoldingsResponse> holdingsHandler) : ControllerBase
 {
-
-    private Guid? GetUserId()
-    {
-        var sub = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-               ?? User.FindFirst("sub")?.Value;
-        return Guid.TryParse(sub, out var id) ? id : null;
-    }
-
     [HttpPost("binance/connect")]
     public async Task<IActionResult> Connect([FromBody] ConnectBinanceRequest request, CancellationToken ct)
     {
-        var userId = GetUserId();
-        if (userId is null)
-            return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
-
         try
         {
             var result = await connectHandler.Handle(
-                new ConnectBinanceCommand(userId.Value, request.ApiKey, request.ApiSecret),
+                new ConnectBinanceCommand(User.RequireUserId(), request.ApiKey, request.ApiSecret),
                 ct);
 
             return StatusCode(201, new
@@ -63,13 +51,9 @@ public sealed class CryptoController(
     [HttpDelete("binance/disconnect")]
     public async Task<IActionResult> Disconnect(CancellationToken ct)
     {
-        var userId = GetUserId();
-        if (userId is null)
-            return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
-
         try
         {
-            await disconnectHandler.Handle(new DisconnectBinanceCommand(userId.Value), ct);
+            await disconnectHandler.Handle(new DisconnectBinanceCommand(User.RequireUserId()), ct);
             return NoContent();
         }
         catch (BinanceException ex) when (ex.BinanceErrorCode == -1002)
@@ -85,11 +69,7 @@ public sealed class CryptoController(
     [HttpGet("holdings")]
     public async Task<IActionResult> GetHoldings(CancellationToken ct)
     {
-        var userId = GetUserId();
-        if (userId is null)
-            return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
-
-        var result = await holdingsHandler.Handle(new GetCryptoHoldingsQuery(userId.Value), ct);
+        var result = await holdingsHandler.Handle(new GetCryptoHoldingsQuery(User.RequireUserId()), ct);
         return Ok(result);
     }
 }

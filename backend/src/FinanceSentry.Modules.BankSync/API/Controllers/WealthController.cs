@@ -1,6 +1,6 @@
 namespace FinanceSentry.Modules.BankSync.API.Controllers;
 
-using System.Security.Claims;
+using FinanceSentry.Core.Auth;
 using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Modules.BankSync.Application.Queries;
 using Microsoft.AspNetCore.Mvc;
@@ -14,23 +14,12 @@ public class WealthController(
     private static readonly HashSet<string> AllowedCategories =
         new(StringComparer.OrdinalIgnoreCase) { "banking", "crypto", "brokerage", "other" };
 
-    private Guid? GetUserId()
-    {
-        var sub = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-               ?? User.FindFirst("sub")?.Value;
-        return Guid.TryParse(sub, out var id) ? id : null;
-    }
-
     [HttpGet("summary")]
     public async Task<IActionResult> GetSummary(
         [FromQuery] string? category,
         [FromQuery] string? provider,
         CancellationToken ct)
     {
-        var userId = GetUserId();
-        if (userId is null)
-            return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
-
         if (category is not null && !AllowedCategories.Contains(category))
             return BadRequest(new
             {
@@ -38,7 +27,7 @@ public class WealthController(
                 errorCode = "INVALID_FILTER"
             });
 
-        var result = await wealthSummaryHandler.Handle(new GetWealthSummaryQuery(userId.Value, category, provider), ct);
+        var result = await wealthSummaryHandler.Handle(new GetWealthSummaryQuery(User.RequireUserId(), category, provider), ct);
         return Ok(result);
     }
 
@@ -50,10 +39,6 @@ public class WealthController(
         [FromQuery] string? provider,
         CancellationToken ct)
     {
-        var userId = GetUserId();
-        if (userId is null)
-            return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
-
         if (string.IsNullOrWhiteSpace(from) || string.IsNullOrWhiteSpace(to))
             return BadRequest(new
             {
@@ -84,7 +69,7 @@ public class WealthController(
             });
 
         var result = await txSummaryHandler.Handle(
-            new GetTransactionSummaryQuery(userId.Value, fromDate, toDate, category, provider), ct);
+            new GetTransactionSummaryQuery(User.RequireUserId(), fromDate, toDate, category, provider), ct);
         return Ok(result);
     }
 }

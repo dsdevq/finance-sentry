@@ -1,4 +1,4 @@
-using System.Security.Claims;
+using FinanceSentry.Core.Auth;
 using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Modules.BrokerageSync.Application.Commands;
 using FinanceSentry.Modules.BrokerageSync.Application.Queries;
@@ -14,25 +14,13 @@ public sealed class BrokerageController(
     ICommandHandler<DisconnectIBKRCommand, Unit> disconnectHandler,
     IQueryHandler<GetBrokerageHoldingsQuery, BrokerageHoldingsResponse> holdingsHandler) : ControllerBase
 {
-
-    private Guid? GetUserId()
-    {
-        var sub = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-               ?? User.FindFirst("sub")?.Value;
-        return Guid.TryParse(sub, out var id) ? id : null;
-    }
-
     [HttpPost("ibkr/connect")]
     public async Task<IActionResult> Connect([FromBody] ConnectIBKRRequest request, CancellationToken ct)
     {
-        var userId = GetUserId();
-        if (userId is null)
-            return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
-
         try
         {
             var result = await connectHandler.Handle(
-                new ConnectIBKRCommand(userId.Value, request.Username, request.Password),
+                new ConnectIBKRCommand(User.RequireUserId(), request.Username, request.Password),
                 ct);
 
             return StatusCode(201, new
@@ -63,11 +51,7 @@ public sealed class BrokerageController(
     [HttpGet("holdings")]
     public async Task<IActionResult> GetHoldings(CancellationToken ct)
     {
-        var userId = GetUserId();
-        if (userId is null)
-            return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
-
-        var result = await holdingsHandler.Handle(new GetBrokerageHoldingsQuery(userId.Value), ct);
+        var result = await holdingsHandler.Handle(new GetBrokerageHoldingsQuery(User.RequireUserId()), ct);
 
         return Ok(new
         {
@@ -84,16 +68,13 @@ public sealed class BrokerageController(
             totalUsdValue = result.TotalUsdValue,
         });
     }
+
     [HttpDelete("ibkr/disconnect")]
     public async Task<IActionResult> Disconnect(CancellationToken ct)
     {
-        var userId = GetUserId();
-        if (userId is null)
-            return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
-
         try
         {
-            await disconnectHandler.Handle(new DisconnectIBKRCommand(userId.Value), ct);
+            await disconnectHandler.Handle(new DisconnectIBKRCommand(User.RequireUserId()), ct);
             return NoContent();
         }
         catch (BrokerAccountNotFoundException)

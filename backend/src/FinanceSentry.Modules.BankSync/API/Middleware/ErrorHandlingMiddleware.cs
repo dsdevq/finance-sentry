@@ -56,6 +56,7 @@ public class ErrorHandlingMiddleware(RequestDelegate next, ILogger<ErrorHandling
         var (statusCode, errorCode, userMessage) = exception switch
         {
             BankSyncException bse => (bse.HttpStatusCode, bse.ErrorCode, bse.Message),
+            UnauthorizedAccessException => (401, "UNAUTHORIZED", "Authentication required."),
             DbUpdateException => (503, "DATABASE_ERROR", "Database unavailable. Try again in 1 minute."),
             OperationCanceledException => (499, "REQUEST_CANCELLED", "Request was cancelled."),
             _ => (500, "INTERNAL_ERROR", "An unexpected error occurred. Please try again.")

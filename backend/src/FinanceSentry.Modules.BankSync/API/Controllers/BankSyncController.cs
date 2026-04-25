@@ -1,6 +1,6 @@
 namespace FinanceSentry.Modules.BankSync.API.Controllers;
 
-using System.Security.Claims;
+using FinanceSentry.Core.Auth;
 using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Modules.BankSync.Application.Commands;
 using FinanceSentry.Modules.BankSync.Application.Queries;
@@ -30,23 +30,12 @@ public class BankSyncController(
     private readonly ISyncJobRepository _syncJobs = syncJobs;
     private readonly ITransactionSyncCoordinator _coordinator = coordinator;
 
-    private Guid? GetUserIdFromClaims()
-    {
-        var sub = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-               ?? User.FindFirst("sub")?.Value;
-        return Guid.TryParse(sub, out var id) ? id : null;
-    }
-
     // ── POST /api/accounts/connect ── T205 ───────────────────────────────────
 
     [HttpPost("connect")]
     public async Task<IActionResult> Connect(CancellationToken ct)
     {
-        var userId = GetUserIdFromClaims();
-        if (userId is null)
-            return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
-
-        var result = await _plaid.CreateLinkTokenAsync(userId.Value, ct);
+        var result = await _plaid.CreateLinkTokenAsync(User.RequireUserId(), ct);
         return Ok(new
         {
             linkToken = result.LinkToken,
@@ -60,12 +49,8 @@ public class BankSyncController(
     [HttpPost("link")]
     public async Task<IActionResult> Link([FromBody] LinkRequest request, CancellationToken ct)
     {
-        var userId = GetUserIdFromClaims();
-        if (userId is null)
-            return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
-
         var result = await connectHandler.Handle(new ConnectBankAccountCommand(
-            userId.Value, request.PublicToken, request.InstitutionName), ct);
+            User.RequireUserId(), request.PublicToken, request.InstitutionName), ct);
 
         return Ok(new
         {
@@ -87,12 +72,8 @@ public class BankSyncController(
         [FromQuery] string? currency = null,
         CancellationToken ct = default)
     {
-        var userId = GetUserIdFromClaims();
-        if (userId is null)
-            return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
-
         var result = await getAccountsHandler.Handle(
-            new GetAccountsQuery(userId.Value, status, currency), ct);
+            new GetAccountsQuery(User.RequireUserId(), status, currency), ct);
 
         return Ok(new
         {
@@ -113,12 +94,10 @@ public class BankSyncController(
         [FromQuery] DateTime? endDate = null,
         CancellationToken ct = default)
     {
-        var userId = GetUserIdFromClaims();
-        if (userId is null)
-            return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
+        var userId = User.RequireUserId();
 
         var account = await _accounts.GetByIdAsync(accountId, ct);
-        if (account == null || account.UserId != userId.Value)
+        if (account == null || account.UserId != userId)
             return NotFound(new { error = "Account not found." });
 
         var transactions = (await _transactions.GetByAccountIdAsync(accountId, offset, limit, ct)).ToList();
@@ -150,12 +129,10 @@ public class BankSyncController(
         Guid accountId,
         CancellationToken ct)
     {
-        var userId = GetUserIdFromClaims();
-        if (userId is null)
-            return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
+        var userId = User.RequireUserId();
 
         var account = await _accounts.GetByIdAsync(accountId, ct);
-        if (account == null || account.UserId != userId.Value)
+        if (account == null || account.UserId != userId)
             return NotFound(new { error = "Account not found." });
 
         if (await _syncJobs.HasRunningJobAsync(accountId, ct))
@@ -178,12 +155,10 @@ public class BankSyncController(
         Guid accountId,
         CancellationToken ct)
     {
-        var userId = GetUserIdFromClaims();
-        if (userId is null)
-            return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
+        var userId = User.RequireUserId();
 
         var account = await _accounts.GetByIdAsync(accountId, ct);
-        if (account == null || account.UserId != userId.Value)
+        if (account == null || account.UserId != userId)
             return NotFound(new { error = "Account not found." });
 
         var latestJob = await _syncJobs.GetLatestByAccountIdAsync(accountId, ct);
@@ -209,12 +184,10 @@ public class BankSyncController(
         Guid accountId,
         CancellationToken ct)
     {
-        var userId = GetUserIdFromClaims();
-        if (userId is null)
-            return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
+        var userId = User.RequireUserId();
 
         var account = await _accounts.GetByIdAsync(accountId, ct);
-        if (account == null || account.UserId != userId.Value)
+        if (account == null || account.UserId != userId)
             return NotFound(new { error = "Account not found." });
 
         await _transactions.SoftDeleteByAccountIdAsync(accountId, ct);
@@ -229,14 +202,10 @@ public class BankSyncController(
     public async Task<IActionResult> ConnectMonobank(
         [FromBody] ConnectMonobankRequest request, CancellationToken ct)
     {
-        var userId = GetUserIdFromClaims();
-        if (userId is null)
-            return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
-
         try
         {
             var result = await connectMonobankHandler.Handle(
-                new ConnectMonobankAccountCommand(userId.Value, request.Token), ct);
+                new ConnectMonobankAccountCommand(User.RequireUserId(), request.Token), ct);
 
             return StatusCode(201, new { accounts = result.Accounts });
         }
