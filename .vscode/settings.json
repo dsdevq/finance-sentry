@@ -29,7 +29,7 @@
 		}
 	},
 	"[typescript]": {
-		"editor.defaultFormatter": "esbenp.prettier-vscode",
+		"editor.defaultFormatter": "dbaeumer.vscode-eslint",
 		"editor.formatOnSave": true
 	},
 	"[html]": {
@@ -43,7 +43,12 @@
 	"editor.codeActionsOnSave": {
 		"source.fixAll.eslint": "explicit"
 	},
-	"eslint.validate": ["javascript", "typescript", "angular"],
+	"eslint.validate": ["javascript", "typescript", "html"],
+	"eslint.useFlatConfig": true,
+	"eslint.workingDirectories": [
+		{ "pattern": "frontend" },
+		{ "pattern": "frontend/projects/dsdevq-common/*" }
+	],
 	"search.exclude": {
 		"**/node_modules": true,
 		"**/bin": true,
