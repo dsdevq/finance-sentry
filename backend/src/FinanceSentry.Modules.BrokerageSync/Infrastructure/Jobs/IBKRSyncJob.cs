@@ -1,39 +1,28 @@
+using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Modules.BrokerageSync.Application.Commands;
 using FinanceSentry.Modules.BrokerageSync.Domain.Repositories;
-using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace FinanceSentry.Modules.BrokerageSync.Infrastructure.Jobs;
 
-public sealed class IBKRSyncJob
+public sealed class IBKRSyncJob(
+    IIBKRCredentialRepository credentialRepository,
+    ICommandHandler<SyncIBKRHoldingsCommand, SyncIBKRHoldingsResult> syncHandler,
+    ILogger<IBKRSyncJob> logger)
 {
-    private readonly IIBKRCredentialRepository _credentialRepository;
-    private readonly IMediator _mediator;
-    private readonly ILogger<IBKRSyncJob> _logger;
-
-    public IBKRSyncJob(
-        IIBKRCredentialRepository credentialRepository,
-        IMediator mediator,
-        ILogger<IBKRSyncJob> logger)
-    {
-        _credentialRepository = credentialRepository;
-        _mediator = mediator;
-        _logger = logger;
-    }
-
     public async Task ExecuteAsync()
     {
-        var activeCredentials = await _credentialRepository.GetAllActiveAsync();
+        var activeCredentials = await credentialRepository.GetAllActiveAsync();
 
         foreach (var credential in activeCredentials)
         {
             try
             {
-                await _mediator.Send(new SyncIBKRHoldingsCommand(credential.UserId));
+                await syncHandler.Handle(new SyncIBKRHoldingsCommand(credential.UserId), CancellationToken.None);
             }
             catch (Exception ex)
             {
-                _logger.LogError(
+                logger.LogError(
                     ex,
                     "Failed to sync IBKR holdings for user {UserId}",
                     credential.UserId);

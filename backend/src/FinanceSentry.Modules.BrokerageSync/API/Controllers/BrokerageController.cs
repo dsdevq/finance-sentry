@@ -1,22 +1,19 @@
 using System.Security.Claims;
+using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Modules.BrokerageSync.Application.Commands;
 using FinanceSentry.Modules.BrokerageSync.Application.Queries;
 using FinanceSentry.Modules.BrokerageSync.Domain.Exceptions;
-using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FinanceSentry.Modules.BrokerageSync.API.Controllers;
 
 [ApiController]
 [Route("api/v1/brokerage")]
-public sealed class BrokerageController : ControllerBase
+public sealed class BrokerageController(
+    ICommandHandler<ConnectIBKRCommand, ConnectIBKRResult> connectHandler,
+    ICommandHandler<DisconnectIBKRCommand, Unit> disconnectHandler,
+    IQueryHandler<GetBrokerageHoldingsQuery, BrokerageHoldingsResponse> holdingsHandler) : ControllerBase
 {
-    private readonly IMediator _mediator;
-
-    public BrokerageController(IMediator mediator)
-    {
-        _mediator = mediator;
-    }
 
     private Guid? GetUserId()
     {
@@ -37,7 +34,7 @@ public sealed class BrokerageController : ControllerBase
 
         try
         {
-            var result = await _mediator.Send(
+            var result = await connectHandler.Handle(
                 new ConnectIBKRCommand(userId.Value, request.Username, request.Password),
                 ct);
 
@@ -73,7 +70,7 @@ public sealed class BrokerageController : ControllerBase
         if (userId is null)
             return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
 
-        var result = await _mediator.Send(new GetBrokerageHoldingsQuery(userId.Value), ct);
+        var result = await holdingsHandler.Handle(new GetBrokerageHoldingsQuery(userId.Value), ct);
 
         return Ok(new
         {
@@ -99,7 +96,7 @@ public sealed class BrokerageController : ControllerBase
 
         try
         {
-            await _mediator.Send(new DisconnectIBKRCommand(userId.Value), ct);
+            await disconnectHandler.Handle(new DisconnectIBKRCommand(userId.Value), ct);
             return NoContent();
         }
         catch (BrokerAccountNotFoundException)

@@ -1,9 +1,9 @@
+using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Modules.BrokerageSync.Domain.Repositories;
-using MediatR;
 
 namespace FinanceSentry.Modules.BrokerageSync.Application.Queries;
 
-public sealed record GetBrokerageHoldingsQuery(Guid UserId) : IRequest<BrokerageHoldingsResponse>;
+public sealed record GetBrokerageHoldingsQuery(Guid UserId) : IQuery<BrokerageHoldingsResponse>;
 
 public sealed record BrokeragePositionDto(
     string Symbol,
@@ -19,7 +19,7 @@ public sealed record BrokerageHoldingsResponse(
     decimal TotalUsdValue);
 
 public sealed class GetBrokerageHoldingsQueryHandler
-    : IRequestHandler<GetBrokerageHoldingsQuery, BrokerageHoldingsResponse>
+    : IQueryHandler<GetBrokerageHoldingsQuery, BrokerageHoldingsResponse>
 {
     private static readonly TimeSpan StaleThreshold = TimeSpan.FromHours(1);
 

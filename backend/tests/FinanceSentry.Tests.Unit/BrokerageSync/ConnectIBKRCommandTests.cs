@@ -1,3 +1,4 @@
+using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Infrastructure.Encryption;
 using FinanceSentry.Modules.BrokerageSync.Application.Commands;
 using FinanceSentry.Modules.BrokerageSync.Domain;
@@ -5,7 +6,6 @@ using FinanceSentry.Modules.BrokerageSync.Domain.Exceptions;
 using FinanceSentry.Modules.BrokerageSync.Domain.Interfaces;
 using FinanceSentry.Modules.BrokerageSync.Domain.Repositories;
 using FluentAssertions;
-using MediatR;
 using Moq;
 using Xunit;
 
@@ -16,10 +16,10 @@ public class ConnectIBKRCommandTests
     private readonly Mock<IIBKRCredentialRepository> _credentialRepo = new(MockBehavior.Strict);
     private readonly Mock<IBrokerAdapter> _adapter = new(MockBehavior.Strict);
     private readonly Mock<ICredentialEncryptionService> _encryption = new(MockBehavior.Strict);
-    private readonly Mock<IMediator> _mediator = new(MockBehavior.Strict);
+    private readonly Mock<ICommandHandler<SyncIBKRHoldingsCommand, SyncIBKRHoldingsResult>> _syncHandler = new(MockBehavior.Strict);
 
     private ConnectIBKRCommandHandler CreateHandler() =>
-        new(_credentialRepo.Object, _adapter.Object, _encryption.Object, _mediator.Object);
+        new(_credentialRepo.Object, _adapter.Object, _encryption.Object, _syncHandler.Object);
 
     private static EncryptionResult FakeEncryption() =>
         new(Ciphertext: [1], Iv: [2], AuthTag: [3], KeyVersion: 1);
@@ -60,8 +60,8 @@ public class ConnectIBKRCommandTests
         _credentialRepo
             .Setup(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        _mediator
-            .Setup(m => m.Send(It.IsAny<SyncIBKRHoldingsCommand>(), It.IsAny<CancellationToken>()))
+        _syncHandler
+            .Setup(h => h.Handle(It.IsAny<SyncIBKRHoldingsCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new SyncIBKRHoldingsResult(0, DateTime.UtcNow));
 
         await CreateHandler().Handle(new ConnectIBKRCommand(userId, "testuser", "testpass"), default);
@@ -92,8 +92,8 @@ public class ConnectIBKRCommandTests
         _credentialRepo
             .Setup(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        _mediator
-            .Setup(m => m.Send(It.IsAny<SyncIBKRHoldingsCommand>(), It.IsAny<CancellationToken>()))
+        _syncHandler
+            .Setup(h => h.Handle(It.IsAny<SyncIBKRHoldingsCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new SyncIBKRHoldingsResult(0, DateTime.UtcNow));
 
         const string plaintextPassword = "super-secret-ibkr-password";
@@ -126,14 +126,14 @@ public class ConnectIBKRCommandTests
         _credentialRepo
             .Setup(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        _mediator
-            .Setup(m => m.Send(It.IsAny<SyncIBKRHoldingsCommand>(), It.IsAny<CancellationToken>()))
+        _syncHandler
+            .Setup(h => h.Handle(It.IsAny<SyncIBKRHoldingsCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new SyncIBKRHoldingsResult(0, DateTime.UtcNow));
 
         await CreateHandler().Handle(new ConnectIBKRCommand(userId, "user", "pass"), default);
 
-        _mediator.Verify(
-            m => m.Send(
+        _syncHandler.Verify(
+            h => h.Handle(
                 It.Is<SyncIBKRHoldingsCommand>(c => c.UserId == userId),
                 It.IsAny<CancellationToken>()),
             Times.Once);

@@ -1,16 +1,16 @@
+using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Infrastructure.Encryption;
 using FinanceSentry.Modules.BrokerageSync.Domain;
 using FinanceSentry.Modules.BrokerageSync.Domain.Interfaces;
 using FinanceSentry.Modules.BrokerageSync.Domain.Repositories;
-using MediatR;
 
 namespace FinanceSentry.Modules.BrokerageSync.Application.Commands;
 
-public sealed record SyncIBKRHoldingsCommand(Guid UserId) : IRequest<SyncIBKRHoldingsResult>;
+public sealed record SyncIBKRHoldingsCommand(Guid UserId) : ICommand<SyncIBKRHoldingsResult>;
 
 public sealed record SyncIBKRHoldingsResult(int HoldingsCount, DateTime SyncedAt);
 
-public sealed class SyncIBKRHoldingsCommandHandler : IRequestHandler<SyncIBKRHoldingsCommand, SyncIBKRHoldingsResult>
+public sealed class SyncIBKRHoldingsCommandHandler : ICommandHandler<SyncIBKRHoldingsCommand, SyncIBKRHoldingsResult>
 {
     private readonly IIBKRCredentialRepository _credentialRepository;
     private readonly IBrokerageHoldingRepository _holdingRepository;

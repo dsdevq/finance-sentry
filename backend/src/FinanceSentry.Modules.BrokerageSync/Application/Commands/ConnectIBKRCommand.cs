@@ -1,63 +1,51 @@
+using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Infrastructure.Encryption;
 using FinanceSentry.Modules.BrokerageSync.Domain;
 using FinanceSentry.Modules.BrokerageSync.Domain.Exceptions;
 using FinanceSentry.Modules.BrokerageSync.Domain.Interfaces;
 using FinanceSentry.Modules.BrokerageSync.Domain.Repositories;
-using MediatR;
 
 namespace FinanceSentry.Modules.BrokerageSync.Application.Commands;
 
 public sealed record ConnectIBKRCommand(
     Guid UserId,
     string Username,
-    string Password) : IRequest<ConnectIBKRResult>;
+    string Password) : ICommand<ConnectIBKRResult>;
 
 public sealed record ConnectIBKRResult(int HoldingsCount, DateTime ConnectedAt);
 
-public sealed class ConnectIBKRCommandHandler : IRequestHandler<ConnectIBKRCommand, ConnectIBKRResult>
+public sealed class ConnectIBKRCommandHandler(
+    IIBKRCredentialRepository credentialRepository,
+    IBrokerAdapter adapter,
+    ICredentialEncryptionService encryption,
+    ICommandHandler<SyncIBKRHoldingsCommand, SyncIBKRHoldingsResult> syncHandler)
+    : ICommandHandler<ConnectIBKRCommand, ConnectIBKRResult>
 {
-    private readonly IIBKRCredentialRepository _credentialRepository;
-    private readonly IBrokerAdapter _adapter;
-    private readonly ICredentialEncryptionService _encryption;
-    private readonly IMediator _mediator;
-
-    public ConnectIBKRCommandHandler(
-        IIBKRCredentialRepository credentialRepository,
-        IBrokerAdapter adapter,
-        ICredentialEncryptionService encryption,
-        IMediator mediator)
+    public async Task<ConnectIBKRResult> Handle(ConnectIBKRCommand command, CancellationToken cancellationToken)
     {
-        _credentialRepository = credentialRepository;
-        _adapter = adapter;
-        _encryption = encryption;
-        _mediator = mediator;
-    }
-
-    public async Task<ConnectIBKRResult> Handle(ConnectIBKRCommand request, CancellationToken ct)
-    {
-        var existing = await _credentialRepository.GetByUserIdAsync(request.UserId, ct);
+        var existing = await credentialRepository.GetByUserIdAsync(command.UserId, cancellationToken);
         if (existing is not null && existing.IsActive)
             throw new BrokerAlreadyConnectedException(
                 "An IBKR account is already connected for this user.");
 
-        await _adapter.AuthenticateAsync(request.Username, request.Password, ct);
+        await adapter.AuthenticateAsync(command.Username, command.Password, cancellationToken);
 
-        var accountId = await _adapter.GetAccountIdAsync(ct);
+        var accountId = await adapter.GetAccountIdAsync(cancellationToken);
 
-        var encUsername = _encryption.Encrypt(request.Username);
-        var encPassword = _encryption.Encrypt(request.Password);
+        var encUsername = encryption.Encrypt(command.Username);
+        var encPassword = encryption.Encrypt(command.Password);
 
         var credential = new IBKRCredential(
-            request.UserId,
+            command.UserId,
             encUsername.Ciphertext, encUsername.Iv, encUsername.AuthTag,
             encPassword.Ciphertext, encPassword.Iv, encPassword.AuthTag,
             encUsername.KeyVersion,
             accountId);
 
-        await _credentialRepository.AddAsync(credential, ct);
-        await _credentialRepository.SaveChangesAsync(ct);
+        await credentialRepository.AddAsync(credential, cancellationToken);
+        await credentialRepository.SaveChangesAsync(cancellationToken);
 
-        var syncResult = await _mediator.Send(new SyncIBKRHoldingsCommand(request.UserId), ct);
+        var syncResult = await syncHandler.Handle(new SyncIBKRHoldingsCommand(command.UserId), cancellationToken);
 
         return new ConnectIBKRResult(syncResult.HoldingsCount, syncResult.SyncedAt);
     }
