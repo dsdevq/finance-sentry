@@ -1,6 +1,6 @@
+using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Modules.Auth.Application.DTOs;
-using MediatR;
 
 namespace FinanceSentry.Modules.Auth.Application.Commands;
 
-public record RegisterCommand(string Email, string Password) : IRequest<AuthResult>;
+public record RegisterCommand(string Email, string Password) : ICommand<AuthResult>;

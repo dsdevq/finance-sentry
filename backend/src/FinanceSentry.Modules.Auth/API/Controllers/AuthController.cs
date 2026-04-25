@@ -1,6 +1,6 @@
+using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Modules.Auth.Application.Commands;
 using FinanceSentry.Modules.Auth.Application.DTOs;
-using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,7 +8,13 @@ namespace FinanceSentry.Modules.Auth.API.Controllers;
 
 [ApiController]
 [Route("auth")]
-public class AuthController(IMediator mediator) : ControllerBase
+public class AuthController(
+    ICommandHandler<LoginCommand, AuthResult> loginHandler,
+    ICommandHandler<RegisterCommand, AuthResult> registerHandler,
+    ICommandHandler<RefreshCommand, AuthResult> refreshHandler,
+    ICommandHandler<VerifyGoogleCredentialCommand, AuthResult> googleVerifyHandler,
+    ICommandHandler<LogoutCommand, Unit> logoutHandler,
+    IQueryHandler<GetMeQuery, GetMeResult> getMeHandler) : ControllerBase
 {
     private const string RefreshTokenCookie = "fs_refresh_token";
     private const string AccessTokenCookie = "fs_access_token";
@@ -22,7 +28,7 @@ public class AuthController(IMediator mediator) : ControllerBase
 
         try
         {
-            var result = await mediator.Send(new GetMeQuery(rawToken));
+            var result = await getMeHandler.Handle(new GetMeQuery(rawToken), HttpContext.RequestAborted);
             SetAccessTokenCookie(result.RawAccessToken, result.Response.ExpiresAt);
             return Ok(result.Response);
         }
@@ -52,7 +58,7 @@ public class AuthController(IMediator mediator) : ControllerBase
 
         try
         {
-            var result = await mediator.Send(new LoginCommand(request.Email, request.Password));
+            var result = await loginHandler.Handle(new LoginCommand(request.Email, request.Password), HttpContext.RequestAborted);
             SetRefreshTokenCookie(result.RawRefreshToken);
             SetAccessTokenCookie(result.RawAccessToken, result.Response.ExpiresAt);
             return Ok(result.Response);
@@ -94,7 +100,7 @@ public class AuthController(IMediator mediator) : ControllerBase
 
         try
         {
-            var result = await mediator.Send(new RegisterCommand(request.Email, request.Password));
+            var result = await registerHandler.Handle(new RegisterCommand(request.Email, request.Password), HttpContext.RequestAborted);
             SetRefreshTokenCookie(result.RawRefreshToken);
             SetAccessTokenCookie(result.RawAccessToken, result.Response.ExpiresAt);
             return Created(string.Empty, result.Response);
@@ -128,7 +134,7 @@ public class AuthController(IMediator mediator) : ControllerBase
 
         try
         {
-            var result = await mediator.Send(new RefreshCommand(rawToken));
+            var result = await refreshHandler.Handle(new RefreshCommand(rawToken), HttpContext.RequestAborted);
             SetRefreshTokenCookie(result.RawRefreshToken);
             SetAccessTokenCookie(result.RawAccessToken, result.Response.ExpiresAt);
             return Ok(result.Response);
@@ -148,7 +154,7 @@ public class AuthController(IMediator mediator) : ControllerBase
 
         try
         {
-            var result = await mediator.Send(new VerifyGoogleCredentialCommand(request.Credential));
+            var result = await googleVerifyHandler.Handle(new VerifyGoogleCredentialCommand(request.Credential), HttpContext.RequestAborted);
             SetRefreshTokenCookie(result.RawRefreshToken);
             SetAccessTokenCookie(result.RawAccessToken, result.Response.ExpiresAt);
             return Ok(result.Response);
@@ -166,7 +172,7 @@ public class AuthController(IMediator mediator) : ControllerBase
                   ?? User.FindFirst("sub")?.Value;
 
         if (!string.IsNullOrWhiteSpace(userId))
-            await mediator.Send(new LogoutCommand(userId));
+            await logoutHandler.Handle(new LogoutCommand(userId), HttpContext.RequestAborted);
 
         DeleteRefreshTokenCookie();
         DeleteAccessTokenCookie();

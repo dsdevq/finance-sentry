@@ -1,7 +1,7 @@
+using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Modules.Auth.Application.DTOs;
 using FinanceSentry.Modules.Auth.Application.Interfaces;
 using FinanceSentry.Modules.Auth.Domain.Entities;
-using MediatR;
 using Microsoft.AspNetCore.Identity;
 
 namespace FinanceSentry.Modules.Auth.Application.Commands;
@@ -9,7 +9,7 @@ namespace FinanceSentry.Modules.Auth.Application.Commands;
 public class RefreshCommandHandler(
     IRefreshTokenService refreshTokenService,
     ITokenService tokenService,
-    UserManager<ApplicationUser> userManager) : IRequestHandler<RefreshCommand, AuthResult>
+    UserManager<ApplicationUser> userManager) : ICommandHandler<RefreshCommand, AuthResult>
 {
     public async Task<AuthResult> Handle(RefreshCommand request, CancellationToken cancellationToken)
     {

@@ -1,6 +1,6 @@
+using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Modules.Auth.Application.DTOs;
-using MediatR;
 
 namespace FinanceSentry.Modules.Auth.Application.Commands;
 
-public record VerifyGoogleCredentialCommand(string Credential) : IRequest<AuthResult>;
+public record VerifyGoogleCredentialCommand(string Credential) : ICommand<AuthResult>;

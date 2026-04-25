@@ -1,12 +1,13 @@
+using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Modules.Auth.Application.Interfaces;
-using MediatR;
 
 namespace FinanceSentry.Modules.Auth.Application.Commands;
 
-public class LogoutCommandHandler(IRefreshTokenService refreshTokenService) : IRequestHandler<LogoutCommand>
+public class LogoutCommandHandler(IRefreshTokenService refreshTokenService) : ICommandHandler<LogoutCommand, Unit>
 {
-    public async Task Handle(LogoutCommand request, CancellationToken cancellationToken)
+    public async Task<Unit> Handle(LogoutCommand command, CancellationToken cancellationToken)
     {
-        await refreshTokenService.RevokeAsync(request.UserId, cancellationToken);
+        await refreshTokenService.RevokeAsync(command.UserId, cancellationToken);
+        return Unit.Value;
     }
 }

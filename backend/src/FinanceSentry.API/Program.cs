@@ -1,5 +1,6 @@
 using Serilog;
 using FinanceSentry.API.Conventions;
+using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Modules.BankSync;
 using FinanceSentry.Modules.BankSync.Domain.Interfaces;
@@ -85,11 +86,13 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// ── MediatR (CQRS) ──────────────────────────────────────────────────────────
+// ── CQRS ─────────────────────────────────────────────────────────────────────
+builder.Services.AddCqrs(typeof(JwtTokenService).Assembly);
+
+// ── MediatR (remaining modules — being migrated off MediatR) ────────────────
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(
     typeof(Program).Assembly,
     typeof(BankSyncModule).Assembly,
-    typeof(JwtTokenService).Assembly,
     typeof(CryptoSyncModule).Assembly,
     typeof(BrokerageSyncModule).Assembly
 ));

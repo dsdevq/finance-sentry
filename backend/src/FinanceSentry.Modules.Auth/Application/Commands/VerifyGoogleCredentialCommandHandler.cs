@@ -1,9 +1,9 @@
 namespace FinanceSentry.Modules.Auth.Application.Commands;
 
+using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Modules.Auth.Application.DTOs;
 using FinanceSentry.Modules.Auth.Application.Interfaces;
 using FinanceSentry.Modules.Auth.Domain.Entities;
-using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,7 +11,7 @@ public class VerifyGoogleCredentialCommandHandler(
     UserManager<ApplicationUser> userManager,
     ITokenService tokenService,
     IRefreshTokenService refreshTokenService,
-    IGoogleCredentialVerifier verifier) : IRequestHandler<VerifyGoogleCredentialCommand, AuthResult>
+    IGoogleCredentialVerifier verifier) : ICommandHandler<VerifyGoogleCredentialCommand, AuthResult>
 {
     public async Task<AuthResult> Handle(VerifyGoogleCredentialCommand request, CancellationToken cancellationToken)
     {
