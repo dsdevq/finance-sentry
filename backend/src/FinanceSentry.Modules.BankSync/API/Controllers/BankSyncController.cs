@@ -233,9 +233,6 @@ public class BankSyncController(
         if (userId is null)
             return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
 
-        if (string.IsNullOrWhiteSpace(request.Token) || request.Token.Length > 64)
-            return BadRequest(new { error = "Token must be non-empty and at most 64 characters.", errorCode = "VALIDATION_ERROR" });
-
         try
         {
             var result = await connectMonobankHandler.Handle(

@@ -49,15 +49,6 @@ public class AuthController(
             SetAccessTokenCookie(result.RawAccessToken, result.Response.ExpiresAt);
             return Ok(result.Response);
         }
-        catch (FluentValidation.ValidationException ex)
-        {
-            return BadRequest(new
-            {
-                error = "Validation failed.",
-                errorCode = "VALIDATION_ERROR",
-                details = ex.Errors.Select(e => e.ErrorMessage),
-            });
-        }
         catch (InvalidOperationException ex) when (ex.Message == "GOOGLE_ACCOUNT_ONLY")
         {
             return Unauthorized(new
@@ -79,20 +70,6 @@ public class AuthController(
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] AuthRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
-        {
-            return BadRequest(new
-            {
-                error = "Validation failed.",
-                errorCode = "VALIDATION_ERROR",
-                details = new[]
-                {
-                    string.IsNullOrWhiteSpace(request.Email) ? "Email is required." : null,
-                    string.IsNullOrWhiteSpace(request.Password) ? "Password is required." : null
-                }.Where(d => d is not null)
-            });
-        }
-
         try
         {
             var result = await registerHandler.Handle(new RegisterCommand(request.Email, request.Password), HttpContext.RequestAborted);
@@ -144,9 +121,6 @@ public class AuthController(
     [HttpPost("google/verify")]
     public async Task<IActionResult> GoogleVerify([FromBody] VerifyGoogleCredentialRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.Credential))
-            return BadRequest(new { error = "Credential is required.", errorCode = "VALIDATION_ERROR" });
-
         try
         {
             var result = await googleVerifyHandler.Handle(new VerifyGoogleCredentialCommand(request.Credential), HttpContext.RequestAborted);

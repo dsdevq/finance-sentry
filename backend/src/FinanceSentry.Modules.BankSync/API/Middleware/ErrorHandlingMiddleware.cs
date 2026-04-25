@@ -2,6 +2,7 @@ namespace FinanceSentry.Modules.BankSync.API.Middleware;
 
 using System.Text.Json;
 using FinanceSentry.Modules.BankSync.Domain.Exceptions;
+using FluentValidation;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -34,6 +35,24 @@ public class ErrorHandlingMiddleware(RequestDelegate next, ILogger<ErrorHandling
 
     private async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
+        if (exception is ValidationException validation)
+        {
+            _logger.LogWarning("Validation failed: {Errors}",
+                string.Join("; ", validation.Errors.Select(e => e.ErrorMessage)));
+
+            context.Response.StatusCode = 400;
+            context.Response.ContentType = "application/json";
+
+            var validationBody = new
+            {
+                error = "Validation failed.",
+                errorCode = "VALIDATION_ERROR",
+                details = validation.Errors.Select(e => e.ErrorMessage),
+            };
+            await context.Response.WriteAsync(JsonSerializer.Serialize(validationBody, _jsonOptions));
+            return;
+        }
+
         var (statusCode, errorCode, userMessage) = exception switch
         {
             BankSyncException bse => (bse.HttpStatusCode, bse.ErrorCode, bse.Message),
@@ -42,7 +61,6 @@ public class ErrorHandlingMiddleware(RequestDelegate next, ILogger<ErrorHandling
             _ => (500, "INTERNAL_ERROR", "An unexpected error occurred. Please try again.")
         };
 
-        // Log technical details server-side only
         if (statusCode >= 500)
             _logger.LogError(exception, "Unhandled exception [{ErrorCode}]: {Message}", errorCode, exception.Message);
         else

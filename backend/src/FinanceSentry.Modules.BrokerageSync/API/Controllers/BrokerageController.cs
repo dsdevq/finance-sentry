@@ -29,9 +29,6 @@ public sealed class BrokerageController(
         if (userId is null)
             return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
 
-        if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
-            return BadRequest(new { error = "Username and Password are required.", errorCode = "VALIDATION_ERROR" });
-
         try
         {
             var result = await connectHandler.Handle(

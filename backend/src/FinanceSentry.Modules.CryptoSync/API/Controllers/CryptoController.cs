@@ -29,9 +29,6 @@ public sealed class CryptoController(
         if (userId is null)
             return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
 
-        if (string.IsNullOrWhiteSpace(request.ApiKey) || string.IsNullOrWhiteSpace(request.ApiSecret))
-            return BadRequest(new { error = "apiKey and apiSecret are required.", errorCode = "VALIDATION_ERROR" });
-
         try
         {
             var result = await connectHandler.Handle(

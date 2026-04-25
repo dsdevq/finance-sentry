@@ -14,6 +14,7 @@
     <PackageReference Include="Polly" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="FluentResults" />
+    <PackageReference Include="FluentValidation" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" />
     <PackageReference Include="Hangfire.Core" />
     <PackageReference Include="Hangfire.AspNetCore" />
