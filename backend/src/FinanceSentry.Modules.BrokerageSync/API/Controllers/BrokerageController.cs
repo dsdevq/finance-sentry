@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace FinanceSentry.Modules.BrokerageSync.API.Controllers;
 
 [ApiController]
-[Route("api/v1/brokerage")]
+[Route("brokerage")]
 public sealed class BrokerageController(
     ICommandHandler<ConnectIBKRCommand, ConnectIBKRResult> connectHandler,
     ICommandHandler<DisconnectIBKRCommand, Unit> disconnectHandler,

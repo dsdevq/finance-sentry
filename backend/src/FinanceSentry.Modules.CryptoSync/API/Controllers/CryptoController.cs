@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace FinanceSentry.Modules.CryptoSync.API.Controllers;
 
 [ApiController]
-[Route("api/v1/crypto")]
+[Route("crypto")]
 public sealed class CryptoController(
     ICommandHandler<ConnectBinanceCommand, ConnectBinanceResult> connectHandler,
     ICommandHandler<DisconnectBinanceCommand, Unit> disconnectHandler,
