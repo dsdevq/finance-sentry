@@ -232,7 +232,3 @@ public class BankSyncController(
     }
 }
 
-// ── Request DTOs ─────────────────────────────────────────────────────────────
-
-public record LinkRequest(string PublicToken, string InstitutionName);
-public record ConnectMonobankRequest(string Token);

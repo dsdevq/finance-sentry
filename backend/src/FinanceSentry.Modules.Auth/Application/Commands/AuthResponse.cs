@@ -1,4 +1,4 @@
-namespace FinanceSentry.Modules.Auth.Application.DTOs;
+namespace FinanceSentry.Modules.Auth.Application.Commands;
 
 public record UserDto(string Id, string Email);
 

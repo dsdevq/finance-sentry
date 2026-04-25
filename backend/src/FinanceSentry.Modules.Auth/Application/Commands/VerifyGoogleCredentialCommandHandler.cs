@@ -1,7 +1,6 @@
 namespace FinanceSentry.Modules.Auth.Application.Commands;
 
 using FinanceSentry.Core.Cqrs;
-using FinanceSentry.Modules.Auth.Application.DTOs;
 using FinanceSentry.Modules.Auth.Application.Interfaces;
 using FinanceSentry.Modules.Auth.Domain.Entities;
 using Microsoft.AspNetCore.Identity;

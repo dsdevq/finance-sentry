@@ -1,6 +1,5 @@
 using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Modules.Auth.Application.Commands;
-using FinanceSentry.Modules.Auth.Application.DTOs;
 using FinanceSentry.Modules.Auth.Domain.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -148,5 +147,3 @@ public class AuthController(
         });
     }
 }
-
-public record VerifyGoogleCredentialRequest(string Credential);

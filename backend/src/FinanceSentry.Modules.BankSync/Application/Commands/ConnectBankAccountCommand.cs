@@ -12,6 +12,8 @@ using FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
 /// FR-003: never logs plaintext tokens.
 /// Publishes BankAccountConnectedEvent for async initial sync (T210).
 /// </summary>
+public record LinkRequest(string PublicToken, string InstitutionName);
+
 public record ConnectBankAccountCommand(
     Guid UserId,
     string PublicToken,

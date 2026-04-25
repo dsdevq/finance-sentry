@@ -56,5 +56,3 @@ public sealed class BrokerageController(
         return NoContent();
     }
 }
-
-public sealed record ConnectIBKRRequest(string Username, string Password);

@@ -7,6 +7,8 @@ using FinanceSentry.Modules.BrokerageSync.Domain.Repositories;
 
 namespace FinanceSentry.Modules.BrokerageSync.Application.Commands;
 
+public sealed record ConnectIBKRRequest(string Username, string Password);
+
 public sealed record ConnectIBKRCommand(
     Guid UserId,
     string Username,

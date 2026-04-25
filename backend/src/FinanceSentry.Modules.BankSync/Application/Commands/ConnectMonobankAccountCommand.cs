@@ -7,6 +7,8 @@ using FinanceSentry.Modules.BankSync.Domain.Repositories;
 using FinanceSentry.Modules.BankSync.Infrastructure.Monobank;
 using Hangfire;
 
+public record ConnectMonobankRequest(string Token);
+
 public record ConnectMonobankAccountCommand(Guid UserId, string Token) : ICommand<ConnectMonobankResult>;
 
 public record ConnectedMonobankAccount(

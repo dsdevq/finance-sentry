@@ -7,6 +7,8 @@ using FinanceSentry.Modules.CryptoSync.Domain.Repositories;
 
 namespace FinanceSentry.Modules.CryptoSync.Application.Commands;
 
+public sealed record ConnectBinanceRequest(string ApiKey, string ApiSecret);
+
 public sealed record ConnectBinanceCommand(
     Guid UserId,
     string ApiKey,

@@ -42,5 +42,3 @@ public sealed class CryptoController(
         return Ok(result);
     }
 }
-
-public sealed record ConnectBinanceRequest(string ApiKey, string ApiSecret);
