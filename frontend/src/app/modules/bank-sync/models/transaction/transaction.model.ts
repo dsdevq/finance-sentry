@@ -1,6 +1,8 @@
+import {type Timestamped} from '../../../../shared/models/timestamped/timestamped.model';
+
 export type TransactionType = 'debit' | 'credit';
 
-export interface GlobalTransactionDto {
+export interface GlobalTransactionDto extends Timestamped {
   transactionId: string;
   accountId: string;
   bankName: string;
@@ -11,7 +13,6 @@ export interface GlobalTransactionDto {
   transactionType: Nullable<TransactionType>;
   merchantCategory: Nullable<string>;
   isPending: boolean;
-  createdAt: string;
 }
 
 export interface GlobalTransactionsResponse {
@@ -20,7 +21,7 @@ export interface GlobalTransactionsResponse {
   hasMore: boolean;
 }
 
-export interface Transaction {
+export interface Transaction extends Timestamped {
   transactionId: string;
   accountId: string;
   amount: number;
@@ -31,7 +32,6 @@ export interface Transaction {
   description: string;
   merchantCategory: Nullable<string>;
   syncedAt: string;
-  createdAt: string;
 }
 
 export interface TransactionListResponse {

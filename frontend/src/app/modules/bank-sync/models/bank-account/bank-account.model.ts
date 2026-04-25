@@ -1,20 +1,17 @@
+import {type AccountIdentity} from '../../../../shared/models/account-identity/account-identity.model';
+import {type Timestamped} from '../../../../shared/models/timestamped/timestamped.model';
+
 export type SyncStatus = 'pending' | 'syncing' | 'active' | 'failed' | 'reauth_required';
 
 export type Provider = 'plaid' | 'monobank';
 
-export interface BankAccount {
-  accountId: string;
-  bankName: string;
-  accountType: string;
-  accountNumberLast4: string;
+export interface BankAccount extends AccountIdentity, Timestamped {
   ownerName: string;
-  currency: string;
   currentBalance: number;
   availableBalance: number;
   syncStatus: SyncStatus;
   lastSyncTimestamp: Nullable<string>;
   lastSyncDurationMs: Nullable<number>;
-  createdAt: string;
   provider: string;
 }
 
@@ -47,13 +44,8 @@ export interface ConnectMonobankResponse {
   accounts: ConnectedMonobankAccount[];
 }
 
-export interface LinkAccountResponse {
-  accountId: string;
-  bankName: string;
-  accountType: string;
-  accountNumberLast4: string;
+export interface LinkAccountResponse extends AccountIdentity {
   ownerName: string;
-  currency: string;
   initialBalance: number;
   syncStatus: string;
   lastSyncTimestamp: Nullable<string>;

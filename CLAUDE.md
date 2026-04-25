@@ -210,6 +210,12 @@ Rules:
 
 ---
 
+## Type Unification — extract narrow shared bases as duplication appears
+
+When ≥3 model interfaces share the same fields with identical types, extract a structural base into `shared/models/<base-name>/<base-name>.model.ts` and refactor consumers to `extends`. Currently in place: `AccountIdentity` (account identifier fields) and `Timestamped` (`createdAt`). The `frontend-type-unification` skill covers the audit + extract loop and the criteria for *refusing* to extract (type divergence, optional/required mismatch, n=2 duplication, etc.). Don't unify aggressively — duplication of two is fine, hiding legitimate type divergence behind a base is not.
+
+---
+
 ## Utility Helpers — always a `*.utils.ts` class
 
 Pure helper functions are NEVER bare `export function`s in a random file. Each helper lives in `<domain>.utils.ts` (e.g. `error.utils.ts`, `time.utils.ts`) under `frontend/src/app/shared/utils/` (cross-module) or `frontend/src/app/modules/<feature>/utils/` (feature-local), as a class with `public static` methods:
