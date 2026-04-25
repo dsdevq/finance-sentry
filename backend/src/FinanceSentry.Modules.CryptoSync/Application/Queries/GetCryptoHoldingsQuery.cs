@@ -1,9 +1,9 @@
+using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Modules.CryptoSync.Domain.Repositories;
-using MediatR;
 
 namespace FinanceSentry.Modules.CryptoSync.Application.Queries;
 
-public sealed record GetCryptoHoldingsQuery(Guid UserId) : IRequest<CryptoHoldingsResponse>;
+public sealed record GetCryptoHoldingsQuery(Guid UserId) : IQuery<CryptoHoldingsResponse>;
 
 public sealed record CryptoHoldingsResponse(
     string Provider,
@@ -18,7 +18,7 @@ public sealed record CryptoHoldingDto(
     decimal LockedQuantity,
     decimal UsdValue);
 
-public sealed class GetCryptoHoldingsQueryHandler : IRequestHandler<GetCryptoHoldingsQuery, CryptoHoldingsResponse>
+public sealed class GetCryptoHoldingsQueryHandler : IQueryHandler<GetCryptoHoldingsQuery, CryptoHoldingsResponse>
 {
     private static readonly TimeSpan StaleThreshold = TimeSpan.FromHours(1);
 

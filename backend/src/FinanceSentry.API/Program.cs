@@ -87,13 +87,14 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 // ── CQRS ─────────────────────────────────────────────────────────────────────
-builder.Services.AddCqrs(typeof(JwtTokenService).Assembly);
+builder.Services.AddCqrs(
+    typeof(JwtTokenService).Assembly,
+    typeof(CryptoSyncModule).Assembly);
 
 // ── MediatR (remaining modules — being migrated off MediatR) ────────────────
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(
     typeof(Program).Assembly,
     typeof(BankSyncModule).Assembly,
-    typeof(CryptoSyncModule).Assembly,
     typeof(BrokerageSyncModule).Assembly
 ));
 

@@ -1,22 +1,19 @@
 using System.Security.Claims;
+using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Modules.CryptoSync.Application.Commands;
 using FinanceSentry.Modules.CryptoSync.Application.Queries;
 using FinanceSentry.Modules.CryptoSync.Domain.Exceptions;
-using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FinanceSentry.Modules.CryptoSync.API.Controllers;
 
 [ApiController]
 [Route("api/v1/crypto")]
-public sealed class CryptoController : ControllerBase
+public sealed class CryptoController(
+    ICommandHandler<ConnectBinanceCommand, ConnectBinanceResult> connectHandler,
+    ICommandHandler<DisconnectBinanceCommand, Unit> disconnectHandler,
+    IQueryHandler<GetCryptoHoldingsQuery, CryptoHoldingsResponse> holdingsHandler) : ControllerBase
 {
-    private readonly IMediator _mediator;
-
-    public CryptoController(IMediator mediator)
-    {
-        _mediator = mediator;
-    }
 
     private Guid? GetUserId()
     {
@@ -37,7 +34,7 @@ public sealed class CryptoController : ControllerBase
 
         try
         {
-            var result = await _mediator.Send(
+            var result = await connectHandler.Handle(
                 new ConnectBinanceCommand(userId.Value, request.ApiKey, request.ApiSecret),
                 ct);
 
@@ -75,7 +72,7 @@ public sealed class CryptoController : ControllerBase
 
         try
         {
-            await _mediator.Send(new DisconnectBinanceCommand(userId.Value), ct);
+            await disconnectHandler.Handle(new DisconnectBinanceCommand(userId.Value), ct);
             return NoContent();
         }
         catch (BinanceException ex) when (ex.BinanceErrorCode == -1002)
@@ -95,7 +92,7 @@ public sealed class CryptoController : ControllerBase
         if (userId is null)
             return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
 
-        var result = await _mediator.Send(new GetCryptoHoldingsQuery(userId.Value), ct);
+        var result = await holdingsHandler.Handle(new GetCryptoHoldingsQuery(userId.Value), ct);
         return Ok(result);
     }
 }

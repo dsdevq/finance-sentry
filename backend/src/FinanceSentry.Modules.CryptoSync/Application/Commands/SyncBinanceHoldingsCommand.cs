@@ -1,17 +1,17 @@
+using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Infrastructure.Encryption;
 using FinanceSentry.Modules.CryptoSync.Domain;
 using FinanceSentry.Modules.CryptoSync.Domain.Exceptions;
 using FinanceSentry.Modules.CryptoSync.Domain.Interfaces;
 using FinanceSentry.Modules.CryptoSync.Domain.Repositories;
-using MediatR;
 
 namespace FinanceSentry.Modules.CryptoSync.Application.Commands;
 
-public sealed record SyncBinanceHoldingsCommand(Guid UserId) : IRequest<SyncBinanceHoldingsResult>;
+public sealed record SyncBinanceHoldingsCommand(Guid UserId) : ICommand<SyncBinanceHoldingsResult>;
 
 public sealed record SyncBinanceHoldingsResult(int HoldingsCount, DateTime SyncedAt);
 
-public sealed class SyncBinanceHoldingsCommandHandler : IRequestHandler<SyncBinanceHoldingsCommand, SyncBinanceHoldingsResult>
+public sealed class SyncBinanceHoldingsCommandHandler : ICommandHandler<SyncBinanceHoldingsCommand, SyncBinanceHoldingsResult>
 {
     private readonly IBinanceCredentialRepository _credentialRepository;
     private readonly ICryptoHoldingRepository _holdingRepository;

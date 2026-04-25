@@ -1,3 +1,4 @@
+using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Infrastructure.Encryption;
 using FinanceSentry.Modules.CryptoSync.Application.Commands;
 using FinanceSentry.Modules.CryptoSync.Domain;
@@ -5,7 +6,6 @@ using FinanceSentry.Modules.CryptoSync.Domain.Exceptions;
 using FinanceSentry.Modules.CryptoSync.Domain.Interfaces;
 using FinanceSentry.Modules.CryptoSync.Domain.Repositories;
 using FluentAssertions;
-using MediatR;
 using Moq;
 using Xunit;
 
@@ -16,10 +16,10 @@ public class ConnectBinanceCommandTests
     private readonly Mock<IBinanceCredentialRepository> _credentialRepo = new(MockBehavior.Strict);
     private readonly Mock<ICryptoExchangeAdapter> _adapter = new(MockBehavior.Strict);
     private readonly Mock<ICredentialEncryptionService> _encryption = new(MockBehavior.Strict);
-    private readonly Mock<IMediator> _mediator = new(MockBehavior.Strict);
+    private readonly Mock<ICommandHandler<SyncBinanceHoldingsCommand, SyncBinanceHoldingsResult>> _syncHandler = new(MockBehavior.Strict);
 
     private ConnectBinanceCommandHandler CreateHandler() =>
-        new(_credentialRepo.Object, _adapter.Object, _encryption.Object, _mediator.Object);
+        new(_credentialRepo.Object, _adapter.Object, _encryption.Object, _syncHandler.Object);
 
     private static EncryptionResult FakeEncryption() =>
         new(Ciphertext: [1], Iv: [2], AuthTag: [3], KeyVersion: 1);
@@ -59,8 +59,8 @@ public class ConnectBinanceCommandTests
         _credentialRepo
             .Setup(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        _mediator
-            .Setup(m => m.Send(It.IsAny<SyncBinanceHoldingsCommand>(), It.IsAny<CancellationToken>()))
+        _syncHandler
+            .Setup(h => h.Handle(It.IsAny<SyncBinanceHoldingsCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new SyncBinanceHoldingsResult(0, DateTime.UtcNow));
 
         await CreateHandler().Handle(new ConnectBinanceCommand(userId, "mykey", "mysecret"), default);
@@ -88,8 +88,8 @@ public class ConnectBinanceCommandTests
         _credentialRepo
             .Setup(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        _mediator
-            .Setup(m => m.Send(It.IsAny<SyncBinanceHoldingsCommand>(), It.IsAny<CancellationToken>()))
+        _syncHandler
+            .Setup(h => h.Handle(It.IsAny<SyncBinanceHoldingsCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new SyncBinanceHoldingsResult(0, DateTime.UtcNow));
 
         const string plaintextSecret = "super-secret-binance-api-secret";
@@ -120,10 +120,10 @@ public class ConnectBinanceCommandTests
         _credentialRepo
             .Setup(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        _mediator
-            .Setup(m => m.Send(It.IsAny<SyncBinanceHoldingsCommand>(), It.IsAny<CancellationToken>()))
-            .Callback<IRequest<SyncBinanceHoldingsResult>, CancellationToken>((cmd, _) =>
-                capturedCommand = cmd as SyncBinanceHoldingsCommand)
+        _syncHandler
+            .Setup(h => h.Handle(It.IsAny<SyncBinanceHoldingsCommand>(), It.IsAny<CancellationToken>()))
+            .Callback<SyncBinanceHoldingsCommand, CancellationToken>((cmd, _) =>
+                capturedCommand = cmd)
             .ReturnsAsync(new SyncBinanceHoldingsResult(3, DateTime.UtcNow));
 
         await CreateHandler().Handle(new ConnectBinanceCommand(userId, "key", "secret"), default);

@@ -1,36 +1,30 @@
+using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Modules.CryptoSync.Domain.Exceptions;
 using FinanceSentry.Modules.CryptoSync.Domain.Repositories;
-using MediatR;
 
 namespace FinanceSentry.Modules.CryptoSync.Application.Commands;
 
-public sealed record DisconnectBinanceCommand(Guid UserId) : IRequest;
+public sealed record DisconnectBinanceCommand(Guid UserId) : ICommand<Unit>;
 
-public sealed class DisconnectBinanceCommandHandler : IRequestHandler<DisconnectBinanceCommand>
+public sealed class DisconnectBinanceCommandHandler(
+    IBinanceCredentialRepository credentialRepository,
+    ICryptoHoldingRepository holdingRepository)
+    : ICommandHandler<DisconnectBinanceCommand, Unit>
 {
-    private readonly IBinanceCredentialRepository _credentialRepository;
-    private readonly ICryptoHoldingRepository _holdingRepository;
-
-    public DisconnectBinanceCommandHandler(
-        IBinanceCredentialRepository credentialRepository,
-        ICryptoHoldingRepository holdingRepository)
+    public async Task<Unit> Handle(DisconnectBinanceCommand command, CancellationToken cancellationToken)
     {
-        _credentialRepository = credentialRepository;
-        _holdingRepository = holdingRepository;
-    }
-
-    public async Task Handle(DisconnectBinanceCommand request, CancellationToken ct)
-    {
-        var credential = await _credentialRepository.GetByUserIdAsync(request.UserId, ct);
+        var credential = await credentialRepository.GetByUserIdAsync(command.UserId, cancellationToken);
         if (credential is null || !credential.IsActive)
         {
             throw new BinanceException("No Binance account is connected for this user.", -1002);
         }
 
         credential.Deactivate();
-        _credentialRepository.Update(credential);
+        credentialRepository.Update(credential);
 
-        await _holdingRepository.DeleteByUserIdAsync(request.UserId, ct);
-        await _credentialRepository.SaveChangesAsync(ct);
+        await holdingRepository.DeleteByUserIdAsync(command.UserId, cancellationToken);
+        await credentialRepository.SaveChangesAsync(cancellationToken);
+
+        return Unit.Value;
     }
 }
