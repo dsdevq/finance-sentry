@@ -8,7 +8,6 @@
     <PackageReference Include="Serilog.Enrichers.Environment" />
     <PackageReference Include="MediatR" />
     <PackageReference Include="FluentResults" />
-    <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" />
     <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" />
     <PackageReference Include="Polly.Core" />
     <PackageReference Include="Polly.Extensions.Http" />
