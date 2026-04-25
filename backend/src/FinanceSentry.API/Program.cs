@@ -53,9 +53,11 @@ builder.Host.UseSerilog((context, loggerConfig) =>
     loggerConfig
         .ReadFrom.Configuration(context.Configuration)
         .WriteTo.Console()
-        .WriteTo.File("logs/app-.txt", rollingInterval: RollingInterval.Day)
+        .WriteTo.File(
+            "logs/app-.txt",
+            rollingInterval: RollingInterval.Day,
+            retainedFileCountLimit: 14)
         .Enrich.FromLogContext()
-        .MinimumLevel.Information()
 );
 
 builder.Services.AddCors(options =>
@@ -303,6 +305,7 @@ using (var scope = app.Services.CreateScope())
 }
 
 // ── Middleware pipeline ───────────────────────────────────────────────────────
+app.UseSerilogRequestLogging();
 app.UseCors("Frontend");
 app.UseMiddleware<ErrorHandlingMiddleware>();
 app.UseMiddleware<CorrelationIdMiddleware>();

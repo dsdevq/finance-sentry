@@ -17,14 +17,22 @@ public static class CqrsServiceCollectionExtensions
             RegisterDecoratedHandlers(
                 services,
                 assembly,
-                typeof(ICommandHandler<,>),
-                typeof(CommandValidationDecorator<,>));
+                openHandlerInterface: typeof(ICommandHandler<,>),
+                openDecoratorTypes:
+                [
+                    typeof(CommandValidationDecorator<,>),
+                    typeof(LoggingCommandDecorator<,>),
+                ]);
 
             RegisterDecoratedHandlers(
                 services,
                 assembly,
-                typeof(IQueryHandler<,>),
-                typeof(QueryValidationDecorator<,>));
+                openHandlerInterface: typeof(IQueryHandler<,>),
+                openDecoratorTypes:
+                [
+                    typeof(QueryValidationDecorator<,>),
+                    typeof(LoggingQueryDecorator<,>),
+                ]);
 
             RegisterClosedHandlers(services, assembly, typeof(IEventHandler<>));
 
@@ -45,23 +53,33 @@ public static class CqrsServiceCollectionExtensions
         }
     }
 
+    /// <summary>
+    /// Registers each closed handler under its concrete type, then composes the
+    /// supplied open-generic decorators around it (first decorator wraps the impl,
+    /// each subsequent decorator wraps the previous). The outermost decorator is
+    /// what the consumer resolves through the service-type interface.
+    /// </summary>
     private static void RegisterDecoratedHandlers(
         IServiceCollection services,
         Assembly assembly,
         Type openHandlerInterface,
-        Type openDecoratorType)
+        Type[] openDecoratorTypes)
     {
         foreach (var (implementation, serviceType) in FindClosedHandlers(assembly, openHandlerInterface))
         {
             services.AddTransient(implementation);
 
             var typeArgs = serviceType.GetGenericArguments();
-            var closedDecorator = openDecoratorType.MakeGenericType(typeArgs);
+            var closedDecorators = openDecoratorTypes.Select(t => t.MakeGenericType(typeArgs)).ToArray();
 
             services.AddTransient(serviceType, sp =>
             {
-                var inner = sp.GetRequiredService(implementation);
-                return ActivatorUtilities.CreateInstance(sp, closedDecorator, inner);
+                object current = sp.GetRequiredService(implementation);
+                foreach (var closedDecorator in closedDecorators)
+                {
+                    current = ActivatorUtilities.CreateInstance(sp, closedDecorator, current);
+                }
+                return current;
             });
         }
     }
