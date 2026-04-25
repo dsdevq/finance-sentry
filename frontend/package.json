@@ -31,6 +31,9 @@
     ]
   },
   "private": true,
+  "workspaces": [
+    "projects/dsdevq-common/*"
+  ],
   "dependencies": {
     "@angular/animations": "^21.2.5",
     "@angular/cdk": "^21.2.7",

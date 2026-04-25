@@ -1,0 +1,28 @@
+{
+  "name": "@dsdevq-common/config",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "exports": {
+    "./eslint": "./eslint/index.mjs",
+    "./prettier": "./prettier/index.mjs",
+    "./stylelint": "./stylelint/index.mjs",
+    "./tailwind": "./tailwind/preset.cjs",
+    "./tsconfig.base.json": "./tsconfig.base.json"
+  },
+  "peerDependencies": {
+    "@eslint/js": "*",
+    "@smarttools/eslint-plugin-rxjs": "*",
+    "angular-eslint": "*",
+    "eslint": "*",
+    "eslint-config-prettier": "*",
+    "eslint-plugin-import": "*",
+    "eslint-plugin-no-unsanitized": "*",
+    "eslint-plugin-prettier": "*",
+    "eslint-plugin-simple-import-sort": "*",
+    "eslint-plugin-unused-imports": "*",
+    "stylelint-config-standard-scss": "*",
+    "stylelint-prettier": "*",
+    "typescript-eslint": "*"
+  }
+}

@@ -1,27 +1,5 @@
-import rootConfig from '../../../eslint.config.mjs';
-import { defineConfig } from 'eslint/config';
+import {createEslintConfig} from '@dsdevq-common/config/eslint';
 
-export default defineConfig(
-  ...rootConfig,
-  {
-    files: ['projects/dsdevq-common/ui/src/**/*.ts'],
-    rules: {
-      '@angular-eslint/component-selector': [
-        'error',
-        {
-          type: 'element',
-          prefix: 'cmn',
-          style: 'kebab-case',
-        },
-      ],
-      '@angular-eslint/directive-selector': [
-        'error',
-        {
-          type: 'attribute',
-          prefix: 'cmn',
-          style: 'camelCase',
-        },
-      ],
-    },
-  }
-);
+export default createEslintConfig({
+  selectorPrefix: 'cmn',
+});
