@@ -9,6 +9,8 @@ import {AppRoute} from '../../shared/enums/app-route.enum';
 const NAV_ITEMS: NavItem[] = [
   {label: 'Dashboard', icon: 'LayoutDashboard', route: AppRoute.Dashboard},
   {label: 'Accounts', icon: 'Building2', route: AppRoute.AccountsList},
+  {label: 'Transactions', icon: 'ArrowLeftRight', route: AppRoute.Transactions},
+  {label: 'Holdings', icon: 'ChartPie', route: AppRoute.Holdings},
 ];
 
 @Component({

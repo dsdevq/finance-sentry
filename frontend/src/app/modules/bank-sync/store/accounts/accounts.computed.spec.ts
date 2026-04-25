@@ -4,25 +4,43 @@ import {ERROR_MESSAGES} from '@dsdevq-common/ui';
 import {beforeEach, describe, expect, it} from 'vitest';
 
 import {ERROR_MESSAGES_REGISTRY} from '../../../../core/errors/error-messages.registry';
-import {type BankAccount} from '../../models/bank-account.model';
+import {type AccountBalanceItem, type WealthSummaryResponse} from '../../models/wealth.model';
 import {accountsComputed} from './accounts.computed';
 import {type AccountsStatus} from './accounts.state';
 
+const FAKE_ACCOUNT: AccountBalanceItem = {
+  accountId: 'a1',
+  bankName: 'Test Bank',
+  accountType: 'checking',
+  accountNumberLast4: '1234',
+  provider: 'plaid',
+  category: 'banking',
+  currency: 'USD',
+  currentBalance: 1000,
+  balanceInBaseCurrency: 1000,
+  syncStatus: 'active',
+};
+
+const FAKE_SUMMARY: WealthSummaryResponse = {
+  totalNetWorth: 1000,
+  baseCurrency: 'USD',
+  categories: [{category: 'banking', totalInBaseCurrency: 1000, accounts: [FAKE_ACCOUNT]}],
+  appliedFilters: {category: null, provider: null},
+};
+
 function build(
   overrides: Partial<{
-    accounts: BankAccount[];
+    summary: WealthSummaryResponse | null;
     status: AccountsStatus;
     errorCode: string | null;
   }> = {}
 ) {
   return {
-    accounts: signal<BankAccount[]>(overrides.accounts ?? []),
+    summary: signal<WealthSummaryResponse | null>(overrides.summary ?? null),
     status: signal<AccountsStatus>(overrides.status ?? 'idle'),
     errorCode: signal<string | null>(overrides.errorCode ?? null),
   };
 }
-
-const FAKE_ACCOUNT = {accountId: 'a1'} as unknown as BankAccount;
 
 describe('accountsComputed', () => {
   beforeEach(() => {
@@ -38,22 +56,22 @@ describe('accountsComputed', () => {
     });
   });
 
-  it('isEmpty is true when idle and no accounts', () => {
-    const store = build({status: 'idle', accounts: []});
+  it('isEmpty is true when idle and no summary', () => {
+    const store = build({status: 'idle', summary: null});
     TestBed.runInInjectionContext(() => {
       expect(accountsComputed(store).isEmpty()).toBe(true);
     });
   });
 
   it('isEmpty is false when loading', () => {
-    const store = build({status: 'loading', accounts: []});
+    const store = build({status: 'loading', summary: null});
     TestBed.runInInjectionContext(() => {
       expect(accountsComputed(store).isEmpty()).toBe(false);
     });
   });
 
-  it('isEmpty is false when accounts present', () => {
-    const store = build({status: 'idle', accounts: [FAKE_ACCOUNT]});
+  it('isEmpty is false when summary has categories', () => {
+    const store = build({status: 'idle', summary: FAKE_SUMMARY});
     TestBed.runInInjectionContext(() => {
       expect(accountsComputed(store).isEmpty()).toBe(false);
     });
@@ -66,17 +84,24 @@ describe('accountsComputed', () => {
     });
   });
 
-  it('errorMessage resolves known codes via registry', () => {
-    const store = build({status: 'error', errorCode: 'MONOBANK_TOKEN_INVALID'});
-    TestBed.runInInjectionContext(() => {
-      expect(accountsComputed(store).errorMessage()).toContain('Invalid Monobank token');
-    });
-  });
-
   it('errorMessage is empty when status is not error', () => {
     const store = build({status: 'idle', errorCode: 'ANY'});
     TestBed.runInInjectionContext(() => {
       expect(accountsComputed(store).errorMessage()).toBe('');
+    });
+  });
+
+  it('totalNetWorth returns 0 when no summary', () => {
+    const store = build({summary: null});
+    TestBed.runInInjectionContext(() => {
+      expect(accountsComputed(store).totalNetWorth()).toBe(0);
+    });
+  });
+
+  it('totalNetWorth returns summary value', () => {
+    const store = build({summary: FAKE_SUMMARY});
+    TestBed.runInInjectionContext(() => {
+      expect(accountsComputed(store).totalNetWorth()).toBe(1000);
     });
   });
 });

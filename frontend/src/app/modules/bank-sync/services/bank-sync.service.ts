@@ -12,7 +12,11 @@ import {
 } from '../models/bank-account.model';
 import {DashboardData} from '../models/dashboard.model';
 import {SyncStatusResponse, TriggerSyncResponse} from '../models/sync.model';
-import {TransactionListResponse, TransactionQueryParams} from '../models/transaction.model';
+import {
+  GlobalTransactionsResponse,
+  TransactionListResponse,
+  TransactionQueryParams,
+} from '../models/transaction.model';
 
 export type {DashboardData, SyncStatusResponse, TriggerSyncResponse};
 
@@ -75,6 +79,30 @@ export class BankSyncService {
     }
     return this.http.get<TransactionListResponse>(`${this.baseUrl}/${accountId}/transactions`, {
       params,
+    });
+  }
+
+  public getAllTransactions(params?: {
+    offset?: number;
+    limit?: number;
+    from?: string;
+    to?: string;
+  }): Observable<GlobalTransactionsResponse> {
+    let httpParams = new HttpParams();
+    if (params?.offset !== undefined) {
+      httpParams = httpParams.set('offset', params.offset.toString());
+    }
+    if (params?.limit !== undefined) {
+      httpParams = httpParams.set('limit', params.limit.toString());
+    }
+    if (params?.from) {
+      httpParams = httpParams.set('from', params.from);
+    }
+    if (params?.to) {
+      httpParams = httpParams.set('to', params.to);
+    }
+    return this.http.get<GlobalTransactionsResponse>(`${this.baseUrl}/transactions`, {
+      params: httpParams,
     });
   }
 

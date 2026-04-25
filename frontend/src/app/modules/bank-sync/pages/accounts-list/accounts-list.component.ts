@@ -1,28 +1,29 @@
-import {DatePipe, DecimalPipe} from '@angular/common';
+import {DecimalPipe} from '@angular/common';
 import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
 import {Router} from '@angular/router';
-import {AlertComponent, ButtonComponent, CardComponent} from '@dsdevq-common/ui';
+import {AlertComponent, BadgeComponent, ButtonComponent, CardComponent} from '@dsdevq-common/ui';
 
-import {SyncStatusComponent} from '../../components/sync-status/sync-status.component';
-import {type SyncStatus} from '../../models/bank-account.model';
+import {type AccountBalanceItem} from '../../models/wealth.model';
 import {AccountsStore} from '../../store/accounts/accounts.store';
 
-const STATUS_LABELS: Record<SyncStatus, string> = {
-  pending: 'Pending',
-  syncing: 'Syncing',
-  active: 'Active',
-  failed: 'Failed',
+const BALANCE_DECIMAL_PLACES = 2;
+
+const BADGE_VARIANT_MAP: Record<string, 'success' | 'warning' | 'error' | 'neutral'> = {
+  active: 'success',
+  pending: 'warning',
+  syncing: 'warning',
+  failed: 'error',
   // eslint-disable-next-line @typescript-eslint/naming-convention
-  reauth_required: 'Reauth Required',
+  reauth_required: 'error',
 };
 
-const STATUS_CLASSES: Record<SyncStatus, string> = {
-  pending: 'badge-secondary',
-  syncing: 'badge-warning',
-  active: 'badge-success',
-  failed: 'badge-danger',
+const BADGE_LABEL_MAP: Record<string, string> = {
+  active: 'Synced',
+  pending: 'Pending',
+  syncing: 'Syncing',
+  failed: 'Failed',
   // eslint-disable-next-line @typescript-eslint/naming-convention
-  reauth_required: 'badge-orange',
+  reauth_required: 'Reauth',
 };
 
 @Component({
@@ -30,11 +31,10 @@ const STATUS_CLASSES: Record<SyncStatus, string> = {
   standalone: true,
   imports: [
     AlertComponent,
+    BadgeComponent,
     ButtonComponent,
     CardComponent,
-    DatePipe,
     DecimalPipe,
-    SyncStatusComponent,
   ],
   templateUrl: './accounts-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -45,19 +45,20 @@ export class AccountsListComponent {
 
   public readonly store = inject(AccountsStore);
 
-  public viewTransactions(accountId: string): void {
-    void this.router.navigate(['/accounts', accountId, 'transactions']);
-  }
-
   public connectAccount(): void {
     void this.router.navigate(['/accounts/connect']);
   }
 
-  public getStatusLabel(status: SyncStatus): string {
-    return STATUS_LABELS[status] ?? status;
+  public getBadgeVariant(syncStatus: string): 'success' | 'warning' | 'error' | 'neutral' {
+    return BADGE_VARIANT_MAP[syncStatus] ?? 'neutral';
   }
 
-  public getStatusClass(status: SyncStatus): string {
-    return STATUS_CLASSES[status] ?? 'badge-secondary';
+  public getBadgeLabel(syncStatus: string): string {
+    return BADGE_LABEL_MAP[syncStatus] ?? syncStatus;
+  }
+
+  public formatBalance(account: AccountBalanceItem): string {
+    const value = account.balanceInBaseCurrency ?? account.currentBalance;
+    return `${account.currency} ${value.toFixed(BALANCE_DECIMAL_PLACES)}`;
   }
 }

@@ -1,4 +1,5 @@
-import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, inject} from '@angular/core';
+import {toSignal} from '@angular/core/rxjs-interop';
 import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
 import {RouterLink} from '@angular/router';
 import {
@@ -12,9 +13,11 @@ import {
 import {environment} from '../../../../../environments/environment';
 import {AppRoute} from '../../../../shared/enums/app-route.enum';
 import {AuthStore} from '../../store/auth.store';
-import {passwordsMatch} from '../../validators/password-match.validator';
 
 const MIN_PASSWORD_LENGTH = 8;
+const STRENGTH_FAIR = 2;
+const STRENGTH_GOOD = 3;
+const STRENGTH_STRONG = 4;
 
 @Component({
   selector: 'fns-register',
@@ -33,15 +36,55 @@ const MIN_PASSWORD_LENGTH = 8;
 })
 export class RegisterComponent {
   private readonly authStore = inject(AuthStore);
+  private readonly formGroup = inject(FormBuilder).group({
+    firstName: [''],
+    lastName: [''],
+    email: ['', [Validators.required, Validators.email]],
+    password: ['', [Validators.required, Validators.minLength(MIN_PASSWORD_LENGTH)]],
+  });
+  private readonly passwordValue = toSignal(this.formGroup.controls.password.valueChanges, {
+    initialValue: '',
+  });
 
-  public readonly form = inject(FormBuilder).group(
-    {
-      email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(MIN_PASSWORD_LENGTH)]],
-      confirmPassword: ['', Validators.required],
-    },
-    {validators: passwordsMatch}
-  );
+  public readonly form = this.formGroup;
+  public readonly passwordStrength = computed(() => {
+    const pw = this.passwordValue() ?? '';
+    if (pw.length === 0) {
+      return 0;
+    }
+    let score = 0;
+    if (pw.length >= MIN_PASSWORD_LENGTH) {
+      score++;
+    }
+    if (/[A-Z]/.test(pw)) {
+      score++;
+    }
+    if (/[0-9]/.test(pw)) {
+      score++;
+    }
+    if (/[^A-Za-z0-9]/.test(pw)) {
+      score++;
+    }
+    return score;
+  });
+
+  public readonly strengthLabel = computed(() => {
+    const score = this.passwordStrength();
+    if (score === 0) {
+      return '';
+    }
+    if (score < STRENGTH_FAIR) {
+      return 'Weak';
+    }
+    if (score < STRENGTH_GOOD) {
+      return 'Fair';
+    }
+    if (score < STRENGTH_STRONG) {
+      return 'Good';
+    }
+    return 'Strong';
+  });
+
   public readonly googleClientId = environment.googleClientId;
   public readonly AppRoute = AppRoute;
   public readonly loading = this.authStore.isLoading;

@@ -16,6 +16,7 @@ public class BankSyncController(
     ICommandHandler<ConnectBankAccountCommand, ConnectBankAccountResult> connectHandler,
     ICommandHandler<ConnectMonobankAccountCommand, ConnectMonobankResult> connectMonobankHandler,
     IQueryHandler<GetAccountsQuery, GetAccountsResult> getAccountsHandler,
+    IQueryHandler<GetAllTransactionsQuery, AllTransactionsResult> allTransactionsHandler,
     PlaidAdapter plaid,
     IBankAccountRepository accounts,
     ITransactionRepository transactions,
@@ -28,6 +29,7 @@ public class BankSyncController(
     private readonly ITransactionRepository _transactions = transactions;
     private readonly IBackgroundJobClient _backgroundJobs = backgroundJobs;
     private readonly ISyncJobRepository _syncJobs = syncJobs;
+    private readonly IQueryHandler<GetAllTransactionsQuery, AllTransactionsResult> _allTransactionsHandler = allTransactionsHandler;
     private readonly ITransactionSyncCoordinator _coordinator = coordinator;
 
     // ── POST /api/accounts/connect ── T205 ───────────────────────────────────
@@ -80,6 +82,27 @@ public class BankSyncController(
             accounts = result.Accounts,
             totalCount = result.TotalCount,
             currencyTotals = result.CurrencyTotals
+        });
+    }
+
+    // ── GET /api/accounts/transactions ── T208-G ─────────────────────────────
+
+    [HttpGet("transactions")]
+    public async Task<IActionResult> GetAllTransactions(
+        [FromQuery] int offset = 0,
+        [FromQuery] int limit = 50,
+        [FromQuery] DateTime? from = null,
+        [FromQuery] DateTime? to = null,
+        CancellationToken ct = default)
+    {
+        var result = await _allTransactionsHandler.Handle(
+            new GetAllTransactionsQuery(User.RequireUserId(), offset, limit, from, to), ct);
+
+        return Ok(new
+        {
+            transactions = result.Transactions,
+            totalCount = result.TotalCount,
+            hasMore = result.HasMore
         });
     }
 

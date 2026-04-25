@@ -36,6 +36,20 @@ export const APP_ROUTES: Routes = [
             ({BANK_SYNC_ROUTES}) => BANK_SYNC_ROUTES
           ),
       },
+      {
+        path: AppRoute.Transactions.slice(1),
+        loadComponent: () =>
+          import('./modules/bank-sync/pages/transaction-ledger/transaction-ledger.component').then(
+            m => m.TransactionLedgerComponent
+          ),
+      },
+      {
+        path: AppRoute.Holdings.slice(1),
+        loadComponent: () =>
+          import('./modules/holdings/pages/holdings/holdings.component').then(
+            m => m.HoldingsComponent
+          ),
+      },
       {path: '', redirectTo: AppRoute.Accounts, pathMatch: 'full'},
     ],
   },

@@ -1,5 +1,25 @@
 export type TransactionType = 'debit' | 'credit';
 
+export interface GlobalTransactionDto {
+  transactionId: string;
+  accountId: string;
+  bankName: string;
+  amount: number;
+  date: string;
+  postedDate: string | null;
+  description: string;
+  transactionType: TransactionType | null;
+  merchantCategory: string | null;
+  isPending: boolean;
+  createdAt: string;
+}
+
+export interface GlobalTransactionsResponse {
+  transactions: GlobalTransactionDto[];
+  totalCount: number;
+  hasMore: boolean;
+}
+
 export interface Transaction {
   transactionId: string;
   accountId: string;

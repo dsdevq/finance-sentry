@@ -1,70 +1,116 @@
 <div class="flex items-center justify-center min-h-screen bg-surface-bg">
-  <div class="bg-surface-card p-cmn-4 rounded-cmn-md shadow-cmn-sm w-full max-w-[400px]">
-    <h1 class="font-headline text-cmn-2xl font-bold text-text-primary mb-cmn-1">Create Account</h1>
-    <p class="text-cmn-sm text-text-secondary mb-cmn-8">Finance Sentry</p>
+  <div class="bg-surface-card rounded-cmn-md border border-border-default w-full max-w-[480px]">
 
-    <div class="flex justify-center mb-cmn-6">
-      <cmn-google-sign-in-button
-        [clientId]="googleClientId"
-        (credential)="onGoogleCredential($event)"
-      />
+    <div class="flex items-center justify-between px-cmn-8 py-cmn-4 border-b border-border-default">
+      <span class="text-cmn-sm text-text-secondary">Already have an account?</span>
+      <a [routerLink]="AppRoute.Login" class="text-cmn-sm text-accent-default no-underline font-medium hover:underline">
+        Sign In
+      </a>
     </div>
 
-    <div class="flex items-center gap-cmn-3 mb-cmn-6">
-      <div class="flex-1 h-px bg-border-default"></div>
-      <span class="text-cmn-xs text-text-secondary">or</span>
-      <div class="flex-1 h-px bg-border-default"></div>
-    </div>
-
-    <form [formGroup]="form" (ngSubmit)="onSubmit()">
-      <cmn-form-field
-        [control]="form.get('email')"
-        label="Email"
-        formControlName="email"
-        class="block mb-cmn-5"
-      >
-        <cmn-input type="email" placeholder="you@example.com" />
-      </cmn-form-field>
-
-      <cmn-form-field
-        [control]="form.get('password')"
-        label="Password"
-        formControlName="password"
-        class="block mb-cmn-5"
-      >
-        <cmn-input type="password" placeholder="Min 8 characters" />
-      </cmn-form-field>
-
-      <cmn-form-field
-        [control]="form.get('confirmPassword')"
-        label="Confirm Password"
-        formControlName="confirmPassword"
-        class="block mb-cmn-6"
-      >
-        <cmn-input type="password" placeholder="Repeat password" />
-      </cmn-form-field>
+    <div class="p-cmn-8">
+      <div class="mb-cmn-8">
+        <h1 class="font-headline text-cmn-2xl font-bold text-text-primary mb-cmn-1">Get Started</h1>
+        <p class="text-cmn-sm text-text-secondary">Create an account to begin your journey to operational financial clarity.</p>
+      </div>
 
       @if (errorMessage()) {
         <cmn-alert variant="error" class="block mb-cmn-4">{{ errorMessage() }}</cmn-alert>
       }
 
-      <cmn-button
-        [disabled]="loading() || form.invalid"
-        [loading]="loading()"
-        type="submit"
-        variant="primary"
-        class="block w-full"
-        >{{ loading() ? 'Creating account…' : 'Create Account' }}</cmn-button
-      >
-    </form>
+      <div class="flex justify-center mb-cmn-6">
+        <cmn-google-sign-in-button
+          [clientId]="googleClientId"
+          (credential)="onGoogleCredential($event)"
+        />
+      </div>
 
-    <p class="mt-cmn-6 text-center text-cmn-sm text-text-secondary">
-      Already have an account?
-      <a
-        [routerLink]="AppRoute.Login"
-        class="text-accent-default no-underline font-medium hover:underline"
-        >Sign in</a
-      >
-    </p>
+      <div class="flex items-center gap-cmn-3 mb-cmn-6">
+        <div class="flex-1 h-px bg-border-default"></div>
+        <span class="text-cmn-xs text-text-secondary uppercase tracking-wide">or continue with email</span>
+        <div class="flex-1 h-px bg-border-default"></div>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="onSubmit()">
+        <div class="flex gap-cmn-4 mb-cmn-5">
+          <cmn-form-field
+            [control]="form.get('firstName')"
+            label="First Name"
+            formControlName="firstName"
+            class="flex-1"
+          >
+            <cmn-input type="text" placeholder="John" />
+          </cmn-form-field>
+
+          <cmn-form-field
+            [control]="form.get('lastName')"
+            label="Last Name"
+            formControlName="lastName"
+            class="flex-1"
+          >
+            <cmn-input type="text" placeholder="Doe" />
+          </cmn-form-field>
+        </div>
+
+        <cmn-form-field
+          [control]="form.get('email')"
+          label="Email Address"
+          formControlName="email"
+          class="block mb-cmn-5"
+        >
+          <cmn-input type="email" placeholder="name@organization.com" />
+        </cmn-form-field>
+
+        <div class="mb-cmn-6">
+          <cmn-form-field
+            [control]="form.get('password')"
+            label="Password"
+            formControlName="password"
+          >
+            <cmn-input type="password" placeholder="Min 8 characters" />
+          </cmn-form-field>
+
+          @if (passwordStrength() > 0) {
+            <div class="mt-cmn-2">
+              <div class="flex gap-1 mb-cmn-1">
+                @for (segment of [1, 2, 3, 4]; track segment) {
+                  <div
+                    class="h-1 flex-1 rounded-full transition-colors"
+                    [class]="
+                      segment <= passwordStrength()
+                        ? passwordStrength() === 1
+                          ? 'bg-red-500'
+                          : passwordStrength() === 2
+                            ? 'bg-amber-400'
+                            : passwordStrength() === 3
+                              ? 'bg-blue-500'
+                              : 'bg-green-500'
+                        : 'bg-border-default'
+                    "
+                  ></div>
+                }
+              </div>
+              <span class="text-cmn-xs text-text-secondary">{{ strengthLabel() }}</span>
+            </div>
+          }
+        </div>
+
+        <label class="flex items-center gap-cmn-3 mb-cmn-6 cursor-pointer">
+          <input type="checkbox" class="w-4 h-4 rounded border-border-default accent-accent-default" />
+          <span class="text-cmn-sm text-text-secondary">
+            I agree to the <span class="text-accent-default">Terms of Service</span> and <span class="text-accent-default">Privacy Policy</span>
+          </span>
+        </label>
+
+        <cmn-button
+          [disabled]="loading() || form.invalid"
+          [loading]="loading()"
+          type="submit"
+          variant="primary"
+          class="block w-full"
+          >{{ loading() ? 'Creating account…' : 'Create Account' }}</cmn-button
+        >
+      </form>
+    </div>
   </div>
 </div>

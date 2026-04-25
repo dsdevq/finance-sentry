@@ -1,15 +1,15 @@
-import {type BankAccount} from '../../models/bank-account.model';
+import {type WealthSummaryResponse} from '../../models/wealth.model';
 
 export type AccountsStatus = 'idle' | 'loading' | 'error';
 
 export interface AccountsState {
-  accounts: BankAccount[];
+  summary: WealthSummaryResponse | null;
   status: AccountsStatus;
   errorCode: string | null;
 }
 
 export const initialAccountsState: AccountsState = {
-  accounts: [],
+  summary: null,
   status: 'idle',
   errorCode: null,
 };

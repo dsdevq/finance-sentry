@@ -1,0 +1,115 @@
+<div class="p-cmn-8 max-w-[1200px] mx-auto">
+
+  <div class="flex items-center justify-between mb-cmn-8">
+    <div>
+      <h1 class="font-headline text-cmn-2xl font-bold text-text-primary">Transaction Ledger</h1>
+      <p class="text-cmn-sm text-text-secondary mt-cmn-1">All transactions across connected accounts</p>
+    </div>
+    <div class="flex items-center gap-cmn-3">
+      <cmn-button variant="secondary" size="sm">Export CSV</cmn-button>
+      <cmn-button variant="primary" size="sm">+ New Entry</cmn-button>
+    </div>
+  </div>
+
+  <div class="flex items-center gap-cmn-2 mb-cmn-6">
+    <button class="px-cmn-4 py-cmn-2 rounded-full border border-accent-default bg-accent-default text-white text-cmn-xs font-medium">
+      All Transactions
+    </button>
+    <button class="px-cmn-4 py-cmn-2 rounded-full border border-border-default text-text-secondary text-cmn-xs font-medium hover:bg-surface-raised transition-colors">
+      Last 30 Days
+    </button>
+    <button class="px-cmn-4 py-cmn-2 rounded-full border border-border-default text-text-secondary text-cmn-xs font-medium hover:bg-surface-raised transition-colors">
+      All Accounts
+    </button>
+  </div>
+
+  <div class="grid grid-cols-3 gap-cmn-4 mb-cmn-8">
+    <cmn-stat-card
+      label="Monthly Outflow"
+      [value]="'$' + ((store.monthlyOutflow() | number: '1.2-2') ?? '0.00')"
+      [loading]="store.isLoading()"
+      icon="TrendingDown"
+    />
+    <cmn-stat-card
+      label="Top Category"
+      [value]="store.topCategory()"
+      [loading]="store.isLoading()"
+      icon="Tag"
+    />
+    <cmn-stat-card
+      label="Total Transactions"
+      [value]="(store.totalCount() | number) ?? ''"
+      [loading]="store.isLoading()"
+      icon="List"
+    />
+  </div>
+
+  @if (store.errorMessage()) {
+    <cmn-alert variant="error" class="block mb-cmn-6">
+      {{ store.errorMessage() }}
+      <cmn-button (clicked)="store.load()" variant="secondary" size="sm">Retry</cmn-button>
+    </cmn-alert>
+  }
+
+  @if (store.isLoading()) {
+    <div class="flex items-center justify-center py-cmn-16 text-text-secondary">
+      Loading transactions…
+    </div>
+  }
+
+  @if (!store.isLoading() && store.isEmpty()) {
+    <cmn-card>
+      <div class="flex flex-col items-center py-cmn-12 gap-cmn-2">
+        <p class="font-medium text-text-primary">No transactions found</p>
+        <p class="text-cmn-sm text-text-secondary">Connect an account to see your transaction history.</p>
+      </div>
+    </cmn-card>
+  }
+
+  @if (!store.isLoading() && !store.isEmpty()) {
+    <cmn-card>
+      <table class="w-full text-cmn-sm" aria-label="Transaction ledger">
+        <thead>
+          <tr class="border-b border-border-default text-cmn-xs text-text-secondary uppercase tracking-wide">
+            <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Date</th>
+            <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Description</th>
+            <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Category</th>
+            <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Account</th>
+            <th class="text-right py-cmn-3 px-cmn-4 font-medium" scope="col">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (t of store.transactions(); track t.transactionId) {
+            <tr class="border-b border-border-default last:border-0 hover:bg-surface-bg transition-colors">
+              <td class="py-cmn-4 px-cmn-4 text-text-secondary whitespace-nowrap">
+                {{ (t.postedDate ?? t.date) | date: 'MMM d, y' }}
+                @if (t.isPending) {
+                  <span class="ml-1 text-cmn-xs text-amber-500">Pending</span>
+                }
+              </td>
+              <td class="py-cmn-4 px-cmn-4 text-text-primary max-w-[280px] truncate">{{ t.description }}</td>
+              <td class="py-cmn-4 px-cmn-4">
+                @if (t.merchantCategory) {
+                  <cmn-badge variant="neutral">{{ t.merchantCategory }}</cmn-badge>
+                } @else {
+                  <span class="text-text-secondary text-cmn-xs">—</span>
+                }
+              </td>
+              <td class="py-cmn-4 px-cmn-4 text-text-secondary">{{ t.bankName }}</td>
+              <td class="py-cmn-4 px-cmn-4 text-right font-mono tabular-nums font-medium" [class]="amountClass(t)">
+                {{ formatAmount(t) }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      @if (store.hasMore()) {
+        <div class="flex justify-center p-cmn-4 border-t border-border-default">
+          <cmn-button variant="secondary" size="sm" (clicked)="store.load()">Load More</cmn-button>
+        </div>
+      }
+    </cmn-card>
+  }
+
+</div>

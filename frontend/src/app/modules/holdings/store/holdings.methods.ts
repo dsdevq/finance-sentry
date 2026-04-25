@@ -1,9 +1,9 @@
 import {patchState, type WritableStateSource} from '@ngrx/signals';
 
-import {type WealthSummaryResponse} from '../../models/wealth.model';
-import {type AccountsState} from './accounts.state';
+import {type WealthSummaryResponse} from '../../bank-sync/models/wealth.model';
+import {type HoldingsState} from './holdings.state';
 
-export function accountsMethods(store: WritableStateSource<AccountsState>) {
+export function holdingsMethods(store: WritableStateSource<HoldingsState>) {
   return {
     setLoading(): void {
       patchState(store, {status: 'loading', errorCode: null});

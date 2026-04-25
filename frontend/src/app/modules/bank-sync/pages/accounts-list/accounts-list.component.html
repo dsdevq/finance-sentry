@@ -1,76 +1,172 @@
-<div class="accounts-list">
-  <div class="accounts-header">
-    <h2>Connected Accounts</h2>
-    <cmn-button (clicked)="connectAccount()" variant="primary">Connect Account</cmn-button>
+<div class="p-cmn-8 max-w-[1200px] mx-auto">
+
+  <div class="flex items-center justify-between mb-cmn-8">
+    <div>
+      <h1 class="font-headline text-cmn-2xl font-bold text-text-primary">Account Inventory</h1>
+      <p class="text-cmn-sm text-text-secondary mt-cmn-1">All connected financial accounts</p>
+    </div>
+    <div class="flex items-center gap-cmn-6">
+      @if (!store.isLoading() && store.totalNetWorth() !== 0) {
+        <div class="text-right">
+          <p class="text-cmn-xs text-text-secondary uppercase tracking-wide">Total Net Worth</p>
+          <p class="font-mono text-cmn-2xl font-bold text-text-primary tabular-nums">
+            {{ store.baseCurrency() }} {{ store.totalNetWorth() | number: '1.2-2' }}
+          </p>
+        </div>
+      }
+      <cmn-button variant="primary" (clicked)="connectAccount()">Connect Account</cmn-button>
+    </div>
   </div>
 
   @if (store.isLoading()) {
-    <div class="loading-state" role="status" aria-live="polite">
-      <p>Loading accounts...</p>
+    <div class="flex items-center justify-center py-cmn-16 text-text-secondary">
+      Loading accounts…
     </div>
   }
 
   @if (store.errorMessage()) {
-    <cmn-alert variant="error" class="state-alert">
+    <cmn-alert variant="error" class="block mb-cmn-6">
       {{ store.errorMessage() }}
       <cmn-button (clicked)="store.load()" variant="secondary" size="sm">Retry</cmn-button>
     </cmn-alert>
   }
 
-  @if (!store.isLoading() && !store.errorMessage()) {
-    @if (store.accounts().length === 0) {
-      <cmn-card class="empty-card">
-        <cmn-alert variant="info">No accounts connected yet.</cmn-alert>
-        <cmn-button (clicked)="connectAccount()" variant="primary" class="empty-action">
-          Connect Your First Account
-        </cmn-button>
-      </cmn-card>
-    } @else {
-      <table class="accounts-table" aria-label="Connected bank accounts">
-        <thead>
-          <tr>
-            <th scope="col">Bank</th>
-            <th scope="col">Account</th>
-            <th scope="col">Balance</th>
-            <th scope="col">Currency</th>
-            <th scope="col">Last Sync</th>
-            <th scope="col">Status</th>
-            <th scope="col">Sync</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (account of store.accounts(); track account.accountId) {
-            <tr
-              (click)="viewTransactions(account.accountId)"
-              (keydown.enter)="viewTransactions(account.accountId)"
-              class="account-row"
-              role="button"
-              tabindex="0"
-            >
-              <td>
-                {{ account.bankName }}
-                <span class="provider-badge provider-badge--{{ account.provider }}">
-                  {{ account.provider }}
-                </span>
-              </td>
-              <td>•••• {{ account.accountNumberLast4 }}</td>
-              <td>{{ account.currentBalance | number: '1.2-2' }}</td>
-              <td>{{ account.currency }}</td>
-              <td>
-                {{ account.lastSyncTimestamp ? (account.lastSyncTimestamp | date: 'short') : '—' }}
-              </td>
-              <td>
-                <span [class]="'badge ' + getStatusClass(account.syncStatus)">
-                  {{ getStatusLabel(account.syncStatus) }}
-                </span>
-              </td>
-              <td (click)="$event.stopPropagation()">
-                <fns-sync-status [accountId]="account.accountId" />
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    }
+  @if (!store.isLoading() && store.isEmpty()) {
+    <cmn-card>
+      <div class="flex flex-col items-center py-cmn-12 gap-cmn-4">
+        <p class="text-text-secondary text-cmn-sm">No accounts connected yet.</p>
+        <cmn-button variant="primary" (clicked)="connectAccount()">Connect Your First Account</cmn-button>
+      </div>
+    </cmn-card>
   }
+
+  @if (!store.isLoading() && !store.isEmpty()) {
+
+    @if (store.bankingCategory(); as banking) {
+      <div class="mb-cmn-8">
+        <div class="flex items-center justify-between mb-cmn-3">
+          <h2 class="text-cmn-xs font-semibold text-text-secondary uppercase tracking-wider">
+            Banking Institutions
+          </h2>
+          <span class="text-cmn-xs text-text-secondary">{{ banking.accounts.length }} account{{ banking.accounts.length !== 1 ? 's' : '' }}</span>
+        </div>
+        <cmn-card>
+          <table class="w-full text-cmn-sm" aria-label="Banking accounts">
+            <thead>
+              <tr class="border-b border-border-default text-cmn-xs text-text-secondary uppercase tracking-wide">
+                <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Institution</th>
+                <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Account Type</th>
+                <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Connectivity</th>
+                <th class="text-right py-cmn-3 px-cmn-4 font-medium" scope="col">Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (account of banking.accounts; track account.accountId) {
+                <tr class="border-b border-border-default last:border-0 hover:bg-surface-bg transition-colors">
+                  <td class="py-cmn-4 px-cmn-4">
+                    <p class="font-medium text-text-primary">{{ account.bankName }}</p>
+                    <p class="text-cmn-xs text-text-secondary">•••• {{ account.accountNumberLast4 }}</p>
+                  </td>
+                  <td class="py-cmn-4 px-cmn-4 text-text-secondary">{{ account.accountType }}</td>
+                  <td class="py-cmn-4 px-cmn-4">
+                    <cmn-badge [variant]="getBadgeVariant(account.syncStatus)">{{ getBadgeLabel(account.syncStatus) }}</cmn-badge>
+                  </td>
+                  <td class="py-cmn-4 px-cmn-4 text-right font-mono tabular-nums font-medium text-text-primary">
+                    {{ formatBalance(account) }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </cmn-card>
+      </div>
+    }
+
+    @if (store.brokerageCategory(); as brokerage) {
+      <div class="mb-cmn-8">
+        <div class="flex items-center justify-between mb-cmn-3">
+          <h2 class="text-cmn-xs font-semibold text-text-secondary uppercase tracking-wider">
+            Brokerage &amp; Investment
+          </h2>
+          <span class="text-cmn-xs text-text-secondary">{{ brokerage.accounts.length }} account{{ brokerage.accounts.length !== 1 ? 's' : '' }}</span>
+        </div>
+        <cmn-card>
+          <table class="w-full text-cmn-sm" aria-label="Brokerage accounts">
+            <thead>
+              <tr class="border-b border-border-default text-cmn-xs text-text-secondary uppercase tracking-wide">
+                <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Institution</th>
+                <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Account Type</th>
+                <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Connectivity</th>
+                <th class="text-right py-cmn-3 px-cmn-4 font-medium" scope="col">Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (account of brokerage.accounts; track account.accountId) {
+                <tr class="border-b border-border-default last:border-0 hover:bg-surface-bg transition-colors">
+                  <td class="py-cmn-4 px-cmn-4">
+                    <p class="font-medium text-text-primary">{{ account.bankName }}</p>
+                    <p class="text-cmn-xs text-text-secondary">•••• {{ account.accountNumberLast4 }}</p>
+                  </td>
+                  <td class="py-cmn-4 px-cmn-4 text-text-secondary">{{ account.accountType }}</td>
+                  <td class="py-cmn-4 px-cmn-4">
+                    <cmn-badge [variant]="getBadgeVariant(account.syncStatus)">{{ getBadgeLabel(account.syncStatus) }}</cmn-badge>
+                  </td>
+                  <td class="py-cmn-4 px-cmn-4 text-right font-mono tabular-nums font-medium text-text-primary">
+                    {{ formatBalance(account) }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </cmn-card>
+      </div>
+    }
+
+    @if (store.cryptoCategory(); as crypto) {
+      <div class="mb-cmn-8">
+        <div class="flex items-center justify-between mb-cmn-3">
+          <h2 class="text-cmn-xs font-semibold text-text-secondary uppercase tracking-wider">
+            Digital Assets
+          </h2>
+          <span class="text-cmn-xs text-text-secondary">{{ crypto.accounts.length }} account{{ crypto.accounts.length !== 1 ? 's' : '' }}</span>
+        </div>
+        <cmn-card>
+          <table class="w-full text-cmn-sm" aria-label="Crypto holdings">
+            <thead>
+              <tr class="border-b border-border-default text-cmn-xs text-text-secondary uppercase tracking-wide">
+                <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Exchange</th>
+                <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Account Type</th>
+                <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Connectivity</th>
+                <th class="text-right py-cmn-3 px-cmn-4 font-medium" scope="col">Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (account of crypto.accounts; track account.accountId) {
+                <tr class="border-b border-border-default last:border-0 hover:bg-surface-bg transition-colors">
+                  <td class="py-cmn-4 px-cmn-4">
+                    <p class="font-medium text-text-primary">{{ account.bankName }}</p>
+                    <p class="text-cmn-xs text-text-secondary">{{ account.provider }}</p>
+                  </td>
+                  <td class="py-cmn-4 px-cmn-4 text-text-secondary">{{ account.accountType }}</td>
+                  <td class="py-cmn-4 px-cmn-4">
+                    <cmn-badge [variant]="getBadgeVariant(account.syncStatus)">{{ getBadgeLabel(account.syncStatus) }}</cmn-badge>
+                  </td>
+                  <td class="py-cmn-4 px-cmn-4 text-right font-mono tabular-nums font-medium text-text-primary">
+                    {{ formatBalance(account) }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </cmn-card>
+      </div>
+    }
+
+    <div class="flex items-center justify-between text-cmn-xs text-text-secondary border-t border-border-default pt-cmn-4">
+      <span>{{ store.totalConnections() }} total connection{{ store.totalConnections() !== 1 ? 's' : '' }}</span>
+      <span>Net worth: {{ store.baseCurrency() }} {{ store.totalNetWorth() | number: '1.2-2' }}</span>
+    </div>
+
+  }
+
 </div>
