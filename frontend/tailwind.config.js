@@ -51,8 +51,8 @@ module.exports = {
       // ─── Font families ──────────────────────────────────────────
       fontFamily: {
         base:     ['Inter', 'system-ui', 'sans-serif'],
-        headline: ['Manrope', 'system-ui', 'sans-serif'],
-        label:    ['"Space Grotesk"', 'system-ui', 'sans-serif'],
+        headline: ['Inter', 'system-ui', 'sans-serif'],
+        label:    ['Inter', 'system-ui', 'sans-serif'],
         mono:     ['ui-monospace', '"SFMono-Regular"', '"Fira Code"', 'monospace'],
       },
 
@@ -71,8 +71,8 @@ module.exports = {
       // ─── Border radius ──────────────────────────────────────────
       borderRadius: {
         'cmn-sm':   '0.25rem',
-        'cmn-md':   '0.375rem',
-        'cmn-lg':   '0.5rem',
+        'cmn-md':   '0.5rem',
+        'cmn-lg':   '0.75rem',
         'cmn-full': '9999px',
       },
 

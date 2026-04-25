@@ -67,6 +67,10 @@ export class ThemeService {
     this.themeSubject$.next(theme);
   }
 
+  public toggle(): void {
+    this.setTheme(this.themeSubject$.value === 'dark' ? 'light' : 'dark');
+  }
+
   public getTheme(): Theme {
     return this.themeSubject$.value;
   }

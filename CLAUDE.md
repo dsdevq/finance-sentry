@@ -149,6 +149,19 @@ After writing or modifying **any** Angular `.ts` file, run `npx eslint <file>` f
 
 ---
 
+## Backend Build Gate — mandatory
+
+After writing or modifying **any** `.cs` file, run `dotnet build backend/` and fix **all warnings** before moving on. Non-negotiable:
+- Remove unused `using` directives (`IDE0005`)
+- Apply primary constructor where suggested (`IDE0290`)
+- Resolve nullable reference warnings (`CS8618`, `CS8600`–`CS8604`) — do not suppress with `!` without a comment
+- Apply safe IDE suggestions (`IDE0161`, `IDE0028`, `IDE0059`) that do not change runtime behaviour
+- Zero warnings before the task is marked complete — same standard as the ESLint gate
+
+Use `/csharp-quality` for a batch cleanup sweep across multiple files.
+
+---
+
 ## UI Component Library Rule
 
 **Any new UI component MUST be created in `@dsdevq-common/ui` first.** Components are never built directly in the host Angular app (`frontend/`). This applies to all future features, starting with 005-ui-component-library. The `cmn-` selector prefix is reserved for library components.
@@ -166,6 +179,10 @@ In Angular modules, each concept lives in its own file — no mixing:
 - **Service class** → `*.service.ts` (HTTP-only; no state, no inline interfaces — import from model files)
 - **State** → `<feature>/store/*.state.ts` · `*.computed.ts` · `*.methods.ts` · `*.effects.ts` · `*.store.ts` (see State Management rule)
 - **Validators** → `<feature>/validators/*.validator.ts`
+
+**Shared rule**: any type, constant, utility, or enum used by more than one feature module MUST live in `frontend/src/app/shared/`. Never define cross-module concerns inside a feature folder. If a piece of code is imported by two or more modules, move it to `shared/` in the same PR.
+
+This is a **hard gate** — inline interfaces in component files and cross-module code outside `shared/` block PR merge (see constitution Principle VI.5). Use `/frontend-code-quality` for an audit sweep.
 
 ---
 

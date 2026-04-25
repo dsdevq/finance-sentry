@@ -1,22 +1,22 @@
-<!-- SYNC IMPACT REPORT - Constitution 1.3.0
-Version: 1.2.1 → 1.3.0
-Bump Type: MINOR (New Principle VI + supporting tech stack updates)
-Principles Modified: None
-Principles Added:
-  - VI. Frontend State & Composition Discipline (new) — mandates NgRx SignalStore
-    with state/computed/methods/effects file split, custom providers extracted as
-    provide*() EnvironmentProviders factories under core/providers/, and centralized
-    error-code→message resolution via @dsdevq-common/ui's ErrorMessageService +
-    app-owned registry. Components must be declarative: no ngOnInit fetches, no
-    setInterval, no local state holding business concerns, no inline error mapping.
+<!-- SYNC IMPACT REPORT - Constitution 1.3.1
+Version: 1.3.0 → 1.3.1
+Bump Type: PATCH (Quality gate clarifications; no new principles)
+Principles Modified:
+  - II. Code Quality Enforcement — added explicit C# build-warning gate:
+    zero dotnet build warnings required after every .cs file change; specific
+    analyzer codes enumerated (IDE0005, IDE0290, CS8618, IDE0161, etc.).
+  - VI. Frontend State & Composition Discipline — added point 5: file organization
+    rule (one concept per file) and shared/ boundary rule (cross-module code must
+    live in frontend/src/app/shared/) elevated to governance level.
 Sections Modified:
-  - Tech Stack Minimums: Added NgRx SignalStore (@ngrx/signals) to Frontend line.
+  - Code Review & Compliance: added three new automatic-block triggers for inline
+    interfaces, cross-module code outside shared/, and unresolved build warnings.
 Follow-up TODOs:
   - Sweep remaining bank-sync components (connect-account, transaction-list,
     sync-status) to ConnectStore / TransactionsStore per Principle VI.
   - Repair or remove stale Playwright integration tests under
     frontend/tests/integration/bank-sync/.
-Prior report (1.2.1 → 1.1.1 → 1.1.0) retained in git history.
+Prior report (1.3.0, 1.2.1 → 1.1.1 → 1.1.0) retained in git history.
 -->
 
 # Finance Sentry Constitution
@@ -61,6 +61,22 @@ Every Angular TypeScript file written or modified by the agent MUST pass `npx es
 - `prettier/prettier` — run `eslint --fix` to auto-apply formatting; do not hand-format multi-line ternaries
 
 **Workflow**: after writing each TypeScript file, run `npx eslint <file>` and fix all errors before proceeding.
+
+**Backend C# Quality — mandatory build gate:**
+Every C# file written or modified MUST produce zero `dotnet build` warnings before the
+task is marked complete. Key analyzer codes and their required fixes:
+- `IDE0005` — unused `using` directive → remove
+- `IDE0290` — primary constructor available → apply
+- `IDE0161` — block-scoped namespace → convert to file-scoped `namespace X;`
+- `CS8618`/`CS8600`–`CS8604` — nullable reference warnings → resolve; never suppress
+  with `!` without an explanatory comment
+- `IDE0028`, `IDE0059`, `CS0168`, `CS0219` — unnecessary code → remove
+
+Warnings-as-errors is the CI target state. Any PR that introduces new `dotnet build`
+warnings is blocked. Use the `csharp-quality` skill for batch cleanup.
+
+**Workflow**: after writing each C# file, run `dotnet build backend/` and fix all
+warnings before proceeding.
 
 ### III. Multi-Source Financial Integration
 
@@ -139,6 +155,20 @@ Any UI primitive used by the app MUST come from `@dsdevq-common/ui`. Raw `<input
 `<button>`, `<div class="error">` are forbidden when a `cmn-*` equivalent exists.
 New primitives are added to the library first, never directly to `frontend/`.
 
+**5. File organization: one concept per file; cross-module code in `shared/`.**
+In Angular modules, each concept type has exactly one canonical home — no exceptions:
+- Interfaces / types → `models/*.model.ts` or `models/*.types.ts`
+- Constants → `*.constants.ts` adjacent to the consumer
+- Component class → `*.component.ts` — no inline interface or constant definitions
+- Service class → `*.service.ts` — no inline interfaces; import from model files
+- Validators → `<feature>/validators/*.validator.ts`
+
+Anything consumed by more than one feature module MUST live in
+`frontend/src/app/shared/`. Placing cross-module types, utilities, or enums inside a
+feature folder is a violation. Duplicating helpers across feature modules is a violation.
+Mixing an interface definition into a component or service file is a violation.
+All three block PR merge. Use the `frontend-code-quality` skill for audit sweeps.
+
 ## Tech Stack Minimums
 
 **Backend**: .NET Core 9+, ASP.NET with OpenAPI/Swagger documentation
@@ -193,6 +223,10 @@ Every PR MUST verify compliance with Core Principles I–VI. Violations block me
 - Frontend feature state held in a component, `setInterval` polling, inline error-code
   ladders, or custom providers not extracted under `core/providers/` (Principle VI) →
   automatic block
+- Interface or constant defined inline inside a component or service file (Principle VI.5) →
+  automatic block
+- Cross-module type, utility, or enum not in `shared/` (Principle VI.5) → automatic block
+- Backend `dotnet build` warnings not resolved (Principle II) → automatic block
 - Version NOT bumped on frontend/API changes → automatic block (see Versioning & Tagging
   Policy)
 - Tag NOT created for version bump → automatic block (see Versioning & Tagging Policy)
@@ -323,4 +357,4 @@ and tag creation. Missing version bump or tag blocks PR merge.
 - Each version change increments **Last Amended** date (ISO format)
 - Applies to both constitution versioning and feature versioning (frontend/backend)
 
-**Version**: 1.3.0 | **Ratified**: 2026-03-21 | **Last Amended**: 2026-04-24
+**Version**: 1.3.1 | **Ratified**: 2026-03-21 | **Last Amended**: 2026-04-24

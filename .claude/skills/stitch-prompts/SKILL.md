@@ -1,6 +1,6 @@
 ---
 name: stitch-prompts
-description: Generate Stitch (Google Labs UI design tool) prompts for Finance Sentry screens. Use when the user wants to design, redesign, or mock up a page with Stitch — or asks for "stitch prompts", "UI prompts", or help with the Stitch workspace DESIGN.md. Produces plain-language, one-change-at-a-time prompts aligned with Stitch's official prompt guide.
+description: Generate Stitch (Google Labs UI design tool) prompts for Finance Sentry screens and execute them directly via MCP. Use when the user wants to design, redesign, or mock up a page with Stitch — or asks for "stitch prompts", "UI prompts", or help with the Stitch workspace. Drives Stitch end-to-end: crafts prompt → sends to Stitch via MCP → pulls result back → ready for Angular implementation.
 user-invocable: true
 allowed-tools:
   - Read
@@ -8,40 +8,53 @@ allowed-tools:
   - Bash(ls *)
   - Bash(find *)
   - Bash(grep *)
+  - mcp__stitch__list_projects
+  - mcp__stitch__get_project
+  - mcp__stitch__list_screens
+  - mcp__stitch__get_screen
+  - mcp__stitch__generate_screen_from_text
+  - mcp__stitch__edit_screens
+  - mcp__stitch__generate_variants
+  - mcp__stitch__list_design_systems
+  - mcp__stitch__apply_design_system
 ---
 
-# Stitch Prompt Generator — Finance Sentry
+# Stitch MCP Driver — Finance Sentry
 
-Generate prompts the user can paste into [Google Stitch](https://stitch.withgoogle.com) to design or refine Finance Sentry screens. Follow Stitch's [official prompt guide](https://discuss.ai.google.dev/t/stitch-prompt-guide/83844) — prompts must be plain conversational language, short, and scoped to one change at a time.
+Design Finance Sentry screens end-to-end via the Stitch MCP: craft prompt → send to Stitch → pull result → hand off to Angular implementation. Follow Stitch's [official prompt guide](https://discuss.ai.google.dev/t/stitch-prompt-guide/83844) — prompts must be plain conversational language, short, and scoped to one change at a time.
 
-## Rules (non-negotiable)
+## Active Stitch project
+
+**Finance Sentry Wealth Dashboard**
+- Project ID: `2377738634696453555`
+- Design system: `assets/c71e9082d1d14e9dbcc6796dbb1f0ba3` (Finance Sentry Design System, v1)
+- Device type: `DESKTOP`
+
+Always target this project. Do not use the older "Finance Sentry" project (`11537407583059591048`).
+
+## Prompt rules (non-negotiable)
 
 1. **Plain English, not markdown specs.** No bullet lists inside the prompt body, no XML tags, no JSON. Short paragraphs Stitch can parse.
-2. **One screen per prompt. One change per refinement prompt.** Never bundle "add a filter bar AND change the table AND add a drawer" into one prompt — Stitch will re-layout and drop elements.
+2. **One screen per `generate_screen_from_text` call. One change per `edit_screens` call.** Never bundle "add a filter bar AND change the table AND add a drawer" — Stitch will re-layout and drop elements.
 3. **Keep each prompt under ~1,500 characters.** Stitch starts omitting components past ~5,000; stay well below.
-4. **Zoom-Out → Zoom-In.** For a new workspace, the first prompt is always a broad one-sentence app concept. Screen prompts come next. Refinement prompts come last.
-5. **Put shared design context in a DESIGN.md, not in every prompt.** Stitch attaches a workspace-level `DESIGN.md` to every generation. Generate it once per feature; never paste its content into individual screen prompts.
-6. **Reference-by-location when refining.** Start refinement prompts with where the change lands: *"On the dashboard, in the hero row, …"*.
-7. **Use vibe adjectives.** Stitch responds to mood words. Finance Sentry's vibe is: *minimal, institutional, data-dense, numbers-as-hero, low-chrome.* Never "playful", "vibrant", or "consumer".
+4. **Zoom-Out → Zoom-In.** For a new screen, write a broad layout paragraph first. Refinements come after.
+5. **Reference-by-location when refining.** Start `edit_screens` prompts with where the change lands: *"On the dashboard, in the hero row, …"*.
+6. **Use vibe adjectives.** Finance Sentry's vibe: *minimal, institutional, data-dense, numbers-as-hero, low-chrome.* Never "playful", "vibrant", or "consumer".
 
-## Finance Sentry design context (source material for DESIGN.md)
-
-Feed these facts into any DESIGN.md you generate. Verify against the current repo before locking numbers — the UI library (`@dsdevq-common/ui`, feature 005) is the source of truth for component names and tokens.
+## Finance Sentry design context (source of truth for prompts)
 
 - **App**: Personal finance aggregator. Banks (Plaid, Monobank), crypto (Binance), brokerage (IBKR). Single user, power tool.
 - **Vibe**: Institutional ops dashboard, not a consumer app. Data-dense. Numbers are the hero.
-- **Color**: Single user-configurable accent (default indigo) on primary actions and key numbers. Everything else neutral grays. Status: green = gains/synced, red = losses/errors, amber = stale/warning.
-- **Themes**: Light and dark both mandatory. Never hardcode white or black.
-- **Type**: Inter sans. Tabular monospaced numerals for all money, right-aligned.
-- **Surfaces**: 1px borders over drop shadows. Cards = 12px radius + border, flat. Inputs/buttons = 8px radius.
+- **Color**: Indigo primary (`#4F46E5`) on primary actions and key numbers. Everything else neutral grays. Status: green `#10B981` = gains/synced, red `#EF4444` = losses/errors, amber `#F59E0B` = stale/warning.
+- **Type**: Inter throughout. Tabular monospaced numerals for all money, right-aligned.
+- **Surfaces**: 1px neutral border over drop shadows. Cards = 12px radius + border, flat. Inputs/buttons = 8px radius. No shadows.
 - **Icons**: Lucide, 20px, stroke 1.75.
 - **Shell** (authenticated pages): 240px left sidebar (Dashboard, Accounts, Transactions, Holdings, Settings; collapsible to 64px). Top bar: title left, ⌘K search center, theme toggle + avatar right. Main maxes at 1440px with 32px padding.
-- **Responsive breakpoints**: 1440 desktop, 768 tablet, 375 mobile.
-- **Components in library** (prefer these names when instructing Stitch for traceability): `cmn-button`, `cmn-input`, `cmn-form-field`, `cmn-card`, `cmn-alert`, `cmn-toast`, `cmn-icon`, `google-sign-in-button`.
+- **Responsive**: 1440 desktop, 768 tablet, 375 mobile.
 
 ## Current screens (pages that exist or are planned)
 
-Verify via `find frontend/src/app/modules -type d -name pages` before claiming coverage. As of last check:
+Verify via `find frontend/src/app/modules -type d -name pages` before claiming coverage:
 
 - Auth: login, register
 - Bank-sync: accounts-list, connect-account, transaction-list, dashboard
@@ -49,55 +62,47 @@ Verify via `find frontend/src/app/modules -type d -name pages` before claiming c
 
 ## Workflow when invoked
 
-1. **Ask what they need** if the args don't say:
-   - A fresh DESIGN.md for the workspace? (once per project)
-   - Prompts for a specific screen? (name it)
-   - Prompts for every screen? (full pack)
-   - Refinement prompts for an already-generated screen? (need them to describe what's wrong)
-2. **Check the codebase** for up-to-date context before generating — component names, existing page list, any new providers added since this SKILL was written. Do not assume.
-3. **Output the prompts as fenced code blocks**, each labeled with its purpose (*"Broad concept — send first"*, *"Dashboard — send after concept"*, *"Dashboard refinement 1"*, etc.).
-4. **Order them in send-order** so the user can run them top-to-bottom.
-5. **Remind the user** at the end: attach DESIGN.md to the workspace first; send broad concept first; then one screen; then refine one element per prompt.
+1. **Clarify intent** if args are ambiguous:
+   - Generate a new screen from scratch?
+   - Refine/edit an existing Stitch screen?
+   - Generate variants of an existing screen?
 
-## Output templates
+2. **Check codebase** for up-to-date context (`find`, `grep`) — component names, existing page list. Do not assume.
 
-### Template — DESIGN.md (generate once per workspace)
+3. **Craft the prompt** following the rules above.
 
-Plain prose, 200–400 words. Covers: app concept, vibe, color system (accent + neutrals + status), themes, typography, surfaces, icons, shell/layout, breakpoints. No bullet lists. See the design context block above for source facts.
+4. **Execute via MCP**:
+   - New screen → `mcp__stitch__generate_screen_from_text` (projectId: `2377738634696453555`, deviceType: `DESKTOP`)
+   - Edit existing → `mcp__stitch__edit_screens` (pass `selectedScreenIds`)
+   - Variants → `mcp__stitch__generate_variants`
 
-### Template — Broad concept prompt (send first)
+5. **Pull the result** with `mcp__stitch__get_screen` and report back: screen name, dimensions, and a summary of what Stitch produced. If `output_components` in the response contains suggestions, present them to the user.
 
-One or two sentences. Example:
+6. **Hand off**: Note the screen ID for Angular implementation. The implementation should reference the Stitch design as the visual spec.
 
+## Prompt templates
+
+### Template — New screen prompt
+
+Short paragraph, 3–6 sentences. State the page name, top-level layout, and primary elements by position. Leave micro-details for follow-up `edit_screens` calls.
+
+Good:
 ```
-A personal finance dashboard called Finance Sentry that aggregates a user's bank 
-accounts, crypto holdings, and brokerage positions into one wealth view. Minimal, 
-institutional, data-dense. Desktop-first.
-```
-
-### Template — Screen prompt (send one at a time)
-
-Short paragraph, 3–6 sentences. State the page name, top-level layout, and the primary elements in their position. Do **not** describe every micro-detail — leave room for refinement.
-
-Good example:
-
-```
-Design the dashboard as the main landing screen. Four KPI cards across the top: 
-Total Wealth with a sparkline and month-over-month delta, then Banks, Crypto, 
-Brokerage. Below that, two charts side by side — a 12-month net worth line chart 
-taking two thirds of the width, and an allocation donut chart taking one third. 
-Below the charts, a Recent Activity card with the last 10 transactions in a table.
+Design the dashboard as the main landing screen inside the authenticated shell. 
+Four KPI cards across the top: Total Wealth with a sparkline and month-over-month 
+delta, then Banks, Crypto, Brokerage. Below that, a 12-month net worth line chart 
+taking two-thirds of the width and an allocation donut taking one-third. Below the 
+charts, a Recent Activity card with the last 10 transactions in a compact table.
 ```
 
-Bad example (too dense, bundles too much):
-
+Bad (too dense — bundles too much):
 ```
 Design the dashboard with 4 KPI cards, 2 charts, a recent activity table with 
 48px rows, a sync status panel, an empty state, a slide-out drawer, hover states, 
 loading skeletons, and a mobile breakdown.
 ```
 
-### Template — Refinement prompt (send after the screen exists)
+### Template — Refinement prompt (edit_screens)
 
 One sentence. Start with location. One change only.
 
@@ -115,15 +120,14 @@ Crypto, Brokerage options.
 
 - ❌ Markdown headers inside the prompt body.
 - ❌ Bullet lists inside the prompt body.
-- ❌ Pixel-perfect measurements for every element (Stitch ignores most; leave refinement for follow-ups).
+- ❌ Pixel-perfect measurements for every element.
 - ❌ "Also add…", "And then…", multi-clause changes.
-- ❌ Component library jargon the Stitch model won't recognize. Prefer visual descriptions: "a card with a border and 12px rounded corners" beats "a cmn-card with default slots". Mention `cmn-*` only if the user asks for traceability.
-- ❌ Theme toggling instructions mid-screen. Let DESIGN.md carry theming; don't re-explain per screen.
+- ❌ Component library jargon (`cmn-*`) — prefer visual descriptions.
+- ❌ Re-explaining theming per screen — the design system handles it.
 
-## Final check before returning output
+## Final check before calling MCP
 
-- Every screen prompt is under ~1,500 characters.
-- Each refinement prompt contains exactly one change.
-- Prompts are ordered send-first to send-last.
+- Prompt is under ~1,500 characters.
+- Each edit/refinement contains exactly one change.
 - Vibe language is institutional, not playful.
-- DESIGN.md is attached instructions are called out if this is a fresh workspace.
+- Targeting project `2377738634696453555`, deviceType `DESKTOP`.
