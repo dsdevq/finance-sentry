@@ -1,7 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
 using FinanceSentry.Modules.CryptoSync.Domain.Exceptions;
-using FinanceSentry.Modules.CryptoSync.Infrastructure.Binance;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 

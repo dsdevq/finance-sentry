@@ -4,7 +4,6 @@ using Hangfire;
 using Hangfire.InMemory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using FinanceSentry.Modules.BankSync.Application.Services;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
 
 /// <summary>
@@ -62,7 +61,7 @@ public class SyncScheduler(
             _recurringJobs.AddOrUpdate<ScheduledSyncJob>(
                 jobId,
                 job => job.ExecuteSyncAsync(account.Id),
-                Cron.HourInterval(2)); // every 2 hours
+                "0 */2 * * *"); // every 2 hours
         }
 
         // Register monthly data retention job (T527 — FR-008)

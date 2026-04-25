@@ -13,7 +13,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Moq;
@@ -32,7 +31,7 @@ public class BrokerageControllerConnectContractTests(BrokerageApiFactory factory
     [Fact]
     public async Task Connect_NoAuth_Returns401()
     {
-        var anonClient = factory.CreateClient();
+        var anonClient = _factory.CreateClient();
         var response = await anonClient.PostAsJsonAsync("/api/v1/brokerage/ibkr/connect",
             new { Username = "user", Password = "pass" });
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);

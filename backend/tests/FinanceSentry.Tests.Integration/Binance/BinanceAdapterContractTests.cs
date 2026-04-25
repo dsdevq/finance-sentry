@@ -1,11 +1,9 @@
 using System.Net;
-using System.Net.Http.Headers;
 using System.Text;
 using FinanceSentry.Modules.CryptoSync.Domain.Exceptions;
 using FinanceSentry.Modules.CryptoSync.Infrastructure.Binance;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
-using Moq;
 using Xunit;
 
 namespace FinanceSentry.Tests.Integration.Binance;
@@ -115,7 +113,7 @@ public class BinanceAdapterContractTests
     }
 
     [Fact]
-    public void GetAccountAsync_RequestIncludesHmacSignature()
+    public async Task GetAccountAsync_RequestIncludesHmacSignature()
     {
         string? capturedUrl = null;
         var handler = new CapturingHttpMessageHandler(url =>
@@ -125,7 +123,7 @@ public class BinanceAdapterContractTests
         });
 
         var client = CreateHttpClient(handler);
-        client.GetAccountAsync(FakeApiKey, FakeApiSecret).Wait();
+        await client.GetAccountAsync(FakeApiKey, FakeApiSecret);
 
         capturedUrl.Should().Contain("signature=");
         capturedUrl.Should().Contain("timestamp=");

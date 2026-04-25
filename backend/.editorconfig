@@ -1,0 +1,5 @@
+root = true
+
+[*.cs]
+# Surface unused-using diagnostic from CLI builds (IDE-only by default).
+dotnet_diagnostic.IDE0005.severity = warning

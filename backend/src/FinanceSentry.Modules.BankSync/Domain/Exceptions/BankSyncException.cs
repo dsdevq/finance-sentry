@@ -41,7 +41,7 @@ public class AccountNotFoundException(Guid accountId) : BankSyncException("ACCOU
 /// <summary>
 /// Thrown when a sync is attempted but one is already running.
 /// </summary>
-public class SyncAlreadyRunningException(Guid accountId) : BankSyncException("SYNC_ALREADY_RUNNING", "A sync is already in progress for this account.", 409)
+public class SyncAlreadyRunningException() : BankSyncException("SYNC_ALREADY_RUNNING", "A sync is already in progress for this account.", 409)
 {
 }
 

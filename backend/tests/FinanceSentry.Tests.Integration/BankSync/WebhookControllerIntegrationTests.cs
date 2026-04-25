@@ -1,14 +1,12 @@
 namespace FinanceSentry.Tests.Integration.BankSync;
 
 using System.Net;
-using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using FinanceSentry.Modules.BankSync.Domain;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
 using FinanceSentry.Modules.BankSync.Infrastructure.Jobs;
 using FinanceSentry.Modules.BankSync.Infrastructure.Persistence;
-using FinanceSentry.Modules.BankSync.Infrastructure.Security;
 using FluentAssertions;
 using Hangfire;
 using Hangfire.Common;

@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Claims;
-using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Modules.CryptoSync.Domain;
 using FinanceSentry.Modules.CryptoSync.Domain.Exceptions;
 using FinanceSentry.Modules.CryptoSync.Domain.Interfaces;
@@ -13,7 +12,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Moq;
@@ -32,7 +30,7 @@ public class CryptoControllerConnectContractTests(CryptoApiFactory factory) : IC
     [Fact]
     public async Task Connect_NoAuth_Returns401()
     {
-        var anonClient = factory.CreateClient();
+        var anonClient = _factory.CreateClient();
         var response = await anonClient.PostAsJsonAsync("/api/v1/crypto/binance/connect",
             new { ApiKey = "key", ApiSecret = "secret" });
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -119,7 +117,7 @@ public class CryptoControllerHoldingsContractTests(CryptoApiFactory factory) : I
     [Fact]
     public async Task GetHoldings_NoAuth_Returns401()
     {
-        var anonClient = factory.CreateClient();
+        var anonClient = _factory.CreateClient();
         var response = await anonClient.GetAsync("/api/v1/crypto/holdings");
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
@@ -169,7 +167,7 @@ public class CryptoControllerDisconnectContractTests(CryptoApiFactory factory) :
     [Fact]
     public async Task Disconnect_NoAuth_Returns401()
     {
-        var anonClient = factory.CreateClient();
+        var anonClient = _factory.CreateClient();
         var response = await anonClient.DeleteAsync("/api/v1/crypto/binance/disconnect");
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }

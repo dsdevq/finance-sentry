@@ -6,13 +6,11 @@ using System.Net.Http.Json;
 using System.Security.Claims;
 using FinanceSentry.Modules.BankSync.Domain;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
-using FinanceSentry.Modules.BankSync.Domain.Services;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Moq;
@@ -29,7 +27,7 @@ public class WealthSummaryContractTests(WealthApiFactory factory) : IClassFixtur
     [Fact]
     public async Task GetSummary_NoAuth_Returns401()
     {
-        var anonClient = factory.CreateClient();
+        var anonClient = _factory.CreateClient();
         var response = await anonClient.GetAsync("/api/v1/wealth/summary");
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
@@ -108,7 +106,7 @@ public class TransactionSummaryContractTests(WealthApiFactory factory) : IClassF
     [Fact]
     public async Task GetTxSummary_NoAuth_Returns401()
     {
-        var anonClient = factory.CreateClient();
+        var anonClient = _factory.CreateClient();
         var response = await anonClient.GetAsync("/api/v1/wealth/transactions/summary?from=2026-04-01&to=2026-04-30");
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }

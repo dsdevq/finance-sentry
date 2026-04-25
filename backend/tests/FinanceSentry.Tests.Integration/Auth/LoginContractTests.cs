@@ -2,8 +2,6 @@ namespace FinanceSentry.Tests.Integration.Auth;
 
 using System.Net;
 using System.Net.Http.Json;
-using System.Security.Claims;
-using System.Text;
 using FinanceSentry.Modules.Auth.Application.Interfaces;
 using FinanceSentry.Modules.Auth.Domain.Entities;
 using FinanceSentry.Modules.Auth.Infrastructure.Persistence;

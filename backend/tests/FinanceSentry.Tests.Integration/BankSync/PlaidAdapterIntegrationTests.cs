@@ -2,7 +2,6 @@ namespace FinanceSentry.Tests.Integration.BankSync;
 
 using FinanceSentry.Infrastructure.Encryption;
 using FinanceSentry.Modules.BankSync.Application.Services;
-using FinanceSentry.Modules.BankSync.Domain;
 using FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
 using FluentAssertions;
 using Microsoft.Extensions.Options;

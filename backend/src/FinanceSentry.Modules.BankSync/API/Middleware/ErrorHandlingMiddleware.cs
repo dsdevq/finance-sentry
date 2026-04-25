@@ -1,6 +1,5 @@
 namespace FinanceSentry.Modules.BankSync.API.Middleware;
 
-using System.Net;
 using System.Text.Json;
 using FinanceSentry.Modules.BankSync.Domain.Exceptions;
 using Microsoft.AspNetCore.Http;
