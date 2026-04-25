@@ -1,5 +1,6 @@
 using Google.Apis.Auth;
 using FinanceSentry.Modules.Auth.Application.Interfaces;
+using FinanceSentry.Modules.Auth.Domain.Exceptions;
 using Microsoft.Extensions.Options;
 
 namespace FinanceSentry.Modules.Auth.Infrastructure.Services;
@@ -19,7 +20,7 @@ public class GoogleCredentialVerifier(IOptions<GoogleOAuthOptions> options) : IG
         }
         catch (Exception)
         {
-            throw new InvalidOperationException("INVALID_GOOGLE_CREDENTIAL");
+            throw new InvalidGoogleCredentialException();
         }
     }
 }

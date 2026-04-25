@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Http.Json;
 using FinanceSentry.Modules.Auth.Application.Interfaces;
 using FinanceSentry.Modules.Auth.Domain.Entities;
+using FinanceSentry.Modules.Auth.Domain.Exceptions;
 using FinanceSentry.Modules.Auth.Infrastructure.Persistence;
 using Moq;
 using FinanceSentry.Modules.BankSync.Infrastructure.Persistence;
@@ -136,7 +137,7 @@ public class AuthApiFactory : WebApplicationFactory<Program>
                 .ReturnsAsync(new GoogleUserInfo("google-sub-link", "link@test.com", "Link User"));
             mockVerifier
                 .Setup(v => v.VerifyAsync("invalid-credential"))
-                .ThrowsAsync(new InvalidOperationException("INVALID_GOOGLE_CREDENTIAL"));
+                .ThrowsAsync(new InvalidGoogleCredentialException());
             services.RemoveAll<IGoogleCredentialVerifier>();
             services.AddScoped(_ => mockVerifier.Object);
         });

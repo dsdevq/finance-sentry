@@ -2,7 +2,6 @@ using FinanceSentry.Core.Auth;
 using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Modules.BrokerageSync.Application.Commands;
 using FinanceSentry.Modules.BrokerageSync.Application.Queries;
-using FinanceSentry.Modules.BrokerageSync.Domain.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FinanceSentry.Modules.BrokerageSync.API.Controllers;
@@ -17,35 +16,16 @@ public sealed class BrokerageController(
     [HttpPost("ibkr/connect")]
     public async Task<IActionResult> Connect([FromBody] ConnectIBKRRequest request, CancellationToken ct)
     {
-        try
-        {
-            var result = await connectHandler.Handle(
-                new ConnectIBKRCommand(User.RequireUserId(), request.Username, request.Password),
-                ct);
+        var result = await connectHandler.Handle(
+            new ConnectIBKRCommand(User.RequireUserId(), request.Username, request.Password),
+            ct);
 
-            return StatusCode(201, new
-            {
-                message = "IBKR account connected successfully.",
-                holdingsCount = result.HoldingsCount,
-                connectedAt = result.ConnectedAt,
-            });
-        }
-        catch (BrokerAlreadyConnectedException)
+        return StatusCode(201, new
         {
-            return Conflict(new
-            {
-                error = "An IBKR account is already connected for this user.",
-                errorCode = "ALREADY_CONNECTED",
-            });
-        }
-        catch (BrokerAuthException)
-        {
-            return UnprocessableEntity(new
-            {
-                error = "IB Gateway rejected the provided credentials. Verify your username and password.",
-                errorCode = "INVALID_CREDENTIALS",
-            });
-        }
+            message = "IBKR account connected successfully.",
+            holdingsCount = result.HoldingsCount,
+            connectedAt = result.ConnectedAt,
+        });
     }
 
     [HttpGet("holdings")]
@@ -72,19 +52,8 @@ public sealed class BrokerageController(
     [HttpDelete("ibkr/disconnect")]
     public async Task<IActionResult> Disconnect(CancellationToken ct)
     {
-        try
-        {
-            await disconnectHandler.Handle(new DisconnectIBKRCommand(User.RequireUserId()), ct);
-            return NoContent();
-        }
-        catch (BrokerAccountNotFoundException)
-        {
-            return NotFound(new
-            {
-                error = "No active IBKR account connected for this user.",
-                errorCode = "NOT_CONNECTED",
-            });
-        }
+        await disconnectHandler.Handle(new DisconnectIBKRCommand(User.RequireUserId()), ct);
+        return NoContent();
     }
 }
 

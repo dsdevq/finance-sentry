@@ -2,6 +2,7 @@ using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Modules.Auth.Application.DTOs;
 using FinanceSentry.Modules.Auth.Application.Interfaces;
 using FinanceSentry.Modules.Auth.Domain.Entities;
+using FinanceSentry.Modules.Auth.Domain.Exceptions;
 using Microsoft.AspNetCore.Identity;
 
 namespace FinanceSentry.Modules.Auth.Application.Commands;
@@ -13,9 +14,9 @@ public class RefreshCommandHandler(
 {
     public async Task<AuthResult> Handle(RefreshCommand request, CancellationToken cancellationToken)
     {
-        var existing = await refreshTokenService.ValidateAsync(request.RawRefreshToken, cancellationToken) ?? throw new UnauthorizedAccessException("INVALID_REFRESH_TOKEN");
+        var existing = await refreshTokenService.ValidateAsync(request.RawRefreshToken, cancellationToken) ?? throw new InvalidRefreshTokenException();
 
-        var user = await userManager.FindByIdAsync(existing.UserId) ?? throw new UnauthorizedAccessException("INVALID_REFRESH_TOKEN");
+        var user = await userManager.FindByIdAsync(existing.UserId) ?? throw new InvalidRefreshTokenException();
         var (newRaw, _) = await refreshTokenService.RotateAsync(existing, cancellationToken);
 
         var accessToken = tokenService.GenerateToken(user);

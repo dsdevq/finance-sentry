@@ -2,6 +2,7 @@ using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Modules.Auth.Application.DTOs;
 using FinanceSentry.Modules.Auth.Application.Interfaces;
 using FinanceSentry.Modules.Auth.Domain.Entities;
+using FinanceSentry.Modules.Auth.Domain.Exceptions;
 using Microsoft.AspNetCore.Identity;
 
 namespace FinanceSentry.Modules.Auth.Application.Commands;
@@ -14,10 +15,10 @@ public class GetMeQueryHandler(
     public async Task<GetMeResult> Handle(GetMeQuery request, CancellationToken cancellationToken)
     {
         var existing = await refreshTokenService.ValidateAsync(request.RawRefreshToken, cancellationToken)
-            ?? throw new UnauthorizedAccessException("INVALID_REFRESH_TOKEN");
+            ?? throw new InvalidRefreshTokenException();
 
         var user = await userManager.FindByIdAsync(existing.UserId)
-            ?? throw new UnauthorizedAccessException("INVALID_REFRESH_TOKEN");
+            ?? throw new InvalidRefreshTokenException();
 
         var accessToken = tokenService.GenerateToken(user);
         var expiresAt = DateTime.UtcNow.AddMinutes(60);

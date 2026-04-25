@@ -16,7 +16,7 @@ public sealed class DisconnectBinanceCommandHandler(
         var credential = await credentialRepository.GetByUserIdAsync(command.UserId, cancellationToken);
         if (credential is null || !credential.IsActive)
         {
-            throw new BinanceException("No Binance account is connected for this user.", -1002);
+            throw new BinanceAccountNotFoundException();
         }
 
         credential.Deactivate();

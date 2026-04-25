@@ -1,7 +1,7 @@
 namespace FinanceSentry.Modules.BankSync.API.Middleware;
 
 using System.Text.Json;
-using FinanceSentry.Modules.BankSync.Domain.Exceptions;
+using FinanceSentry.Core.Exceptions;
 using FluentValidation;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -55,7 +55,7 @@ public class ErrorHandlingMiddleware(RequestDelegate next, ILogger<ErrorHandling
 
         var (statusCode, errorCode, userMessage) = exception switch
         {
-            BankSyncException bse => (bse.HttpStatusCode, bse.ErrorCode, bse.Message),
+            ApiException api => (api.StatusCode, api.ErrorCode, api.Message),
             UnauthorizedAccessException => (401, "UNAUTHORIZED", "Authentication required."),
             DbUpdateException => (503, "DATABASE_ERROR", "Database unavailable. Try again in 1 minute."),
             OperationCanceledException => (499, "REQUEST_CANCELLED", "Request was cancelled."),

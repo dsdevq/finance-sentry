@@ -2,6 +2,7 @@ using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Modules.Auth.Application.DTOs;
 using FinanceSentry.Modules.Auth.Application.Interfaces;
 using FinanceSentry.Modules.Auth.Domain.Entities;
+using FinanceSentry.Modules.Auth.Domain.Exceptions;
 using Microsoft.AspNetCore.Identity;
 
 namespace FinanceSentry.Modules.Auth.Application.Commands;
@@ -15,13 +16,13 @@ public class LoginCommandHandler(
     {
         var user = await userManager.FindByEmailAsync(request.Email);
         if (user is null)
-            throw new UnauthorizedAccessException("INVALID_CREDENTIALS");
+            throw new InvalidCredentialsException();
 
         if (user.PasswordHash is null)
-            throw new InvalidOperationException("GOOGLE_ACCOUNT_ONLY");
+            throw new GoogleAccountOnlyException();
 
         if (!await userManager.CheckPasswordAsync(user, request.Password))
-            throw new UnauthorizedAccessException("INVALID_CREDENTIALS");
+            throw new InvalidCredentialsException();
 
         var accessToken = tokenService.GenerateToken(user);
         var expiresAt = DateTime.UtcNow.AddMinutes(60);

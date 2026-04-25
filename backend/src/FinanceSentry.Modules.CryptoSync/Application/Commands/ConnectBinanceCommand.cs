@@ -28,7 +28,7 @@ public sealed class ConnectBinanceCommandHandler(
         var existing = await credentialRepository.GetByUserIdAsync(command.UserId, cancellationToken);
         if (existing is not null && existing.IsActive)
         {
-            throw new BinanceException("A Binance account is already connected for this user.", -1001);
+            throw new BinanceAlreadyConnectedException();
         }
 
         await adapter.ValidateCredentialsAsync(command.ApiKey, command.ApiSecret, cancellationToken);

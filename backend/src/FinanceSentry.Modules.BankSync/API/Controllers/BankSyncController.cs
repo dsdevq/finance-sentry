@@ -202,23 +202,10 @@ public class BankSyncController(
     public async Task<IActionResult> ConnectMonobank(
         [FromBody] ConnectMonobankRequest request, CancellationToken ct)
     {
-        try
-        {
-            var result = await connectMonobankHandler.Handle(
-                new ConnectMonobankAccountCommand(User.RequireUserId(), request.Token), ct);
+        var result = await connectMonobankHandler.Handle(
+            new ConnectMonobankAccountCommand(User.RequireUserId(), request.Token), ct);
 
-            return StatusCode(201, new { accounts = result.Accounts });
-        }
-        catch (Infrastructure.Monobank.MonobankException ex)
-        {
-            return ex.ErrorCode switch
-            {
-                "MONOBANK_TOKEN_INVALID" => BadRequest(new { error = ex.Message, errorCode = ex.ErrorCode }),
-                "MONOBANK_TOKEN_DUPLICATE" => Conflict(new { error = ex.Message, errorCode = ex.ErrorCode }),
-                "MONOBANK_RATE_LIMITED" => StatusCode(429, new { error = ex.Message, errorCode = ex.ErrorCode }),
-                _ => StatusCode(500, new { error = ex.Message, errorCode = ex.ErrorCode })
-            };
-        }
+        return StatusCode(201, new { accounts = result.Accounts });
     }
 }
 

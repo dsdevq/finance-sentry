@@ -25,7 +25,7 @@ public class ConnectBinanceCommandTests
         new(Ciphertext: [1], Iv: [2], AuthTag: [3], KeyVersion: 1);
 
     [Fact]
-    public async Task Handle_AlreadyConnected_ThrowsBinanceException()
+    public async Task Handle_AlreadyConnected_ThrowsBinanceAlreadyConnectedException()
     {
         var userId = Guid.NewGuid();
         var existing = BinanceCredential.Create(userId, [1], [2], [3], [4], [5], [6], 1);
@@ -37,8 +37,7 @@ public class ConnectBinanceCommandTests
         var handler = CreateHandler();
         var act = () => handler.Handle(new ConnectBinanceCommand(userId, "key", "secret"), default);
 
-        await act.Should().ThrowAsync<BinanceException>()
-            .Where(ex => ex.BinanceErrorCode == -1001);
+        await act.Should().ThrowAsync<BinanceAlreadyConnectedException>();
     }
 
     [Fact]

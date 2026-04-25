@@ -111,7 +111,7 @@ public class MonobankHttpClient(HttpClient http)
 
             if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                 throw new MonobankException("MONOBANK_TOKEN_INVALID",
-                    "Invalid or expired Monobank token.", 401);
+                    "Invalid or expired Monobank token.", 400);
 
             response.EnsureSuccessStatusCode();
             return response;

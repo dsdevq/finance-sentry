@@ -1,6 +1,7 @@
 using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Modules.Auth.Application.Commands;
 using FinanceSentry.Modules.Auth.Application.DTOs;
+using FinanceSentry.Modules.Auth.Domain.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -24,7 +25,7 @@ public class AuthController(
     {
         var rawToken = Request.Cookies[RefreshTokenCookie];
         if (string.IsNullOrWhiteSpace(rawToken))
-            return Unauthorized(new { error = "No session found.", errorCode = "INVALID_REFRESH_TOKEN" });
+            throw new InvalidRefreshTokenException("No session found.");
 
         try
         {
@@ -32,69 +33,29 @@ public class AuthController(
             SetAccessTokenCookie(result.RawAccessToken, result.Response.ExpiresAt);
             return Ok(result.Response);
         }
-        catch (UnauthorizedAccessException)
+        catch (InvalidRefreshTokenException)
         {
             DeleteRefreshTokenCookie();
-            return Unauthorized(new { error = "Session expired. Please sign in again.", errorCode = "INVALID_REFRESH_TOKEN" });
+            throw;
         }
     }
 
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] AuthRequest request)
     {
-        try
-        {
-            var result = await loginHandler.Handle(new LoginCommand(request.Email, request.Password), HttpContext.RequestAborted);
-            SetRefreshTokenCookie(result.RawRefreshToken);
-            SetAccessTokenCookie(result.RawAccessToken, result.Response.ExpiresAt);
-            return Ok(result.Response);
-        }
-        catch (InvalidOperationException ex) when (ex.Message == "GOOGLE_ACCOUNT_ONLY")
-        {
-            return Unauthorized(new
-            {
-                error = "This account uses Google sign-in. Please use 'Continue with Google'.",
-                errorCode = "GOOGLE_ACCOUNT_ONLY"
-            });
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return Unauthorized(new
-            {
-                error = "Invalid email or password.",
-                errorCode = "INVALID_CREDENTIALS"
-            });
-        }
+        var result = await loginHandler.Handle(new LoginCommand(request.Email, request.Password), HttpContext.RequestAborted);
+        SetRefreshTokenCookie(result.RawRefreshToken);
+        SetAccessTokenCookie(result.RawAccessToken, result.Response.ExpiresAt);
+        return Ok(result.Response);
     }
 
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] AuthRequest request)
     {
-        try
-        {
-            var result = await registerHandler.Handle(new RegisterCommand(request.Email, request.Password), HttpContext.RequestAborted);
-            SetRefreshTokenCookie(result.RawRefreshToken);
-            SetAccessTokenCookie(result.RawAccessToken, result.Response.ExpiresAt);
-            return Created(string.Empty, result.Response);
-        }
-        catch (InvalidOperationException ex) when (ex.Message == "DUPLICATE_EMAIL")
-        {
-            return BadRequest(new
-            {
-                error = "Email is already registered.",
-                errorCode = "DUPLICATE_EMAIL"
-            });
-        }
-        catch (ArgumentException ex) when (ex.Message.StartsWith("VALIDATION_ERROR:"))
-        {
-            var details = ex.Message["VALIDATION_ERROR:".Length..].Split('|');
-            return BadRequest(new
-            {
-                error = "Validation failed.",
-                errorCode = "VALIDATION_ERROR",
-                details
-            });
-        }
+        var result = await registerHandler.Handle(new RegisterCommand(request.Email, request.Password), HttpContext.RequestAborted);
+        SetRefreshTokenCookie(result.RawRefreshToken);
+        SetAccessTokenCookie(result.RawAccessToken, result.Response.ExpiresAt);
+        return Created(string.Empty, result.Response);
     }
 
     [HttpPost("refresh")]
@@ -102,7 +63,7 @@ public class AuthController(
     {
         var rawToken = Request.Cookies[RefreshTokenCookie];
         if (string.IsNullOrWhiteSpace(rawToken))
-            return Unauthorized(new { error = "Refresh token missing.", errorCode = "INVALID_REFRESH_TOKEN" });
+            throw new InvalidRefreshTokenException("Refresh token missing.");
 
         try
         {
@@ -111,27 +72,20 @@ public class AuthController(
             SetAccessTokenCookie(result.RawAccessToken, result.Response.ExpiresAt);
             return Ok(result.Response);
         }
-        catch (UnauthorizedAccessException)
+        catch (InvalidRefreshTokenException)
         {
             DeleteRefreshTokenCookie();
-            return Unauthorized(new { error = "Refresh token invalid or expired.", errorCode = "INVALID_REFRESH_TOKEN" });
+            throw;
         }
     }
 
     [HttpPost("google/verify")]
     public async Task<IActionResult> GoogleVerify([FromBody] VerifyGoogleCredentialRequest request)
     {
-        try
-        {
-            var result = await googleVerifyHandler.Handle(new VerifyGoogleCredentialCommand(request.Credential), HttpContext.RequestAborted);
-            SetRefreshTokenCookie(result.RawRefreshToken);
-            SetAccessTokenCookie(result.RawAccessToken, result.Response.ExpiresAt);
-            return Ok(result.Response);
-        }
-        catch (InvalidOperationException ex) when (ex.Message == "INVALID_GOOGLE_CREDENTIAL")
-        {
-            return BadRequest(new { error = "Invalid Google credential.", errorCode = "INVALID_GOOGLE_CREDENTIAL" });
-        }
+        var result = await googleVerifyHandler.Handle(new VerifyGoogleCredentialCommand(request.Credential), HttpContext.RequestAborted);
+        SetRefreshTokenCookie(result.RawRefreshToken);
+        SetAccessTokenCookie(result.RawAccessToken, result.Response.ExpiresAt);
+        return Ok(result.Response);
     }
 
     [HttpPost("logout")]
