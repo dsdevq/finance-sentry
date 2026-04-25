@@ -54,16 +54,7 @@ public class BankSyncController(
         var result = await connectHandler.Handle(new ConnectBankAccountCommand(
             User.RequireUserId(), request.PublicToken, request.InstitutionName), ct);
 
-        return Ok(new
-        {
-            accountId = result.AccountId,
-            bankName = result.BankName,
-            accountType = result.AccountType,
-            accountNumberLast4 = result.AccountNumberLast4,
-            currency = result.Currency,
-            syncStatus = result.SyncStatus,
-            message = "Account linked. Syncing transaction history..."
-        });
+        return Ok(result);
     }
 
     // ── GET /api/accounts ── T207 ────────────────────────────────────────────
@@ -77,12 +68,7 @@ public class BankSyncController(
         var result = await getAccountsHandler.Handle(
             new GetAccountsQuery(User.RequireUserId(), status, currency), ct);
 
-        return Ok(new
-        {
-            accounts = result.Accounts,
-            totalCount = result.TotalCount,
-            currencyTotals = result.CurrencyTotals
-        });
+        return Ok(result);
     }
 
     // ── GET /api/accounts/transactions ── T208-G ─────────────────────────────
@@ -228,7 +214,7 @@ public class BankSyncController(
         var result = await connectMonobankHandler.Handle(
             new ConnectMonobankAccountCommand(User.RequireUserId(), request.Token), ct);
 
-        return StatusCode(201, new { accounts = result.Accounts });
+        return StatusCode(201, result);
     }
 }
 

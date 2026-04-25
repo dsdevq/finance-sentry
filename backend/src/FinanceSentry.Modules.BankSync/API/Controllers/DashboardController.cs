@@ -30,16 +30,7 @@ public class DashboardController(
     public async Task<IActionResult> GetAggregated(CancellationToken ct)
     {
         var data = await _dashboard.GetDashboardDataAsync(User.RequireUserId(), ct);
-
-        return Ok(new
-        {
-            aggregatedBalance = data.AggregatedBalance,
-            accountCount = data.AccountCount,
-            accountsByType = data.AccountsByType,
-            monthlyFlow = data.MonthlyFlow,
-            topCategories = data.TopCategories,
-            lastSyncTimestamp = data.LastSyncTimestamp
-        });
+        return Ok(data);
     }
 
     // ── GET /api/dashboard/transfers ── T410 ──────────────────────────────────

@@ -20,12 +20,7 @@ public sealed class CryptoController(
             new ConnectBinanceCommand(User.RequireUserId(), request.ApiKey, request.ApiSecret),
             ct);
 
-        return StatusCode(201, new
-        {
-            message = "Binance account connected successfully.",
-            holdingsCount = result.HoldingsCount,
-            syncedAt = result.SyncedAt,
-        });
+        return StatusCode(201, result);
     }
 
     [HttpDelete("binance/disconnect")]

@@ -20,33 +20,14 @@ public sealed class BrokerageController(
             new ConnectIBKRCommand(User.RequireUserId(), request.Username, request.Password),
             ct);
 
-        return StatusCode(201, new
-        {
-            message = "IBKR account connected successfully.",
-            holdingsCount = result.HoldingsCount,
-            connectedAt = result.ConnectedAt,
-        });
+        return StatusCode(201, result);
     }
 
     [HttpGet("holdings")]
     public async Task<IActionResult> GetHoldings(CancellationToken ct)
     {
         var result = await holdingsHandler.Handle(new GetBrokerageHoldingsQuery(User.RequireUserId()), ct);
-
-        return Ok(new
-        {
-            provider = result.Provider,
-            syncedAt = result.SyncedAt,
-            isStale = result.IsStale,
-            positions = result.Positions.Select(p => new
-            {
-                symbol = p.Symbol,
-                instrumentType = p.InstrumentType,
-                quantity = p.Quantity,
-                usdValue = p.UsdValue,
-            }),
-            totalUsdValue = result.TotalUsdValue,
-        });
+        return Ok(result);
     }
 
     [HttpDelete("ibkr/disconnect")]
