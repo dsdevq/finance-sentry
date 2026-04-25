@@ -1,18 +1,18 @@
 namespace FinanceSentry.Modules.BankSync.Application.Queries;
 
 using FinanceSentry.Modules.BankSync.Application.Services;
-using MediatR;
+using FinanceSentry.Core.Cqrs;
 
 // ── Query ──────────────────────────────────────────────────────────────────────
 
 /// <summary>
 /// Returns the top spending categories for a user sorted by total spend DESC.
 /// </summary>
-public record GetTopCategoriesQuery(Guid UserId, int Limit = 10) : IRequest<IReadOnlyList<CategoryStat>>;
+public record GetTopCategoriesQuery(Guid UserId, int Limit = 10) : IQuery<IReadOnlyList<CategoryStat>>;
 
 // ── Handler ────────────────────────────────────────────────────────────────────
 
-public class GetTopCategoriesQueryHandler(IMerchantCategoryStatisticsService service) : IRequestHandler<GetTopCategoriesQuery, IReadOnlyList<CategoryStat>>
+public class GetTopCategoriesQueryHandler(IMerchantCategoryStatisticsService service) : IQueryHandler<GetTopCategoriesQuery, IReadOnlyList<CategoryStat>>
 {
     private readonly IMerchantCategoryStatisticsService _service = service;
 

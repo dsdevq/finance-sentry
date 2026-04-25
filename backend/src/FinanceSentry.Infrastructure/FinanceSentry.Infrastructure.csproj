@@ -6,7 +6,6 @@
     <PackageReference Include="Serilog" />
     <PackageReference Include="Serilog.Enrichers.Context" />
     <PackageReference Include="Serilog.Enrichers.Environment" />
-    <PackageReference Include="MediatR" />
     <PackageReference Include="FluentResults" />
     <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" />
     <PackageReference Include="Polly.Core" />

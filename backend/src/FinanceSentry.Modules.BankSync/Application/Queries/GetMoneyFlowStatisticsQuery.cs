@@ -1,18 +1,18 @@
 namespace FinanceSentry.Modules.BankSync.Application.Queries;
 
 using FinanceSentry.Modules.BankSync.Application.Services;
-using MediatR;
+using FinanceSentry.Core.Cqrs;
 
 // ── Query ──────────────────────────────────────────────────────────────────────
 
 /// <summary>
 /// Returns monthly cash-flow statistics (inflow / outflow / net) for a user.
 /// </summary>
-public record GetMoneyFlowStatisticsQuery(Guid UserId, int Months = 6) : IRequest<IReadOnlyList<MonthlyFlow>>;
+public record GetMoneyFlowStatisticsQuery(Guid UserId, int Months = 6) : IQuery<IReadOnlyList<MonthlyFlow>>;
 
 // ── Handler ────────────────────────────────────────────────────────────────────
 
-public class GetMoneyFlowStatisticsQueryHandler(IMoneyFlowStatisticsService service) : IRequestHandler<GetMoneyFlowStatisticsQuery, IReadOnlyList<MonthlyFlow>>
+public class GetMoneyFlowStatisticsQueryHandler(IMoneyFlowStatisticsService service) : IQueryHandler<GetMoneyFlowStatisticsQuery, IReadOnlyList<MonthlyFlow>>
 {
     private readonly IMoneyFlowStatisticsService _service = service;
 

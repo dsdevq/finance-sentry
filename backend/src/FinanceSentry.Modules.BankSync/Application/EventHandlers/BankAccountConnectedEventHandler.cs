@@ -1,12 +1,12 @@
 namespace FinanceSentry.Modules.BankSync.Application.EventHandlers;
 
+using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Infrastructure.Encryption;
 using FinanceSentry.Modules.BankSync.Application.Commands;
 using FinanceSentry.Modules.BankSync.Application.Services;
 using FinanceSentry.Modules.BankSync.Domain;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
 using FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
-using MediatR;
 
 /// <summary>
 /// Handles the initial transaction sync when a bank account is connected (T210).
@@ -28,7 +28,7 @@ public class BankAccountConnectedEventHandler(
     IEncryptedCredentialRepository credentials,
     ICredentialEncryptionService encryption,
     PlaidAdapter plaid,
-    ITransactionDeduplicationService deduplication) : INotificationHandler<BankAccountConnectedEvent>
+    ITransactionDeduplicationService deduplication) : IEventHandler<BankAccountConnectedEvent>
 {
     private readonly IBankAccountRepository _accounts = accounts;
     private readonly ITransactionRepository _transactions = transactions;
@@ -38,10 +38,10 @@ public class BankAccountConnectedEventHandler(
     private readonly PlaidAdapter _plaid = plaid;
     private readonly ITransactionDeduplicationService _deduplication = deduplication;
 
-    public async Task Handle(BankAccountConnectedEvent notification, CancellationToken cancellationToken)
+    public async Task Handle(BankAccountConnectedEvent @event, CancellationToken cancellationToken)
     {
-        var account = await _accounts.GetByIdAsync(notification.AccountId, cancellationToken)
-            ?? throw new InvalidOperationException($"Account {notification.AccountId} not found.");
+        var account = await _accounts.GetByIdAsync(@event.AccountId, cancellationToken)
+            ?? throw new InvalidOperationException($"Account {@event.AccountId} not found.");
 
         // Create sync job to track progress
         var syncJob = new SyncJob
@@ -67,7 +67,7 @@ public class BankAccountConnectedEventHandler(
 
             // Initial full sync — no cursor yet, Plaid returns all available history
             var (candidatesRaw, nextCursor) = await _plaid.SyncTransactionsAsync(
-                accessToken, account.Id, notification.UserId, null, cancellationToken);
+                accessToken, account.Id, @event.UserId, null, cancellationToken);
             var candidates = candidatesRaw.ToList();
 
             // Deduplicate: fetch existing hashes, filter candidates

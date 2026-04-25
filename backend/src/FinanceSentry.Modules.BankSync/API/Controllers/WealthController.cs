@@ -1,18 +1,18 @@
 namespace FinanceSentry.Modules.BankSync.API.Controllers;
 
 using System.Security.Claims;
+using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Modules.BankSync.Application.Queries;
-using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
 [Route("wealth")]
-public class WealthController(IMediator mediator) : ControllerBase
+public class WealthController(
+    IQueryHandler<GetWealthSummaryQuery, WealthSummaryResponse> wealthSummaryHandler,
+    IQueryHandler<GetTransactionSummaryQuery, TransactionSummaryResponse> txSummaryHandler) : ControllerBase
 {
     private static readonly HashSet<string> AllowedCategories =
         new(StringComparer.OrdinalIgnoreCase) { "banking", "crypto", "brokerage", "other" };
-
-    private readonly IMediator _mediator = mediator;
 
     private Guid? GetUserId()
     {
@@ -20,8 +20,6 @@ public class WealthController(IMediator mediator) : ControllerBase
                ?? User.FindFirst("sub")?.Value;
         return Guid.TryParse(sub, out var id) ? id : null;
     }
-
-    // ── GET /api/v1/wealth/summary ───────────────────────────────────────────
 
     [HttpGet("summary")]
     public async Task<IActionResult> GetSummary(
@@ -40,11 +38,9 @@ public class WealthController(IMediator mediator) : ControllerBase
                 errorCode = "INVALID_FILTER"
             });
 
-        var result = await _mediator.Send(new GetWealthSummaryQuery(userId.Value, category, provider), ct);
+        var result = await wealthSummaryHandler.Handle(new GetWealthSummaryQuery(userId.Value, category, provider), ct);
         return Ok(result);
     }
-
-    // ── GET /api/v1/wealth/transactions/summary ──────────────────────────────
 
     [HttpGet("transactions/summary")]
     public async Task<IActionResult> GetTransactionSummary(
@@ -87,7 +83,7 @@ public class WealthController(IMediator mediator) : ControllerBase
                 errorCode = "INVALID_FILTER"
             });
 
-        var result = await _mediator.Send(
+        var result = await txSummaryHandler.Handle(
             new GetTransactionSummaryQuery(userId.Value, fromDate, toDate, category, provider), ct);
         return Ok(result);
     }

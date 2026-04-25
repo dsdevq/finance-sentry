@@ -2,7 +2,7 @@ namespace FinanceSentry.Modules.BankSync.Application.Queries;
 
 using FinanceSentry.Modules.BankSync.Domain;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
-using MediatR;
+using FinanceSentry.Core.Cqrs;
 
 // ──────────────────────────────────────────────
 // Query
@@ -17,7 +17,7 @@ public record GetAccountsQuery(
     Guid UserId,
     string? SyncStatusFilter = null,
     string? CurrencyFilter = null
-) : IRequest<GetAccountsResult>;
+) : IQuery<GetAccountsResult>;
 
 // ──────────────────────────────────────────────
 // Result DTO
@@ -47,7 +47,7 @@ public record BankAccountDto(
 // Handler
 // ──────────────────────────────────────────────
 
-public class GetAccountsQueryHandler(IBankAccountRepository accounts) : IRequestHandler<GetAccountsQuery, GetAccountsResult>
+public class GetAccountsQueryHandler(IBankAccountRepository accounts) : IQueryHandler<GetAccountsQuery, GetAccountsResult>
 {
     private readonly IBankAccountRepository _accounts = accounts;
 

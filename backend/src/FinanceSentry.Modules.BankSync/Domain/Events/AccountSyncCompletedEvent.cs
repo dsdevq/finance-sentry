@@ -1,6 +1,6 @@
 namespace FinanceSentry.Modules.BankSync.Domain.Events;
 
-using MediatR;
+using FinanceSentry.Core.Cqrs;
 
 /// <summary>
 /// Published when a sync job finishes (either successfully or with a failure).
@@ -10,4 +10,4 @@ public record AccountSyncCompletedEvent(
     Guid AccountId,
     string Status,
     int TransactionCountFetched,
-    string? ErrorMessage) : INotification;
+    string? ErrorMessage) : IEvent;

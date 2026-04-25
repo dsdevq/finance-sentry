@@ -90,13 +90,8 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddCqrs(
     typeof(JwtTokenService).Assembly,
     typeof(CryptoSyncModule).Assembly,
-    typeof(BrokerageSyncModule).Assembly);
-
-// ── MediatR (BankSync — being migrated off MediatR) ─────────────────────────
-builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(
-    typeof(Program).Assembly,
-    typeof(BankSyncModule).Assembly
-));
+    typeof(BrokerageSyncModule).Assembly,
+    typeof(BankSyncModule).Assembly);
 
 // ── Database (EF Core + PostgreSQL) ─────────────────────────────────────────
 var connectionString = builder.Configuration.GetConnectionString("Default")

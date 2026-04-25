@@ -1,7 +1,7 @@
 namespace FinanceSentry.Modules.BankSync.Application.Queries;
 
 using FinanceSentry.Modules.BankSync.Domain.Services;
-using MediatR;
+using FinanceSentry.Core.Cqrs;
 
 // ── DTOs ─────────────────────────────────────────────────────────────────────
 
@@ -29,12 +29,12 @@ public record GetTransactionSummaryQuery(
     DateOnly To,
     string? Category = null,
     string? Provider = null
-) : IRequest<TransactionSummaryResponse>;
+) : IQuery<TransactionSummaryResponse>;
 
 // ── Handler ──────────────────────────────────────────────────────────────────
 
 public class GetTransactionSummaryQueryHandler(IWealthAggregationService service)
-    : IRequestHandler<GetTransactionSummaryQuery, TransactionSummaryResponse>
+    : IQueryHandler<GetTransactionSummaryQuery, TransactionSummaryResponse>
 {
     private readonly IWealthAggregationService _service = service;
 

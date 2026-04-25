@@ -1,14 +1,14 @@
 namespace FinanceSentry.Modules.BankSync.Application.Queries;
 
 using FinanceSentry.Modules.BankSync.Application.Services;
-using MediatR;
+using FinanceSentry.Core.Cqrs;
 
 // ── Query ──────────────────────────────────────────────────────────────────────
 
 /// <summary>
 /// Returns the aggregated current balance per currency and total account count for a user.
 /// </summary>
-public record GetAggregatedBalanceQuery(Guid UserId) : IRequest<AggregatedBalanceResult>;
+public record GetAggregatedBalanceQuery(Guid UserId) : IQuery<AggregatedBalanceResult>;
 
 // ── Result ─────────────────────────────────────────────────────────────────────
 
@@ -18,7 +18,7 @@ public record AggregatedBalanceResult(
 
 // ── Handler ────────────────────────────────────────────────────────────────────
 
-public class GetAggregatedBalanceQueryHandler(IAggregationService aggregation) : IRequestHandler<GetAggregatedBalanceQuery, AggregatedBalanceResult>
+public class GetAggregatedBalanceQueryHandler(IAggregationService aggregation) : IQueryHandler<GetAggregatedBalanceQuery, AggregatedBalanceResult>
 {
     private readonly IAggregationService _aggregation = aggregation;
 

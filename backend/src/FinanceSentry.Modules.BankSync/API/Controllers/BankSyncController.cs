@@ -1,19 +1,21 @@
 namespace FinanceSentry.Modules.BankSync.API.Controllers;
 
 using System.Security.Claims;
+using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Modules.BankSync.Application.Commands;
 using FinanceSentry.Modules.BankSync.Application.Queries;
 using FinanceSentry.Modules.BankSync.Application.Services;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
 using FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
 using Hangfire;
-using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
 [Route("accounts")]
 public class BankSyncController(
-    IMediator mediator,
+    ICommandHandler<ConnectBankAccountCommand, ConnectBankAccountResult> connectHandler,
+    ICommandHandler<ConnectMonobankAccountCommand, ConnectMonobankResult> connectMonobankHandler,
+    IQueryHandler<GetAccountsQuery, GetAccountsResult> getAccountsHandler,
     PlaidAdapter plaid,
     IBankAccountRepository accounts,
     ITransactionRepository transactions,
@@ -21,7 +23,6 @@ public class BankSyncController(
     ISyncJobRepository syncJobs,
     ITransactionSyncCoordinator coordinator) : ControllerBase
 {
-    private readonly IMediator _mediator = mediator;
     private readonly PlaidAdapter _plaid = plaid;
     private readonly IBankAccountRepository _accounts = accounts;
     private readonly ITransactionRepository _transactions = transactions;
@@ -63,7 +64,7 @@ public class BankSyncController(
         if (userId is null)
             return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
 
-        var result = await _mediator.Send(new ConnectBankAccountCommand(
+        var result = await connectHandler.Handle(new ConnectBankAccountCommand(
             userId.Value, request.PublicToken, request.InstitutionName), ct);
 
         return Ok(new
@@ -90,7 +91,7 @@ public class BankSyncController(
         if (userId is null)
             return Unauthorized(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
 
-        var result = await _mediator.Send(
+        var result = await getAccountsHandler.Handle(
             new GetAccountsQuery(userId.Value, status, currency), ct);
 
         return Ok(new
@@ -237,7 +238,7 @@ public class BankSyncController(
 
         try
         {
-            var result = await _mediator.Send(
+            var result = await connectMonobankHandler.Handle(
                 new ConnectMonobankAccountCommand(userId.Value, request.Token), ct);
 
             return StatusCode(201, new { accounts = result.Accounts });

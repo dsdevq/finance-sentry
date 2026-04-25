@@ -1,13 +1,13 @@
 namespace FinanceSentry.Modules.BankSync.Application.Commands;
 
+using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Infrastructure.Encryption;
 using FinanceSentry.Modules.BankSync.Domain;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
 using FinanceSentry.Modules.BankSync.Infrastructure.Monobank;
 using Hangfire;
-using MediatR;
 
-public record ConnectMonobankAccountCommand(Guid UserId, string Token) : IRequest<ConnectMonobankResult>;
+public record ConnectMonobankAccountCommand(Guid UserId, string Token) : ICommand<ConnectMonobankResult>;
 
 public record ConnectedMonobankAccount(
     Guid Id,
@@ -27,7 +27,7 @@ public class ConnectMonobankAccountCommandHandler(
     ICredentialEncryptionService encryption,
     IBankAccountRepository accounts,
     IMonobankCredentialRepository monobankCredentials,
-    IBackgroundJobClient backgroundJobs) : IRequestHandler<ConnectMonobankAccountCommand, ConnectMonobankResult>
+    IBackgroundJobClient backgroundJobs) : ICommandHandler<ConnectMonobankAccountCommand, ConnectMonobankResult>
 {
     public async Task<ConnectMonobankResult> Handle(
         ConnectMonobankAccountCommand request, CancellationToken cancellationToken)

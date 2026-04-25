@@ -1,6 +1,6 @@
 namespace FinanceSentry.Modules.BankSync.Domain.Events;
 
-using MediatR;
+using FinanceSentry.Core.Cqrs;
 
 /// <summary>
 /// Published when a sync job begins for a bank account.
@@ -9,4 +9,4 @@ using MediatR;
 public record AccountSyncStartedEvent(
     Guid AccountId,
     string? CorrelationId,
-    DateTime StartedAt) : INotification;
+    DateTime StartedAt) : IEvent;
