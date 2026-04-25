@@ -3,7 +3,6 @@ using FinanceSentry.Modules.Auth.Application.DTOs;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace FinanceSentry.Modules.Auth.API.Controllers;
 
@@ -12,6 +11,27 @@ namespace FinanceSentry.Modules.Auth.API.Controllers;
 public class AuthController(IMediator mediator) : ControllerBase
 {
     private const string RefreshTokenCookie = "fs_refresh_token";
+    private const string AccessTokenCookie = "fs_access_token";
+
+    [HttpGet("me")]
+    public async Task<IActionResult> Me()
+    {
+        var rawToken = Request.Cookies[RefreshTokenCookie];
+        if (string.IsNullOrWhiteSpace(rawToken))
+            return Unauthorized(new { error = "No session found.", errorCode = "INVALID_REFRESH_TOKEN" });
+
+        try
+        {
+            var result = await mediator.Send(new GetMeQuery(rawToken));
+            SetAccessTokenCookie(result.RawAccessToken, result.Response.ExpiresAt);
+            return Ok(result.Response);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            DeleteRefreshTokenCookie();
+            return Unauthorized(new { error = "Session expired. Please sign in again.", errorCode = "INVALID_REFRESH_TOKEN" });
+        }
+    }
 
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] AuthRequest request)
@@ -34,6 +54,7 @@ public class AuthController(IMediator mediator) : ControllerBase
         {
             var result = await mediator.Send(new LoginCommand(request.Email, request.Password));
             SetRefreshTokenCookie(result.RawRefreshToken);
+            SetAccessTokenCookie(result.RawAccessToken, result.Response.ExpiresAt);
             return Ok(result.Response);
         }
         catch (InvalidOperationException ex) when (ex.Message == "GOOGLE_ACCOUNT_ONLY")
@@ -75,6 +96,7 @@ public class AuthController(IMediator mediator) : ControllerBase
         {
             var result = await mediator.Send(new RegisterCommand(request.Email, request.Password));
             SetRefreshTokenCookie(result.RawRefreshToken);
+            SetAccessTokenCookie(result.RawAccessToken, result.Response.ExpiresAt);
             return Created(string.Empty, result.Response);
         }
         catch (InvalidOperationException ex) when (ex.Message == "DUPLICATE_EMAIL")
@@ -108,6 +130,7 @@ public class AuthController(IMediator mediator) : ControllerBase
         {
             var result = await mediator.Send(new RefreshCommand(rawToken));
             SetRefreshTokenCookie(result.RawRefreshToken);
+            SetAccessTokenCookie(result.RawAccessToken, result.Response.ExpiresAt);
             return Ok(result.Response);
         }
         catch (UnauthorizedAccessException)
@@ -127,6 +150,7 @@ public class AuthController(IMediator mediator) : ControllerBase
         {
             var result = await mediator.Send(new VerifyGoogleCredentialCommand(request.Credential));
             SetRefreshTokenCookie(result.RawRefreshToken);
+            SetAccessTokenCookie(result.RawAccessToken, result.Response.ExpiresAt);
             return Ok(result.Response);
         }
         catch (InvalidOperationException ex) when (ex.Message == "INVALID_GOOGLE_CREDENTIAL")
@@ -138,13 +162,14 @@ public class AuthController(IMediator mediator) : ControllerBase
     [HttpPost("logout")]
     public async Task<IActionResult> Logout()
     {
-        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
                   ?? User.FindFirst("sub")?.Value;
 
         if (!string.IsNullOrWhiteSpace(userId))
             await mediator.Send(new LogoutCommand(userId));
 
         DeleteRefreshTokenCookie();
+        DeleteAccessTokenCookie();
         return NoContent();
     }
 
@@ -160,9 +185,32 @@ public class AuthController(IMediator mediator) : ControllerBase
         });
     }
 
+    private void SetAccessTokenCookie(string rawToken, DateTime expiresAt)
+    {
+        Response.Cookies.Append(AccessTokenCookie, rawToken, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            Expires = new DateTimeOffset(expiresAt, TimeSpan.Zero),
+            Path = "/"
+        });
+    }
+
     private void DeleteRefreshTokenCookie()
     {
         Response.Cookies.Delete(RefreshTokenCookie, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            Path = "/"
+        });
+    }
+
+    private void DeleteAccessTokenCookie()
+    {
+        Response.Cookies.Delete(AccessTokenCookie, new CookieOptions
         {
             HttpOnly = true,
             Secure = true,

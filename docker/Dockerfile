@@ -13,6 +13,8 @@ COPY ["backend/src/FinanceSentry.Core/FinanceSentry.Core.csproj", "backend/src/F
 COPY ["backend/src/FinanceSentry.Infrastructure/FinanceSentry.Infrastructure.csproj", "backend/src/FinanceSentry.Infrastructure/"]
 COPY ["backend/src/FinanceSentry.Modules.BankSync/FinanceSentry.Modules.BankSync.csproj", "backend/src/FinanceSentry.Modules.BankSync/"]
 COPY ["backend/src/FinanceSentry.Modules.Auth/FinanceSentry.Modules.Auth.csproj", "backend/src/FinanceSentry.Modules.Auth/"]
+COPY ["backend/src/FinanceSentry.Modules.CryptoSync/FinanceSentry.Modules.CryptoSync.csproj", "backend/src/FinanceSentry.Modules.CryptoSync/"]
+COPY ["backend/src/FinanceSentry.Modules.BrokerageSync/FinanceSentry.Modules.BrokerageSync.csproj", "backend/src/FinanceSentry.Modules.BrokerageSync/"]
 COPY ["backend/tests/FinanceSentry.Tests.Unit/FinanceSentry.Tests.Unit.csproj", "backend/tests/FinanceSentry.Tests.Unit/"]
 COPY ["backend/tests/FinanceSentry.Tests.Integration/FinanceSentry.Tests.Integration.csproj", "backend/tests/FinanceSentry.Tests.Integration/"]
 

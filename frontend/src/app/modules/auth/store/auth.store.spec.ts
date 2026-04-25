@@ -5,24 +5,13 @@ import {of, Subject, throwError} from 'rxjs';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 
 import {ERROR_MESSAGES_REGISTRY} from '../../../core/errors/error-messages.registry';
-import {MS_PER_SECOND} from '../constants/auth.constants';
 import {type AuthResponse} from '../models/auth.models';
 import {AuthService} from '../services/auth.service';
 import {AuthStore} from './auth.store';
 
-const ONE_HOUR_SECONDS = 3600;
-
-function makeToken(expSecondsFromNow: number): string {
-  const header = btoa(JSON.stringify({alg: 'HS256', typ: 'JWT'}));
-  const payload = btoa(
-    JSON.stringify({exp: Math.floor(Date.now() / MS_PER_SECOND) + expSecondsFromNow})
-  );
-  return `${header}.${payload}.sig`;
-}
-
 const SAMPLE_RESPONSE: AuthResponse = {
-  token: makeToken(ONE_HOUR_SECONDS),
   userId: 'u-1',
+  email: 'user@test.com',
   expiresAt: '2099-01-01T00:00:00Z',
 };
 
@@ -45,6 +34,7 @@ function authServiceMock(overrides: Partial<Record<string, unknown>> = {}) {
     verifyGoogleCredential: vi.fn(),
     refresh: vi.fn().mockReturnValue(throwError(() => new Error('no cookie'))),
     logout: vi.fn().mockReturnValue(of(null)),
+    getMe: vi.fn().mockReturnValue(throwError(() => new Error('no session'))),
     ...overrides,
   };
 }
@@ -64,35 +54,25 @@ describe('AuthStore (integration)', () => {
     TestBed.resetTestingModule();
   });
 
-  it('silent refresh on init hydrates token when the refresh cookie is valid', () => {
-    const authService = authServiceMock({refresh: vi.fn().mockReturnValue(of(SAMPLE_RESPONSE))});
-    configure(authService);
-
-    const store = TestBed.inject(AuthStore);
-
-    expect(authService.refresh).toHaveBeenCalled();
-    expect(store.token()).toBe(SAMPLE_RESPONSE.token);
-    expect(store.isAuthenticated()).toBe(true);
-  });
-
-  it('silent refresh failure on init leaves the store unauthenticated', () => {
+  it('starts unauthenticated before getMe resolves', () => {
     const authService = authServiceMock();
     configure(authService);
 
     const store = TestBed.inject(AuthStore);
 
-    expect(store.token()).toBeNull();
+    expect(store.userId()).toBeNull();
     expect(store.isAuthenticated()).toBe(false);
   });
 
-  it('successful login stores the token in state', () => {
+  it('successful login stores userId and email in state', () => {
     const authService = authServiceMock({login: vi.fn().mockReturnValue(of(SAMPLE_RESPONSE))});
     configure(authService);
 
     const store = TestBed.inject(AuthStore);
     store.login({email: 'a@b.c', password: 'pw'});
 
-    expect(store.token()).toBe(SAMPLE_RESPONSE.token);
+    expect(store.userId()).toBe(SAMPLE_RESPONSE.userId);
+    expect(store.email()).toBe(SAMPLE_RESPONSE.email);
     expect(store.isAuthenticated()).toBe(true);
     expect(store.errorMessage()).toBe('');
   });
@@ -108,22 +88,23 @@ describe('AuthStore (integration)', () => {
     const store = TestBed.inject(AuthStore);
     store.login({email: 'a@b.c', password: 'pw'});
 
-    expect(store.token()).toBeNull();
+    expect(store.userId()).toBeNull();
     expect(store.errorMessage()).toContain('Continue with Google');
   });
 
-  it('logout clears the token in state and navigates', () => {
+  it('logout clears userId and email and navigates', () => {
     const authService = authServiceMock({login: vi.fn().mockReturnValue(of(SAMPLE_RESPONSE))});
     const router = routerMock();
     configure(authService, router);
 
     const store = TestBed.inject(AuthStore);
     store.login({email: 'a@b.c', password: 'pw'});
-    expect(store.token()).toBe(SAMPLE_RESPONSE.token);
+    expect(store.userId()).toBe(SAMPLE_RESPONSE.userId);
 
     store.logout();
 
-    expect(store.token()).toBeNull();
+    expect(store.userId()).toBeNull();
+    expect(store.email()).toBeNull();
     expect(router.navigate).toHaveBeenCalled();
   });
 });

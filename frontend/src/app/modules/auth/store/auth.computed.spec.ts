@@ -4,31 +4,19 @@ import {ERROR_MESSAGES} from '@dsdevq-common/ui';
 import {beforeEach, describe, expect, it} from 'vitest';
 
 import {ERROR_MESSAGES_REGISTRY} from '../../../core/errors/error-messages.registry';
-import {MS_PER_SECOND} from '../constants/auth.constants';
 import {authComputed} from './auth.computed';
 import {type AuthFlow, type AuthStatus} from './auth.state';
 
-function makeToken(expSecondsFromNow: number): string {
-  const header = btoa(JSON.stringify({alg: 'HS256', typ: 'JWT'}));
-  const payload = btoa(
-    JSON.stringify({exp: Math.floor(Date.now() / MS_PER_SECOND) + expSecondsFromNow})
-  );
-  return `${header}.${payload}.sig`;
-}
-
-const ONE_HOUR_SECONDS = 3600;
-const ONE_HOUR_AGO_SECONDS = -3600;
-
 function build(
   overrides: Partial<{
-    token: string | null;
+    userId: string | null;
     status: AuthStatus;
     errorCode: string | null;
     flow: AuthFlow;
   }> = {}
 ) {
   return {
-    token: signal<string | null>(overrides.token ?? null),
+    userId: signal<string | null>(overrides.userId ?? null),
     status: signal<AuthStatus>(overrides.status ?? 'idle'),
     errorCode: signal<string | null>(overrides.errorCode ?? null),
     flow: signal<AuthFlow>(overrides.flow ?? null),
@@ -43,35 +31,17 @@ describe('authComputed', () => {
   });
 
   describe('isAuthenticated', () => {
-    it('returns true for a non-expired token', () => {
-      const store = build({token: makeToken(ONE_HOUR_SECONDS)});
+    it('returns true when userId is set', () => {
+      const store = build({userId: 'u-1'});
       TestBed.runInInjectionContext(() => {
-        const {isAuthenticated} = authComputed(store);
-        expect(isAuthenticated()).toBe(true);
+        expect(authComputed(store).isAuthenticated()).toBe(true);
       });
     });
 
-    it('returns false when token is null', () => {
-      const store = build({token: null});
+    it('returns false when userId is null', () => {
+      const store = build({userId: null});
       TestBed.runInInjectionContext(() => {
-        const {isAuthenticated} = authComputed(store);
-        expect(isAuthenticated()).toBe(false);
-      });
-    });
-
-    it('returns false when token is expired', () => {
-      const store = build({token: makeToken(ONE_HOUR_AGO_SECONDS)});
-      TestBed.runInInjectionContext(() => {
-        const {isAuthenticated} = authComputed(store);
-        expect(isAuthenticated()).toBe(false);
-      });
-    });
-
-    it('returns false when token is malformed', () => {
-      const store = build({token: 'not-a-jwt'});
-      TestBed.runInInjectionContext(() => {
-        const {isAuthenticated} = authComputed(store);
-        expect(isAuthenticated()).toBe(false);
+        expect(authComputed(store).isAuthenticated()).toBe(false);
       });
     });
   });

@@ -11,23 +11,22 @@ function makeState() {
 }
 
 const SAMPLE_RESPONSE: AuthResponse = {
-  token: 'jwt.token.value',
   userId: 'user-123',
+  email: 'user@test.com',
   expiresAt: '2099-01-01T00:00:00Z',
 };
 
 describe('authMethods', () => {
   describe('applyAuthResponse', () => {
-    it('patches state with response fields and resets status/error/flow/flashMessage', () => {
+    it('patches state with userId/email and resets status/error/flow/flashMessage', () => {
       const {state, methods} = makeState();
       methods.setLoading('login');
       methods.setFlashMessage({kind: 'info', text: 'stale'});
 
       methods.applyAuthResponse(SAMPLE_RESPONSE);
 
-      expect(state.token()).toBe(SAMPLE_RESPONSE.token);
       expect(state.userId()).toBe(SAMPLE_RESPONSE.userId);
-      expect(state.expiresAt()).toBe(SAMPLE_RESPONSE.expiresAt);
+      expect(state.email()).toBe(SAMPLE_RESPONSE.email);
       expect(state.status()).toBe('idle');
       expect(state.errorCode()).toBeNull();
       expect(state.flow()).toBeNull();
@@ -36,16 +35,15 @@ describe('authMethods', () => {
   });
 
   describe('clearSession', () => {
-    it('resets auth fields but preserves flashMessage', () => {
+    it('clears userId and email but preserves flashMessage', () => {
       const {state, methods} = makeState();
       methods.applyAuthResponse(SAMPLE_RESPONSE);
       methods.setFlashMessage({kind: 'error', text: 'keep me'});
 
       methods.clearSession();
 
-      expect(state.token()).toBeNull();
       expect(state.userId()).toBeNull();
-      expect(state.expiresAt()).toBeNull();
+      expect(state.email()).toBeNull();
       expect(state.status()).toBe('idle');
       expect(state.errorCode()).toBeNull();
       expect(state.flow()).toBeNull();

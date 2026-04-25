@@ -1,4 +1,5 @@
 // Components
+export * from './components/app-layout/app-layout.component';
 export * from './components/alert/alert.component';
 export * from './components/badge/badge.component';
 export * from './components/button/button.component';

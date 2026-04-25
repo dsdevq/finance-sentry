@@ -60,15 +60,13 @@ public class JwtAuthenticationMiddleware
             return;
         }
 
-        var authHeader = context.Request.Headers.Authorization.FirstOrDefault();
-        if (authHeader == null || !authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        var token = context.Request.Cookies["fs_access_token"];
+        if (string.IsNullOrWhiteSpace(token))
         {
             context.Response.StatusCode = 401;
             await context.Response.WriteAsJsonAsync(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
             return;
         }
-
-        var token = authHeader["Bearer ".Length..].Trim();
 
         try
         {

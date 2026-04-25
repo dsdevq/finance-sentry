@@ -7,9 +7,8 @@ export interface FlashMessage {
 }
 
 export interface AuthState {
-  token: string | null;
   userId: string | null;
-  expiresAt: string | null;
+  email: string | null;
   status: AuthStatus;
   errorCode: string | null;
   flow: AuthFlow;
@@ -18,9 +17,8 @@ export interface AuthState {
 }
 
 export const initialAuthState: AuthState = {
-  token: null,
   userId: null,
-  expiresAt: null,
+  email: null,
   status: 'idle',
   errorCode: null,
   flow: null,

@@ -10,8 +10,8 @@ import {AuthService} from '../services/auth.service';
 import {authEffects, authHooks} from './auth.effects';
 
 const SAMPLE_RESPONSE: AuthResponse = {
-  token: 'jwt.token',
   userId: 'u-1',
+  email: 'user@test.com',
   expiresAt: '2099-01-01T00:00:00Z',
 };
 

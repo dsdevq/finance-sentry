@@ -4,13 +4,9 @@ export interface AuthRequest {
 }
 
 export interface AuthResponse {
-  token: string;
-  expiresAt: string;
   userId: string;
-}
-
-export interface JwtPayload {
-  exp: number;
+  email: string;
+  expiresAt: string;
 }
 
 export interface ApiError {

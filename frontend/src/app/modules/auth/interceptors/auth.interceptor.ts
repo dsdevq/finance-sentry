@@ -8,16 +8,11 @@ import {
 import {inject} from '@angular/core';
 import {catchError, switchMap, throwError} from 'rxjs';
 
-import {AUTHORIZATION_HEADER} from '../constants/auth.constants';
 import {AuthService} from '../services/auth.service';
 import {AuthStore} from '../store/auth.store';
 
-function isRefreshOrAuthRequest(req: HttpRequest<unknown>): boolean {
-  return req.url.includes('/auth/refresh') || req.url.includes('/auth/logout');
-}
-
-function attachToken(req: HttpRequest<unknown>, token: string | null): HttpRequest<unknown> {
-  return token ? req.clone({setHeaders: {[AUTHORIZATION_HEADER]: `Bearer ${token}`}}) : req;
+function isAuthEndpoint(req: HttpRequest<unknown>): boolean {
+  return req.url.includes('/auth/');
 }
 
 export const authInterceptor: HttpInterceptorFn = (
@@ -26,7 +21,7 @@ export const authInterceptor: HttpInterceptorFn = (
 ) => {
   const authStore = inject(AuthStore);
   const authService = inject(AuthService);
-  const authReq = attachToken(req, authStore.token());
+  const authReq = req.clone({withCredentials: true});
 
   return next(authReq).pipe(
     catchError((err: unknown) => {
@@ -34,11 +29,11 @@ export const authInterceptor: HttpInterceptorFn = (
         err instanceof HttpErrorResponse &&
         (err.status as HttpStatusCode) === HttpStatusCode.Unauthorized;
 
-      if (isUnauthorized && !isRefreshOrAuthRequest(req)) {
+      if (isUnauthorized && !isAuthEndpoint(req)) {
         return authService.refresh().pipe(
-          switchMap(refreshed => {
-            authStore.applyAuthResponse(refreshed);
-            return next(attachToken(req, refreshed.token));
+          switchMap(res => {
+            authStore.applyAuthResponse(res);
+            return next(authReq);
           }),
           catchError(() => {
             authStore.logout();
@@ -47,7 +42,7 @@ export const authInterceptor: HttpInterceptorFn = (
         );
       }
 
-      if (isUnauthorized && isRefreshOrAuthRequest(req)) {
+      if (isUnauthorized && isAuthEndpoint(req)) {
         authStore.logout();
       }
 
