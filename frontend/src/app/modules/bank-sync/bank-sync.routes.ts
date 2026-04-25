@@ -10,13 +10,6 @@ export const BANK_SYNC_ROUTES: Routes = [
       import('./pages/accounts-list/accounts-list.component').then(m => m.AccountsListComponent),
   },
   {
-    path: BankSyncRoute.Connect,
-    loadComponent: () =>
-      import('./pages/connect-account/connect-account.component').then(
-        m => m.ConnectAccountComponent
-      ),
-  },
-  {
     path: ':accountId/transactions',
     loadComponent: () =>
       import('./pages/transaction-list/transaction-list.component').then(

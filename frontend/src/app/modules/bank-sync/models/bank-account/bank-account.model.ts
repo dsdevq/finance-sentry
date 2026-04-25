@@ -3,7 +3,7 @@ import {type Timestamped} from '../../../../shared/models/timestamped/timestampe
 
 export type SyncStatus = 'pending' | 'syncing' | 'active' | 'failed' | 'reauth_required';
 
-export type Provider = 'plaid' | 'monobank';
+export type Provider = 'plaid' | 'monobank' | 'binance' | 'ibkr';
 
 export interface BankAccount extends AccountIdentity, Timestamped {
   ownerName: string;

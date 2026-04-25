@@ -1,12 +1,17 @@
 import {inject} from '@angular/core';
-import {Router} from '@angular/router';
 import {rxMethod} from '@ngrx/signals/rxjs-interop';
 import {catchError, EMPTY, filter, map, pipe, race, switchMap, take, tap, timer} from 'rxjs';
 
 import {ErrorUtils} from '../../../../shared/utils/error.utils';
+import {type ConnectBinanceRequest} from '../../models/binance/binance.model';
+import {type ModalStep} from '../../models/connect/connect.model';
+import {type ConnectIBKRRequest} from '../../models/ibkr/ibkr.model';
 import {type PlaidSuccessMetadata} from '../../models/plaid/plaid.model';
 import {BankSyncService} from '../../services/bank-sync.service';
+import {BinanceService} from '../../services/binance.service';
+import {IBKRService} from '../../services/ibkr.service';
 import {PlaidLinkService} from '../../services/plaid-link.service';
+import {AccountsStore} from '../accounts/accounts.store';
 
 interface EffectsStore {
   setInitializing: () => void;
@@ -15,6 +20,8 @@ interface EffectsStore {
   setPolling: (msg: string) => void;
   setSuccess: () => void;
   setError: (code: Nullable<string>) => void;
+  modalStep: () => ModalStep;
+  setModalStep: (step: ModalStep) => void;
 }
 
 const POLL_INTERVAL_MS = 3000;
@@ -25,10 +32,27 @@ interface PlaidSuccessPayload {
   metadata: PlaidSuccessMetadata;
 }
 
+function resolveBackStep(step: ModalStep): ModalStep {
+  switch (step) {
+    case 'bank-picker':
+      return 'type-picker';
+    case 'monobank-form':
+      return 'bank-picker';
+    case 'binance-form':
+      return 'type-picker';
+    case 'ibkr-form':
+      return 'type-picker';
+    default:
+      return 'closed';
+  }
+}
+
 export function connectEffects(store: EffectsStore) {
   const bankSyncService = inject(BankSyncService);
+  const binanceService = inject(BinanceService);
+  const ibkrService = inject(IBKRService);
   const plaidService = inject(PlaidLinkService);
-  const router = inject(Router);
+  const accountsStore = inject(AccountsStore, {optional: true});
 
   const pollForActive = rxMethod<void>(
     pipe(
@@ -44,7 +68,7 @@ export function connectEffects(store: EffectsStore) {
         return race(polling$, timeout$).pipe(
           tap(() => {
             store.setSuccess();
-            void router.navigate(['/accounts']);
+            accountsStore?.load();
           }),
           catchError((err: unknown) => {
             store.setError(ErrorUtils.extractCode(err));
@@ -107,6 +131,36 @@ export function connectEffects(store: EffectsStore) {
     )
   );
 
+  const connectBinance = rxMethod<ConnectBinanceRequest>(
+    pipe(
+      tap(() => store.setSyncing('Connecting your Binance account...')),
+      switchMap(request =>
+        binanceService.connect(request).pipe(
+          tap(() => pollForActive()),
+          catchError((err: unknown) => {
+            store.setError(ErrorUtils.extractCode(err));
+            return EMPTY;
+          })
+        )
+      )
+    )
+  );
+
+  const connectIBKR = rxMethod<ConnectIBKRRequest>(
+    pipe(
+      tap(() => store.setSyncing('Connecting your IBKR account...')),
+      switchMap(request =>
+        ibkrService.connect(request).pipe(
+          tap(() => pollForActive()),
+          catchError((err: unknown) => {
+            store.setError(ErrorUtils.extractCode(err));
+            return EMPTY;
+          })
+        )
+      )
+    )
+  );
+
   return {
     initPlaid,
     openPlaid(): void {
@@ -116,6 +170,8 @@ export function connectEffects(store: EffectsStore) {
       plaidService.destroy();
     },
     connectMonobank,
+    connectBinance,
+    connectIBKR,
     exchangePlaidToken,
     pollForActive,
   };
