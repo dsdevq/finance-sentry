@@ -39,20 +39,13 @@ public class DashboardQueryService(
     /// <inheritdoc />
     public async Task<DashboardData> GetDashboardDataAsync(Guid userId, CancellationToken ct = default)
     {
-        // Fan-out: run independent queries concurrently for performance
-        var balanceTask = _aggregation.GetAggregatedBalanceAsync(userId, ct);
-        var byTypeTask = _aggregation.GetAccountCountByTypeAsync(userId, ct);
-        var flowTask = _moneyFlow.GetMonthlyFlowAsync(userId, 6, ct);
-        var categoriesTask = _categories.GetTopCategoriesAsync(userId, 10, ct);
-        var lastSyncTask = _syncJobs.GetLatestSuccessfulByUserIdAsync(userId, ct);
-
-        await Task.WhenAll(balanceTask, byTypeTask, flowTask, categoriesTask, lastSyncTask);
-
-        var balance = await balanceTask;
-        var byType = await byTypeTask;
-        var flow = await flowTask;
-        var topCats = await categoriesTask;
-        var lastSync = await lastSyncTask;
+        // Sequential — DbContext is scoped per request and not thread-safe.
+        // Fan-out would require IDbContextFactory.
+        var balance = await _aggregation.GetAggregatedBalanceAsync(userId, ct);
+        var byType = await _aggregation.GetAccountCountByTypeAsync(userId, ct);
+        var flow = await _moneyFlow.GetMonthlyFlowAsync(userId, 6, ct);
+        var topCats = await _categories.GetTopCategoriesAsync(userId, 10, ct);
+        var lastSync = await _syncJobs.GetLatestSuccessfulByUserIdAsync(userId, ct);
 
         var accountCount = byType.Values.Sum();
 

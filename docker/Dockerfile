@@ -8,6 +8,8 @@ WORKDIR /src
 # Copy solution and project files (layer 1: stable dependencies)
 COPY ["backend/NuGet.Config", "backend/"]
 COPY ["backend/FinanceSentry.sln", "backend/"]
+COPY ["backend/Directory.Build.props", "backend/"]
+COPY ["backend/Directory.Packages.props", "backend/"]
 COPY ["backend/src/FinanceSentry.API/FinanceSentry.API.csproj", "backend/src/FinanceSentry.API/"]
 COPY ["backend/src/FinanceSentry.Core/FinanceSentry.Core.csproj", "backend/src/FinanceSentry.Core/"]
 COPY ["backend/src/FinanceSentry.Infrastructure/FinanceSentry.Infrastructure.csproj", "backend/src/FinanceSentry.Infrastructure/"]

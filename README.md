@@ -18,32 +18,76 @@ Personal finance aggregation platform with bank account sync, transaction histor
 
 ## Local Development
 
-Everything runs in Docker:
+All `docker compose` commands assume `cd docker` first. The compose file is `docker-compose.dev.yml`. Frontend source is bind-mounted into its container, so edits hot-reload without rebuilding.
+
+### Service map
+
+| Service | Container | Port |
+|---|---|---|
+| Frontend (Angular dev server) | `finance-sentry-frontend` | 4200 |
+| Backend API (.NET 9) | `finance-sentry-api` | 5050 |
+| PostgreSQL 14 | `finance-sentry-postgres` | 5432 |
+
+Startup order enforced by health checks: `postgres → api → frontend`.
+
+| URL | What |
+|---|---|
+| http://localhost:4200 | Angular SPA |
+| http://localhost:5050/api/v1 | REST API |
+| http://localhost:5050/api/v1/health | Health probe |
+| http://localhost:5050/swagger | Swagger UI |
+| http://localhost:5050/hangfire | Hangfire dashboard |
+
+### Run everything together
 
 ```bash
-cd docker
-docker compose -f docker-compose.dev.yml up -d --build
+docker compose -f docker-compose.dev.yml up -d --build       # first time / after Dockerfile changes
+docker compose -f docker-compose.dev.yml up -d               # subsequent runs (no rebuild)
 ```
 
-Startup order is enforced by health checks: `postgres → api → frontend`
-
-| Service | URL |
-|---|---|
-| Frontend (Angular) | http://localhost:4200 |
-| Backend API | http://localhost:5000/api/v1 |
-| Health check | http://localhost:5000/api/v1/health |
-| Swagger UI | http://localhost:5000/swagger |
-| Hangfire dashboard | http://localhost:5000/hangfire |
-| PostgreSQL | localhost:5432 |
-
-For faster frontend iteration, run `ng serve` locally while keeping API + DB in Docker:
+### Run services separately
 
 ```bash
-# Terminal 1 — backend + db only
-cd docker && docker compose -f docker-compose.dev.yml up -d postgres api
+docker compose -f docker-compose.dev.yml up -d postgres            # db only
+docker compose -f docker-compose.dev.yml up -d postgres api        # db + api (skip frontend)
+docker compose -f docker-compose.dev.yml up -d frontend            # frontend only (assumes api+db already up)
+```
 
-# Terminal 2 — frontend with hot reload
-cd frontend && npm start
+For native frontend with hot reload (alternative to the frontend container):
+
+```bash
+docker compose -f docker-compose.dev.yml up -d postgres api
+cd ../frontend && npm start
+```
+
+### Rebuild
+
+```bash
+docker compose -f docker-compose.dev.yml build api                 # rebuild a single service
+docker compose -f docker-compose.dev.yml build --no-cache frontend # force a clean rebuild
+docker compose -f docker-compose.dev.yml up -d --build api         # rebuild and restart in one step
+docker compose -f docker-compose.dev.yml up -d --force-recreate    # recreate containers without rebuild
+```
+
+Backend (`.cs`) edits require an api rebuild; frontend (`.ts`/`.html`) edits do **not** — the bind mount + `ng serve --watch` picks them up live.
+
+### Logs / shell / inspect
+
+```bash
+docker compose -f docker-compose.dev.yml logs -f api               # tail one service
+docker compose -f docker-compose.dev.yml logs -f                   # tail everything
+docker compose -f docker-compose.dev.yml ps                        # service status + health
+
+docker exec -it finance-sentry-api bash                            # shell into api
+docker exec -it finance-sentry-postgres psql -U finance_user -d finance_sentry
+```
+
+### Stop / clean
+
+```bash
+docker compose -f docker-compose.dev.yml stop                      # stop, keep containers + volumes
+docker compose -f docker-compose.dev.yml down                      # stop + remove containers
+docker compose -f docker-compose.dev.yml down -v                   # also drop the postgres volume (DESTRUCTIVE — wipes the DB)
 ```
 
 ### Environment Variables

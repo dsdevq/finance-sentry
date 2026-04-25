@@ -112,6 +112,9 @@ export function connectEffects(store: EffectsStore) {
     openPlaid(): void {
       plaidService.open();
     },
+    destroyPlaid(): void {
+      plaidService.destroy();
+    },
     connectMonobank,
     exchangePlaidToken,
     pollForActive,
@@ -120,12 +123,13 @@ export function connectEffects(store: EffectsStore) {
 
 interface HookStore {
   initPlaid: () => void;
+  destroyPlaid: () => void;
 }
 
 export function connectOnInit(store: HookStore): void {
   store.initPlaid();
 }
 
-export function connectOnDestroy(): void {
-  inject(PlaidLinkService).destroy();
+export function connectOnDestroy(store: HookStore): void {
+  store.destroyPlaid();
 }
