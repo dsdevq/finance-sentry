@@ -29,8 +29,10 @@
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.0.2" />
     <PackageVersion Include="Google.Apis.Auth" Version="1.68.0" />
 
-    <!-- FluentResults -->
+    <!-- FluentResults / FluentValidation -->
     <PackageVersion Include="FluentResults" Version="4.0.0" />
+    <PackageVersion Include="FluentValidation" Version="11.10.0" />
+    <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="11.10.0" />
 
     <!-- Hangfire -->
     <PackageVersion Include="Hangfire.Core" Version="1.8.14" />

@@ -42,26 +42,21 @@ public class AuthController(
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] AuthRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
-        {
-            return BadRequest(new
-            {
-                error = "Validation failed.",
-                errorCode = "VALIDATION_ERROR",
-                details = new[]
-                {
-                    string.IsNullOrWhiteSpace(request.Email) ? "Email is required." : null,
-                    string.IsNullOrWhiteSpace(request.Password) ? "Password is required." : null
-                }.Where(d => d is not null)
-            });
-        }
-
         try
         {
             var result = await loginHandler.Handle(new LoginCommand(request.Email, request.Password), HttpContext.RequestAborted);
             SetRefreshTokenCookie(result.RawRefreshToken);
             SetAccessTokenCookie(result.RawAccessToken, result.Response.ExpiresAt);
             return Ok(result.Response);
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            return BadRequest(new
+            {
+                error = "Validation failed.",
+                errorCode = "VALIDATION_ERROR",
+                details = ex.Errors.Select(e => e.ErrorMessage),
+            });
         }
         catch (InvalidOperationException ex) when (ex.Message == "GOOGLE_ACCOUNT_ONLY")
         {
