@@ -5,20 +5,20 @@ import {beforeEach, describe, expect, it} from 'vitest';
 
 import {ERROR_MESSAGES_REGISTRY} from '../../../core/errors/error-messages.registry';
 import {authComputed} from './auth.computed';
-import {type AuthFlow, type AuthStatus} from './auth.state';
+import {type AuthFlow} from './auth.state';
 
 function build(
   overrides: Partial<{
-    userId: string | null;
-    status: AuthStatus;
-    errorCode: string | null;
+    userId: Nullable<string>;
+    status: AsyncStatus;
+    errorCode: Nullable<string>;
     flow: AuthFlow;
   }> = {}
 ) {
   return {
-    userId: signal<string | null>(overrides.userId ?? null),
-    status: signal<AuthStatus>(overrides.status ?? 'idle'),
-    errorCode: signal<string | null>(overrides.errorCode ?? null),
+    userId: signal<Nullable<string>>(overrides.userId ?? null),
+    status: signal<AsyncStatus>(overrides.status ?? 'idle'),
+    errorCode: signal<Nullable<string>>(overrides.errorCode ?? null),
     flow: signal<AuthFlow>(overrides.flow ?? null),
   };
 }

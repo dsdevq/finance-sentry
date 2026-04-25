@@ -1,11 +1,11 @@
 import {computed, inject, type Signal} from '@angular/core';
 import {ErrorMessageService} from '@dsdevq-common/ui';
 
-import {PAGE_SIZE, type TransactionsStatus} from './transactions.state';
+import {PAGE_SIZE} from './transactions.state';
 
 interface StateSignals {
-  status: Signal<TransactionsStatus>;
-  errorCode: Signal<string | null>;
+  status: Signal<AsyncStatus>;
+  errorCode: Signal<Nullable<string>>;
   offset: Signal<number>;
   totalCount: Signal<number>;
 }

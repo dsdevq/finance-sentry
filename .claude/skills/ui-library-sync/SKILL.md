@@ -189,7 +189,7 @@ frontend/projects/dsdevq-common/ui/src/lib/components/<name>/
 
 ### Component rules (non-negotiable)
 
-- `standalone: true`, `ChangeDetectionStrategy.OnPush`
+- `ChangeDetectionStrategy.OnPush` (standalone is default in Angular 19+ — do NOT add `standalone: true`)
 - Selector: `cmn-<name>` (kebab, always `cmn-` prefix)
 - All inputs via `input<T>()` signal, outputs via `output<T>()`
 - Explicit access modifiers on all class members (`public`/`private`)

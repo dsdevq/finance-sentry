@@ -4,8 +4,8 @@ import {NavigationEnd, Router} from '@angular/router';
 import {of, Subject, throwError} from 'rxjs';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 
-import {AppRoute} from '../../../shared/enums/app-route.enum';
-import {type AuthResponse} from '../models/auth.models';
+import {AppRoute} from '../../../shared/enums/app-route/app-route.enum';
+import {type AuthResponse} from '../models/auth/auth.model';
 import {AuthService} from '../services/auth.service';
 import {authEffects, authHooks} from './auth.effects';
 
@@ -14,7 +14,7 @@ const SAMPLE_RESPONSE: AuthResponse = {
   expiresAt: '2099-01-01T00:00:00Z',
 };
 
-function buildStore(overrides: {isAuthenticated?: boolean; returnUrl?: string | null} = {}) {
+function buildStore(overrides: {isAuthenticated?: boolean; returnUrl?: Nullable<string>} = {}) {
   return {
     applyAuthResponse: vi.fn(),
     clearSession: vi.fn(),
@@ -23,7 +23,7 @@ function buildStore(overrides: {isAuthenticated?: boolean; returnUrl?: string | 
     setReturnUrl: vi.fn(),
     setFlashMessage: vi.fn(),
     isAuthenticated: signal(overrides.isAuthenticated ?? false),
-    returnUrl: signal<string | null>(overrides.returnUrl ?? null),
+    returnUrl: signal<Nullable<string>>(overrides.returnUrl ?? null),
   };
 }
 

@@ -1,4 +1,3 @@
-export type AuthStatus = 'idle' | 'loading' | 'error';
 export type AuthFlow = 'login' | 'register' | 'google' | null;
 
 export interface FlashMessage {
@@ -7,13 +6,13 @@ export interface FlashMessage {
 }
 
 export interface AuthState {
-  userId: string | null;
-  email: string | null;
-  status: AuthStatus;
-  errorCode: string | null;
+  userId: Nullable<string>;
+  email: Nullable<string>;
+  status: AsyncStatus;
+  errorCode: Nullable<string>;
   flow: AuthFlow;
-  returnUrl: string | null;
-  flashMessage: FlashMessage | null;
+  returnUrl: Nullable<string>;
+  flashMessage: Nullable<FlashMessage>;
 }
 
 export const initialAuthState: AuthState = {

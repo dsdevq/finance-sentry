@@ -10,12 +10,11 @@ import {
 } from '@dsdevq-common/ui';
 
 import {environment} from '../../../../../environments/environment';
-import {AppRoute} from '../../../../shared/enums/app-route.enum';
+import {AppRoute} from '../../../../shared/enums/app-route/app-route.enum';
 import {AuthStore} from '../../store/auth.store';
 
 @Component({
   selector: 'fns-login',
-  standalone: true,
   imports: [
     ReactiveFormsModule,
     RouterLink,

@@ -2,7 +2,7 @@ import {inject, type Signal} from '@angular/core';
 import {rxMethod} from '@ngrx/signals/rxjs-interop';
 import {catchError, EMPTY, pipe, switchMap, tap} from 'rxjs';
 
-import {type SyncStatusResponse} from '../../models/sync.model';
+import {type SyncStatusResponse} from '../../models/sync/sync.model';
 import {BankSyncService} from '../../services/bank-sync.service';
 
 interface EffectsStore {

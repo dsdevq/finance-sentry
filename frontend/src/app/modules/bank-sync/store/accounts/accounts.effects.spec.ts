@@ -2,7 +2,7 @@ import {TestBed} from '@angular/core/testing';
 import {of, throwError} from 'rxjs';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 
-import {type WealthSummaryResponse} from '../../models/wealth.model';
+import {type WealthSummaryResponse} from '../../../../shared/models/wealth/wealth.model';
 import {WealthService} from '../../services/wealth.service';
 import {accountsEffects} from './accounts.effects';
 

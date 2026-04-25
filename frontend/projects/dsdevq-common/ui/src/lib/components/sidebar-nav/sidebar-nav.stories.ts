@@ -1,12 +1,12 @@
 import type {Meta, StoryObj} from '@storybook/angular';
 
-import {SidebarNavComponent} from './sidebar-nav.component';
+import {type NavItem, SidebarNavComponent} from './sidebar-nav.component';
 
-const NAV_ITEMS = [
+const NAV_ITEMS: NavItem[] = [
   {label: 'Dashboard', icon: 'LayoutDashboard', route: '/dashboard'},
   {label: 'Accounts', icon: 'Building2', route: '/accounts'},
   {label: 'Transactions', icon: 'ArrowLeftRight', route: '/transactions'},
-  {label: 'Holdings', icon: 'BarChart2', route: '/holdings'},
+  {label: 'Holdings', icon: 'ChartBar', route: '/holdings'},
   {label: 'Settings', icon: 'Settings', route: '/settings'},
 ];
 

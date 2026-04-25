@@ -1,10 +1,9 @@
 import {CommonModule} from '@angular/common';
 import {ChangeDetectionStrategy, Component, input} from '@angular/core';
-import {CategoryStat} from '@modules/bank-sync/models/dashboard.model';
+import {CategoryStat} from '@modules/bank-sync/models/dashboard/dashboard.model';
 
 @Component({
   selector: 'fns-category-breakdown-chart',
-  standalone: true,
   imports: [CommonModule],
   templateUrl: './category-breakdown-chart.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

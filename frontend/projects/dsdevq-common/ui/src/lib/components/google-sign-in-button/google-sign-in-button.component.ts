@@ -15,7 +15,6 @@ import {
 
 @Component({
   selector: 'cmn-google-sign-in-button',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: '<div #btn></div>',
 })

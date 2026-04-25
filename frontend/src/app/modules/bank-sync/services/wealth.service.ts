@@ -3,7 +3,7 @@ import {inject, Injectable} from '@angular/core';
 import {type Observable} from 'rxjs';
 
 import {environment} from '../../../../environments/environment';
-import {type WealthSummaryResponse} from '../models/wealth.model';
+import {type WealthSummaryResponse} from '../../../shared/models/wealth/wealth.model';
 
 @Injectable({providedIn: 'root'})
 export class WealthService {

@@ -19,7 +19,7 @@
 
   @if (store.status(); as s) {
     <div class="last-synced">
-      Last synced: {{ getRelativeTime(s.lastSyncTimestamp) }}
+      Last synced: {{ s.lastSyncTimestamp | relativeTime }}
       @if (s.transactionCountFetched > 0) {
         <span>({{ s.transactionCountFetched }} transactions)</span>
       }

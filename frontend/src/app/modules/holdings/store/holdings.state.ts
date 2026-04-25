@@ -1,11 +1,9 @@
-import {type WealthSummaryResponse} from '../../bank-sync/models/wealth.model';
-
-export type HoldingsStatus = 'idle' | 'loading' | 'error';
+import {type WealthSummaryResponse} from '../../../shared/models/wealth/wealth.model';
 
 export interface HoldingsState {
-  summary: WealthSummaryResponse | null;
-  status: HoldingsStatus;
-  errorCode: string | null;
+  summary: Nullable<WealthSummaryResponse>;
+  status: AsyncStatus;
+  errorCode: Nullable<string>;
 }
 
 export const initialHoldingsState: HoldingsState = {

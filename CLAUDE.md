@@ -141,6 +141,7 @@ From the cross-artifact analysis of `specs/001-bank-account-sync/`:
 After writing or modifying **any** Angular `.ts` file, run `npx eslint <file>` from `frontend/` and fix all errors before moving on. Non-negotiable rules (see constitution § II for the full list):
 - `inject()` only — no constructor parameter injection
 - `ChangeDetectionStrategy.OnPush` on every component
+- Do **not** add `standalone: true` to `@Component` / `@Pipe` / `@Directive` — it is the default in Angular 19+ and is dead boilerplate
 - Selector prefix: `fns-` (e.g. `fns-login`, `fns-dashboard`)
 - Explicit access modifiers on all class members (`public`/`private`)
 - No magic numbers — extract to named constants
@@ -173,8 +174,8 @@ Use `/csharp-quality` for a batch cleanup sweep across multiple files.
 ## File Organisation Rule (Frontend)
 
 In Angular modules, each concept lives in its own file — no mixing:
-- **Interfaces / types** → `models/*.model.ts` or `models/*.types.ts`
-- **Constants** → `*.constants.ts` next to the consumer, or a shared `models/*.constants.ts`
+- **Interfaces / types** → `models/<entity>/<entity>.model.ts` (or `*.types.ts` for type-alias-only files)
+- **Domain constants** → `constants/<entity>/<entity>.constants.ts` (separate sibling tree to `models/`); page-only UI constants → `<page>.constants.ts` next to the page
 - **Component class** → `*.component.ts` (no inline interface or constant definitions)
 - **Service class** → `*.service.ts` (HTTP-only; no state, no inline interfaces — import from model files)
 - **State** → `<feature>/store/*.state.ts` · `*.computed.ts` · `*.methods.ts` · `*.effects.ts` · `*.store.ts` (see State Management rule)
@@ -206,6 +207,26 @@ Rules:
 - **No `setInterval`.** Periodic refresh uses `timer(ms, ms).pipe(switchMap(...))` inside an `rxMethod` in `*.effects.ts`, kicked off by `onInit`.
 - **No component subscriptions.** Components inject the store and bind `store.someSignal()` in templates. For flows, call `store.someMethod(payload)` and rely on computed signals for loading/error feedback.
 - Unit tests live next to the files (`*.spec.ts`), use `TestBed.runInInjectionContext` and `signalState(initialState)` for lightweight fixtures. Run with `npx ng test --watch=false` (Vitest via `@angular/build:unit-test`).
+
+---
+
+## Utility Helpers — always a `*.utils.ts` class
+
+Pure helper functions are NEVER bare `export function`s in a random file. Each helper lives in `<domain>.utils.ts` (e.g. `error.utils.ts`, `time.utils.ts`) under `frontend/src/app/shared/utils/` (cross-module) or `frontend/src/app/modules/<feature>/utils/` (feature-local), as a class with `public static` methods:
+
+```ts
+export class TimeUtils {
+  public static getRelativeTime(timestamp: Nullable<string>): string { ... }
+}
+```
+
+Rules:
+- One domain per file. `error.utils.ts` holds error helpers, `time.utils.ts` holds time helpers — never mix.
+- Methods are `public static`, no instance state, no DI, no `inject()`. If you need DI, make it a service in `services/` instead.
+- **Template-bound helpers must have a thin pipe wrapper.** If any `*.html` calls the helper, create `shared/pipes/<name>.pipe.ts` (or `modules/<feature>/pipes/`) whose `transform()` just delegates to the static method. Templates use the pipe; components don't expose the function via `public readonly fooFn = fooFn`.
+- Every `*.utils.ts` ships with `<domain>.utils.spec.ts` (Vitest) — one branch per `it`, edge cases (null/undefined/empty), `vi.useFakeTimers()` for time-dependent helpers. Coverage on the util file: 100%.
+
+The `frontend-utils-creation` skill covers the full mechanics; trigger it whenever you're tempted to write a bare helper function.
 
 ---
 

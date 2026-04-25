@@ -2,7 +2,7 @@ import {type Routes} from '@angular/router';
 
 import {authGuard} from './modules/auth/guards/auth.guard';
 import {guestGuard} from './modules/auth/guards/guest.guard';
-import {AppRoute} from './shared/enums/app-route.enum';
+import {AppRoute} from './shared/enums/app-route/app-route.enum';
 
 export const APP_ROUTES: Routes = [
   {

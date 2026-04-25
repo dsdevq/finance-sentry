@@ -4,9 +4,11 @@ import {ERROR_MESSAGES} from '@dsdevq-common/ui';
 import {beforeEach, describe, expect, it} from 'vitest';
 
 import {ERROR_MESSAGES_REGISTRY} from '../../../../core/errors/error-messages.registry';
-import {type AccountBalanceItem, type WealthSummaryResponse} from '../../models/wealth.model';
+import {
+  type AccountBalanceItem,
+  type WealthSummaryResponse,
+} from '../../../../shared/models/wealth/wealth.model';
 import {accountsComputed} from './accounts.computed';
-import {type AccountsStatus} from './accounts.state';
 
 const FAKE_ACCOUNT: AccountBalanceItem = {
   accountId: 'a1',
@@ -18,7 +20,7 @@ const FAKE_ACCOUNT: AccountBalanceItem = {
   currency: 'USD',
   currentBalance: 1000,
   balanceInBaseCurrency: 1000,
-  syncStatus: 'active',
+  syncStatus: 'synced',
 };
 
 const FAKE_SUMMARY: WealthSummaryResponse = {
@@ -30,15 +32,15 @@ const FAKE_SUMMARY: WealthSummaryResponse = {
 
 function build(
   overrides: Partial<{
-    summary: WealthSummaryResponse | null;
-    status: AccountsStatus;
-    errorCode: string | null;
+    summary: Nullable<WealthSummaryResponse>;
+    status: AsyncStatus;
+    errorCode: Nullable<string>;
   }> = {}
 ) {
   return {
-    summary: signal<WealthSummaryResponse | null>(overrides.summary ?? null),
-    status: signal<AccountsStatus>(overrides.status ?? 'idle'),
-    errorCode: signal<string | null>(overrides.errorCode ?? null),
+    summary: signal<Nullable<WealthSummaryResponse>>(overrides.summary ?? null),
+    status: signal<AsyncStatus>(overrides.status ?? 'idle'),
+    errorCode: signal<Nullable<string>>(overrides.errorCode ?? null),
   };
 }
 

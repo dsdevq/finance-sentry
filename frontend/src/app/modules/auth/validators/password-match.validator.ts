@@ -1,6 +1,6 @@
 import {type AbstractControl, type ValidationErrors} from '@angular/forms';
 
-export function passwordsMatch(group: AbstractControl): ValidationErrors | null {
+export function passwordsMatch(group: AbstractControl): Nullable<ValidationErrors> {
   const password = group.get('password')?.value as string | undefined;
   const confirm = group.get('confirmPassword')?.value as string | undefined;
   const ctrl = group.get('confirmPassword');

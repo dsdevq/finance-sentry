@@ -8,13 +8,12 @@ import {
   InputComponent,
 } from '@dsdevq-common/ui';
 
-import {type Provider} from '../../models/bank-account.model';
+import {type Provider} from '../../models/bank-account/bank-account.model';
 import {ConnectStore} from '../../store/connect/connect.store';
 import {MONOBANK_TOKEN_MAX_LENGTH} from './connect-account.constants';
 
 @Component({
   selector: 'fns-connect-account',
-  standalone: true,
   imports: [
     CommonModule,
     ReactiveFormsModule,

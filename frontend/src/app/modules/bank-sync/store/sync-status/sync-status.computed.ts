@@ -1,9 +1,9 @@
 import {computed, type Signal} from '@angular/core';
 
-import {type SyncStatusResponse} from '../../models/sync.model';
+import {type SyncStatusResponse} from '../../models/sync/sync.model';
 
 interface StateSignals {
-  status: Signal<SyncStatusResponse | null>;
+  status: Signal<Nullable<SyncStatusResponse>>;
   isSyncing: Signal<boolean>;
 }
 

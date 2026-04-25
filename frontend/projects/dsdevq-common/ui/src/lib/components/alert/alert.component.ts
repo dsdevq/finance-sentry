@@ -34,7 +34,6 @@ const VARIANT_ROLE: Record<AlertVariant, string> = {
 
 @Component({
   selector: 'cmn-alert',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [IconComponent],
   template: `

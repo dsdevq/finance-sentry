@@ -8,7 +8,7 @@ import {
   type TableColumn,
 } from '@dsdevq-common/ui';
 
-import {type CategoryStat} from '../../models/dashboard.model';
+import {type CategoryStat} from '../../models/dashboard/dashboard.model';
 import {DashboardStore} from '../../store/dashboard/dashboard.store';
 
 const CATEGORY_COLUMNS: TableColumn<CategoryStat>[] = [
@@ -30,7 +30,6 @@ const CATEGORY_COLUMNS: TableColumn<CategoryStat>[] = [
 
 @Component({
   selector: 'fns-dashboard',
-  standalone: true,
   imports: [
     AlertComponent,
     DataTableComponent,

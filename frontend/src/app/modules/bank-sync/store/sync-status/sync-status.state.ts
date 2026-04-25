@@ -1,10 +1,10 @@
-import {type SyncStatusResponse} from '../../models/sync.model';
+import {type SyncStatusResponse} from '../../models/sync/sync.model';
 
 export interface SyncStatusState {
   accountId: string;
-  status: SyncStatusResponse | null;
+  status: Nullable<SyncStatusResponse>;
   isSyncing: boolean;
-  errorMessage: string | null;
+  errorMessage: Nullable<string>;
 }
 
 export const initialSyncStatusState: SyncStatusState = {

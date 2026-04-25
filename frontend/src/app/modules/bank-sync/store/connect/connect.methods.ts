@@ -1,6 +1,6 @@
 import {patchState, type WritableStateSource} from '@ngrx/signals';
 
-import {type Provider} from '../../models/bank-account.model';
+import {type Provider} from '../../models/bank-account/bank-account.model';
 import {type ConnectState} from './connect.state';
 
 export function connectMethods(store: WritableStateSource<ConnectState>) {
@@ -23,7 +23,7 @@ export function connectMethods(store: WritableStateSource<ConnectState>) {
     setSuccess(): void {
       patchState(store, {status: 'success', statusMessage: null, errorCode: null});
     },
-    setError(errorCode: string | null): void {
+    setError(errorCode: Nullable<string>): void {
       patchState(store, {status: 'error', errorCode, statusMessage: null});
     },
     clearStatus(): void {

@@ -3,7 +3,7 @@ import {TestBed} from '@angular/core/testing';
 import {of, throwError} from 'rxjs';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 
-import {type TransactionListResponse} from '../../models/transaction.model';
+import {type TransactionListResponse} from '../../models/transaction/transaction.model';
 import {BankSyncService} from '../../services/bank-sync.service';
 import {transactionsEffects} from './transactions.effects';
 import {PAGE_SIZE} from './transactions.state';

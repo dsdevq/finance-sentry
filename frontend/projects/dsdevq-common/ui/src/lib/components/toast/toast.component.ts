@@ -29,7 +29,6 @@ const VARIANT_ROLE: Record<ToastVariant, string> = {
 
 @Component({
   selector: 'cmn-toast',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [IconComponent],
   template: `

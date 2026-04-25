@@ -12,8 +12,8 @@ export interface BankAccount {
   currentBalance: number;
   availableBalance: number;
   syncStatus: SyncStatus;
-  lastSyncTimestamp: string | null;
-  lastSyncDurationMs: number | null;
+  lastSyncTimestamp: Nullable<string>;
+  lastSyncDurationMs: Nullable<number>;
   createdAt: string;
   provider: string;
 }
@@ -38,7 +38,7 @@ export interface ConnectedMonobankAccount {
   accountNumberLast4: string;
   ownerName: string;
   currency: string;
-  currentBalance: number | null;
+  currentBalance: Nullable<number>;
   syncStatus: string;
   provider: string;
 }
@@ -56,6 +56,6 @@ export interface LinkAccountResponse {
   currency: string;
   initialBalance: number;
   syncStatus: string;
-  lastSyncTimestamp: string | null;
+  lastSyncTimestamp: Nullable<string>;
   message: string;
 }

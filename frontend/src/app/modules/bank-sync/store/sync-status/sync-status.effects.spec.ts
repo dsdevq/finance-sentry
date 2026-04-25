@@ -3,7 +3,7 @@ import {TestBed} from '@angular/core/testing';
 import {of, throwError} from 'rxjs';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 
-import {type SyncStatusResponse, type TriggerSyncResponse} from '../../models/sync.model';
+import {type SyncStatusResponse, type TriggerSyncResponse} from '../../models/sync/sync.model';
 import {BankSyncService} from '../../services/bank-sync.service';
 import {syncStatusEffects} from './sync-status.effects';
 

@@ -7,7 +7,6 @@ import {TransactionsStore} from '../../store/transactions/transactions.store';
 
 @Component({
   selector: 'fns-transaction-list',
-  standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './transaction-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

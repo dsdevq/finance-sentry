@@ -5,7 +5,7 @@ import {of, Subject, throwError} from 'rxjs';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 
 import {ERROR_MESSAGES_REGISTRY} from '../../../core/errors/error-messages.registry';
-import {type AuthResponse} from '../models/auth.models';
+import {type AuthResponse} from '../models/auth/auth.model';
 import {AuthService} from '../services/auth.service';
 import {AuthStore} from './auth.store';
 
@@ -70,8 +70,8 @@ describe('AuthStore (integration)', () => {
     const store = TestBed.inject(AuthStore);
     store.login({email: 'a@b.c', password: 'pw'});
 
-    expect(store.userId()).toBe(SAMPLE_RESPONSE.userId);
-    expect(store.email()).toBe(SAMPLE_RESPONSE.email);
+    expect(store.userId()).toBe(SAMPLE_RESPONSE.user.id);
+    expect(store.email()).toBe(SAMPLE_RESPONSE.user.email);
     expect(store.isAuthenticated()).toBe(true);
     expect(store.errorMessage()).toBe('');
   });
@@ -98,7 +98,7 @@ describe('AuthStore (integration)', () => {
 
     const store = TestBed.inject(AuthStore);
     store.login({email: 'a@b.c', password: 'pw'});
-    expect(store.userId()).toBe(SAMPLE_RESPONSE.userId);
+    expect(store.userId()).toBe(SAMPLE_RESPONSE.user.id);
 
     store.logout();
 

@@ -5,7 +5,6 @@ import {TypographyDirective} from './typography.directive';
 
 @Component({
   selector: 'cmn-typography-showcase',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TypographyDirective],
   template: `

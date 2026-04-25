@@ -11,7 +11,7 @@ import {
 } from '@dsdevq-common/ui';
 
 import {environment} from '../../../../../environments/environment';
-import {AppRoute} from '../../../../shared/enums/app-route.enum';
+import {AppRoute} from '../../../../shared/enums/app-route/app-route.enum';
 import {AuthStore} from '../../store/auth.store';
 
 const MIN_PASSWORD_LENGTH = 8;
@@ -21,7 +21,6 @@ const STRENGTH_STRONG = 4;
 
 @Component({
   selector: 'fns-register',
-  standalone: true,
   imports: [
     ReactiveFormsModule,
     RouterLink,

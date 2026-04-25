@@ -5,6 +5,7 @@
   "compilerOptions": {
     "rootDir": "./src",
     "outDir": "../../../out-tsc/lib",
+    "composite": true,
     "declaration": true,
     "declarationMap": true,
     "types": ["google.accounts"]

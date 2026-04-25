@@ -31,7 +31,6 @@ const DEFAULT_COLORS = [
 
 @Component({
   selector: 'cmn-donut-chart',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div

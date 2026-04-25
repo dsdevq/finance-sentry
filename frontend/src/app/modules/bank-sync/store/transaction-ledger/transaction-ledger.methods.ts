@@ -1,6 +1,6 @@
 import {patchState, type WritableStateSource} from '@ngrx/signals';
 
-import {type GlobalTransactionDto} from '../../models/transaction.model';
+import {type GlobalTransactionDto} from '../../models/transaction/transaction.model';
 import {type TransactionLedgerState} from './transaction-ledger.state';
 
 export function transactionLedgerMethods(store: WritableStateSource<TransactionLedgerState>) {
@@ -15,7 +15,7 @@ export function transactionLedgerMethods(store: WritableStateSource<TransactionL
     ): void {
       patchState(store, {transactions, totalCount, hasMore, status: 'idle', errorCode: null});
     },
-    setError(errorCode: string | null): void {
+    setError(errorCode: Nullable<string>): void {
       patchState(store, {status: 'error', errorCode});
     },
     setOffset(offset: number): void {

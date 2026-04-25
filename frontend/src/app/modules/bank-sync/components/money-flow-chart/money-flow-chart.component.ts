@@ -1,10 +1,9 @@
 import {CommonModule} from '@angular/common';
 import {ChangeDetectionStrategy, Component, input} from '@angular/core';
-import {MonthlyFlow} from '@modules/bank-sync/models/dashboard.model';
+import {MonthlyFlow} from '@modules/bank-sync/models/dashboard/dashboard.model';
 
 @Component({
   selector: 'fns-money-flow-chart',
-  standalone: true,
   imports: [CommonModule],
   templateUrl: './money-flow-chart.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

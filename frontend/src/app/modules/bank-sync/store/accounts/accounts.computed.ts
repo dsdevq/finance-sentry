@@ -1,13 +1,15 @@
 import {computed, inject, type Signal} from '@angular/core';
 import {ErrorMessageService} from '@dsdevq-common/ui';
 
-import {type CategorySummary, type WealthSummaryResponse} from '../../models/wealth.model';
-import {type AccountsStatus} from './accounts.state';
+import {
+  type CategorySummary,
+  type WealthSummaryResponse,
+} from '../../../../shared/models/wealth/wealth.model';
 
 interface StateSignals {
-  summary: Signal<WealthSummaryResponse | null>;
-  status: Signal<AccountsStatus>;
-  errorCode: Signal<string | null>;
+  summary: Signal<Nullable<WealthSummaryResponse>>;
+  status: Signal<AsyncStatus>;
+  errorCode: Signal<Nullable<string>>;
 }
 
 const DEFAULT_ERROR_MESSAGE = 'Failed to load accounts. Please try again.';
@@ -28,13 +30,13 @@ export function accountsComputed(store: StateSignals) {
     }),
     totalNetWorth: computed(() => store.summary()?.totalNetWorth ?? 0),
     baseCurrency: computed(() => store.summary()?.baseCurrency ?? 'USD'),
-    bankingCategory: computed<CategorySummary | null>(
+    bankingCategory: computed<Nullable<CategorySummary>>(
       () => store.summary()?.categories.find(c => c.category === 'banking') ?? null
     ),
-    cryptoCategory: computed<CategorySummary | null>(
+    cryptoCategory: computed<Nullable<CategorySummary>>(
       () => store.summary()?.categories.find(c => c.category === 'crypto') ?? null
     ),
-    brokerageCategory: computed<CategorySummary | null>(
+    brokerageCategory: computed<Nullable<CategorySummary>>(
       () => store.summary()?.categories.find(c => c.category === 'brokerage') ?? null
     ),
     totalConnections: computed(

@@ -75,7 +75,6 @@ export const Disabled: Story = {
 
 @Component({
   selector: 'cmn-form-example',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormFieldComponent, InputComponent, ButtonComponent, ReactiveFormsModule],
   template: `
@@ -154,7 +153,6 @@ export const FullReactiveFormExample: Story = {
 
 @Component({
   selector: 'cmn-control-input-example',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormFieldComponent, InputComponent, ButtonComponent, ReactiveFormsModule],
   template: `

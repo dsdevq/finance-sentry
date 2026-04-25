@@ -28,7 +28,6 @@ export interface ChartPoint {
 
 @Component({
   selector: 'cmn-line-chart',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div

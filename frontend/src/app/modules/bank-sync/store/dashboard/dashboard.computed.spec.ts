@@ -4,9 +4,8 @@ import {ERROR_MESSAGES} from '@dsdevq-common/ui';
 import {beforeEach, describe, expect, it} from 'vitest';
 
 import {ERROR_MESSAGES_REGISTRY} from '../../../../core/errors/error-messages.registry';
-import {type DashboardData} from '../../models/dashboard.model';
+import {type DashboardData} from '../../models/dashboard/dashboard.model';
 import {dashboardComputed} from './dashboard.computed';
-import {type DashboardStatus} from './dashboard.state';
 
 const EMPTY_DATA: DashboardData = {
   aggregatedBalance: {},
@@ -19,15 +18,15 @@ const EMPTY_DATA: DashboardData = {
 
 function build(
   overrides: Partial<{
-    data: DashboardData | null;
-    status: DashboardStatus;
-    errorCode: string | null;
+    data: Nullable<DashboardData>;
+    status: AsyncStatus;
+    errorCode: Nullable<string>;
   }> = {}
 ) {
   return {
-    data: signal<DashboardData | null>(overrides.data ?? null),
-    status: signal<DashboardStatus>(overrides.status ?? 'idle'),
-    errorCode: signal<string | null>(overrides.errorCode ?? null),
+    data: signal<Nullable<DashboardData>>(overrides.data ?? null),
+    status: signal<AsyncStatus>(overrides.status ?? 'idle'),
+    errorCode: signal<Nullable<string>>(overrides.errorCode ?? null),
   };
 }
 

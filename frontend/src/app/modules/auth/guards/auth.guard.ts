@@ -1,7 +1,7 @@
 import {inject} from '@angular/core';
 import {type CanActivateFn, Router} from '@angular/router';
 
-import {AppRoute} from '../../../shared/enums/app-route.enum';
+import {AppRoute} from '../../../shared/enums/app-route/app-route.enum';
 import {AuthStore} from '../store/auth.store';
 
 export const authGuard: CanActivateFn = (_route, state) => {

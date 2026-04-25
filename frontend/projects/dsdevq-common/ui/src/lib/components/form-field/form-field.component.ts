@@ -19,7 +19,6 @@ let fieldCounter = 0;
 
 @Component({
   selector: 'cmn-form-field',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [],
   providers: [

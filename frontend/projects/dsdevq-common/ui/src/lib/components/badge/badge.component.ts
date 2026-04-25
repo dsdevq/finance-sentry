@@ -16,7 +16,6 @@ const BASE_CLASSES =
 
 @Component({
   selector: 'cmn-badge',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<span [class]="classes()"><ng-content /></span>`,
 })

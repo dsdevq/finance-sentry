@@ -3,8 +3,10 @@ import {Router} from '@angular/router';
 import {rxMethod} from '@ngrx/signals/rxjs-interop';
 import {catchError, EMPTY, filter, map, pipe, race, switchMap, take, tap, timer} from 'rxjs';
 
+import {ErrorUtils} from '../../../../shared/utils/error.utils';
+import {type PlaidSuccessMetadata} from '../../models/plaid/plaid.model';
 import {BankSyncService} from '../../services/bank-sync.service';
-import {PlaidLinkService, type PlaidSuccessMetadata} from '../../services/plaid-link.service';
+import {PlaidLinkService} from '../../services/plaid-link.service';
 
 interface EffectsStore {
   setInitializing: () => void;
@@ -12,7 +14,7 @@ interface EffectsStore {
   setSyncing: (msg: string) => void;
   setPolling: (msg: string) => void;
   setSuccess: () => void;
-  setError: (code: string | null) => void;
+  setError: (code: Nullable<string>) => void;
 }
 
 const POLL_INTERVAL_MS = 3000;
@@ -21,11 +23,6 @@ const POLL_MAX_MS = 60_000;
 interface PlaidSuccessPayload {
   publicToken: string;
   metadata: PlaidSuccessMetadata;
-}
-
-function extractErrorCode(err: unknown): string | null {
-  const code = (err as {error?: {errorCode?: string}} | null)?.error?.errorCode;
-  return code ?? null;
 }
 
 export function connectEffects(store: EffectsStore) {
@@ -50,7 +47,7 @@ export function connectEffects(store: EffectsStore) {
             void router.navigate(['/accounts']);
           }),
           catchError((err: unknown) => {
-            store.setError(extractErrorCode(err));
+            store.setError(ErrorUtils.extractCode(err));
             return EMPTY;
           })
         );
@@ -66,7 +63,7 @@ export function connectEffects(store: EffectsStore) {
         return bankSyncService.exchangePublicToken(publicToken, institutionName).pipe(
           tap(() => pollForActive()),
           catchError((err: unknown) => {
-            store.setError(extractErrorCode(err) ?? 'PLAID_LINK_FAILED');
+            store.setError(ErrorUtils.extractCode(err) ?? 'PLAID_LINK_FAILED');
             return EMPTY;
           })
         );
@@ -87,7 +84,7 @@ export function connectEffects(store: EffectsStore) {
           ),
           tap(() => store.setReady()),
           catchError((err: unknown) => {
-            store.setError(extractErrorCode(err));
+            store.setError(ErrorUtils.extractCode(err));
             return EMPTY;
           })
         )
@@ -102,7 +99,7 @@ export function connectEffects(store: EffectsStore) {
         bankSyncService.connectMonobank(token).pipe(
           tap(() => pollForActive()),
           catchError((err: unknown) => {
-            store.setError(extractErrorCode(err));
+            store.setError(ErrorUtils.extractCode(err));
             return EMPTY;
           })
         )

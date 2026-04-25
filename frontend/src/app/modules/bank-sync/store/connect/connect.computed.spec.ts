@@ -4,7 +4,7 @@ import {ERROR_MESSAGES} from '@dsdevq-common/ui';
 import {beforeEach, describe, expect, it} from 'vitest';
 
 import {ERROR_MESSAGES_REGISTRY} from '../../../../core/errors/error-messages.registry';
-import {type Provider} from '../../models/bank-account.model';
+import {type Provider} from '../../models/bank-account/bank-account.model';
 import {connectComputed} from './connect.computed';
 import {type ConnectStatus} from './connect.state';
 
@@ -12,14 +12,14 @@ function build(
   overrides: Partial<{
     selectedProvider: Provider;
     status: ConnectStatus;
-    errorCode: string | null;
+    errorCode: Nullable<string>;
   }> = {}
 ) {
   return {
     selectedProvider: signal<Provider>(overrides.selectedProvider ?? 'plaid'),
     status: signal<ConnectStatus>(overrides.status ?? 'idle'),
-    errorCode: signal<string | null>(overrides.errorCode ?? null),
-    statusMessage: signal<string | null>(null),
+    errorCode: signal<Nullable<string>>(overrides.errorCode ?? null),
+    statusMessage: signal<Nullable<string>>(null),
   };
 }
 

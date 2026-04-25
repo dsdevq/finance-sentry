@@ -8,14 +8,12 @@ import {
   StatCardComponent,
 } from '@dsdevq-common/ui';
 
-import {type GlobalTransactionDto} from '../../models/transaction.model';
+import {TransactionAmountPipe} from '../../pipes/transaction-amount.pipe';
+import {TransactionAmountClassPipe} from '../../pipes/transaction-amount-class.pipe';
 import {TransactionLedgerStore} from '../../store/transaction-ledger/transaction-ledger.store';
-
-const AMOUNT_DECIMAL_PLACES = 2;
 
 @Component({
   selector: 'fns-transaction-ledger',
-  standalone: true,
   imports: [
     AlertComponent,
     BadgeComponent,
@@ -24,6 +22,8 @@ const AMOUNT_DECIMAL_PLACES = 2;
     DatePipe,
     DecimalPipe,
     StatCardComponent,
+    TransactionAmountClassPipe,
+    TransactionAmountPipe,
   ],
   templateUrl: './transaction-ledger.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -31,13 +31,4 @@ const AMOUNT_DECIMAL_PLACES = 2;
 })
 export class TransactionLedgerComponent {
   public readonly store = inject(TransactionLedgerStore);
-
-  public formatAmount(t: GlobalTransactionDto): string {
-    const sign = t.transactionType === 'credit' ? '+' : '-';
-    return `${sign}${Math.abs(t.amount).toFixed(AMOUNT_DECIMAL_PLACES)}`;
-  }
-
-  public amountClass(t: GlobalTransactionDto): string {
-    return t.transactionType === 'credit' ? 'text-status-success' : 'text-status-error';
-  }
 }

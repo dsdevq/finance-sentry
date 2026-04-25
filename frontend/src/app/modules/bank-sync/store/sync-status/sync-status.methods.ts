@@ -1,6 +1,6 @@
 import {patchState, type WritableStateSource} from '@ngrx/signals';
 
-import {type SyncStatusResponse} from '../../models/sync.model';
+import {type SyncStatusResponse} from '../../models/sync/sync.model';
 import {type SyncStatusState} from './sync-status.state';
 
 const FALLBACK_SYNC_FAILED = 'Sync failed. Please try again.';

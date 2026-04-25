@@ -89,6 +89,8 @@ docker-compose.override*.yml
 # Frontend
 frontend/dist/
 frontend/.angular/
+frontend/out-tsc/
+frontend/**/*.tsbuildinfo
 
 # Backend
 backend/bin/

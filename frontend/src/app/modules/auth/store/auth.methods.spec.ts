@@ -1,7 +1,7 @@
 import {signalState} from '@ngrx/signals';
 import {describe, expect, it} from 'vitest';
 
-import {type AuthResponse} from '../models/auth.models';
+import {type AuthResponse} from '../models/auth/auth.model';
 import {authMethods} from './auth.methods';
 import {initialAuthState} from './auth.state';
 
@@ -24,8 +24,8 @@ describe('authMethods', () => {
 
       methods.applyAuthResponse(SAMPLE_RESPONSE);
 
-      expect(state.userId()).toBe(SAMPLE_RESPONSE.userId);
-      expect(state.email()).toBe(SAMPLE_RESPONSE.email);
+      expect(state.userId()).toBe(SAMPLE_RESPONSE.user.id);
+      expect(state.email()).toBe(SAMPLE_RESPONSE.user.email);
       expect(state.status()).toBe('idle');
       expect(state.errorCode()).toBeNull();
       expect(state.flow()).toBeNull();

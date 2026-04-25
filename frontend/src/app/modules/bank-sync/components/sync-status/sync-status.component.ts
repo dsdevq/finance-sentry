@@ -1,13 +1,12 @@
 import {CommonModule} from '@angular/common';
 import {ChangeDetectionStrategy, Component, effect, inject, input} from '@angular/core';
 
-import {getRelativeTime} from '../../../../shared/utils/relative-time';
+import {RelativeTimePipe} from '../../../../shared/pipes/relative-time.pipe';
 import {SyncStatusStore} from '../../store/sync-status/sync-status.store';
 
 @Component({
   selector: 'fns-sync-status',
-  standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RelativeTimePipe],
   templateUrl: './sync-status.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [SyncStatusStore],
@@ -15,7 +14,6 @@ import {SyncStatusStore} from '../../store/sync-status/sync-status.store';
 export class SyncStatusComponent {
   public readonly accountId = input.required<string>();
   public readonly store = inject(SyncStatusStore);
-  public readonly getRelativeTime = getRelativeTime;
 
   constructor() {
     effect(() => {

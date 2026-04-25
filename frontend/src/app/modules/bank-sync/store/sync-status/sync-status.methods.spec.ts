@@ -1,7 +1,7 @@
 import {signalState} from '@ngrx/signals';
 import {describe, expect, it} from 'vitest';
 
-import {type SyncStatusResponse} from '../../models/sync.model';
+import {type SyncStatusResponse} from '../../models/sync/sync.model';
 import {syncStatusMethods} from './sync-status.methods';
 import {initialSyncStatusState} from './sync-status.state';
 

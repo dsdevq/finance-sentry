@@ -3,7 +3,7 @@ import {inject, Injectable} from '@angular/core';
 import {Observable} from 'rxjs';
 
 import {environment} from '../../../../environments/environment';
-import {AuthRequest, AuthResponse} from '../models/auth.models';
+import {AuthRequest, AuthResponse} from '../models/auth/auth.model';
 
 @Injectable({providedIn: 'root'})
 export class AuthService {

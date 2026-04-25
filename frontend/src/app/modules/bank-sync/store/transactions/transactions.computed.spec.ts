@@ -5,19 +5,19 @@ import {beforeEach, describe, expect, it} from 'vitest';
 
 import {ERROR_MESSAGES_REGISTRY} from '../../../../core/errors/error-messages.registry';
 import {transactionsComputed} from './transactions.computed';
-import {PAGE_SIZE, type TransactionsStatus} from './transactions.state';
+import {PAGE_SIZE} from './transactions.state';
 
 function build(
   overrides: Partial<{
-    status: TransactionsStatus;
-    errorCode: string | null;
+    status: AsyncStatus;
+    errorCode: Nullable<string>;
     offset: number;
     totalCount: number;
   }> = {}
 ) {
   return {
-    status: signal<TransactionsStatus>(overrides.status ?? 'idle'),
-    errorCode: signal<string | null>(overrides.errorCode ?? null),
+    status: signal<AsyncStatus>(overrides.status ?? 'idle'),
+    errorCode: signal<Nullable<string>>(overrides.errorCode ?? null),
     offset: signal(overrides.offset ?? 0),
     totalCount: signal(overrides.totalCount ?? 0),
   };

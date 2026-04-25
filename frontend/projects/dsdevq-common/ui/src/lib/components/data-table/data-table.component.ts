@@ -10,7 +10,6 @@ export interface TableColumn<T = Record<string, unknown>> {
 
 @Component({
   selector: 'cmn-data-table',
-  standalone: true,
   imports: [CdkTableModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `

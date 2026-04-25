@@ -1,11 +1,9 @@
-import {type DashboardData} from '../../models/dashboard.model';
-
-export type DashboardStatus = 'idle' | 'loading' | 'error';
+import {type DashboardData} from '../../models/dashboard/dashboard.model';
 
 export interface DashboardState {
-  data: DashboardData | null;
-  status: DashboardStatus;
-  errorCode: string | null;
+  data: Nullable<DashboardData>;
+  status: AsyncStatus;
+  errorCode: Nullable<string>;
 }
 
 export const initialDashboardState: DashboardState = {

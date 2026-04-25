@@ -18,5 +18,5 @@ export interface DashboardData {
   accountsByType: Record<string, number>;
   monthlyFlow: MonthlyFlow[];
   topCategories: CategoryStat[];
-  lastSyncTimestamp: string | null;
+  lastSyncTimestamp: Nullable<string>;
 }

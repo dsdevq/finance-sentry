@@ -2,7 +2,8 @@ import {inject, type Signal} from '@angular/core';
 import {rxMethod} from '@ngrx/signals/rxjs-interop';
 import {catchError, EMPTY, pipe, switchMap, tap} from 'rxjs';
 
-import {type TransactionListResponse} from '../../models/transaction.model';
+import {ErrorUtils} from '../../../../shared/utils/error.utils';
+import {type TransactionListResponse} from '../../models/transaction/transaction.model';
 import {BankSyncService} from '../../services/bank-sync.service';
 import {PAGE_SIZE} from './transactions.state';
 
@@ -13,12 +14,7 @@ interface EffectsStore {
   offset: Signal<number>;
   setLoading: () => void;
   setResponse: (res: TransactionListResponse) => void;
-  setError: (code: string | null) => void;
-}
-
-function extractErrorCode(err: unknown): string | null {
-  const code = (err as {error?: {errorCode?: string}} | null)?.error?.errorCode;
-  return code ?? null;
+  setError: (code: Nullable<string>) => void;
 }
 
 export function transactionsEffects(store: EffectsStore) {
@@ -44,7 +40,7 @@ export function transactionsEffects(store: EffectsStore) {
             .pipe(
               tap(res => store.setResponse(res)),
               catchError((err: unknown) => {
-                store.setError(extractErrorCode(err));
+                store.setError(ErrorUtils.extractCode(err));
                 return EMPTY;
               })
             );

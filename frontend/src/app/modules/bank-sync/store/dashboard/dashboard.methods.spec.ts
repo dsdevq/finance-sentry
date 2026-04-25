@@ -1,7 +1,7 @@
 import {signalState} from '@ngrx/signals';
 import {describe, expect, it} from 'vitest';
 
-import {type DashboardData} from '../../models/dashboard.model';
+import {type DashboardData} from '../../models/dashboard/dashboard.model';
 import {dashboardMethods} from './dashboard.methods';
 import {initialDashboardState} from './dashboard.state';
 

@@ -1,4 +1,4 @@
-import {type Provider} from '../../models/bank-account.model';
+import {type Provider} from '../../models/bank-account/bank-account.model';
 
 export type ConnectStatus =
   | 'idle'
@@ -12,8 +12,8 @@ export type ConnectStatus =
 export interface ConnectState {
   selectedProvider: Provider;
   status: ConnectStatus;
-  errorCode: string | null;
-  statusMessage: string | null;
+  errorCode: Nullable<string>;
+  statusMessage: Nullable<string>;
 }
 
 export const initialConnectState: ConnectState = {

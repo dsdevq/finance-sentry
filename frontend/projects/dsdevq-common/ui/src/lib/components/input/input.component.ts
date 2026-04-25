@@ -30,7 +30,6 @@ const ERROR_BORDER = 'border-status-error';
 
 @Component({
   selector: 'cmn-input',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [
     {

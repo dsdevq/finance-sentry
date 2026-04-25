@@ -1,12 +1,12 @@
 import {computed, inject, type Signal} from '@angular/core';
 import {ErrorMessageService} from '@dsdevq-common/ui';
 
-import {type AuthFlow, type AuthStatus} from './auth.state';
+import {type AuthFlow} from './auth.state';
 
 interface StateSignals {
-  userId: Signal<string | null>;
-  status: Signal<AuthStatus>;
-  errorCode: Signal<string | null>;
+  userId: Signal<Nullable<string>>;
+  status: Signal<AsyncStatus>;
+  errorCode: Signal<Nullable<string>>;
   flow: Signal<AuthFlow>;
 }
 

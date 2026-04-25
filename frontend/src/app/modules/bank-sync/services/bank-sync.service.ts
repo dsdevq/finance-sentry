@@ -9,14 +9,14 @@ import {
   ConnectMonobankResponse,
   ConnectResponse,
   LinkAccountResponse,
-} from '../models/bank-account.model';
-import {DashboardData} from '../models/dashboard.model';
-import {SyncStatusResponse, TriggerSyncResponse} from '../models/sync.model';
+} from '../models/bank-account/bank-account.model';
+import {DashboardData} from '../models/dashboard/dashboard.model';
+import {SyncStatusResponse, TriggerSyncResponse} from '../models/sync/sync.model';
 import {
   GlobalTransactionsResponse,
   TransactionListResponse,
   TransactionQueryParams,
-} from '../models/transaction.model';
+} from '../models/transaction/transaction.model';
 
 export type {DashboardData, SyncStatusResponse, TriggerSyncResponse};
 

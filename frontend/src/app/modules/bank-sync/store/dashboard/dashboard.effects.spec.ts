@@ -2,7 +2,7 @@ import {TestBed} from '@angular/core/testing';
 import {of, throwError} from 'rxjs';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 
-import {type DashboardData} from '../../models/dashboard.model';
+import {type DashboardData} from '../../models/dashboard/dashboard.model';
 import {BankSyncService} from '../../services/bank-sync.service';
 import {dashboardEffects} from './dashboard.effects';
 

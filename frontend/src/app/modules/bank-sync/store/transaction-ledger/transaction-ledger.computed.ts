@@ -1,15 +1,14 @@
 import {computed, inject, type Signal} from '@angular/core';
 import {ErrorMessageService} from '@dsdevq-common/ui';
 
-import {type GlobalTransactionDto} from '../../models/transaction.model';
-import {type LedgerStatus} from './transaction-ledger.state';
+import {type GlobalTransactionDto} from '../../models/transaction/transaction.model';
 
 interface StateSignals {
   transactions: Signal<GlobalTransactionDto[]>;
   totalCount: Signal<number>;
   hasMore: Signal<boolean>;
-  status: Signal<LedgerStatus>;
-  errorCode: Signal<string | null>;
+  status: Signal<AsyncStatus>;
+  errorCode: Signal<Nullable<string>>;
 }
 
 const DEFAULT_ERROR = 'Failed to load transactions. Please try again.';

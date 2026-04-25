@@ -11,7 +11,6 @@ export interface NavItem {
 
 @Component({
   selector: 'cmn-sidebar-nav',
-  standalone: true,
   imports: [NgClass, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -62,7 +61,7 @@ export class SidebarNavComponent {
   public readonly navClick = output<NavItem>();
   public readonly collapsedChange = output<boolean>();
 
-  public readonly collapsed = signal(false);
+  public readonly collapsed = signal<boolean>(false);
 
   public toggleCollapsed(): void {
     const next = !this.collapsed();

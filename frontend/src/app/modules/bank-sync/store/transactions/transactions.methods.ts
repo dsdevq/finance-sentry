@@ -1,6 +1,6 @@
 import {patchState, type WritableStateSource} from '@ngrx/signals';
 
-import {type TransactionListResponse} from '../../models/transaction.model';
+import {type TransactionListResponse} from '../../models/transaction/transaction.model';
 import {PAGE_SIZE, type TransactionsState} from './transactions.state';
 
 export function transactionsMethods(store: WritableStateSource<TransactionsState>) {
@@ -27,7 +27,7 @@ export function transactionsMethods(store: WritableStateSource<TransactionsState
         errorCode: null,
       });
     },
-    setError(errorCode: string | null): void {
+    setError(errorCode: Nullable<string>): void {
       patchState(store, {status: 'error', errorCode});
     },
     nextPage(): void {

@@ -2,23 +2,14 @@ import {inject} from '@angular/core';
 import {rxMethod} from '@ngrx/signals/rxjs-interop';
 import {pipe, switchMap, tap} from 'rxjs';
 
+import {ErrorUtils} from '../../../shared/utils/error.utils';
 import {HoldingsService} from '../services/holdings.service';
 import {type HoldingsState} from './holdings.state';
 
 interface StoreMethods {
   setLoading(): void;
   setSummary(summary: HoldingsState['summary'] & {}): void;
-  setError(errorCode: string | null): void;
-}
-
-function extractErrorCode(err: unknown): string | null {
-  if (err && typeof err === 'object' && 'error' in err) {
-    const body = (err as {error: unknown}).error;
-    if (body && typeof body === 'object' && 'errorCode' in body) {
-      return String((body as {errorCode: unknown}).errorCode);
-    }
-  }
-  return null;
+  setError(errorCode: Nullable<string>): void;
 }
 
 export function holdingsEffects(store: StoreMethods) {
@@ -32,7 +23,7 @@ export function holdingsEffects(store: StoreMethods) {
           holdingsService.getSummary().pipe(
             tap({
               next: summary => store.setSummary(summary),
-              error: err => store.setError(extractErrorCode(err)),
+              error: err => store.setError(ErrorUtils.extractCode(err)),
             })
           )
         )
@@ -43,8 +34,6 @@ export function holdingsEffects(store: StoreMethods) {
 
 export function holdingsHooks(store: ReturnType<typeof holdingsEffects>) {
   return {
-    onInit(): void {
-      store.load();
-    },
+    onInit: () => store.load(),
   };
 }

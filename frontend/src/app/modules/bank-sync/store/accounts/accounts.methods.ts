@@ -1,6 +1,6 @@
 import {patchState, type WritableStateSource} from '@ngrx/signals';
 
-import {type WealthSummaryResponse} from '../../models/wealth.model';
+import {type WealthSummaryResponse} from '../../../../shared/models/wealth/wealth.model';
 import {type AccountsState} from './accounts.state';
 
 export function accountsMethods(store: WritableStateSource<AccountsState>) {
@@ -11,7 +11,7 @@ export function accountsMethods(store: WritableStateSource<AccountsState>) {
     setSummary(summary: WealthSummaryResponse): void {
       patchState(store, {summary, status: 'idle', errorCode: null});
     },
-    setError(errorCode: string | null): void {
+    setError(errorCode: Nullable<string>): void {
       patchState(store, {status: 'error', errorCode});
     },
   };

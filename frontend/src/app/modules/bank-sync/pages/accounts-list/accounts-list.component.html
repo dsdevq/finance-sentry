@@ -1,5 +1,4 @@
 <div class="p-cmn-8 max-w-[1200px] mx-auto">
-
   <div class="flex items-center justify-between mb-cmn-8">
     <div>
       <h1 class="font-headline text-cmn-2xl font-bold text-text-primary">Account Inventory</h1>
@@ -14,7 +13,7 @@
           </p>
         </div>
       }
-      <cmn-button variant="primary" (clicked)="connectAccount()">Connect Account</cmn-button>
+      <cmn-button (clicked)="connectAccount()" variant="primary">Connect Account</cmn-button>
     </div>
   </div>
 
@@ -35,25 +34,32 @@
     <cmn-card>
       <div class="flex flex-col items-center py-cmn-12 gap-cmn-4">
         <p class="text-text-secondary text-cmn-sm">No accounts connected yet.</p>
-        <cmn-button variant="primary" (clicked)="connectAccount()">Connect Your First Account</cmn-button>
+        <cmn-button (clicked)="connectAccount()" variant="primary"
+          >Connect Your First Account</cmn-button
+        >
       </div>
     </cmn-card>
   }
 
   @if (!store.isLoading() && !store.isEmpty()) {
-
     @if (store.bankingCategory(); as banking) {
       <div class="mb-cmn-8">
         <div class="flex items-center justify-between mb-cmn-3">
           <h2 class="text-cmn-xs font-semibold text-text-secondary uppercase tracking-wider">
             Banking Institutions
           </h2>
-          <span class="text-cmn-xs text-text-secondary">{{ banking.accounts.length }} account{{ banking.accounts.length !== 1 ? 's' : '' }}</span>
+          <span class="text-cmn-xs text-text-secondary"
+            >{{ banking.accounts.length }} account{{
+              banking.accounts.length !== 1 ? 's' : ''
+            }}</span
+          >
         </div>
         <cmn-card>
           <table class="w-full text-cmn-sm" aria-label="Banking accounts">
             <thead>
-              <tr class="border-b border-border-default text-cmn-xs text-text-secondary uppercase tracking-wide">
+              <tr
+                class="border-b border-border-default text-cmn-xs text-text-secondary uppercase tracking-wide"
+              >
                 <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Institution</th>
                 <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Account Type</th>
                 <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Connectivity</th>
@@ -62,17 +68,25 @@
             </thead>
             <tbody>
               @for (account of banking.accounts; track account.accountId) {
-                <tr class="border-b border-border-default last:border-0 hover:bg-surface-bg transition-colors">
+                <tr
+                  class="border-b border-border-default last:border-0 hover:bg-surface-bg transition-colors"
+                >
                   <td class="py-cmn-4 px-cmn-4">
                     <p class="font-medium text-text-primary">{{ account.bankName }}</p>
-                    <p class="text-cmn-xs text-text-secondary">•••• {{ account.accountNumberLast4 }}</p>
+                    <p class="text-cmn-xs text-text-secondary">
+                      •••• {{ account.accountNumberLast4 }}
+                    </p>
                   </td>
                   <td class="py-cmn-4 px-cmn-4 text-text-secondary">{{ account.accountType }}</td>
                   <td class="py-cmn-4 px-cmn-4">
-                    <cmn-badge [variant]="getBadgeVariant(account.syncStatus)">{{ getBadgeLabel(account.syncStatus) }}</cmn-badge>
+                    <cmn-badge [variant]="account.syncStatus | syncStatusVariant">{{
+                      account.syncStatus | syncStatusLabel
+                    }}</cmn-badge>
                   </td>
-                  <td class="py-cmn-4 px-cmn-4 text-right font-mono tabular-nums font-medium text-text-primary">
-                    {{ formatBalance(account) }}
+                  <td
+                    class="py-cmn-4 px-cmn-4 text-right font-mono tabular-nums font-medium text-text-primary"
+                  >
+                    {{ account | accountBalance }}
                   </td>
                 </tr>
               }
@@ -88,12 +102,18 @@
           <h2 class="text-cmn-xs font-semibold text-text-secondary uppercase tracking-wider">
             Brokerage &amp; Investment
           </h2>
-          <span class="text-cmn-xs text-text-secondary">{{ brokerage.accounts.length }} account{{ brokerage.accounts.length !== 1 ? 's' : '' }}</span>
+          <span class="text-cmn-xs text-text-secondary"
+            >{{ brokerage.accounts.length }} account{{
+              brokerage.accounts.length !== 1 ? 's' : ''
+            }}</span
+          >
         </div>
         <cmn-card>
           <table class="w-full text-cmn-sm" aria-label="Brokerage accounts">
             <thead>
-              <tr class="border-b border-border-default text-cmn-xs text-text-secondary uppercase tracking-wide">
+              <tr
+                class="border-b border-border-default text-cmn-xs text-text-secondary uppercase tracking-wide"
+              >
                 <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Institution</th>
                 <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Account Type</th>
                 <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Connectivity</th>
@@ -102,17 +122,25 @@
             </thead>
             <tbody>
               @for (account of brokerage.accounts; track account.accountId) {
-                <tr class="border-b border-border-default last:border-0 hover:bg-surface-bg transition-colors">
+                <tr
+                  class="border-b border-border-default last:border-0 hover:bg-surface-bg transition-colors"
+                >
                   <td class="py-cmn-4 px-cmn-4">
                     <p class="font-medium text-text-primary">{{ account.bankName }}</p>
-                    <p class="text-cmn-xs text-text-secondary">•••• {{ account.accountNumberLast4 }}</p>
+                    <p class="text-cmn-xs text-text-secondary">
+                      •••• {{ account.accountNumberLast4 }}
+                    </p>
                   </td>
                   <td class="py-cmn-4 px-cmn-4 text-text-secondary">{{ account.accountType }}</td>
                   <td class="py-cmn-4 px-cmn-4">
-                    <cmn-badge [variant]="getBadgeVariant(account.syncStatus)">{{ getBadgeLabel(account.syncStatus) }}</cmn-badge>
+                    <cmn-badge [variant]="account.syncStatus | syncStatusVariant">{{
+                      account.syncStatus | syncStatusLabel
+                    }}</cmn-badge>
                   </td>
-                  <td class="py-cmn-4 px-cmn-4 text-right font-mono tabular-nums font-medium text-text-primary">
-                    {{ formatBalance(account) }}
+                  <td
+                    class="py-cmn-4 px-cmn-4 text-right font-mono tabular-nums font-medium text-text-primary"
+                  >
+                    {{ account | accountBalance }}
                   </td>
                 </tr>
               }
@@ -128,12 +156,16 @@
           <h2 class="text-cmn-xs font-semibold text-text-secondary uppercase tracking-wider">
             Digital Assets
           </h2>
-          <span class="text-cmn-xs text-text-secondary">{{ crypto.accounts.length }} account{{ crypto.accounts.length !== 1 ? 's' : '' }}</span>
+          <span class="text-cmn-xs text-text-secondary"
+            >{{ crypto.accounts.length }} account{{ crypto.accounts.length !== 1 ? 's' : '' }}</span
+          >
         </div>
         <cmn-card>
           <table class="w-full text-cmn-sm" aria-label="Crypto holdings">
             <thead>
-              <tr class="border-b border-border-default text-cmn-xs text-text-secondary uppercase tracking-wide">
+              <tr
+                class="border-b border-border-default text-cmn-xs text-text-secondary uppercase tracking-wide"
+              >
                 <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Exchange</th>
                 <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Account Type</th>
                 <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Connectivity</th>
@@ -142,17 +174,23 @@
             </thead>
             <tbody>
               @for (account of crypto.accounts; track account.accountId) {
-                <tr class="border-b border-border-default last:border-0 hover:bg-surface-bg transition-colors">
+                <tr
+                  class="border-b border-border-default last:border-0 hover:bg-surface-bg transition-colors"
+                >
                   <td class="py-cmn-4 px-cmn-4">
                     <p class="font-medium text-text-primary">{{ account.bankName }}</p>
                     <p class="text-cmn-xs text-text-secondary">{{ account.provider }}</p>
                   </td>
                   <td class="py-cmn-4 px-cmn-4 text-text-secondary">{{ account.accountType }}</td>
                   <td class="py-cmn-4 px-cmn-4">
-                    <cmn-badge [variant]="getBadgeVariant(account.syncStatus)">{{ getBadgeLabel(account.syncStatus) }}</cmn-badge>
+                    <cmn-badge [variant]="account.syncStatus | syncStatusVariant">{{
+                      account.syncStatus | syncStatusLabel
+                    }}</cmn-badge>
                   </td>
-                  <td class="py-cmn-4 px-cmn-4 text-right font-mono tabular-nums font-medium text-text-primary">
-                    {{ formatBalance(account) }}
+                  <td
+                    class="py-cmn-4 px-cmn-4 text-right font-mono tabular-nums font-medium text-text-primary"
+                  >
+                    {{ account | accountBalance }}
                   </td>
                 </tr>
               }
@@ -162,11 +200,17 @@
       </div>
     }
 
-    <div class="flex items-center justify-between text-cmn-xs text-text-secondary border-t border-border-default pt-cmn-4">
-      <span>{{ store.totalConnections() }} total connection{{ store.totalConnections() !== 1 ? 's' : '' }}</span>
-      <span>Net worth: {{ store.baseCurrency() }} {{ store.totalNetWorth() | number: '1.2-2' }}</span>
+    <div
+      class="flex items-center justify-between text-cmn-xs text-text-secondary border-t border-border-default pt-cmn-4"
+    >
+      <span
+        >{{ store.totalConnections() }} total connection{{
+          store.totalConnections() !== 1 ? 's' : ''
+        }}</span
+      >
+      <span
+        >Net worth: {{ store.baseCurrency() }} {{ store.totalNetWorth() | number: '1.2-2' }}</span
+      >
     </div>
-
   }
-
 </div>

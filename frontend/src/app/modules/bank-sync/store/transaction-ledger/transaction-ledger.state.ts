@@ -1,14 +1,12 @@
-import {type GlobalTransactionDto} from '../../models/transaction.model';
-
-export type LedgerStatus = 'idle' | 'loading' | 'error';
+import {type GlobalTransactionDto} from '../../models/transaction/transaction.model';
 
 export interface TransactionLedgerState {
   transactions: GlobalTransactionDto[];
   totalCount: number;
   hasMore: boolean;
   offset: number;
-  status: LedgerStatus;
-  errorCode: string | null;
+  status: AsyncStatus;
+  errorCode: Nullable<string>;
 }
 
 export const PAGE_SIZE = 50;

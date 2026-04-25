@@ -185,6 +185,9 @@ public class WealthAggregationService(
             a.Currency,
             a.CurrentBalance,
             usd,
-            a.SyncStatus);
+            NormalizeSyncStatus(a.SyncStatus));
     }
+
+    private static string NormalizeSyncStatus(string domainStatus) =>
+        domainStatus == "active" ? "synced" : domainStatus;
 }

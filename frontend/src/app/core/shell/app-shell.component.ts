@@ -4,7 +4,7 @@ import {NavigationEnd, Router, RouterOutlet} from '@angular/router';
 import {AppLayoutComponent, type NavItem, ThemeService} from '@dsdevq-common/ui';
 import {filter, map} from 'rxjs';
 
-import {AppRoute} from '../../shared/enums/app-route.enum';
+import {AppRoute} from '../../shared/enums/app-route/app-route.enum';
 
 const NAV_ITEMS: NavItem[] = [
   {label: 'Dashboard', icon: 'LayoutDashboard', route: AppRoute.Dashboard},
@@ -15,7 +15,6 @@ const NAV_ITEMS: NavItem[] = [
 
 @Component({
   selector: 'fns-app-shell',
-  standalone: true,
   imports: [AppLayoutComponent, RouterOutlet],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `

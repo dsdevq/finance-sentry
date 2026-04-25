@@ -6,10 +6,10 @@ export interface GlobalTransactionDto {
   bankName: string;
   amount: number;
   date: string;
-  postedDate: string | null;
+  postedDate: Nullable<string>;
   description: string;
-  transactionType: TransactionType | null;
-  merchantCategory: string | null;
+  transactionType: Nullable<TransactionType>;
+  merchantCategory: Nullable<string>;
   isPending: boolean;
   createdAt: string;
 }
@@ -25,11 +25,11 @@ export interface Transaction {
   accountId: string;
   amount: number;
   transactionType: TransactionType;
-  postedDate: string | null;
-  pendingDate: string | null;
+  postedDate: Nullable<string>;
+  pendingDate: Nullable<string>;
   isPending: boolean;
   description: string;
-  merchantCategory: string | null;
+  merchantCategory: Nullable<string>;
   syncedAt: string;
   createdAt: string;
 }
@@ -39,19 +39,12 @@ export interface TransactionListResponse {
   bankName: string;
   currency: string;
   transactions: Transaction[];
-  pagination: {
-    offset: number;
-    limit: number;
-    totalCount: number;
-    hasMore: boolean;
-  };
+  pagination: OffsetPagination;
 }
 
-export interface TransactionQueryParams {
+export interface TransactionQueryParams extends OffsetPaginationParams {
   startDate?: string;
   endDate?: string;
-  offset?: number;
-  limit?: number;
   status?: 'posted' | 'pending' | 'all';
   sort?: string;
 }

@@ -1,13 +1,12 @@
 import {computed, inject, type Signal} from '@angular/core';
 import {type ChartPoint, type DonutSegment, ErrorMessageService} from '@dsdevq-common/ui';
 
-import {type DashboardData} from '../../models/dashboard.model';
-import {type DashboardStatus} from './dashboard.state';
+import {type DashboardData} from '../../models/dashboard/dashboard.model';
 
 interface StateSignals {
-  data: Signal<DashboardData | null>;
-  status: Signal<DashboardStatus>;
-  errorCode: Signal<string | null>;
+  data: Signal<Nullable<DashboardData>>;
+  status: Signal<AsyncStatus>;
+  errorCode: Signal<Nullable<string>>;
 }
 
 const DEFAULT_ERROR_MESSAGE = 'Failed to load dashboard data. Please try again.';
@@ -59,18 +58,18 @@ export function dashboardComputed(store: StateSignals) {
       return latest ? COMPACT_FORMATTER.format(latest.outflow) : '—';
     }),
 
-    netFlowChartData: computed((): ChartPoint[] => {
-      return (store.data()?.monthlyFlow ?? []).map(m => ({
+    netFlowChartData: computed((): ChartPoint[] =>
+      (store.data()?.monthlyFlow ?? []).map(m => ({
         label: m.month,
         value: m.net,
-      }));
-    }),
+      }))
+    ),
 
-    categoryChartData: computed((): DonutSegment[] => {
-      return (store.data()?.topCategories ?? []).map(c => ({
+    categoryChartData: computed((): DonutSegment[] =>
+      (store.data()?.topCategories ?? []).map(c => ({
         label: c.category,
         value: c.totalSpend,
-      }));
-    }),
+      }))
+    ),
   };
 }

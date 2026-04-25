@@ -11,7 +11,6 @@ const PADDING_CLASSES: Record<CardPadding, string> = {
 
 @Component({
   selector: 'cmn-card',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div [class]="classes()">

@@ -1,6 +1,6 @@
 import {patchState, type WritableStateSource} from '@ngrx/signals';
 
-import {type DashboardData} from '../../models/dashboard.model';
+import {type DashboardData} from '../../models/dashboard/dashboard.model';
 import {type DashboardState} from './dashboard.state';
 
 export function dashboardMethods(store: WritableStateSource<DashboardState>) {
@@ -11,7 +11,7 @@ export function dashboardMethods(store: WritableStateSource<DashboardState>) {
     setData(data: DashboardData): void {
       patchState(store, {data, status: 'idle', errorCode: null});
     },
-    setError(errorCode: string | null): void {
+    setError(errorCode: Nullable<string>): void {
       patchState(store, {status: 'error', errorCode});
     },
   };

@@ -3,8 +3,9 @@ import {NavigationEnd, Router} from '@angular/router';
 import {rxMethod} from '@ngrx/signals/rxjs-interop';
 import {catchError, EMPTY, filter, pipe, startWith, switchMap, tap} from 'rxjs';
 
-import {AppRoute} from '../../../shared/enums/app-route.enum';
-import {type AuthRequest, type AuthResponse} from '../models/auth.models';
+import {AppRoute} from '../../../shared/enums/app-route/app-route.enum';
+import {ErrorUtils} from '../../../shared/utils/error.utils';
+import {type AuthRequest, type AuthResponse} from '../models/auth/auth.model';
 import {AuthService} from '../services/auth.service';
 import {type AuthFlow, type FlashMessage} from './auth.state';
 
@@ -12,19 +13,14 @@ interface EffectsStore {
   applyAuthResponse: (res: AuthResponse) => void;
   clearSession: () => void;
   setLoading: (flow: AuthFlow) => void;
-  setError: (errorCode: string | null, flow: AuthFlow) => void;
-  setReturnUrl: (returnUrl: string | null) => void;
-  setFlashMessage: (flashMessage: FlashMessage | null) => void;
+  setError: (errorCode: Nullable<string>, flow: AuthFlow) => void;
+  setReturnUrl: (returnUrl: Nullable<string>) => void;
+  setFlashMessage: (flashMessage: Nullable<FlashMessage>) => void;
   isAuthenticated: Signal<boolean>;
-  returnUrl: Signal<string | null>;
+  returnUrl: Signal<Nullable<string>>;
 }
 
-function extractErrorCode(err: unknown): string | null {
-  const code = (err as {error?: {errorCode?: string}} | null)?.error?.errorCode;
-  return code ?? null;
-}
-
-function flashFromParams(info: string | null, error: string | null): FlashMessage | null {
+function flashFromParams(info: Nullable<string>, error: Nullable<string>): Nullable<FlashMessage> {
   if (info === 'google_cancelled') {
     return {kind: 'info', text: 'Google sign-in was cancelled. Try again or use email/password.'};
   }
@@ -46,7 +42,7 @@ export function authEffects(store: EffectsStore) {
           authService.login(req).pipe(
             tap(res => store.applyAuthResponse(res)),
             catchError((err: unknown) => {
-              store.setError(extractErrorCode(err), 'login');
+              store.setError(ErrorUtils.extractCode(err), 'login');
               return EMPTY;
             })
           )
@@ -60,7 +56,7 @@ export function authEffects(store: EffectsStore) {
           authService.register(req).pipe(
             tap(res => store.applyAuthResponse(res)),
             catchError((err: unknown) => {
-              store.setError(extractErrorCode(err), 'register');
+              store.setError(ErrorUtils.extractCode(err), 'register');
               return EMPTY;
             })
           )
@@ -74,7 +70,7 @@ export function authEffects(store: EffectsStore) {
           authService.verifyGoogleCredential(credential).pipe(
             tap(res => store.applyAuthResponse(res)),
             catchError((err: unknown) => {
-              store.setError(extractErrorCode(err), 'google');
+              store.setError(ErrorUtils.extractCode(err), 'google');
               return EMPTY;
             })
           )

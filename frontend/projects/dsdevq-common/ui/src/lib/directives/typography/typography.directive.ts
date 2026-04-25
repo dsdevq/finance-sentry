@@ -27,7 +27,6 @@ const LEVEL_CLASSES: Record<TypographyLevel, string[]> = {
 
 @Directive({
   selector: '[cmnTypography]',
-  standalone: true,
 })
 export class TypographyDirective {
   private readonly el = inject(ElementRef);

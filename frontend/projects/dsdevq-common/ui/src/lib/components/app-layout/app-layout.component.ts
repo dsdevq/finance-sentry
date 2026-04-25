@@ -7,7 +7,6 @@ export {type NavItem} from '../sidebar-nav/sidebar-nav.component';
 
 @Component({
   selector: 'cmn-app-layout',
-  standalone: true,
   imports: [SidebarNavComponent, TopBarComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `

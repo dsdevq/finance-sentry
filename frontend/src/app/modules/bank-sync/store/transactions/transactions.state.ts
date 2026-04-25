@@ -1,6 +1,4 @@
-import {type Transaction} from '../../models/transaction.model';
-
-export type TransactionsStatus = 'idle' | 'loading' | 'error';
+import {type Transaction} from '../../models/transaction/transaction.model';
 
 export interface TransactionsFilter {
   accountId: string;
@@ -18,8 +16,8 @@ export interface TransactionsState {
   offset: number;
   startDate: string;
   endDate: string;
-  status: TransactionsStatus;
-  errorCode: string | null;
+  status: AsyncStatus;
+  errorCode: Nullable<string>;
 }
 
 export const PAGE_SIZE = 50;

@@ -4,7 +4,6 @@ import {IconComponent} from '../icon/icon.component';
 
 @Component({
   selector: 'cmn-top-bar',
-  standalone: true,
   imports: [IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `

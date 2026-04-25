@@ -1,7 +1,7 @@
 import {signalState} from '@ngrx/signals';
 import {describe, expect, it} from 'vitest';
 
-import {type TransactionListResponse} from '../../models/transaction.model';
+import {type TransactionListResponse} from '../../models/transaction/transaction.model';
 import {transactionsMethods} from './transactions.methods';
 import {initialTransactionsState, PAGE_SIZE} from './transactions.state';
 

@@ -1,7 +1,7 @@
 import {signalState} from '@ngrx/signals';
 import {describe, expect, it} from 'vitest';
 
-import {type WealthSummaryResponse} from '../../models/wealth.model';
+import {type WealthSummaryResponse} from '../../../../shared/models/wealth/wealth.model';
 import {accountsMethods} from './accounts.methods';
 import {initialAccountsState} from './accounts.state';
 

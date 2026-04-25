@@ -1,9 +1,11 @@
 <div class="flex items-center justify-center min-h-screen bg-surface-bg">
   <div class="bg-surface-card rounded-cmn-md border border-border-default w-full max-w-[480px]">
-
     <div class="flex items-center justify-between px-cmn-8 py-cmn-4 border-b border-border-default">
       <span class="text-cmn-sm text-text-secondary">Already have an account?</span>
-      <a [routerLink]="AppRoute.Login" class="text-cmn-sm text-accent-default no-underline font-medium hover:underline">
+      <a
+        [routerLink]="AppRoute.Login"
+        class="text-cmn-sm text-accent-default no-underline font-medium hover:underline"
+      >
         Sign In
       </a>
     </div>
@@ -11,7 +13,9 @@
     <div class="p-cmn-8">
       <div class="mb-cmn-8">
         <h1 class="font-headline text-cmn-2xl font-bold text-text-primary mb-cmn-1">Get Started</h1>
-        <p class="text-cmn-sm text-text-secondary">Create an account to begin your journey to operational financial clarity.</p>
+        <p class="text-cmn-sm text-text-secondary">
+          Create an account to begin your journey to operational financial clarity.
+        </p>
       </div>
 
       @if (errorMessage()) {
@@ -27,7 +31,9 @@
 
       <div class="flex items-center gap-cmn-3 mb-cmn-6">
         <div class="flex-1 h-px bg-border-default"></div>
-        <span class="text-cmn-xs text-text-secondary uppercase tracking-wide">or continue with email</span>
+        <span class="text-cmn-xs text-text-secondary uppercase tracking-wide"
+          >or continue with email</span
+        >
         <div class="flex-1 h-px bg-border-default"></div>
       </div>
 
@@ -75,7 +81,6 @@
               <div class="flex gap-1 mb-cmn-1">
                 @for (segment of [1, 2, 3, 4]; track segment) {
                   <div
-                    class="h-1 flex-1 rounded-full transition-colors"
                     [class]="
                       segment <= passwordStrength()
                         ? passwordStrength() === 1
@@ -87,6 +92,7 @@
                               : 'bg-green-500'
                         : 'bg-border-default'
                     "
+                    class="h-1 flex-1 rounded-full transition-colors"
                   ></div>
                 }
               </div>
@@ -96,9 +102,13 @@
         </div>
 
         <label class="flex items-center gap-cmn-3 mb-cmn-6 cursor-pointer">
-          <input type="checkbox" class="w-4 h-4 rounded border-border-default accent-accent-default" />
+          <input
+            type="checkbox"
+            class="w-4 h-4 rounded border-border-default accent-accent-default"
+          />
           <span class="text-cmn-sm text-text-secondary">
-            I agree to the <span class="text-accent-default">Terms of Service</span> and <span class="text-accent-default">Privacy Policy</span>
+            I agree to the <span class="text-accent-default">Terms of Service</span> and
+            <span class="text-accent-default">Privacy Policy</span>
           </span>
         </label>
 

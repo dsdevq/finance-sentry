@@ -12,7 +12,6 @@ const SIZE_PX: Record<IconSize, number> = {
 
 @Component({
   selector: 'cmn-icon',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [LucideAngularModule],
   providers: [

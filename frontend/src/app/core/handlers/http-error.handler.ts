@@ -20,7 +20,7 @@ export class HttpErrorHandler implements ErrorHandler {
       if (error.status === UNAUTHORIZED_STATUS) {
         return;
       }
-      const body = error.error as ApiErrorBody | null;
+      const body = error.error as Nullable<ApiErrorBody>;
       const message = this.errorMessages.resolve(body?.errorCode) ?? body?.message ?? GENERIC_ERROR;
       this.toastService.error(message);
     }

@@ -2,18 +2,14 @@ import {inject} from '@angular/core';
 import {rxMethod} from '@ngrx/signals/rxjs-interop';
 import {catchError, EMPTY, pipe, switchMap, tap} from 'rxjs';
 
-import {type WealthSummaryResponse} from '../../models/wealth.model';
+import {type WealthSummaryResponse} from '../../../../shared/models/wealth/wealth.model';
+import {ErrorUtils} from '../../../../shared/utils/error.utils';
 import {WealthService} from '../../services/wealth.service';
 
 interface EffectsStore {
   setLoading: () => void;
   setSummary: (summary: WealthSummaryResponse) => void;
-  setError: (errorCode: string | null) => void;
-}
-
-function extractErrorCode(err: unknown): string | null {
-  const code = (err as {error?: {errorCode?: string}} | null)?.error?.errorCode;
-  return code ?? null;
+  setError: (errorCode: Nullable<string>) => void;
 }
 
 export function accountsEffects(store: EffectsStore) {
@@ -27,7 +23,7 @@ export function accountsEffects(store: EffectsStore) {
           wealthService.getSummary().pipe(
             tap(summary => store.setSummary(summary)),
             catchError((err: unknown) => {
-              store.setError(extractErrorCode(err));
+              store.setError(ErrorUtils.extractCode(err));
               return EMPTY;
             })
           )

@@ -28,7 +28,6 @@ const DISABLED_CLASSES = 'opacity-50 pointer-events-none cursor-not-allowed';
 
 @Component({
   selector: 'cmn-button',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [IconComponent],
   template: `

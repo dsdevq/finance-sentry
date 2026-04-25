@@ -8,7 +8,6 @@ const NEUTRAL_DELTA_CLASSES = 'text-text-secondary';
 
 @Component({
   selector: 'cmn-stat-card',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [IconComponent],
   template: `

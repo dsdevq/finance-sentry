@@ -1,10 +1,13 @@
-/* eslint-disable @typescript-eslint/unbound-method, @typescript-eslint/naming-convention */
+/* eslint-disable @typescript-eslint/naming-convention */
 import {TestBed} from '@angular/core/testing';
 import {Router} from '@angular/router';
 import {of, throwError} from 'rxjs';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 
-import {type AccountsResponse, type BankAccount} from '../../models/bank-account.model';
+import {
+  type AccountsResponse,
+  type BankAccount,
+} from '../../models/bank-account/bank-account.model';
 import {BankSyncService} from '../../services/bank-sync.service';
 import {PlaidLinkService} from '../../services/plaid-link.service';
 import {connectEffects} from './connect.effects';

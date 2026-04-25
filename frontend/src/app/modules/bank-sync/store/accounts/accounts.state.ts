@@ -1,11 +1,9 @@
-import {type WealthSummaryResponse} from '../../models/wealth.model';
-
-export type AccountsStatus = 'idle' | 'loading' | 'error';
+import {type WealthSummaryResponse} from '../../../../shared/models/wealth/wealth.model';
 
 export interface AccountsState {
-  summary: WealthSummaryResponse | null;
-  status: AccountsStatus;
-  errorCode: string | null;
+  summary: Nullable<WealthSummaryResponse>;
+  status: AsyncStatus;
+  errorCode: Nullable<string>;
 }
 
 export const initialAccountsState: AccountsState = {

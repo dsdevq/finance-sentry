@@ -1,46 +1,14 @@
 import {Injectable, signal} from '@angular/core';
 import {defer, from, Observable, of, switchMap} from 'rxjs';
 
-export interface PlaidSuccessMetadata {
-  institution: {name: string; institution_id: string} | null;
-  accounts: {id: string; name: string; mask: string; type: string; subtype: string}[];
-  link_session_id: string;
-}
-
-export interface PlaidLinkOptions {
-  token: string;
-  onSuccess: (publicToken: string, metadata: PlaidSuccessMetadata) => void;
-  onExit?: (err: unknown, metadata: unknown) => void;
-  onLoad?: () => void;
-  onEvent?: (eventName: string, metadata: unknown) => void;
-}
-
-export interface PlaidHandler {
-  open: () => void;
-  destroy: () => void;
-}
-
-export interface PreparePlaidOptions {
-  token: string;
-  onSuccess: (publicToken: string, metadata: PlaidSuccessMetadata) => void;
-  onExit?: (err: unknown) => void;
-}
-
-declare global {
-  interface Window {
-    Plaid?: {
-      create: (options: PlaidLinkOptions) => PlaidHandler;
-    };
-  }
-}
-
-const PLAID_SCRIPT_URL = 'https://cdn.plaid.com/link/v2/stable/link-initialize.js';
+import {PLAID_SCRIPT_URL} from '../constants/plaid/plaid.constants';
+import {type PlaidHandler, type PreparePlaidOptions} from '../models/plaid/plaid.model';
 
 @Injectable({providedIn: 'root'})
 export class PlaidLinkService {
-  private readonly readySignal = signal(false);
-  private scriptPromise: Promise<void> | null = null;
-  private handler: PlaidHandler | null = null;
+  private readonly readySignal = signal<boolean>(false);
+  private scriptPromise: Nullable<Promise<void>> = null;
+  private handler: Nullable<PlaidHandler> = null;
 
   public readonly ready = this.readySignal.asReadonly();
 
