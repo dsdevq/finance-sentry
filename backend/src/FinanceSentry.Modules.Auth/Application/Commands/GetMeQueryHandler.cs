@@ -23,6 +23,6 @@ public class GetMeQueryHandler(
         var accessToken = tokenService.GenerateToken(user);
         var expiresAt = DateTime.UtcNow.AddMinutes(60);
 
-        return new GetMeResult(new AuthResponse(user.Id, user.Email!, expiresAt), accessToken);
+        return new GetMeResult(new AuthResponse(new UserDto(user.Id, user.Email!), expiresAt), accessToken);
     }
 }

@@ -7,8 +7,8 @@ export function authMethods(store: WritableStateSource<AuthState>) {
   return {
     applyAuthResponse(res: AuthResponse): void {
       patchState(store, {
-        userId: res.userId,
-        email: res.email,
+        userId: res.user.id,
+        email: res.user.email,
         status: 'idle',
         errorCode: null,
         flow: null,

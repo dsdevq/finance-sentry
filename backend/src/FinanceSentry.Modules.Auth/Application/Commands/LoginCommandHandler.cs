@@ -29,6 +29,6 @@ public class LoginCommandHandler(
 
         var (rawRefreshToken, _) = await refreshTokenService.IssueAsync(user.Id, cancellationToken);
 
-        return new AuthResult(new AuthResponse(user.Id, user.Email!, expiresAt), rawRefreshToken, accessToken);
+        return new AuthResult(new AuthResponse(new UserDto(user.Id, user.Email!), expiresAt), rawRefreshToken, accessToken);
     }
 }

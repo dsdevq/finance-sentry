@@ -3,9 +3,13 @@ export interface AuthRequest {
   password: string;
 }
 
-export interface AuthResponse {
-  userId: string;
+export interface UserDto {
+  id: string;
   email: string;
+}
+
+export interface AuthResponse {
+  user: UserDto;
   expiresAt: string;
 }
 

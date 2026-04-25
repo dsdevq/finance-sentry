@@ -10,8 +10,7 @@ import {AuthService} from '../services/auth.service';
 import {AuthStore} from './auth.store';
 
 const SAMPLE_RESPONSE: AuthResponse = {
-  userId: 'u-1',
-  email: 'user@test.com',
+  user: {id: 'u-1', email: 'user@test.com'},
   expiresAt: '2099-01-01T00:00:00Z',
 };
 

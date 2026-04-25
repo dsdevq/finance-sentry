@@ -22,6 +22,6 @@ public class RefreshCommandHandler(
         var accessToken = tokenService.GenerateToken(user);
         var expiresAt = DateTime.UtcNow.AddMinutes(60);
 
-        return new AuthResult(new AuthResponse(user.Id, user.Email!, expiresAt), newRaw, accessToken);
+        return new AuthResult(new AuthResponse(new UserDto(user.Id, user.Email!), expiresAt), newRaw, accessToken);
     }
 }
