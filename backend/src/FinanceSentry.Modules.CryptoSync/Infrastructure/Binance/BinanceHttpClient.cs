@@ -1,8 +1,8 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using FinanceSentry.Modules.CryptoSync.Domain.Exceptions;
 using Microsoft.Extensions.Configuration;
-using Newtonsoft.Json;
 
 namespace FinanceSentry.Modules.CryptoSync.Infrastructure.Binance;
 
@@ -60,13 +60,15 @@ public sealed class BinanceHttpClient
 
         if (!response.IsSuccessStatusCode)
         {
-            var error = JsonConvert.DeserializeObject<BinanceErrorResponse>(body);
+            BinanceErrorResponse? error = null;
+            try { error = JsonSerializer.Deserialize<BinanceErrorResponse>(body); }
+            catch (JsonException) { /* fall through with null */ }
             throw new BinanceException(
                 error?.Message ?? $"Binance API error: HTTP {(int)response.StatusCode}",
                 error?.Code);
         }
 
-        return JsonConvert.DeserializeObject<T>(body)
+        return JsonSerializer.Deserialize<T>(body)
             ?? throw new BinanceException("Binance API returned empty response.");
     }
 }

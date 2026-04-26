@@ -1,6 +1,6 @@
+using System.Net.Http.Json;
 using FinanceSentry.Modules.BrokerageSync.Domain.Exceptions;
 using Microsoft.Extensions.Configuration;
-using Newtonsoft.Json;
 
 namespace FinanceSentry.Modules.BrokerageSync.Infrastructure.IBKR;
 
@@ -18,10 +18,20 @@ public sealed class IBKRGatewayClient
     public async Task AuthenticateAsync(string username, string password, CancellationToken ct = default)
     {
         var payload = new IBKRAuthInitRequest(username, password);
-        var json = JsonConvert.SerializeObject(payload);
-        using var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
 
-        var response = await _http.PostAsync("/v1/api/iserver/auth/ssodh/init", content, ct);
+        HttpResponseMessage response;
+        try
+        {
+            response = await _http.PostAsJsonAsync("/v1/api/iserver/auth/ssodh/init", payload, ct);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new BrokerAuthException(
+                $"IBKR gateway is unreachable at {_http.BaseAddress}. Start the IBKR Client Portal Gateway and retry.",
+                "IBKR",
+                ex);
+        }
+
         if (!response.IsSuccessStatusCode)
             throw new BrokerAuthException("IBKR authentication failed.", "IBKR");
 
@@ -35,8 +45,7 @@ public sealed class IBKRGatewayClient
         var response = await _http.GetAsync("/v1/api/iserver/auth/status", ct);
         response.EnsureSuccessStatusCode();
 
-        var body = await response.Content.ReadAsStringAsync(ct);
-        return JsonConvert.DeserializeObject<IBKRAuthStatusResponse>(body)
+        return await response.Content.ReadFromJsonAsync<IBKRAuthStatusResponse>(cancellationToken: ct)
             ?? new IBKRAuthStatusResponse(false, false);
     }
 
@@ -45,8 +54,7 @@ public sealed class IBKRGatewayClient
         var response = await _http.GetAsync("/v1/api/iserver/accounts", ct);
         response.EnsureSuccessStatusCode();
 
-        var body = await response.Content.ReadAsStringAsync(ct);
-        return JsonConvert.DeserializeObject<IBKRAccountsResponse>(body)
+        return await response.Content.ReadFromJsonAsync<IBKRAccountsResponse>(cancellationToken: ct)
             ?? new IBKRAccountsResponse([]);
     }
 
@@ -55,7 +63,6 @@ public sealed class IBKRGatewayClient
         var response = await _http.GetAsync($"/v1/api/portfolio/{accountId}/positions/0", ct);
         response.EnsureSuccessStatusCode();
 
-        var body = await response.Content.ReadAsStringAsync(ct);
-        return JsonConvert.DeserializeObject<List<IBKRPositionResponse>>(body) ?? [];
+        return await response.Content.ReadFromJsonAsync<List<IBKRPositionResponse>>(cancellationToken: ct) ?? [];
     }
 }

@@ -52,7 +52,6 @@
     <PackageVersion Include="Polly" Version="8.2.0" />
     <PackageVersion Include="Polly.Core" Version="8.4.1" />
     <PackageVersion Include="Polly.Extensions.Http" Version="3.0.0" />
-    <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
 
     <!-- Swagger -->
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.6.2" />
