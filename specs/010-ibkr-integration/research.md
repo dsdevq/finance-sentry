@@ -46,14 +46,18 @@
 
 ## Decision 3: Credential Model
 
-**Decision**: Finance Sentry stores the user's IBKR **username** + **password**, each encrypted separately with AES-256-GCM (same `ICredentialEncryptionService` pattern as Binance). The `AccountId` (discovered on first connect from the gateway's `/iserver/accounts` response) is stored in plaintext on the credential record.
+**Decision (revised 2026-04-26): Single-tenant gateway**. The IBeam sidecar holds **one** IBKR session for the entire deployment, authenticated from `IBKR_ACCOUNT` / `IBKR_PASSWORD` env vars (`docker/.env`). The `IBKRCredential` row stores **only** the user-id ↔ discovered `AccountId` linkage — no per-user credentials, no encryption, no `ICredentialEncryptionService` dependency.
 
-**Rationale**:
-- Consistent with the Binance pattern (two separate encrypted byte arrays).
-- The gateway is stateless from Finance Sentry's perspective — each sync session re-authenticates using stored credentials.
-- `AccountId` is not a secret (it's the user's account number visible in the IBKR portal).
+**Why this changed**:
+- The Client Portal Gateway only allows a single active session at a time. Posting different credentials per user at runtime would fight IBeam's own session.
+- For a personal-finance app with one operator, this is the correct shape: the operator supplies their IBKR creds once via `.env`; the gateway authenticates once and stays logged in.
+- Original decision (per-user encrypted username + password, AES-256-GCM) was incompatible with IBeam — it assumed the application owns the gateway session, which it doesn't.
 
-**Why not gateway-level credential injection**: Storing per-user credentials in Finance Sentry allows the multi-user model described in the spec (each user links their own IBKR account). Baking credentials into Docker env vars would only support a single hardcoded user.
+**When the app is opened to multiple users**:
+- Switch to IBKR's **OAuth Web API** (per-user authorization, each user grants Finance Sentry consent against their own IBKR account).
+- New `IBKRCredential` columns: encrypted `accessToken` + `refreshToken` + `expiresAt`. AES-256-GCM via the existing `ICredentialEncryptionService`.
+- Drop the IBeam sidecar; OAuth talks directly to IBKR's hosted endpoints.
+- The migration from this single-tenant shape to OAuth is bounded: one EF migration to add OAuth columns, a rewrite of `IBKRGatewayClient` against the OAuth endpoints, and a frontend "Authorize with IBKR" redirect button. Estimated 2–3 days of focused work.
 
 ---
 

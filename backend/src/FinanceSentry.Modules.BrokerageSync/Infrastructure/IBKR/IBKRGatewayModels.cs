@@ -2,10 +2,6 @@ using System.Text.Json.Serialization;
 
 namespace FinanceSentry.Modules.BrokerageSync.Infrastructure.IBKR;
 
-public sealed record IBKRAuthInitRequest(
-    [property: JsonPropertyName("username")] string Username,
-    [property: JsonPropertyName("password")] string Password);
-
 public sealed record IBKRAuthStatusResponse(
     [property: JsonPropertyName("authenticated")] bool Authenticated,
     [property: JsonPropertyName("connected")] bool Connected);

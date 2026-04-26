@@ -1,5 +1,4 @@
 using FinanceSentry.Core.Cqrs;
-using FinanceSentry.Infrastructure.Encryption;
 using FinanceSentry.Modules.BrokerageSync.Domain;
 using FinanceSentry.Modules.BrokerageSync.Domain.Interfaces;
 using FinanceSentry.Modules.BrokerageSync.Domain.Repositories;
@@ -15,18 +14,15 @@ public sealed class SyncIBKRHoldingsCommandHandler : ICommandHandler<SyncIBKRHol
     private readonly IIBKRCredentialRepository _credentialRepository;
     private readonly IBrokerageHoldingRepository _holdingRepository;
     private readonly IBrokerAdapter _adapter;
-    private readonly ICredentialEncryptionService _encryption;
 
     public SyncIBKRHoldingsCommandHandler(
         IIBKRCredentialRepository credentialRepository,
         IBrokerageHoldingRepository holdingRepository,
-        IBrokerAdapter adapter,
-        ICredentialEncryptionService encryption)
+        IBrokerAdapter adapter)
     {
         _credentialRepository = credentialRepository;
         _holdingRepository = holdingRepository;
         _adapter = adapter;
-        _encryption = encryption;
     }
 
     public async Task<SyncIBKRHoldingsResult> Handle(SyncIBKRHoldingsCommand request, CancellationToken ct)
@@ -34,34 +30,9 @@ public sealed class SyncIBKRHoldingsCommandHandler : ICommandHandler<SyncIBKRHol
         var credential = await _credentialRepository.GetByUserIdAsync(request.UserId, ct)
             ?? throw new InvalidOperationException("No active IBKR credential found for this user.");
 
-        string username;
-        string password;
-
         try
         {
-            username = _encryption.Decrypt(
-                credential.EncryptedUsername,
-                credential.UsernameIv,
-                credential.UsernameAuthTag,
-                credential.KeyVersion);
-
-            password = _encryption.Decrypt(
-                credential.EncryptedPassword,
-                credential.PasswordIv,
-                credential.PasswordAuthTag,
-                credential.KeyVersion);
-        }
-        catch (Exception ex)
-        {
-            credential.RecordSyncError("Failed to decrypt credentials.");
-            _credentialRepository.Update(credential);
-            await _credentialRepository.SaveChangesAsync(ct);
-            throw new InvalidOperationException("Failed to decrypt IBKR credentials.", ex);
-        }
-
-        try
-        {
-            await _adapter.AuthenticateAsync(username, password, ct);
+            await _adapter.EnsureSessionAsync(ct);
 
             var accountId = credential.AccountId
                 ?? await _adapter.GetAccountIdAsync(ct);

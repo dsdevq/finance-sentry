@@ -14,10 +14,10 @@ public sealed class BrokerageController(
     IQueryHandler<GetBrokerageHoldingsQuery, BrokerageHoldingsResponse> holdingsHandler) : ControllerBase
 {
     [HttpPost("ibkr/connect")]
-    public async Task<IActionResult> Connect([FromBody] ConnectIBKRRequest request, CancellationToken ct)
+    public async Task<IActionResult> Connect(CancellationToken ct)
     {
         var result = await connectHandler.Handle(
-            new ConnectIBKRCommand(User.RequireUserId(), request.Username, request.Password),
+            new ConnectIBKRCommand(User.RequireUserId()),
             ct);
 
         return StatusCode(201, result);

@@ -242,3 +242,31 @@ Sequential:
 - `BinanceSyncJob` skips credentials with `IsActive = false` (disconnected users)
 - `WealthAggregationService` change (T027) is backward-compatible: if `ICryptoHoldingsReader` returns empty, the `"crypto"` category is simply absent from the summary
 - API secret MUST never appear in logs, responses, or error messages — validate in contract tests
+
+---
+
+## Post-implementation iterations (after the original task list landed)
+
+These tasks were added on top of the implemented feature to fix gaps and align with code-quality decisions made later. Recorded here so the spec, plan, and code stay in sync.
+
+### Iteration 1 — Drop Newtonsoft.Json from CryptoSync (2026-04-26)
+
+- [X] **TI-009-001** Replace `[JsonProperty]` with `[JsonPropertyName]` in `BinanceAdapterModels.cs`. Replace `JsonConvert.DeserializeObject<T>(body)` with `JsonSerializer.Deserialize<T>(body)` in `BinanceHttpClient.DeserializeAsync<T>`. Wrap the error-body deserialize in a `try/catch (JsonException)` so a malformed error response doesn't shadow the real HTTP error.
+- [X] **TI-009-002** Drop `<PackageReference Include="Newtonsoft.Json" />` from `FinanceSentry.Modules.CryptoSync.csproj`. Drop the matching `PackageVersion` from the central `Directory.Packages.props`. (Same iteration also drops the package from `Modules.BankSync.csproj` and `Modules.BrokerageSync.csproj` — see spec 010 iterations.)
+- [X] **TI-009-003** Build under Release in the API container to verify the Crypto module compiles after the JSON migration.
+
+### Iteration 2 — Wallet aggregation across Spot + Funding + Simple Earn (2026-04-26)
+
+Driven by the discovery that the original Spot-only adapter produced empty portfolios for users whose funds live in Earn. Records the work that ships the change described in `research.md` Decision 10 and `data-model.md` (CryptoHolding aggregation table).
+
+- [X] **TI-009-010** Add new request/response records to `BinanceAdapterModels.cs`: `BinanceFundingAsset`, `BinanceEarnPage<T>`, `BinanceFlexibleEarnPosition`, `BinanceLockedEarnPosition`. All use `[JsonPropertyName]`.
+- [X] **TI-009-011** Refactor `BinanceHttpClient`: extract a private `SendSignedAsync<T>(HttpMethod, path, apiKey, apiSecret, queryParams, ct)` helper that handles signed-query construction for both GET and POST. `GetAccountAsync` becomes a one-liner that delegates to it.
+- [X] **TI-009-012** Add four new HTTP methods to `BinanceHttpClient`:
+  - `GetFundingAssetsAsync(...)` → `POST /sapi/v1/asset/get-funding-asset`
+  - `GetFlexibleEarnPositionsAsync(...)` → `GET /sapi/v1/simple-earn/flexible/position?size=100&current=1`
+  - `GetLockedEarnPositionsAsync(...)` → `GET /sapi/v1/simple-earn/locked/position?size=100&current=1`
+- [X] **TI-009-013** Inject `ILogger<BinanceAdapter>` into `BinanceAdapter` (new ctor parameter — also requires updating `BinanceAdapterContractTests` to pass `NullLogger<BinanceAdapter>.Instance`).
+- [X] **TI-009-014** Rewrite `BinanceAdapter.GetHoldingsAsync` to fan out four endpoint calls + the price call in parallel via `Task.WhenAll`. Spot is mandatory (failure throws). Funding + flexible Earn + locked Earn each go through a permission-tolerant `SafeFetchAsync<T>(fetcher, label, fallback)` that catches `BinanceException`, logs a warning with the source label, and returns the fallback.
+- [X] **TI-009-015** Add aggregation helpers (`Add`, `AddSpotBalances`, `AddFundingBalances`, `AddFlexibleEarnBalances`, `AddLockedEarnBalances`) that accumulate `(free, locked)` per asset symbol in a single dictionary. Flexible Earn balances are treated as "free"; locked Earn as "locked".
+- [X] **TI-009-016** Move dust-threshold filtering to **after** aggregation so a tiny Spot balance plus a real Earn position aren't accidentally filtered.
+- [X] **TI-009-017** Extract aggregation logic from `BinanceAdapter` into a separate `BinanceHoldingsAggregator` class — pure function (no IO, no DI dependencies) that takes the four raw responses + price map + dust threshold and returns a `CryptoAssetBalance` list. `BinanceAdapter` now does HTTP orchestration only (~90 LOC, down from ~210). Registered as `Singleton` in `Program.cs` (it has no per-request state). Existing `BinanceAdapterContractTests` updated to construct the adapter with the aggregator. New `BinanceHoldingsAggregatorTests` (`tests/FinanceSentry.Tests.Unit/CryptoSync/`) covers: Spot-only, Spot+Flexible-Earn merge on same asset, Locked-Earn → `LockedQuantity`, Funding-wallet contribution, stablecoin path with empty price map, dust filter applied post-aggregation, "tiny Spot + real Earn" survives the threshold, asset-without-price-feed filtered, BTC cross-pair pricing.

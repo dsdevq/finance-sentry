@@ -19,7 +19,7 @@ public class IBKRSyncJobTests
         new(_credentialRepo.Object, _syncHandler.Object, NullLogger<IBKRSyncJob>.Instance);
 
     private static IBKRCredential MakeCredential(Guid userId) =>
-        new(userId, [1], [2], [3], [4], [5], [6], 1, "U1234567");
+        new(userId, "U1234567");
 
     [Fact]
     public async Task ExecuteAsync_IteratesAllActiveCredentials()

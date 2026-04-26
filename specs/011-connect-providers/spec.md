@@ -55,19 +55,21 @@ A signed-in user opens the connect-account flow, picks **Binance**, pastes the A
 
 ---
 
-### User Story 4 - Connect Interactive Brokers (IBKR) via gateway credentials (Priority: P2)
+### User Story 4 - Connect Interactive Brokers (IBKR) via shared gateway (Priority: P2)
 
-A signed-in user opens the connect-account flow, picks **Interactive Brokers**, enters their IBKR username and password, submits, and sees their brokerage positions (stocks, ETFs, options) listed under a new "Brokerage — IBKR" section with quantity, instrument type, and USD value per position.
+A signed-in user opens the connect-account flow, picks **Interactive Brokers**, clicks **Connect**, and sees their brokerage positions (stocks, ETFs, options) listed under a new "Brokerage — IBKR" section with quantity, instrument type, and USD value per position.
 
-**Why this priority**: IBKR completes the "all asset classes in one app" story, the backend (`POST /api/v1/brokerage/ibkr/connect`) is implemented, and the form mirrors Binance (username + password). P2 because IBKR has a smaller user base than banks/crypto and the gateway dependency makes it the most fragile integration to demo.
+**Why this priority**: IBKR completes the "all asset classes in one app" story. P2 because IBKR has a smaller user base than banks/crypto, and the deployment depends on an IBKR Client Portal Gateway sidecar (IBeam) being authenticated via env-var credentials.
 
-**Independent Test**: Can be fully tested by signing in, opening the connect flow, choosing IBKR, entering valid paper-trading credentials, and verifying that the brokerage holdings view shows the test account's positions with non-zero USD values.
+**Single-tenant model**: under the current personal-finance shape, IBKR credentials are configured once at deployment time (`IBKR_ACCOUNT` / `IBKR_PASSWORD` in `docker/.env`). The gateway sidecar holds the session for the entire deployment; the user does not type credentials in the UI. When the app moves to public/multi-user (out of scope for v1), this story migrates to IBKR's OAuth Web API per `specs/010-ibkr-integration/research.md` Decision 3.
+
+**Independent Test**: Can be fully tested by ensuring the `ibkr-gateway` sidecar is running and authenticated (paper-trading creds in `.env`), signing in to Finance Sentry, opening the connect flow, choosing IBKR, clicking Connect, and verifying that the brokerage holdings view shows the linked account's positions with non-zero USD values.
 
 **Acceptance Scenarios**:
 
-1. **Given** a signed-in user with valid IBKR paper-trading credentials, **When** they submit the form, **Then** they land on the IBKR holdings view with their open positions listed.
-2. **Given** a signed-in user, **When** the IBKR gateway rejects their credentials, **Then** they see "IB Gateway rejected the provided credentials" with a hint that the gateway requires the user to confirm a 2FA push notification.
-3. **Given** a signed-in user who already has an IBKR account connected, **When** they try to connect again, **Then** they see "IBKR account already connected" and are offered a "Disconnect existing" action.
+1. **Given** the IBKR gateway sidecar is authenticated and a signed-in Finance Sentry user, **When** they click **Connect** on the IBKR step, **Then** they land on the brokerage holdings view with their open positions listed.
+2. **Given** the IBKR gateway sidecar is **not** authenticated (missing or invalid env-var creds, or IBeam still retrying login), **When** the user clicks **Connect**, **Then** they see "IBKR gateway is not authenticated. Configure IBKR_ACCOUNT/IBKR_PASSWORD in docker/.env and ensure the ibkr-gateway container is running." with no account created.
+3. **Given** a signed-in user who already has an IBKR account linked, **When** they try to connect again, **Then** they see "IBKR account already connected" and are offered a "Disconnect existing" action.
 
 ---
 
@@ -106,7 +108,7 @@ A signed-in user opens any connected provider's detail view (or the accounts lis
 - **FR-003**: Selecting Plaid MUST open the Plaid Link hosted overlay; the rest of the connect UI MUST be hidden behind the overlay until Plaid completes or is dismissed.
 - **FR-004**: Selecting Monobank MUST present a single password-style input for the API token with a help link explaining how to generate one and a "Connect" submit button that is disabled until the field is non-empty.
 - **FR-005**: Selecting Binance MUST present two password-style inputs (API key, API secret) with a help link explaining how to generate read-only keys and a "Connect" submit button that is disabled until both fields are non-empty.
-- **FR-006**: Selecting IBKR MUST present a username field and a password-style input for the password with a hint that the user may need to confirm a 2FA push notification on their phone after submitting, and a "Connect" submit button disabled until both fields are non-empty.
+- **FR-006**: Selecting IBKR MUST present a single **Connect** button (no credential input). A hint explains that the IBKR Client Portal Gateway sidecar holds the session for this deployment using credentials configured at deploy time (`docker/.env`).
 - **FR-007**: For every provider except Plaid, on submit the form MUST show a loading state on the button, disable all inputs, and remain on the same screen until the backend responds.
 - **FR-008**: On a successful connect, the UI MUST show a success confirmation that names the provider and the count of accounts/holdings added, and MUST automatically route the user to the relevant data view (banking → accounts list; crypto/brokerage → holdings list) within 2 seconds.
 - **FR-009**: On a credential rejection (HTTP 422), the UI MUST show the error message returned by the backend inline next to the offending field (or as a form-level banner if the error is not field-specific) and keep the form editable.
@@ -122,7 +124,7 @@ A signed-in user opens any connected provider's detail view (or the accounts lis
 
 ### Key Entities *(include if feature involves data)*
 
-- **Provider**: A connectable third-party data source. Identified by a slug (`plaid` | `monobank` | `binance` | `ibkr`), with display name, logo asset, one-line description, credential-form shape (URL-redirect for Plaid, single-token for Monobank, key-secret for Binance, user-pass for IBKR), and connection status for the current user (connected | available).
+- **Provider**: A connectable third-party data source. Identified by a slug (`plaid` | `monobank` | `binance` | `ibkr`), with display name, logo asset, one-line description, credential-form shape (URL-redirect for Plaid, single-token for Monobank, key-secret for Binance, **gateway-launcher (no credentials)** for IBKR), and connection status for the current user (connected | available).
 - **Connection Form Submission (transient)**: The credentials a user pastes/types during the flow. Lives only in the form's local state; transmitted once to the backend and discarded on success or error. Never logged, cached, or persisted client-side.
 - **Connect Result (read-side)**: The backend response describing the just-connected accounts/holdings — used by the success screen to decide what to display and where to route. Already typed by the existing handler results (`ConnectBankAccountResult`, `ConnectMonobankResult`, `ConnectBinanceResult`, `ConnectIBKRResult`).
 

@@ -50,25 +50,29 @@ services:
     volumes:
       - ./logs:/app/logs
 
-  ibkr-gateway:
-    image: voyz/ibeam:latest
-    container_name: finance-sentry-ibkr-gateway
-    environment:
-      IBEAM_ACCOUNT: ${IBKR_ACCOUNT:-}
-      IBEAM_PASSWORD: ${IBKR_PASSWORD:-}
-      IBEAM_GATEWAY_BASE_URL: "https://localhost:5000"
-      IBEAM_LOG_LEVEL: INFO
-    ports:
-      - "5055:5000"
-    networks:
-      - finance-sentry-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-skf", "https://localhost:5000/v1/api/iserver/auth/status"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
+  # ibkr-gateway temporarily disabled — IBeam can authenticate but IBKR drops the
+  # session on this live account (read-only-API exemption / pending agreements).
+  # Revisit closer to public launch by switching to IBKR's OAuth Web API.
+  # ibkr-gateway:
+  #   image: voyz/ibeam:latest
+  #   container_name: finance-sentry-ibkr-gateway
+  #   environment:
+  #     IBEAM_ACCOUNT: ${IBKR_ACCOUNT:-}
+  #     IBEAM_PASSWORD: ${IBKR_PASSWORD:-}
+  #     IBEAM_GATEWAY_BASE_URL: "https://localhost:5000"
+  #     IBEAM_LOG_LEVEL: INFO
+  #     IBEAM_ERROR_SCREENSHOTS: "True"
+  #   ports:
+  #     - "5055:5000"
+  #   networks:
+  #     - finance-sentry-network
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-skf", "https://localhost:5000/v1/api/iserver/auth/status"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 5
+  #     start_period: 60s
 
   postgres:
     image: postgres:14-alpine

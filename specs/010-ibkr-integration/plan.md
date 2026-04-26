@@ -5,7 +5,22 @@
 
 ## Summary
 
-Add Interactive Brokers portfolio integration as a new `FinanceSentry.Modules.BrokerageSync` module. The module name is generic to allow future brokerage adapters (Schwab, Fidelity, etc.) under the same boundary. IBKR is the first concrete `IBrokerAdapter` implementation. The feature uses the IBKR Client Portal REST API via a self-hosted IB Gateway Docker container (`ghcr.io/gnzsnz/ib-gateway`); Finance Sentry authenticates at the start of each sync cycle and lets the session expire. Credentials (username + password) are encrypted at rest (AES-256-GCM, same `ICredentialEncryptionService` as Binance). `IBKRCredential` and `BrokerageHolding` entities live in a new `BrokerageSyncDbContext`. Holdings are wired into `/wealth/summary` via `IBrokerageHoldingsReader` in `FinanceSentry.Core`. A Hangfire recurring job syncs positions every 15 minutes. New endpoints: `POST /brokerage/ibkr/connect`, `DELETE /brokerage/ibkr/disconnect`, `GET /brokerage/holdings`. Backend-only — no frontend changes.
+Add Interactive Brokers portfolio integration as a new `FinanceSentry.Modules.BrokerageSync` module. The module name is generic to allow future brokerage adapters (Schwab, Fidelity, etc.) under the same boundary. IBKR is the first concrete `IBrokerAdapter` implementation. The feature uses the IBKR Client Portal Web API via a self-hosted gateway sidecar; `IBKRCredential` and `BrokerageHolding` entities live in a new `BrokerageSyncDbContext`. Holdings are wired into `/wealth/summary` via `IBrokerageHoldingsReader` in `FinanceSentry.Core`. A Hangfire recurring job syncs positions every 15 minutes. Endpoints: `POST /brokerage/ibkr/connect`, `DELETE /brokerage/ibkr/disconnect`, `GET /brokerage/holdings`.
+
+**Single-tenant gateway (revised 2026-04-26)**:
+
+- **Image**: `voyz/ibeam:latest` — wraps IBKR's Java Client Portal Gateway with a Selenium-driven auto-login. The original choice (`ghcr.io/gnzsnz/ib-gateway`) was the wrong product — it serves the Trading API on port 4001/4002, not the Client Portal Web API the codebase calls. See `research.md` Decision 2 for details.
+- **Session ownership**: the IBeam sidecar holds **one** IBKR session for the entire deployment, authenticated from `IBKR_ACCOUNT` / `IBKR_PASSWORD` env vars (`docker/.env`). The user does not type credentials in the UI — the connect flow is a single "Connect" button that verifies the gateway session and stores the user-id ↔ discovered `AccountId` link. See `research.md` Decision 3.
+- **Credential model**: `IBKRCredential` stores only `(UserId, AccountId, IsActive, LastSyncAt, LastSyncError, CreatedAt)` — no encrypted username/password, no AES-256-GCM dependency. `ICredentialEncryptionService` is **not** referenced by this module.
+- **Adapter interface**: `IBrokerAdapter` exposes `EnsureSessionAsync(ct)` (verifies the gateway is authenticated via `/iserver/auth/status`), `GetAccountIdAsync(ct)`, and `GetPositionsAsync(accountId, ct)`. There is no `AuthenticateAsync` method — the gateway owns auth.
+- **Self-signed cert**: IBeam serves `https://ibkr-gateway:5000` with a self-signed cert. The `HttpClient<IBKRGatewayClient>` registration in `Program.cs` accepts the self-signed cert in `Development` or when `IBKR:AllowSelfSignedCert=true`. Production must terminate TLS at a real proxy.
+- **Multi-tenant migration**: when this app moves to public/multi-user, switch to IBKR's **OAuth Web API** (per-user authorization) and add encrypted access/refresh-token columns. Estimated 2–3 days of focused work.
+
+**Status (2026-04-26)**: the `ibkr-gateway` Compose service block is currently **commented out** in `docker/docker-compose.dev.yml`. Reason: live-account login through IBeam succeeds at the SSO step but IBKR drops the session immediately afterwards (likely a pending agreement or a read-only-API exemption that hasn't propagated). Backend module, frontend launcher, migration, and tests are all in place — uncommenting the service plus completing IBKR-side configuration will bring the integration online.
+
+**JSON serialization (revised 2026-04-26)**: `IBKRGatewayClient` and `IBKRGatewayModels` use `System.Text.Json` (`[JsonPropertyName]` + `System.Net.Http.Json` extension methods `PostAsJsonAsync` / `ReadFromJsonAsync`). The original implementation used Newtonsoft.Json which has been removed from this module's `csproj` and from `Directory.Packages.props`.
+
+Backend-only — minimal frontend touch (a single "Connect" launcher component already in place).
 
 ## Technical Context
 
@@ -29,7 +44,7 @@ Add Interactive Brokers portfolio integration as a new `FinanceSentry.Modules.Br
 | II — Code quality enforcement | ✅ PASS | StyleCop enforced; zero-warning build required; no frontend TS files in this feature |
 | III — Multi-source financial integration | ✅ PASS | This feature IS the IBKR broker integration principle in action |
 | IV — AI analytics | N/A | Not in scope |
-| V — Security-first | ✅ PASS | Username + password encrypted at rest (AES-256-GCM); never logged; user-scoped queries |
+| V — Security-first | ✅ PASS | No per-user credentials stored (single-tenant gateway); deploy-time creds in `docker/.env` only; user-scoped queries on the link metadata. |
 | Testing Discipline — External API contracts | ✅ PASS | Contract tests mandatory for IB Gateway HTTP calls + new REST endpoints |
 | Testing Discipline — REST endpoint contracts | ✅ PASS | Each new endpoint (`/connect`, `/disconnect`, `/holdings`) ships with a contract test |
 | Versioning | ✅ PASS | Backend minor version bump (3 new endpoints) |
@@ -55,7 +70,7 @@ specs/010-ibkr-integration/
 ```text
 backend/src/FinanceSentry.Modules.BrokerageSync/          [NEW PROJECT]
 ├── Domain/
-│   ├── IBKRCredential.cs                                  [NEW] encrypted username + password entity
+│   ├── IBKRCredential.cs                                  [NEW] user ↔ IBKR account-id link (single-tenant; no encrypted creds)
 │   ├── BrokerageHolding.cs                                [NEW] per-position snapshot entity
 │   ├── Interfaces/
 │   │   └── IBrokerAdapter.cs                              [NEW] domain interface for brokers

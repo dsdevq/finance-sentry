@@ -113,7 +113,7 @@ A user can revoke their Binance integration, removing stored credentials and ass
 
 ## Assumptions
 
-- Only Binance Spot wallet balances are in scope; Futures, Margin, Earn, and Staking accounts are excluded from the initial integration.
+- ~~Only Binance Spot wallet balances are in scope; Futures, Margin, Earn, and Staking accounts are excluded from the initial integration.~~ **Updated 2026-04-26**: Spot **+ Funding wallet + Simple Earn (flexible & locked)** are aggregated per asset. Futures (USD-M, Coin-M), Cross/Isolated Margin, and Options remain out of scope. See `research.md` Decision 10.
 - The user creates a read-only API key on Binance (no trading permissions required); the system enforces read-only access and never executes trades.
 - USD is the single reference currency for value display; multi-currency display is deferred to a future feature.
 - Asset USD prices are fetched from Binance's own ticker endpoint at sync time; a dedicated pricing service is out of scope.
@@ -124,7 +124,7 @@ A user can revoke their Binance integration, removing stored credentials and ass
 
 ## Notes
 
-- [DECISION] Spot-only scope: Only Binance Spot wallet is integrated. Futures/Margin/Staking require separate API endpoints, distinct data models, and different risk semantics — deferred to a future crypto-depth feature.
+- [DECISION 2026-04-26] Wallet-aggregation scope expansion: original Spot-only scope produced incomplete portfolios for users with funds in Earn — the most common case. Adapter now fans out to Spot + Funding + Simple Earn (flexible & locked) and aggregates per asset. Futures/Margin/Options still deferred. Earn endpoints require the API key's "Read" permission to include Earn data; missing permission is logged as a warning per source and the sync continues with whatever sources succeeded.
 - [DECISION] Polling-only sync: Binance does not provide push webhooks for balance changes; scheduled polling is the only viable sync mechanism.
 - [DECISION] Adapter interface: The Binance integration MUST implement a domain-defined `ICryptoExchangeAdapter` (or equivalent) interface per Constitution Principle I, consistent with the `IBankProvider` pattern used for bank integrations.
 - [OUT OF SCOPE] Trade history: Fetching and storing order/trade history is excluded from this feature to keep scope manageable; can be added in a follow-up.

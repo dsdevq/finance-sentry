@@ -1,15 +1,8 @@
-<form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-cmn-6">
-  <cmn-form-field
-    [control]="form.controls.username"
-    label="Username"
-    hint="Approve the 2FA push on your IBKR mobile app when prompted."
-  >
-    <cmn-input formControlName="username" type="text" placeholder="IBKR username" />
-  </cmn-form-field>
-
-  <cmn-form-field [control]="form.controls.password" label="Password">
-    <cmn-input formControlName="password" type="password" placeholder="IBKR password" />
-  </cmn-form-field>
+<div class="flex flex-col gap-cmn-6">
+  <p class="text-cmn-sm text-text-secondary">
+    The IBKR gateway sidecar holds the session for this deployment. Click connect to verify
+    the gateway is authenticated and link your IBKR account.
+  </p>
 
   @if (isDuplicateError()) {
     <cmn-alert variant="error">
@@ -24,19 +17,20 @@
     <cmn-alert variant="error">{{ store.errorMessage() }}</cmn-alert>
   }
 
-  <cmn-alert variant="accent" icon="ShieldCheck" title="Institutional Grade Security">
-    Credentials are encrypted at rest using AES-256 and never shared with third parties.
+  <cmn-alert variant="accent" icon="ShieldCheck" title="Single-tenant gateway">
+    No credentials are entered here. The gateway sidecar (IBeam) authenticates with IBKR using
+    the credentials in <code>docker/.env</code>.
   </cmn-alert>
 
   <cmn-dialog-actions align="between">
     <cmn-button (clicked)="back()" variant="secondary" icon="ArrowLeft">Back</cmn-button>
     <cmn-button
       [loading]="store.isBusy()"
-      [disabled]="form.invalid || store.isBusy()"
+      [disabled]="store.isBusy()"
+      (clicked)="connect()"
       variant="primary"
-      type="submit"
     >
       Connect IBKR
     </cmn-button>
   </cmn-dialog-actions>
-</form>
+</div>

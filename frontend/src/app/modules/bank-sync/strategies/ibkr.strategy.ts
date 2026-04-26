@@ -3,7 +3,6 @@ import {map, type Observable} from 'rxjs';
 
 import {type Provider} from '../../../shared/models/provider/provider.model';
 import {IbkrFormComponent} from '../components/connect-modal/ibkr-form.component';
-import {type ConnectIBKRRequest} from '../models/ibkr/ibkr.model';
 import {IBKRService} from '../services/ibkr.service';
 import {type ConnectOutcome, type ConnectStrategy} from './connect-strategy';
 
@@ -14,12 +13,11 @@ export class IbkrConnectStrategy implements ConnectStrategy {
   public readonly slug: Provider = 'ibkr';
   public readonly formComponent: Type<unknown> = IbkrFormComponent;
 
-  public submit(input: unknown): Observable<ConnectOutcome> {
-    const payload = input as ConnectIBKRRequest;
-    return this.ibkr.connect(payload).pipe(
-      map(() => ({
+  public submit(): Observable<ConnectOutcome> {
+    return this.ibkr.connect().pipe(
+      map(response => ({
         successCode: 'POLLING' as const,
-        count: 1,
+        count: response.holdingsCount,
         institutionType: 'broker' as const,
       }))
     );

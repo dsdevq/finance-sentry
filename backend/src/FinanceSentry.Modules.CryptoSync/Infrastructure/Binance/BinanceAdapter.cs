@@ -1,23 +1,34 @@
+using FinanceSentry.Modules.CryptoSync.Domain.Exceptions;
 using FinanceSentry.Modules.CryptoSync.Domain.Interfaces;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace FinanceSentry.Modules.CryptoSync.Infrastructure.Binance;
 
+/// <summary>
+/// HTTP orchestration only. Fans out the four wallet endpoints + price call in
+/// parallel, tolerates permission failures on optional sources, and hands the
+/// raw responses to <see cref="BinanceHoldingsAggregator"/> to produce the
+/// per-asset balance list.
+/// </summary>
 public sealed class BinanceAdapter : ICryptoExchangeAdapter
 {
-    private static readonly HashSet<string> Stablecoins = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "USDT", "USDC", "BUSD", "TUSD", "USDP", "DAI", "FDUSD",
-    };
-
     private readonly BinanceHttpClient _httpClient;
+    private readonly BinanceHoldingsAggregator _aggregator;
+    private readonly ILogger<BinanceAdapter> _logger;
     private readonly decimal _dustThresholdUsd;
 
     public string ExchangeName => "binance";
 
-    public BinanceAdapter(BinanceHttpClient httpClient, IConfiguration configuration)
+    public BinanceAdapter(
+        BinanceHttpClient httpClient,
+        BinanceHoldingsAggregator aggregator,
+        ILogger<BinanceAdapter> logger,
+        IConfiguration configuration)
     {
         _httpClient = httpClient;
+        _aggregator = aggregator;
+        _logger = logger;
         _dustThresholdUsd = decimal.TryParse(
             configuration["Binance:DustThresholdUsd"],
             out var threshold) ? threshold : 0.01m;
@@ -33,32 +44,37 @@ public sealed class BinanceAdapter : ICryptoExchangeAdapter
         string apiSecret,
         CancellationToken ct = default)
     {
-        var accountTask = _httpClient.GetAccountAsync(apiKey, apiSecret, ct);
+        // Spot is the source of truth for credential health — fail loudly here.
+        var spotTask = _httpClient.GetAccountAsync(apiKey, apiSecret, ct);
         var pricesTask = _httpClient.GetAllPricesAsync(ct);
 
-        await Task.WhenAll(accountTask, pricesTask);
+        // Funding + Earn require additional permissions on the API key (Read-Only
+        // is enough but the user may have scoped the key narrower). Treat as
+        // best-effort: log and continue if any one of these is rejected.
+        var fundingTask = SafeFetchAsync(
+            () => _httpClient.GetFundingAssetsAsync(apiKey, apiSecret, ct),
+            "Funding wallet",
+            (IReadOnlyList<BinanceFundingAsset>)Array.Empty<BinanceFundingAsset>());
 
-        var account = accountTask.Result;
-        var prices = pricesTask.Result;
+        var flexibleEarnTask = SafeFetchAsync(
+            () => _httpClient.GetFlexibleEarnPositionsAsync(apiKey, apiSecret, ct),
+            "Simple Earn (flexible)",
+            new BinanceEarnPage<BinanceFlexibleEarnPosition>([], 0));
 
-        var priceMap = prices.ToDictionary(p => p.Symbol, p => decimal.Parse(p.Price), StringComparer.OrdinalIgnoreCase);
+        var lockedEarnTask = SafeFetchAsync(
+            () => _httpClient.GetLockedEarnPositionsAsync(apiKey, apiSecret, ct),
+            "Simple Earn (locked)",
+            new BinanceEarnPage<BinanceLockedEarnPosition>([], 0));
 
-        var holdings = new List<CryptoAssetBalance>();
-        foreach (var balance in account.Balances)
-        {
-            if (!decimal.TryParse(balance.Free, out var free)) { free = 0m; }
-            if (!decimal.TryParse(balance.Locked, out var locked)) { locked = 0m; }
+        await Task.WhenAll(spotTask, pricesTask, fundingTask, flexibleEarnTask, lockedEarnTask);
 
-            var total = free + locked;
-            if (total <= 0m) { continue; }
-
-            var usdValue = ComputeUsdValue(balance.Asset, total, priceMap);
-            if (usdValue < _dustThresholdUsd) { continue; }
-
-            holdings.Add(new CryptoAssetBalance(balance.Asset, free, locked, usdValue));
-        }
-
-        return holdings;
+        return _aggregator.Aggregate(
+            spotTask.Result,
+            fundingTask.Result,
+            flexibleEarnTask.Result,
+            lockedEarnTask.Result,
+            pricesTask.Result,
+            _dustThresholdUsd);
     }
 
     public Task DisconnectAsync(CancellationToken ct = default)
@@ -66,29 +82,19 @@ public sealed class BinanceAdapter : ICryptoExchangeAdapter
         return Task.CompletedTask;
     }
 
-    private static decimal ComputeUsdValue(
-        string asset,
-        decimal quantity,
-        Dictionary<string, decimal> priceMap)
+    private async Task<T> SafeFetchAsync<T>(Func<Task<T>> fetcher, string label, T fallback)
     {
-        if (Stablecoins.Contains(asset))
+        try
         {
-            return quantity;
+            return await fetcher();
         }
-
-        var usdtPair = $"{asset}USDT";
-        if (priceMap.TryGetValue(usdtPair, out var usdtPrice))
+        catch (BinanceException ex)
         {
-            return quantity * usdtPrice;
+            _logger.LogWarning(
+                ex,
+                "Skipping Binance source '{Source}' — request was rejected (likely missing API-key permission). Sync continues without this data.",
+                label);
+            return fallback;
         }
-
-        var btcPair = $"{asset}BTC";
-        if (priceMap.TryGetValue(btcPair, out var btcPrice) &&
-            priceMap.TryGetValue("BTCUSDT", out var btcUsdtPrice))
-        {
-            return quantity * btcPrice * btcUsdtPrice;
-        }
-
-        return 0m;
     }
 }

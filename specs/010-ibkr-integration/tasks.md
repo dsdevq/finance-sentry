@@ -243,3 +243,49 @@ Sequential:
 - `WealthAggregationService` change (T027) is backward-compatible: if `IBrokerageHoldingsReader` is not registered or returns empty, the `"brokerage"` category is simply absent from the summary
 - IBKR password MUST never appear in logs, responses, or error messages — validate in contract tests
 - Positions with `mktValue = 0` are stored with `UsdValue = 0` and included in responses (expired options, illiquid instruments)
+
+---
+
+## Post-implementation iterations (after the original task list landed)
+
+These tasks were added on top of the implemented feature to fix gaps and align with architectural decisions made later. Recorded here so the spec, plan, and code stay in sync.
+
+### Iteration 1 — Drop Newtonsoft.Json from BrokerageSync (2026-04-26)
+
+- [X] **TI-010-001** Replace `[JsonProperty]` with `[JsonPropertyName]` in `IBKRGatewayModels.cs`. Replace manual `JsonConvert.SerializeObject` + `StringContent` with `HttpClient.PostAsJsonAsync` and `Content.ReadFromJsonAsync<T>` from `System.Net.Http.Json` in `IBKRGatewayClient`.
+- [X] **TI-010-002** Drop `<PackageReference Include="Newtonsoft.Json" />` from `FinanceSentry.Modules.BrokerageSync.csproj`. (Same iteration also drops the package from `Modules.BankSync.csproj` and `Modules.CryptoSync.csproj`, plus the central `PackageVersion` in `Directory.Packages.props`.)
+
+### Iteration 2 — Single-tenant gateway model (2026-04-26)
+
+The original multi-tenant design (each user types IBKR credentials, encrypted at rest, decrypted at sync time, posted per-request to the gateway) was incompatible with the IBeam sidecar — IBKR's Client Portal Gateway only allows a single active session at a time, so per-user runtime credentials would fight IBeam's own session.
+
+The model collapses to: IBeam holds one IBKR session for the deployment via env-var creds; Finance Sentry stores only the user-id ↔ IBKR-account-id link. See `research.md` Decision 3 for rationale and the future OAuth migration path.
+
+- [X] **TI-010-010** **Image swap**: replace `ghcr.io/gnzsnz/ib-gateway` (wrong product — runs Trading API, not Client Portal Web API) with `voyz/ibeam:latest` in `docker-compose.dev.yml`. Add `IBEAM_ACCOUNT`, `IBEAM_PASSWORD`, `IBEAM_GATEWAY_BASE_URL`, `IBEAM_LOG_LEVEL`, `IBEAM_ERROR_SCREENSHOTS` env vars; expose host port `5055 → container 5000`.
+- [X] **TI-010-011** Add `IBKR_ACCOUNT` / `IBKR_PASSWORD` to `docker/.env.example`. Compose substitutes `${IBKR_ACCOUNT:-}` so the rest of the stack still starts when IBKR creds are blank.
+- [X] **TI-010-012** Add `IBKR__GatewayBaseUrl=https://ibkr-gateway:5000` and `IBKR__AllowSelfSignedCert=true` to the API container env. `Program.cs`'s `AddHttpClient<IBKRGatewayClient>()` now configures a primary `HttpClientHandler` with `ServerCertificateCustomValidationCallback = DangerousAcceptAnyServerCertificateValidator` when the flag is `true` or the env is `Development`.
+- [X] **TI-010-013** Domain entity rewrite: `IBKRCredential` collapses to `(Id, UserId, AccountId, IsActive, LastSyncAt, LastSyncError, CreatedAt)`. Constructor takes only `(userId, accountId)`.
+- [X] **TI-010-014** Adapter interface rewrite: `IBrokerAdapter` drops `AuthenticateAsync(username, password, ct)` and adds `EnsureSessionAsync(ct)` that calls the gateway's `/iserver/auth/status`. `IBKRAdapter.EnsureSessionAsync` throws `BrokerAuthException` (mapped to 422 / `INVALID_CREDENTIALS`) when the gateway is not authenticated.
+- [X] **TI-010-015** Gateway-client hardening: `IBKRGatewayClient.GetAuthStatusAsync` no longer throws on non-200. Any non-success response (404 while IBeam boots, 401 before login completes) and any `HttpRequestException` (gateway down) collapse to `IBKRAuthStatusResponse(false, false)`. `EnsureSessionAsync` in the adapter then turns that into the friendly `BrokerAuthException` instead of leaking raw HTTP errors as 500. Drop the now-unused `IBKRAuthInitRequest` model.
+- [X] **TI-010-016** Connect command rewrite: `ConnectIBKRRequest` becomes an empty record. `ConnectIBKRCommand(Guid UserId)` — no creds. Handler calls `adapter.EnsureSessionAsync` → `adapter.GetAccountIdAsync` → stores `new IBKRCredential(userId, accountId)` → triggers `SyncIBKRHoldingsCommand`. Drop dependency on `ICredentialEncryptionService`.
+- [X] **TI-010-017** Sync handler rewrite: `SyncIBKRHoldingsCommandHandler` drops credential decryption + reauth. Calls `adapter.EnsureSessionAsync` then reads positions for the stored `accountId`.
+- [X] **TI-010-018** Validator deletion: `ConnectIBKRCommandValidator` removed (nothing left to validate after dropping `Username` / `Password` fields).
+- [X] **TI-010-019** Controller signature: `BrokerageController.Connect` no longer takes `[FromBody] ConnectIBKRRequest` — body is now empty.
+- [X] **TI-010-020** EF migration `M002_RemoveIbkrCredentialEncryptedColumns` (timestamp `20260426093000`): `Up()` drops `EncryptedUsername`, `UsernameIv`, `UsernameAuthTag`, `EncryptedPassword`, `PasswordIv`, `PasswordAuthTag`, `KeyVersion` from `IBKRCredentials`. `Down()` re-adds them with empty defaults. Snapshot updated. Annotated with `[DbContext(typeof(BrokerageSyncDbContext))]` + `[Migration(...)]` so EF picks it up at startup.
+- [X] **TI-010-021** EF context mapping: `BrokerageSyncDbContext.OnModelCreating` drops the seven `IsRequired()` lines for the encrypted columns; only `AccountId.HasMaxLength(20)`, `IsActive.IsRequired()`, `CreatedAt.IsRequired()`, `LastSyncError.HasMaxLength(1000)` remain.
+- [X] **TI-010-022** Frontend launcher: `ibkr-form.component` rewritten as a launcher (single "Connect" button, no FormGroup, no `cmn-input`/`cmn-form-field`). Frontend `ConnectIBKRRequest` model removed; only the response shape remains. `IBKRService.connect()` is a no-arg POST. `IbkrConnectStrategy.submit()` takes no payload.
+- [X] **TI-010-023** Test rewrite: `BrokerageControllerConnectContractTests` covers (a) 401 unauthorized, (b) 422 when gateway not authenticated, (c) 201 on success, (d) 409 already-connected. `IBKRAdapterContractTests` covers `EnsureSessionAsync` success / not-authenticated paths plus existing position-parsing tests. Unit tests `ConnectIBKRCommandTests` and `IBKRSyncJobTests` updated to the new `IBKRCredential(userId, accountId)` ctor and the new `EnsureSessionAsync` interface.
+
+### Iteration 3 — Compose service temporarily disabled (2026-04-26)
+
+- [X] **TI-010-030** Comment out the `ibkr-gateway` service block in `docker/docker-compose.dev.yml` with a one-line note explaining why. Reason: live-account login through IBeam succeeds at SSO but IBKR drops the session immediately afterwards (likely a pending agreement or a read-only-API exemption that hasn't propagated). Backend module, frontend launcher, migration, and tests are all in place — uncomment the block once IBKR-side configuration is sorted, or migrate to the OAuth Web API for public deployment.
+
+### Future — OAuth Web API migration (when going public)
+
+Not started. Bounded scope per `research.md` Decision 3:
+
+- [ ] **TI-010-040** _(planned)_ Add a forward EF migration to `IBKRCredentials`: encrypted `AccessToken`, `RefreshToken`, plaintext `ExpiresAt`, plus `KeyVersion` for rotation. Reuse `ICredentialEncryptionService`.
+- [ ] **TI-010-041** _(planned)_ Replace `IBKRGatewayClient` with `IBKRWebApiClient` calling IBKR's hosted OAuth endpoints (no IBeam sidecar).
+- [ ] **TI-010-042** _(planned)_ Add OAuth callback endpoint (`GET /api/v1/brokerage/ibkr/oauth-callback?code=…`) that exchanges the auth code for tokens and stores them.
+- [ ] **TI-010-043** _(planned)_ Frontend: replace the launcher button with an `<a href={IBKR_OAUTH_AUTHORIZE_URL}>` redirect.
+- [ ] **TI-010-044** _(planned)_ Remove `ibkr-gateway` Compose service entirely once OAuth is live.

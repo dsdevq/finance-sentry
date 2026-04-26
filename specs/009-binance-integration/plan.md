@@ -5,7 +5,11 @@
 
 ## Summary
 
-Add Binance Spot wallet integration as a new `FinanceSentry.Modules.CryptoSync` module. The feature introduces `ICryptoExchangeAdapter` (domain interface, Constitution Principle I), implements `BinanceAdapter` using HMAC-SHA256 signed REST calls to Binance API, stores API credentials encrypted at rest (AES-256-GCM reused from Infrastructure), defines `BinanceCredential` and `CryptoHolding` entities in a new `CryptoSyncDbContext`, and wires holdings into the existing `/wealth/summary` response via `ICryptoHoldingsReader` in `FinanceSentry.Core`. A Hangfire recurring job syncs balances every 15 minutes. New endpoints: `POST /crypto/binance/connect`, `DELETE /crypto/binance/disconnect`, `GET /crypto/holdings`. Backend-only — no frontend changes.
+Add Binance crypto integration as a new `FinanceSentry.Modules.CryptoSync` module. The feature introduces `ICryptoExchangeAdapter` (domain interface, Constitution Principle I), implements `BinanceAdapter` using HMAC-SHA256 signed REST calls (`X-MBX-APIKEY` header + signed query params), stores API credentials encrypted at rest (AES-256-GCM reused from Infrastructure), defines `BinanceCredential` and `CryptoHolding` entities in a new `CryptoSyncDbContext`, and wires holdings into the existing `/wealth/summary` response via `ICryptoHoldingsReader` in `FinanceSentry.Core`. A Hangfire recurring job syncs balances every 15 minutes. New endpoints: `POST /crypto/binance/connect`, `DELETE /crypto/binance/disconnect`, `GET /crypto/holdings`. Backend-only — no frontend changes.
+
+**Wallet aggregation (revised 2026-04-26)**: the adapter spans Spot + Funding wallet + Simple Earn (flexible & locked) per user, aggregating per asset symbol before pricing and dust filtering. Original Spot-only scope produced empty portfolios for users whose funds live in Earn — the most common pattern. Earn endpoints carry the most rate-limit weight (~150 each) but a per-user 15-min sync still costs ≤ 325 weight, well under Binance's 1200/min budget. Each non-Spot endpoint is wrapped in a permission-tolerant `SafeFetchAsync` helper so a key scoped without Earn-read still surfaces the sources that work. Futures (USD-M / Coin-M), Margin (cross / isolated), and Options remain out of scope. See `research.md` Decision 10.
+
+**JSON serialization (revised 2026-04-26)**: `BinanceHttpClient` and the response models use `System.Text.Json` (`[JsonPropertyName]`) — the original implementation used Newtonsoft.Json, which has been removed from this module's `csproj` and from `Directory.Packages.props` to standardise the codebase on a single JSON stack.
 
 ## Technical Context
 
@@ -74,9 +78,9 @@ backend/src/FinanceSentry.Modules.CryptoSync/          [NEW PROJECT]
 │       └── CryptoHoldingsReader.cs                    [NEW] implements ICryptoHoldingsReader
 ├── Infrastructure/
 │   ├── Binance/
-│   │   ├── BinanceAdapter.cs                          [NEW] ICryptoExchangeAdapter impl
-│   │   ├── BinanceHttpClient.cs                       [NEW] HMAC-SHA256 signed HTTP calls
-│   │   └── BinanceAdapterModels.cs                    [NEW] API response records
+│   │   ├── BinanceAdapter.cs                          [NEW] ICryptoExchangeAdapter impl — fan-out across Spot+Funding+Earn, aggregation, pricing
+│   │   ├── BinanceHttpClient.cs                       [NEW] HMAC-SHA256 signed HTTP — generic SendSignedAsync<T> helper for GET+POST signed endpoints
+│   │   └── BinanceAdapterModels.cs                    [NEW] System.Text.Json records: BinanceAccountResponse, BinanceFundingAsset, BinanceEarnPage<T>, BinanceFlexibleEarnPosition, BinanceLockedEarnPosition, BinancePriceTicker, BinanceErrorResponse
 │   ├── Persistence/
 │   │   ├── CryptoSyncDbContext.cs                     [NEW]
 │   │   ├── CryptoSyncDbContextFactory.cs              [NEW]

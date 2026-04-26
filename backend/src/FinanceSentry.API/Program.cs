@@ -41,6 +41,7 @@ using FinanceSentry.Modules.Auth.Application.Interfaces;
 using FinanceSentry.Modules.Auth.Infrastructure.Persistence;
 using FinanceSentry.Modules.Auth.Infrastructure.Services;
 using Microsoft.AspNetCore.Identity;
+using FinanceSentry.API.Hangfire;
 using Hangfire;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -188,6 +189,7 @@ builder.Services.AddScoped<ITransactionSyncCoordinator, TransactionSyncCoordinat
 
 // ── CryptoSync module (009-binance-integration) ───────────────────────────────
 builder.Services.AddHttpClient<BinanceHttpClient>();
+builder.Services.AddSingleton<BinanceHoldingsAggregator>();
 builder.Services.AddScoped<ICryptoExchangeAdapter, BinanceAdapter>();
 builder.Services.AddScoped<IBinanceCredentialRepository, BinanceCredentialRepository>();
 builder.Services.AddScoped<ICryptoHoldingRepository, CryptoHoldingRepository>();
@@ -331,7 +333,12 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-    app.UseHangfireDashboard("/hangfire");
+    app.UseHangfireDashboard("/hangfire", new DashboardOptions
+    {
+        Authorization = [new DevDashboardAuthorizationFilter()],
+        DisplayStorageConnectionString = false,
+        DashboardTitle = "Finance Sentry · Hangfire",
+    });
 }
 
 app.UseHttpsRedirection();

@@ -56,6 +56,17 @@ All new entities live in the `CryptoSync` module's own `CryptoSyncDbContext`. No
 
 **Upsert semantics**: On each sync, `INSERT … ON CONFLICT (UserId, Asset) DO UPDATE SET FreeQuantity, LockedQuantity, UsdValue, SyncedAt`.
 
+**Wallet aggregation (revised 2026-04-26)**: `FreeQuantity` and `LockedQuantity` are aggregated **across multiple Binance wallets** before being stored:
+
+| Source | Contributes to `FreeQuantity` | Contributes to `LockedQuantity` |
+|---|---|---|
+| Spot wallet (`/api/v3/account`) | `balance.free` | `balance.locked` |
+| Funding wallet (`/sapi/v1/asset/get-funding-asset`) | `entry.free` | `entry.locked` (if present) |
+| Simple Earn — flexible (`/sapi/v1/simple-earn/flexible/position`) | `position.totalAmount` (redeemable on demand) | — |
+| Simple Earn — locked (`/sapi/v1/simple-earn/locked/position`) | — | `position.amount` (cannot be moved until maturity) |
+
+Aggregation is keyed by asset symbol (case-insensitive). Dust threshold is applied **after** summing across sources. See `research.md` Decision 10.
+
 ---
 
 ## New Interface in FinanceSentry.Core
