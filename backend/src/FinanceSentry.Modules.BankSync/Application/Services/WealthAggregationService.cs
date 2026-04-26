@@ -64,7 +64,8 @@ public class WealthAggregationService(
                         "USD",
                         h.FreeQuantity + h.LockedQuantity,
                         h.UsdValue,
-                        "synced"))
+                        "synced",
+                        h.SyncedAt))
                     .ToList<AccountBalanceDto>();
 
                 var cryptoTotal = cryptoHoldings.Sum(h => h.UsdValue);
@@ -90,7 +91,8 @@ public class WealthAggregationService(
                         "USD",
                         h.Quantity,
                         h.UsdValue,
-                        DateTime.UtcNow - h.SyncedAt > StaleThreshold ? "stale" : "synced"))
+                        DateTime.UtcNow - h.SyncedAt > StaleThreshold ? "stale" : "synced",
+                        h.SyncedAt))
                     .ToList<AccountBalanceDto>();
 
                 var brokerageTotal = brokerageHoldings.Sum(h => h.UsdValue);
@@ -185,7 +187,8 @@ public class WealthAggregationService(
             a.Currency,
             a.CurrentBalance,
             usd,
-            NormalizeSyncStatus(a.SyncStatus));
+            NormalizeSyncStatus(a.SyncStatus),
+            a.UpdatedAt);
     }
 
     private static string NormalizeSyncStatus(string domainStatus) =>

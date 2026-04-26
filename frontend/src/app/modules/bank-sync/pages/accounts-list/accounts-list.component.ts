@@ -2,13 +2,15 @@ import {DecimalPipe} from '@angular/common';
 import {ChangeDetectionStrategy, Component, inject, ViewContainerRef} from '@angular/core';
 import {
   AlertComponent,
-  BadgeComponent,
   ButtonComponent,
   CardComponent,
   CmnDialogService,
+  InstitutionAvatarComponent,
+  StatusIndicatorComponent,
 } from '@dsdevq-common/ui';
 import {take} from 'rxjs';
 
+import {RelativeTimePipe} from '../../../../shared/pipes/relative-time.pipe';
 import {SyncStatusLabelPipe} from '../../../../shared/pipes/sync-status-label.pipe';
 import {SyncStatusVariantPipe} from '../../../../shared/pipes/sync-status-variant.pipe';
 import {ConnectModalComponent} from '../../components/connect-modal/connect-modal.component';
@@ -23,10 +25,12 @@ import {ConnectStore} from '../../store/connect/connect.store';
   imports: [
     AccountBalancePipe,
     AlertComponent,
-    BadgeComponent,
     ButtonComponent,
     CardComponent,
     DecimalPipe,
+    InstitutionAvatarComponent,
+    RelativeTimePipe,
+    StatusIndicatorComponent,
     SyncStatusLabelPipe,
     SyncStatusVariantPipe,
   ],

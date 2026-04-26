@@ -17,7 +17,8 @@ public record AccountBalanceDto(
     string Currency,
     decimal? NativeBalance,
     decimal? BalanceInBaseCurrency,
-    string SyncStatus);
+    string SyncStatus,
+    DateTime? LastSyncTimestamp);
 
 public record CategorySummaryDto(
     string Name,
