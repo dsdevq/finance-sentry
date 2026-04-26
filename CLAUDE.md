@@ -36,10 +36,10 @@ Startup order enforced by health checks: `postgres → api → frontend`
 | Service | URL |
 |---|---|
 | Frontend (Angular) | http://localhost:4200 |
-| Backend API | http://localhost:5050/api/v1 |
-| Health check | http://localhost:5050/api/v1/health |
-| Swagger | http://localhost:5050/swagger |
-| Hangfire dashboard | http://localhost:5050/hangfire |
+| Backend API | http://localhost:5001/api/v1 |
+| Health check | http://localhost:5001/api/v1/health |
+| Swagger | http://localhost:5001/swagger |
+| Hangfire dashboard | http://localhost:5001/hangfire |
 | PostgreSQL | localhost:5432 (user: finance_user / pw: finance_password / db: finance_sentry) |
 
 For faster frontend iteration, run `ng serve` locally while keeping API + DB in Docker:
@@ -284,7 +284,7 @@ After **all tasks in a feature are complete**, act as a QA engineer: spin up the
 
 **Steps (mandatory):**
 1. Ensure the full Docker stack is running: `cd docker && docker compose -f docker-compose.dev.yml up -d`
-2. Wait for health check: `GET http://localhost:5050/api/v1/health` → `{"status":"healthy"}`
+2. Wait for health check: `GET http://localhost:5001/api/v1/health` → `{"status":"healthy"}`
 3. Open `http://localhost:4200` via Playwright
 4. Navigate the golden path of the feature as a real user would — click buttons, fill forms, follow redirects
 5. Also test key error/edge cases (invalid input, cancelled flows, etc.)

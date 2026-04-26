@@ -65,7 +65,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("Frontend", policy =>
     {
         policy
-            .WithOrigins("http://localhost:4200", "http://localhost:4201")
+            .WithOrigins("http://localhost:4200")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -195,7 +195,21 @@ builder.Services.AddScoped<ICryptoHoldingsReader, CryptoHoldingsReader>();
 builder.Services.AddScoped<BinanceSyncJob>();
 
 // ── BrokerageSync module (010-ibkr-integration) ──────────────────────────────
-builder.Services.AddHttpClient<IBKRGatewayClient>();
+// IBeam serves the Client Portal API over HTTPS with a self-signed cert. Allow it
+// in dev only; production deployments must terminate TLS at a real proxy.
+builder.Services.AddHttpClient<IBKRGatewayClient>()
+    .ConfigurePrimaryHttpMessageHandler(sp =>
+    {
+        var env = sp.GetRequiredService<IHostEnvironment>();
+        var allowSelfSigned = builder.Configuration.GetValue<bool>("IBKR:AllowSelfSignedCert")
+            || env.IsDevelopment();
+        return new HttpClientHandler
+        {
+            ServerCertificateCustomValidationCallback = allowSelfSigned
+                ? HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+                : null,
+        };
+    });
 builder.Services.AddScoped<IBrokerAdapter, IBKRAdapter>();
 builder.Services.AddScoped<IIBKRCredentialRepository, IBKRCredentialRepository>();
 builder.Services.AddScoped<IBrokerageHoldingRepository, BrokerageHoldingRepository>();

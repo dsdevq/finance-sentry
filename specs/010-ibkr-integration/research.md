@@ -25,13 +25,22 @@
 
 ## Decision 2: IB Gateway Docker Image
 
-**Decision**: Use **`ghcr.io/gnzsnz/ib-gateway`** (community-maintained, actively updated, IBC automation layer pre-installed).
+**Decision** (revised 2026-04-26): Use **`ghcr.io/voyz/ibeam:latest`**.
 
-**Rationale**:
-- IBC (Interactive Brokers Controller) handles headless/automated login from env-var credentials.
-- Supports `docker-compose` natively with env vars for credentials and account mode.
-- Widely used for personal finance automation.
-- Gateway exposes REST on port `5000` (configurable); Finance Sentry calls `http://ibkr-gateway:5000/v1/api/...` on the Docker internal network.
+**Original choice was `ghcr.io/gnzsnz/ib-gateway` — wrong product.** That image runs the desktop IB Gateway / TWS app headlessly via IBC + Xvfb and exposes the **Trading API** on port 4001/4002. It does not serve the **Client Portal Web API** (the REST endpoints under `/v1/api/iserver/...` that `IBKRGatewayClient` calls). Those two are different IBKR products despite confusingly similar naming.
+
+**Why IBeam**:
+- Wraps IBKR's official Java **Client Portal Gateway** (the REST one).
+- Handles the otherwise-interactive browser login automatically via Selenium/Chromium driven by env-var credentials (`IBEAM_ACCOUNT`, `IBEAM_PASSWORD`).
+- Auto-re-authenticates every ~24h when IBKR's session expires.
+- Free, MIT-licensed, actively maintained.
+- Exposes the Client Portal REST surface on `:5000` over **HTTPS with a self-signed cert**.
+
+**Compose wiring**:
+- Service name: `ibkr-gateway` (so the existing backend config `IBKR:GatewayBaseUrl=https://ibkr-gateway:5000` still resolves).
+- Host port: `5055 → container 5000` (debug only; backend talks container-to-container).
+- Backend `HttpClient<IBKRGatewayClient>` accepts the self-signed cert in dev via `ServerCertificateCustomValidationCallback = DangerousAcceptAnyServerCertificateValidator` gated on `IBKR:AllowSelfSignedCert=true` or `IsDevelopment()`.
+- IBKR creds live in `docker/.env` as `IBKR_ACCOUNT` / `IBKR_PASSWORD`; blank values are tolerated (IBeam keeps retrying; the rest of the stack runs unaffected).
 
 ---
 
