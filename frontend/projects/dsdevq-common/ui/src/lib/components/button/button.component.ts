@@ -1,10 +1,11 @@
 import {ChangeDetectionStrategy, Component, computed, input, output} from '@angular/core';
 
-import {IconComponent} from '../icon/icon.component';
+import {type LucideIconName, IconComponent} from '../icon/icon.component';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'destructive';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 export type ButtonType = 'button' | 'submit' | 'reset';
+export type ButtonIconPosition = 'prefix' | 'suffix';
 
 const BASE_CLASSES =
   'inline-flex items-center justify-center gap-cmn-2 font-label font-medium rounded-cmn-md ' +
@@ -24,6 +25,12 @@ const SIZE_CLASSES: Record<ButtonSize, string> = {
   lg: 'px-cmn-6 py-cmn-3 text-cmn-lg',
 };
 
+const ICON_SIZE: Record<ButtonSize, 'sm' | 'md'> = {
+  sm: 'sm',
+  md: 'sm',
+  lg: 'md',
+};
+
 const DISABLED_CLASSES = 'opacity-50 pointer-events-none cursor-not-allowed';
 
 @Component({
@@ -41,10 +48,15 @@ const DISABLED_CLASSES = 'opacity-50 pointer-events-none cursor-not-allowed';
     >
       @if (loading()) {
         <span class="animate-spin inline-flex">
-          <cmn-icon name="LoaderCircle" size="sm" />
+          <cmn-icon name="LoaderCircle" [size]="iconSize()" />
         </span>
+      } @else if (icon() && iconPosition() === 'prefix') {
+        <cmn-icon [name]="icon()!" [size]="iconSize()" aria-hidden="true" />
       }
       <ng-content />
+      @if (!loading() && icon() && iconPosition() === 'suffix') {
+        <cmn-icon [name]="icon()!" [size]="iconSize()" aria-hidden="true" />
+      }
     </button>
   `,
 })
@@ -54,6 +66,8 @@ export class ButtonComponent {
   public readonly type = input<ButtonType>('button');
   public readonly disabled = input<boolean>(false);
   public readonly loading = input<boolean>(false);
+  public readonly icon = input<Nullable<LucideIconName>>(null);
+  public readonly iconPosition = input<ButtonIconPosition>('prefix');
 
   public readonly clicked = output<MouseEvent>();
 
@@ -64,4 +78,6 @@ export class ButtonComponent {
     }
     return parts.join(' ');
   });
+
+  public readonly iconSize = computed(() => ICON_SIZE[this.size()]);
 }

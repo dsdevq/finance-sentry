@@ -1,57 +1,62 @@
-import {inject} from '@angular/core';
+import {effect, inject} from '@angular/core';
+import {Router} from '@angular/router';
+import {BankSyncService} from '@modules/bank-sync/services/bank-sync.service';
+import {ConnectStrategy} from '@modules/bank-sync/strategies/connect-strategy';
 import {rxMethod} from '@ngrx/signals/rxjs-interop';
 import {catchError, EMPTY, filter, map, pipe, race, switchMap, take, tap, timer} from 'rxjs';
 
+import {AppRoute} from '../../../../shared/enums/app-route/app-route.enum';
+import {type InstitutionType} from '../../../../shared/models/provider/provider.model';
 import {ErrorUtils} from '../../../../shared/utils/error.utils';
-import {type ConnectBinanceRequest} from '../../models/binance/binance.model';
-import {type ModalStep} from '../../models/connect/connect.model';
-import {type ConnectIBKRRequest} from '../../models/ibkr/ibkr.model';
-import {type PlaidSuccessMetadata} from '../../models/plaid/plaid.model';
-import {BankSyncService} from '../../services/bank-sync.service';
-import {BinanceService} from '../../services/binance.service';
-import {IBKRService} from '../../services/ibkr.service';
-import {PlaidLinkService} from '../../services/plaid-link.service';
 import {AccountsStore} from '../accounts/accounts.store';
+import {type ConnectStatus} from './connect.state';
 
 interface EffectsStore {
-  setInitializing: () => void;
-  setReady: () => void;
   setSyncing: (msg: string) => void;
   setPolling: (msg: string) => void;
   setSuccess: () => void;
   setError: (code: Nullable<string>) => void;
-  modalStep: () => ModalStep;
-  setModalStep: (step: ModalStep) => void;
+  setInstitutionType: (type: InstitutionType) => void;
+  status: () => ConnectStatus;
+  institutionType: () => Nullable<InstitutionType>;
+}
+
+interface ConnectInput {
+  readonly strategy: ConnectStrategy;
+  readonly payload: unknown;
 }
 
 const POLL_INTERVAL_MS = 3000;
 const POLL_MAX_MS = 60_000;
 
-interface PlaidSuccessPayload {
-  publicToken: string;
-  metadata: PlaidSuccessMetadata;
+const ROUTE_BY_INSTITUTION: Record<InstitutionType, string> = {
+  bank: AppRoute.Accounts,
+  crypto: AppRoute.Holdings,
+  broker: AppRoute.Holdings,
+};
+
+function extractCode(err: unknown): Nullable<string> {
+  const direct = (err as {errorCode?: string}).errorCode;
+  if (direct) {
+    return direct;
+  }
+  return ErrorUtils.extractCode(err);
 }
 
-function resolveBackStep(step: ModalStep): ModalStep {
-  switch (step) {
-    case 'bank-picker':
-      return 'type-picker';
-    case 'monobank-form':
-      return 'bank-picker';
-    case 'binance-form':
-      return 'type-picker';
-    case 'ibkr-form':
-      return 'type-picker';
-    default:
-      return 'closed';
+function institutionTypeForSlug(strategy: ConnectStrategy): InstitutionType {
+  switch (strategy.slug) {
+    case 'plaid':
+    case 'monobank':
+      return 'bank';
+    case 'binance':
+      return 'crypto';
+    case 'ibkr':
+      return 'broker';
   }
 }
 
 export function connectEffects(store: EffectsStore) {
   const bankSyncService = inject(BankSyncService);
-  const binanceService = inject(BinanceService);
-  const ibkrService = inject(IBKRService);
-  const plaidService = inject(PlaidLinkService);
   const accountsStore = inject(AccountsStore, {optional: true});
 
   const pollForActive = rxMethod<void>(
@@ -60,7 +65,9 @@ export function connectEffects(store: EffectsStore) {
       switchMap(() => {
         const polling$ = timer(0, POLL_INTERVAL_MS).pipe(
           switchMap(() => bankSyncService.getAccounts()),
-          filter(res => res.accounts.some(a => a.syncStatus === 'active')),
+          filter(res =>
+            res.accounts.some(a => a.syncStatus === 'active' || a.syncStatus === 'syncing')
+          ),
           take(1),
           map(() => 'active' as const)
         );
@@ -71,7 +78,7 @@ export function connectEffects(store: EffectsStore) {
             accountsStore?.load();
           }),
           catchError((err: unknown) => {
-            store.setError(ErrorUtils.extractCode(err));
+            store.setError(extractCode(err));
             return EMPTY;
           })
         );
@@ -79,36 +86,24 @@ export function connectEffects(store: EffectsStore) {
     )
   );
 
-  const exchangePlaidToken = rxMethod<PlaidSuccessPayload>(
+  const connect = rxMethod<ConnectInput>(
     pipe(
-      tap(() => store.setSyncing('Linking your account...')),
-      switchMap(({publicToken, metadata}) => {
-        const institutionName = metadata.institution?.name ?? 'Unknown';
-        return bankSyncService.exchangePublicToken(publicToken, institutionName).pipe(
-          tap(() => pollForActive()),
+      tap(({strategy}) => {
+        store.setInstitutionType(institutionTypeForSlug(strategy));
+        store.setSyncing(`Connecting your ${strategy.slug} account...`);
+      }),
+      switchMap(({strategy, payload}) =>
+        strategy.submit(payload).pipe(
+          tap(outcome => {
+            if (outcome.successCode === 'POLLING' && outcome.institutionType === 'bank') {
+              pollForActive();
+            } else {
+              store.setSuccess();
+              accountsStore?.load();
+            }
+          }),
           catchError((err: unknown) => {
-            store.setError(ErrorUtils.extractCode(err) ?? 'PLAID_LINK_FAILED');
-            return EMPTY;
-          })
-        );
-      })
-    )
-  );
-
-  const initPlaid = rxMethod<void>(
-    pipe(
-      tap(() => store.setInitializing()),
-      switchMap(() =>
-        bankSyncService.getLinkToken().pipe(
-          switchMap(res =>
-            plaidService.prepare({
-              token: res.linkToken,
-              onSuccess: (publicToken, metadata) => exchangePlaidToken({publicToken, metadata}),
-            })
-          ),
-          tap(() => store.setReady()),
-          catchError((err: unknown) => {
-            store.setError(ErrorUtils.extractCode(err));
+            store.setError(extractCode(err));
             return EMPTY;
           })
         )
@@ -116,76 +111,25 @@ export function connectEffects(store: EffectsStore) {
     )
   );
 
-  const connectMonobank = rxMethod<string>(
-    pipe(
-      tap(() => store.setSyncing('Connecting your Monobank account...')),
-      switchMap(token =>
-        bankSyncService.connectMonobank(token).pipe(
-          tap(() => pollForActive()),
-          catchError((err: unknown) => {
-            store.setError(ErrorUtils.extractCode(err));
-            return EMPTY;
-          })
-        )
-      )
-    )
-  );
-
-  const connectBinance = rxMethod<ConnectBinanceRequest>(
-    pipe(
-      tap(() => store.setSyncing('Connecting your Binance account...')),
-      switchMap(request =>
-        binanceService.connect(request).pipe(
-          tap(() => pollForActive()),
-          catchError((err: unknown) => {
-            store.setError(ErrorUtils.extractCode(err));
-            return EMPTY;
-          })
-        )
-      )
-    )
-  );
-
-  const connectIBKR = rxMethod<ConnectIBKRRequest>(
-    pipe(
-      tap(() => store.setSyncing('Connecting your IBKR account...')),
-      switchMap(request =>
-        ibkrService.connect(request).pipe(
-          tap(() => pollForActive()),
-          catchError((err: unknown) => {
-            store.setError(ErrorUtils.extractCode(err));
-            return EMPTY;
-          })
-        )
-      )
-    )
-  );
-
-  return {
-    initPlaid,
-    openPlaid(): void {
-      plaidService.open();
-    },
-    destroyPlaid(): void {
-      plaidService.destroy();
-    },
-    connectMonobank,
-    connectBinance,
-    connectIBKR,
-    exchangePlaidToken,
-    pollForActive,
-  };
+  return {connect, pollForActive};
 }
 
-interface HookStore {
-  initPlaid: () => void;
-  destroyPlaid: () => void;
+interface SuccessHookStore {
+  status: () => ConnectStatus;
+  institutionType: () => Nullable<InstitutionType>;
 }
 
-export function connectOnInit(store: HookStore): void {
-  store.initPlaid();
-}
-
-export function connectOnDestroy(store: HookStore): void {
-  store.destroyPlaid();
+export function connectSuccessRouter(store: SuccessHookStore): void {
+  const router = inject(Router);
+  effect(() => {
+    if (store.status() !== 'success') {
+      return;
+    }
+    const type = store.institutionType();
+    if (!type) {
+      return;
+    }
+    const target = ROUTE_BY_INSTITUTION[type];
+    void router.navigateByUrl(target);
+  });
 }

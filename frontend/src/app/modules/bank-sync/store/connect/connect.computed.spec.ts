@@ -4,7 +4,8 @@ import {ERROR_MESSAGES} from '@dsdevq-common/ui';
 import {beforeEach, describe, expect, it} from 'vitest';
 
 import {ERROR_MESSAGES_REGISTRY} from '../../../../core/errors/error-messages.registry';
-import {type Provider} from '../../models/bank-account/bank-account.model';
+import {type Provider} from '../../../../shared/models/provider/provider.model';
+import {type ModalStep} from '../../models/connect/connect.model';
 import {connectComputed} from './connect.computed';
 import {type ConnectStatus} from './connect.state';
 
@@ -13,6 +14,7 @@ function build(
     selectedProvider: Provider;
     status: ConnectStatus;
     errorCode: Nullable<string>;
+    modalStep: ModalStep;
   }> = {}
 ) {
   return {
@@ -20,6 +22,7 @@ function build(
     status: signal<ConnectStatus>(overrides.status ?? 'idle'),
     errorCode: signal<Nullable<string>>(overrides.errorCode ?? null),
     statusMessage: signal<Nullable<string>>(null),
+    modalStep: signal<ModalStep>(overrides.modalStep ?? 'closed'),
   };
 }
 

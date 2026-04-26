@@ -1,6 +1,6 @@
 export interface ConnectBinanceRequest {
   apiKey: string;
-  secretKey: string;
+  apiSecret: string;
 }
 
 export interface ConnectBinanceResponse {

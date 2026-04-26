@@ -13,8 +13,13 @@ using Microsoft.Extensions.Configuration;
 public class PlaidHttpClient(HttpClient http, IConfiguration config) : IPlaidClient
 {
     private readonly HttpClient _http = http;
-    private readonly string _clientId = config["Plaid:ClientId"] ?? throw new InvalidOperationException("Plaid:ClientId is required.");
-    private readonly string _secret = config["Plaid:Secret"] ?? throw new InvalidOperationException("Plaid:Secret is required.");
+    private readonly string _clientId = RequireNonEmpty(config["Plaid:ClientId"], "Plaid:ClientId");
+    private readonly string _secret = RequireNonEmpty(config["Plaid:Secret"], "Plaid:Secret");
+
+    private static string RequireNonEmpty(string? value, string key) =>
+        string.IsNullOrWhiteSpace(value)
+            ? throw new InvalidOperationException($"{key} is required and must be non-empty (check docker/.env).")
+            : value;
 
     private static readonly JsonSerializerOptions JsonOpts = new()
     {

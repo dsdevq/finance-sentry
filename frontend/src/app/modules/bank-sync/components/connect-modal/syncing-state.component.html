@@ -1,0 +1,9 @@
+<div class="flex flex-col items-center justify-center py-cmn-8 gap-cmn-3">
+  <div
+    class="w-10 h-10 rounded-full border-2 border-border-default border-t-accent-default animate-spin"
+    aria-hidden="true"
+  ></div>
+  <p class="text-cmn-sm text-text-secondary text-center">
+    {{ store.statusMessage() ?? 'Connecting…' }}
+  </p>
+</div>

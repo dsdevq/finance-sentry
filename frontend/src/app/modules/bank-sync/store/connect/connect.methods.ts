@@ -1,13 +1,19 @@
 import {patchState, type WritableStateSource} from '@ngrx/signals';
 
-import {type Provider} from '../../models/bank-account/bank-account.model';
-import {type InstitutionType, type ModalStep} from '../../models/connect/connect.model';
+import {type BankProvider, type Provider} from '../../../../shared/models/provider/provider.model';
+import {type InstitutionType} from '../../../../shared/models/provider/provider.model';
+import {type ModalStep} from '../../models/connect/connect.model';
 import {type ConnectState} from './connect.state';
 
 const STEP_FOR_TYPE: Record<InstitutionType, ModalStep> = {
   bank: 'bank-picker',
   crypto: 'binance-form',
   broker: 'ibkr-form',
+};
+
+const STEP_FOR_BANK_PROVIDER: Record<BankProvider, ModalStep> = {
+  plaid: 'plaid-launcher',
+  monobank: 'monobank-form',
 };
 
 export function connectMethods(store: WritableStateSource<ConnectState>) {
@@ -34,11 +40,22 @@ export function connectMethods(store: WritableStateSource<ConnectState>) {
     selectInstitutionType(type: InstitutionType): void {
       patchState(store, {institutionType: type, modalStep: STEP_FOR_TYPE[type], errorCode: null});
     },
+    setInstitutionType(type: InstitutionType): void {
+      patchState(store, {institutionType: type});
+    },
     setModalStep(step: ModalStep): void {
       patchState(store, {modalStep: step, errorCode: null});
     },
     selectProvider(provider: Provider): void {
       patchState(store, {selectedProvider: provider, errorCode: null, statusMessage: null});
+    },
+    selectBankProvider(slug: BankProvider): void {
+      patchState(store, {
+        selectedProvider: slug,
+        modalStep: STEP_FOR_BANK_PROVIDER[slug],
+        errorCode: null,
+        statusMessage: null,
+      });
     },
     setInitializing(): void {
       patchState(store, {status: 'initializing', errorCode: null, statusMessage: null});
@@ -62,6 +79,9 @@ export function connectMethods(store: WritableStateSource<ConnectState>) {
     },
     setError(errorCode: Nullable<string>): void {
       patchState(store, {status: 'error', errorCode, statusMessage: null});
+    },
+    resetError(): void {
+      patchState(store, {status: 'idle', errorCode: null, statusMessage: null});
     },
     clearStatus(): void {
       patchState(store, {statusMessage: null});

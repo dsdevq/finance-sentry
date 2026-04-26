@@ -1,5 +1,6 @@
-import {type Provider} from '../../models/bank-account/bank-account.model';
-import {type InstitutionType, type ModalStep} from '../../models/connect/connect.model';
+import {type Provider} from '../../../../shared/models/provider/provider.model';
+import {type InstitutionType} from '../../../../shared/models/provider/provider.model';
+import {type ModalStep} from '../../models/connect/connect.model';
 
 export type ConnectStatus =
   | 'idle'

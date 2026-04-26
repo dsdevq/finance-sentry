@@ -1,3 +1,5 @@
+@import '@angular/cdk/overlay-prebuilt.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -93,4 +95,32 @@
   --color-border-default:   #2e3452;
   --color-border-strong:    #757682;
   --color-border-focus:     #818cf8;
+}
+
+/* ─── Dialog (cmn-dialog) ───────────────────────────────────────────────── */
+.cmn-dialog-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  pointer-events: none;
+}
+
+.cmn-dialog-panel > * {
+  pointer-events: auto;
+}
+
+.cmn-dialog-panel--sm,
+.cmn-dialog-panel--md,
+.cmn-dialog-panel--lg {
+  padding: 1rem;
+}
+
+.cmn-dialog-panel--full {
+  padding: 0;
+}
+
+.cmn-dialog-backdrop {
+  background-color: rgb(0 0 0 / 0.55);
+  backdrop-filter: blur(2px);
 }

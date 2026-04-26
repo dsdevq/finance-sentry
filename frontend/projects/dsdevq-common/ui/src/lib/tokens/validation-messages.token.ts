@@ -9,6 +9,7 @@ export const DEFAULT_VALIDATION_MESSAGES: Record<string, ValidationMessageFn> = 
     `Minimum ${(p as {requiredLength: number}).requiredLength} characters.`,
   maxlength: (p: unknown) =>
     `Maximum ${(p as {requiredLength: number}).requiredLength} characters.`,
+  pattern: () => 'Format is invalid.',
   passwordsMismatch: () => 'Passwords do not match.',
 };
 

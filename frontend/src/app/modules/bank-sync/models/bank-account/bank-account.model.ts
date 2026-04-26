@@ -1,9 +1,7 @@
-import {type AccountIdentity} from '../../../../shared/models/account-identity/account-identity.model';
-import {type Timestamped} from '../../../../shared/models/timestamped/timestamped.model';
+import {type AccountIdentity} from '@shared/models/account-identity/account-identity.model';
+import {type Timestamped} from '@shared/models/timestamped/timestamped.model';
 
 export type SyncStatus = 'pending' | 'syncing' | 'active' | 'failed' | 'reauth_required';
-
-export type Provider = 'plaid' | 'monobank' | 'binance' | 'ibkr';
 
 export interface BankAccount extends AccountIdentity, Timestamped {
   ownerName: string;

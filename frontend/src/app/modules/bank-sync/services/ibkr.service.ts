@@ -13,4 +13,8 @@ export class IBKRService {
   public connect(request: ConnectIBKRRequest): Observable<ConnectIBKRResponse> {
     return this.http.post<ConnectIBKRResponse>(`${this.baseUrl}/connect`, request);
   }
+
+  public disconnect(): Observable<void> {
+    return this.http.delete<void>(this.baseUrl);
+  }
 }

@@ -64,6 +64,9 @@
                 <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Account Type</th>
                 <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Connectivity</th>
                 <th class="text-right py-cmn-3 px-cmn-4 font-medium" scope="col">Balance</th>
+                <th class="text-right py-cmn-3 px-cmn-4 font-medium" scope="col">
+                  <span class="sr-only">Actions</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -87,6 +90,11 @@
                     class="py-cmn-4 px-cmn-4 text-right font-mono tabular-nums font-medium text-text-primary"
                   >
                     {{ account | accountBalance }}
+                  </td>
+                  <td class="py-cmn-4 px-cmn-4 text-right">
+                    <cmn-button (clicked)="disconnect(account)" variant="secondary" size="sm">
+                      Disconnect
+                    </cmn-button>
                   </td>
                 </tr>
               }

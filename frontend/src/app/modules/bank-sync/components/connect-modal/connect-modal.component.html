@@ -1,0 +1,17 @@
+@if (store.isBusy()) {
+  <fns-syncing-state />
+} @else {
+  @switch (store.modalStep()) {
+    @case ('type-picker') {
+      <fns-type-picker />
+    }
+    @case ('bank-picker') {
+      <fns-bank-picker />
+    }
+    @default {
+      @if (formComponent(); as cmp) {
+        <ng-container *ngComponentOutlet="cmp; injector: formInjector() ?? undefined" />
+      }
+    }
+  }
+}

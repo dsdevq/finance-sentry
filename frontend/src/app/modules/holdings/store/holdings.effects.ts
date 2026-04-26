@@ -2,7 +2,9 @@ import {inject} from '@angular/core';
 import {rxMethod} from '@ngrx/signals/rxjs-interop';
 import {pipe, switchMap, tap} from 'rxjs';
 
-import {ErrorUtils} from '../../../shared/utils/error.utils';
+import {StoreErrorUtils} from '../../../shared/utils/store-error.utils';
+import {BinanceService} from '../../bank-sync/services/binance.service';
+import {IBKRService} from '../../bank-sync/services/ibkr.service';
 import {HoldingsService} from '../services/holdings.service';
 import {type HoldingsState} from './holdings.state';
 
@@ -14,22 +16,44 @@ interface StoreMethods {
 
 export function holdingsEffects(store: StoreMethods) {
   const holdingsService = inject(HoldingsService);
+  const binanceService = inject(BinanceService);
+  const ibkrService = inject(IBKRService);
 
-  return {
-    load: rxMethod<void>(
-      pipe(
-        tap(() => store.setLoading()),
-        switchMap(() =>
-          holdingsService.getSummary().pipe(
-            tap({
-              next: summary => store.setSummary(summary),
-              error: err => store.setError(ErrorUtils.extractCode(err)),
-            })
-          )
+  const load = rxMethod<void>(
+    pipe(
+      tap(() => store.setLoading()),
+      switchMap(() =>
+        holdingsService.getSummary().pipe(
+          tap(summary => store.setSummary(summary)),
+          StoreErrorUtils.catchAndSetError(store)
         )
       )
-    ),
-  };
+    )
+  );
+
+  const disconnectBinance = rxMethod<void>(
+    pipe(
+      switchMap(() =>
+        binanceService.disconnect().pipe(
+          tap(() => load()),
+          StoreErrorUtils.catchAndSetError(store)
+        )
+      )
+    )
+  );
+
+  const disconnectIBKR = rxMethod<void>(
+    pipe(
+      switchMap(() =>
+        ibkrService.disconnect().pipe(
+          tap(() => load()),
+          StoreErrorUtils.catchAndSetError(store)
+        )
+      )
+    )
+  );
+
+  return {load, disconnectBinance, disconnectIBKR};
 }
 
 export function holdingsHooks(store: ReturnType<typeof holdingsEffects>) {

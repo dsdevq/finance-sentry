@@ -1,8 +1,9 @@
 import {computed, inject, type Signal} from '@angular/core';
 import {ErrorMessageService} from '@dsdevq-common/ui';
 
-import {type Provider} from '../../models/bank-account/bank-account.model';
+import {type Provider} from '../../../../shared/models/provider/provider.model';
 import {type ModalStep} from '../../models/connect/connect.model';
+import {AccountsStore} from '../accounts/accounts.store';
 import {type ConnectStatus} from './connect.state';
 
 interface StateSignals {
@@ -39,8 +40,11 @@ function mapErrorByProvider(
   }
 }
 
+const PROVIDER_SLUGS: readonly Provider[] = ['plaid', 'monobank', 'binance', 'ibkr'];
+
 export function connectComputed(store: StateSignals) {
   const errorMessages = inject(ErrorMessageService);
+  const accountsStore = inject(AccountsStore, {optional: true});
 
   return {
     isModalOpen: computed(() => store.modalStep() !== 'closed'),
@@ -59,6 +63,22 @@ export function connectComputed(store: StateSignals) {
         store.selectedProvider(),
         errorMessages.resolve(store.errorCode())
       );
+    }),
+    connectedProviders: computed<ReadonlySet<Provider>>(() => {
+      const summary = accountsStore?.summary();
+      if (!summary) {
+        return new Set();
+      }
+      const known = new Set(PROVIDER_SLUGS as readonly string[]);
+      const set = new Set<Provider>();
+      for (const category of summary.categories) {
+        for (const account of category.accounts) {
+          if (known.has(account.provider)) {
+            set.add(account.provider as Provider);
+          }
+        }
+      }
+      return set;
     }),
   };
 }

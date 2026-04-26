@@ -113,6 +113,7 @@
                 >
                   USD Value
                 </th>
+                <th class="pb-3"><span class="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800">
@@ -149,6 +150,17 @@
                     class="py-3 text-right font-mono tabular-nums font-medium text-neutral-900 dark:text-neutral-100"
                   >
                     {{ account | holdingBalance }}
+                  </td>
+                  <td class="py-3 pl-4 text-right">
+                    @if (canDisconnect(account.provider)) {
+                      <cmn-button
+                        (clicked)="disconnect(account.provider, account.bankName)"
+                        variant="secondary"
+                        size="sm"
+                      >
+                        Disconnect
+                      </cmn-button>
+                    }
                   </td>
                 </tr>
               }
