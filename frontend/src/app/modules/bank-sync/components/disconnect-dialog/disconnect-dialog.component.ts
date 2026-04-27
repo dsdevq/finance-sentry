@@ -2,9 +2,7 @@ import {DialogRef} from '@angular/cdk/dialog';
 import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
 import {ButtonComponent, CMN_DIALOG_DATA, DialogActionsComponent} from '@dsdevq-common/ui';
 
-export interface DisconnectDialogData {
-  readonly providerName: string;
-}
+import {type DisconnectDialogData} from '../../models/disconnect-dialog/disconnect-dialog.model';
 
 @Component({
   selector: 'fns-disconnect-dialog',

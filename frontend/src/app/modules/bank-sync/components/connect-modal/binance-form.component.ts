@@ -11,8 +11,7 @@ import {
 import {HoldingsStore} from '../../../holdings/store/holdings.store';
 import {ConnectStore} from '../../store/connect/connect.store';
 import {CONNECT_STRATEGY} from '../../strategies/connect-strategy.token';
-
-const BINANCE_HELP_URL = 'https://www.binance.com/en/support/faq/360002502072';
+import {BINANCE_HELP_URL} from './connect-modal.constants';
 
 @Component({
   selector: 'fns-binance-form',

@@ -21,6 +21,7 @@ const FAKE_ACCOUNT: AccountBalanceItem = {
   currentBalance: 1000,
   balanceInBaseCurrency: 1000,
   syncStatus: 'synced',
+  lastSyncTimestamp: null,
 };
 
 const FAKE_SUMMARY: WealthSummaryResponse = {

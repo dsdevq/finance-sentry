@@ -1,7 +1,7 @@
 <div class="flex flex-col gap-cmn-6">
   <p class="text-cmn-sm text-text-secondary">
-    The IBKR gateway sidecar holds the session for this deployment. Click connect to verify
-    the gateway is authenticated and link your IBKR account.
+    The IBKR gateway sidecar holds the session for this deployment. Click connect to verify the
+    gateway is authenticated and link your IBKR account.
   </p>
 
   @if (isDuplicateError()) {
@@ -18,8 +18,8 @@
   }
 
   <cmn-alert variant="accent" icon="ShieldCheck" title="Single-tenant gateway">
-    No credentials are entered here. The gateway sidecar (IBeam) authenticates with IBKR using
-    the credentials in <code>docker/.env</code>.
+    No credentials are entered here. The gateway sidecar (IBeam) authenticates with IBKR using the
+    credentials in <code>docker/.env</code>.
   </cmn-alert>
 
   <cmn-dialog-actions align="between">

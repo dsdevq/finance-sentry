@@ -4,11 +4,21 @@
     label="API key"
     hint="Read-only key. Finance Sentry never asks for trading or withdrawal scopes."
   >
-    <cmn-input formControlName="apiKey" type="password" placeholder="Binance API key" />
+    <cmn-input
+      formControlName="apiKey"
+      type="password"
+      autocomplete="off"
+      placeholder="Binance API key"
+    />
   </cmn-form-field>
 
   <cmn-form-field [control]="form.controls.apiSecret" label="API secret">
-    <cmn-input formControlName="apiSecret" type="password" placeholder="Binance API secret" />
+    <cmn-input
+      formControlName="apiSecret"
+      type="password"
+      autocomplete="off"
+      placeholder="Binance API secret"
+    />
   </cmn-form-field>
 
   @if (isDuplicateError()) {
