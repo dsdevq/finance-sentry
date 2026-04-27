@@ -199,7 +199,10 @@ builder.Services.AddScoped<BinanceSyncJob>();
 // ── BrokerageSync module (010-ibkr-integration) ──────────────────────────────
 // IBeam serves the Client Portal API over HTTPS with a self-signed cert. Allow it
 // in dev only; production deployments must terminate TLS at a real proxy.
-builder.Services.AddHttpClient<IBKRGatewayClient>()
+builder.Services.AddHttpClient<IBKRGatewayClient>(client =>
+    {
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("FinanceSentry/1.0");
+    })
     .ConfigurePrimaryHttpMessageHandler(sp =>
     {
         var env = sp.GetRequiredService<IHostEnvironment>();
@@ -207,6 +210,7 @@ builder.Services.AddHttpClient<IBKRGatewayClient>()
             || env.IsDevelopment();
         return new HttpClientHandler
         {
+            UseCookies = false,
             ServerCertificateCustomValidationCallback = allowSelfSigned
                 ? HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
                 : null,
