@@ -40,11 +40,9 @@ export function dashboardComputed(store: StateSignals) {
     currencyEntries: computed(() => Object.entries(store.data()?.aggregatedBalance ?? {})),
     accountTypeEntries: computed(() => Object.entries(store.data()?.accountsByType ?? {})),
 
-    totalBalanceFormatted: computed(() => {
-      const bal = store.data()?.aggregatedBalance ?? {};
-      const usd = bal['USD'] ?? Object.values(bal)[0] ?? 0;
-      return USD_FORMATTER.format(usd);
-    }),
+    totalBalanceFormatted: computed(() =>
+      USD_FORMATTER.format(store.data()?.totalNetWorthUsd ?? 0)
+    ),
 
     latestInflowFormatted: computed(() => {
       const flows = store.data()?.monthlyFlow ?? [];

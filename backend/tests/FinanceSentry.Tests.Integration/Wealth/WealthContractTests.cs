@@ -67,7 +67,7 @@ public class WealthSummaryContractTests(WealthApiFactory factory) : IClassFixtur
         var body = await response.Content.ReadFromJsonAsync<WealthSummaryShape>();
         body!.TotalNetWorth.Should().Be(1000m);
         body.Categories.Should().HaveCount(1);
-        body.Categories[0].Name.Should().Be("banking");
+        body.Categories[0].Category.Should().Be("banking");
         body.Categories[0].Accounts.Should().HaveCount(1);
         body.AppliedFilters.Category.Should().BeNull();
         body.AppliedFilters.Provider.Should().BeNull();
@@ -180,8 +180,8 @@ public class TransactionSummaryContractTests(WealthApiFactory factory) : IClassF
 
 public record AppliedFiltersShape(string? Category, string? Provider);
 public record AccountShape(Guid Id, string BankName, string Provider, string Category,
-    decimal? NativeBalance, decimal? BalanceInBaseCurrency, string SyncStatus);
-public record CategoryShape(string Name, decimal TotalInBaseCurrency, List<AccountShape> Accounts);
+    decimal? CurrentBalance, decimal? BalanceInBaseCurrency, string SyncStatus);
+public record CategoryShape(string Category, decimal TotalInBaseCurrency, List<AccountShape> Accounts);
 public record WealthSummaryShape(decimal TotalNetWorth, string BaseCurrency,
     List<CategoryShape> Categories, AppliedFiltersShape AppliedFilters);
 

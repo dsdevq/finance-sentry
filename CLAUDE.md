@@ -278,6 +278,29 @@ This project uses a two-model pipeline. [`.specify/memory/pipeline.md`](.specify
 
 ---
 
+## QA — Test User Credentials
+
+| Field | Value |
+|---|---|
+| Email | test@gmail.com |
+| Password | Darkfly21 |
+
+This account has connected accounts across Plaid (banking), Monobank (banking), Binance (crypto), and IBKR (brokerage).
+
+### Key test scenarios (check before declaring any fix done)
+
+| Page | Golden path | Key assertions |
+|---|---|---|
+| **Login** | Enter creds → Submit | Redirects to `/accounts/list`; no JS errors |
+| **Accounts** | Load page | Banking/Brokerage/Digital Assets tables render; totalConnections > 0; Net worth shown |
+| **Dashboard** | Load page | Total Balance ≠ $0.00 (if accounts exist); category table shows human-readable labels (not `FOOD_AND_DRINK`) |
+| **Transactions** | Load page | Transaction rows render; categories human-readable; no spinner stuck |
+| **Holdings** | Load page | Summary cards have labels; breakdown table has data |
+| **Connect (Plaid)** | Click "Connect Account" → select Plaid | Modal opens; no 422/500 on link token request |
+| **Disconnect** | Click Disconnect on any account | Confirmation dialog opens; account removed on confirm |
+
+---
+
 ## QA — End-to-End Testing After Implementation
 
 After **all tasks in a feature are complete**, act as a QA engineer: spin up the app and test the feature through the browser using Playwright MCP.

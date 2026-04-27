@@ -14,6 +14,7 @@ export interface CategoryStat {
 
 export interface DashboardData {
   aggregatedBalance: Record<string, number>;
+  totalNetWorthUsd: number;
   accountCount: number;
   accountsByType: Record<string, number>;
   monthlyFlow: MonthlyFlow[];

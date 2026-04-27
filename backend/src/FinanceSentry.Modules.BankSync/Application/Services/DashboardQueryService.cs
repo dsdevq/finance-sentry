@@ -7,6 +7,7 @@ using FinanceSentry.Modules.BankSync.Domain.Repositories;
 /// </summary>
 public record DashboardData(
     Dictionary<string, decimal> AggregatedBalance,
+    decimal TotalNetWorthUsd,
     int AccountCount,
     Dictionary<string, int> AccountsByType,
     IReadOnlyList<MonthlyFlow> MonthlyFlow,
@@ -42,6 +43,7 @@ public class DashboardQueryService(
         // Sequential — DbContext is scoped per request and not thread-safe.
         // Fan-out would require IDbContextFactory.
         var balance = await _aggregation.GetAggregatedBalanceAsync(userId, ct);
+        var totalUsd = await _aggregation.GetTotalNetWorthUsdAsync(userId, ct);
         var byType = await _aggregation.GetAccountCountByTypeAsync(userId, ct);
         var flow = await _moneyFlow.GetMonthlyFlowAsync(userId, 6, ct);
         var topCats = await _categories.GetTopCategoriesAsync(userId, 10, ct);
@@ -51,6 +53,7 @@ public class DashboardQueryService(
 
         return new DashboardData(
             balance,
+            totalUsd,
             accountCount,
             byType,
             flow,

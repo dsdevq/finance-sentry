@@ -8,11 +8,12 @@ import {
   type TableColumn,
 } from '@dsdevq-common/ui';
 
+import {MerchantCategoryUtils} from '../../../../shared/utils/merchant-category.utils';
 import {type CategoryStat} from '../../models/dashboard/dashboard.model';
 import {DashboardStore} from '../../store/dashboard/dashboard.store';
 
 const CATEGORY_COLUMNS: TableColumn<CategoryStat>[] = [
-  {key: 'category', header: 'Category', cell: r => r.category},
+  {key: 'category', header: 'Category', cell: r => MerchantCategoryUtils.format(r.category)},
   {
     key: 'spend',
     header: 'Total Spend',

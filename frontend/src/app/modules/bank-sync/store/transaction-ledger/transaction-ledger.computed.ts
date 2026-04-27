@@ -1,6 +1,7 @@
 import {computed, inject, type Signal} from '@angular/core';
 import {ErrorMessageService} from '@dsdevq-common/ui';
 
+import {MerchantCategoryUtils} from '../../../../shared/utils/merchant-category.utils';
 import {type GlobalTransactionDto} from '../../models/transaction/transaction.model';
 
 interface StateSignals {
@@ -46,7 +47,7 @@ export function transactionLedgerComputed(store: StateSignals) {
       if (entries.length === 0) {
         return '—';
       }
-      return entries.reduce((a, b) => (a[1] >= b[1] ? a : b))[0];
+      return MerchantCategoryUtils.format(entries.reduce((a, b) => (a[1] >= b[1] ? a : b))[0]);
     }),
   };
 }
