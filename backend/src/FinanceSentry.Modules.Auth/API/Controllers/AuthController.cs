@@ -1,8 +1,10 @@
 using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Modules.Auth.Application.Commands;
 using FinanceSentry.Modules.Auth.Domain.Exceptions;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Hosting;
 
 namespace FinanceSentry.Modules.Auth.API.Controllers;
 
@@ -14,7 +16,8 @@ public class AuthController(
     ICommandHandler<RefreshCommand, AuthResult> refreshHandler,
     ICommandHandler<VerifyGoogleCredentialCommand, AuthResult> googleVerifyHandler,
     ICommandHandler<LogoutCommand, Unit> logoutHandler,
-    IQueryHandler<GetMeQuery, GetMeResult> getMeHandler) : ControllerBase
+    IQueryHandler<GetMeQuery, GetMeResult> getMeHandler,
+    IWebHostEnvironment env) : ControllerBase
 {
     private const string RefreshTokenCookie = "fs_refresh_token";
     private const string AccessTokenCookie = "fs_access_token";
@@ -106,7 +109,7 @@ public class AuthController(
         Response.Cookies.Append(RefreshTokenCookie, rawToken, new CookieOptions
         {
             HttpOnly = true,
-            Secure = true,
+            Secure = env.IsProduction(),
             SameSite = SameSiteMode.Strict,
             Expires = DateTimeOffset.UtcNow.AddDays(30),
             Path = "/"
@@ -118,7 +121,7 @@ public class AuthController(
         Response.Cookies.Append(AccessTokenCookie, rawToken, new CookieOptions
         {
             HttpOnly = true,
-            Secure = true,
+            Secure = env.IsProduction(),
             SameSite = SameSiteMode.Strict,
             Expires = new DateTimeOffset(expiresAt, TimeSpan.Zero),
             Path = "/"
@@ -130,7 +133,7 @@ public class AuthController(
         Response.Cookies.Delete(RefreshTokenCookie, new CookieOptions
         {
             HttpOnly = true,
-            Secure = true,
+            Secure = env.IsProduction(),
             SameSite = SameSiteMode.Strict,
             Path = "/"
         });
@@ -141,7 +144,7 @@ public class AuthController(
         Response.Cookies.Delete(AccessTokenCookie, new CookieOptions
         {
             HttpOnly = true,
-            Secure = true,
+            Secure = env.IsProduction(),
             SameSite = SameSiteMode.Strict,
             Path = "/"
         });

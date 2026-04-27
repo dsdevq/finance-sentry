@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace FinanceSentry.Modules.BrokerageSync.Infrastructure.IBKR;
 
@@ -10,42 +11,43 @@ namespace FinanceSentry.Modules.BrokerageSync.Infrastructure.IBKR;
 /// <c>IBKR_ACCOUNT</c>/<c>IBKR_PASSWORD</c> env vars. We never POST credentials
 /// from this client; we only check session status and read portfolio data.
 /// </summary>
-public sealed class IBKRGatewayClient
+public sealed class IBKRGatewayClient(HttpClient http, IConfiguration configuration, ILogger<IBKRGatewayClient> logger)
 {
-    private readonly HttpClient _http;
+    private readonly HttpClient _http = InitHttp(http, configuration);
 
-    public IBKRGatewayClient(HttpClient http, IConfiguration configuration)
+    private static HttpClient InitHttp(HttpClient http, IConfiguration configuration)
     {
-        _http = http;
-        var baseUrl = configuration["IBKR:GatewayBaseUrl"] ?? "https://ibkr-gateway:5000";
-        _http.BaseAddress = new Uri(baseUrl);
+        http.BaseAddress = new Uri(configuration["IBKR:GatewayBaseUrl"] ?? "https://ibkr-gateway:5000");
+        return http;
     }
 
     public async Task<IBKRAuthStatusResponse> GetAuthStatusAsync(CancellationToken ct = default)
     {
-        // Any non-success response (404 while IBeam boots, 401 before login completes,
-        // network failure if the sidecar is down) collapses to "not authenticated".
-        // EnsureSessionAsync turns that into a friendly BrokerAuthException upstream.
         HttpResponseMessage response;
         try
         {
             response = await _http.GetAsync("/v1/api/iserver/auth/status", ct);
         }
-        catch (HttpRequestException)
+        catch (HttpRequestException ex)
         {
+            logger.LogWarning("IBKR gateway unreachable: {Error}", ex.Message);
             return new IBKRAuthStatusResponse(false, false);
         }
+
+        var body = await response.Content.ReadAsStringAsync(ct);
+        logger.LogInformation("IBKR auth/status → HTTP {Status}, body: {Body}", (int)response.StatusCode, body);
 
         if (!response.IsSuccessStatusCode)
             return new IBKRAuthStatusResponse(false, false);
 
         try
         {
-            return await response.Content.ReadFromJsonAsync<IBKRAuthStatusResponse>(cancellationToken: ct)
+            return System.Text.Json.JsonSerializer.Deserialize<IBKRAuthStatusResponse>(body)
                 ?? new IBKRAuthStatusResponse(false, false);
         }
-        catch (System.Text.Json.JsonException)
+        catch (System.Text.Json.JsonException ex)
         {
+            logger.LogWarning("IBKR auth/status JSON parse failed: {Error}", ex.Message);
             return new IBKRAuthStatusResponse(false, false);
         }
     }

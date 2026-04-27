@@ -19,7 +19,7 @@ public class IBKRAdapterContractTests
                 ["IBKR:GatewayBaseUrl"] = "http://ibkr-gateway:5000",
             })
             .Build();
-        return new IBKRGatewayClient(http, config);
+        return new IBKRGatewayClient(http, config, Microsoft.Extensions.Logging.Abstractions.NullLogger<IBKRGatewayClient>.Instance);
     }
 
     private static IBKRAdapter CreateAdapter(IBKRGatewayClient client) => new(client);
