@@ -1,11 +1,9 @@
-<div class="p-8 max-w-screen-xl mx-auto space-y-6">
+<div class="p-cmn-8 max-w-[1200px] mx-auto">
   <!-- Header -->
   <div class="flex items-center justify-between">
     <div>
-      <h1 class="text-2xl font-semibold text-neutral-900 dark:text-neutral-100">
-        Asset Allocation
-      </h1>
-      <p class="text-sm text-neutral-500 mt-0.5">
+      <h1 class="font-headline text-cmn-2xl font-bold text-text-primary">Asset Allocation</h1>
+      <p class="text-cmn-sm text-text-secondary mt-cmn-1">
         Portfolio breakdown across all connected accounts
       </p>
     </div>
@@ -51,123 +49,119 @@
     <div class="grid grid-cols-3 gap-4">
       @for (cat of store.summary()?.categories ?? []; track cat.category) {
         <cmn-card>
-          <div class="p-4">
-            <div class="flex items-center justify-between mb-1">
-              <span class="text-xs font-medium uppercase tracking-wider text-neutral-500">
-                {{ cat.category | categoryLabel }}
-              </span>
-              <span class="text-xs text-neutral-400">{{ cat.accounts.length }} accounts</span>
-            </div>
-            <p
-              class="text-xl font-mono font-semibold text-neutral-900 dark:text-neutral-100 tabular-nums"
-            >
-              {{ cat.totalInBaseCurrency | number: '1.2-2' }}
-            </p>
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-medium uppercase tracking-wider text-neutral-500">
+              {{ cat.category | categoryLabel }}
+            </span>
+            <span class="text-xs text-neutral-400">{{ cat.accounts.length }} accounts</span>
           </div>
+          <p
+            class="text-xl font-mono font-semibold text-neutral-900 dark:text-neutral-100 tabular-nums"
+          >
+            {{ cat.totalInBaseCurrency | number: '1.2-2' }}
+          </p>
         </cmn-card>
       }
     </div>
 
     <!-- Detailed Holdings table -->
-    <cmn-card>
-      <div class="p-5">
-        <h2 class="text-sm font-semibold uppercase tracking-wider text-neutral-500 mb-4">
-          Detailed Holdings
-        </h2>
+    <cmn-card class="grid gap-4">
+      <h2 class="text-sm font-semibold uppercase tracking-wider text-neutral-500 mb-4">
+        Detailed Holdings
+      </h2>
 
-        @if (store.allAccounts().length === 0) {
-          <div class="py-12 text-center text-neutral-400 text-sm">
-            No accounts connected. Connect an account to see your holdings.
-          </div>
-        } @else {
-          <table class="w-full text-sm">
-            <thead>
-              <tr class="border-b border-neutral-200 dark:border-neutral-700">
-                <th
-                  class="text-left pb-3 font-medium text-neutral-500 text-xs uppercase tracking-wider"
+      @if (store.allAccounts().length === 0) {
+        <div class="py-12 text-center text-neutral-400 text-sm">
+          No accounts connected. Connect an account to see your holdings.
+        </div>
+      } @else {
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-neutral-200 dark:border-neutral-700">
+              <th
+                class="text-left pb-3 font-medium text-neutral-500 text-xs uppercase tracking-wider"
+              >
+                Asset Class
+              </th>
+              <th
+                class="text-left pb-3 font-medium text-neutral-500 text-xs uppercase tracking-wider"
+              >
+                Institution
+              </th>
+              <th
+                class="text-left pb-3 font-medium text-neutral-500 text-xs uppercase tracking-wider"
+              >
+                Category
+              </th>
+              <th
+                class="text-right pb-3 font-medium text-neutral-500 text-xs uppercase tracking-wider"
+              >
+                Balance
+              </th>
+              <th
+                class="text-center pb-3 font-medium text-neutral-500 text-xs uppercase tracking-wider"
+              >
+                Status
+              </th>
+              <th
+                class="text-right pb-3 font-medium text-neutral-500 text-xs uppercase tracking-wider"
+              >
+                USD Value
+              </th>
+              <th class="pb-3"><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800">
+            @for (account of store.allAccounts(); track account.accountId) {
+              <tr class="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+                <td class="py-3 pr-4">
+                  <span class="font-medium text-neutral-800 dark:text-neutral-200">{{
+                    account.accountType
+                  }}</span>
+                  <span class="block text-xs text-neutral-400"
+                    >&#8226;&#8226;{{ account.accountNumberLast4 }}</span
+                  >
+                </td>
+                <td class="py-3 pr-4 text-neutral-700 dark:text-neutral-300">
+                  {{ account.bankName }}
+                </td>
+                <td class="py-3 pr-4">
+                  <span class="text-xs text-neutral-500">{{
+                    account.category | categoryLabel
+                  }}</span>
+                </td>
+                <td
+                  class="py-3 pr-4 text-right font-mono tabular-nums text-neutral-800 dark:text-neutral-200"
                 >
-                  Asset Class
-                </th>
-                <th
-                  class="text-left pb-3 font-medium text-neutral-500 text-xs uppercase tracking-wider"
+                  {{ account.currentBalance | number: '1.2-2' }}
+                  <span class="block text-xs text-neutral-400">{{ account.currency }}</span>
+                </td>
+                <td class="py-3 px-4 text-center">
+                  <cmn-badge [variant]="account.syncStatus | syncStatusVariant">{{
+                    account.syncStatus | syncStatusLabel
+                  }}</cmn-badge>
+                </td>
+                <td
+                  class="py-3 text-right font-mono tabular-nums font-medium text-neutral-900 dark:text-neutral-100"
                 >
-                  Institution
-                </th>
-                <th
-                  class="text-left pb-3 font-medium text-neutral-500 text-xs uppercase tracking-wider"
-                >
-                  Category
-                </th>
-                <th
-                  class="text-right pb-3 font-medium text-neutral-500 text-xs uppercase tracking-wider"
-                >
-                  Balance
-                </th>
-                <th
-                  class="text-center pb-3 font-medium text-neutral-500 text-xs uppercase tracking-wider"
-                >
-                  Status
-                </th>
-                <th
-                  class="text-right pb-3 font-medium text-neutral-500 text-xs uppercase tracking-wider"
-                >
-                  USD Value
-                </th>
-                <th class="pb-3"><span class="sr-only">Actions</span></th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800">
-              @for (account of store.allAccounts(); track account.accountId) {
-                <tr class="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
-                  <td class="py-3 pr-4">
-                    <span class="font-medium text-neutral-800 dark:text-neutral-200">{{
-                      account.accountType
-                    }}</span>
-                    <span class="block text-xs text-neutral-400"
-                      >&#8226;&#8226;{{ account.accountNumberLast4 }}</span
+                  {{ account | holdingBalance }}
+                </td>
+                <td class="py-3 pl-4 text-right">
+                  @if (canDisconnect(account.provider)) {
+                    <cmn-button
+                      (clicked)="disconnect(account.provider, account.bankName)"
+                      variant="secondary"
+                      size="sm"
                     >
-                  </td>
-                  <td class="py-3 pr-4 text-neutral-700 dark:text-neutral-300">
-                    {{ account.bankName }}
-                  </td>
-                  <td class="py-3 pr-4">
-                    <span class="text-xs text-neutral-500">{{
-                      account.category | categoryLabel
-                    }}</span>
-                  </td>
-                  <td
-                    class="py-3 pr-4 text-right font-mono tabular-nums text-neutral-800 dark:text-neutral-200"
-                  >
-                    {{ account.currentBalance | number: '1.2-2' }}
-                    <span class="block text-xs text-neutral-400">{{ account.currency }}</span>
-                  </td>
-                  <td class="py-3 px-4 text-center">
-                    <cmn-badge [variant]="account.syncStatus | syncStatusVariant">{{
-                      account.syncStatus | syncStatusLabel
-                    }}</cmn-badge>
-                  </td>
-                  <td
-                    class="py-3 text-right font-mono tabular-nums font-medium text-neutral-900 dark:text-neutral-100"
-                  >
-                    {{ account | holdingBalance }}
-                  </td>
-                  <td class="py-3 pl-4 text-right">
-                    @if (canDisconnect(account.provider)) {
-                      <cmn-button
-                        (clicked)="disconnect(account.provider, account.bankName)"
-                        variant="secondary"
-                        size="sm"
-                      >
-                        Disconnect
-                      </cmn-button>
-                    }
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        }
-      </div>
+                      Disconnect
+                    </cmn-button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
     </cmn-card>
   }
 </div>

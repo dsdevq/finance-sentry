@@ -1,6 +1,7 @@
 import {computed, inject, type Signal} from '@angular/core';
 import {type ChartPoint, type DonutSegment, ErrorMessageService} from '@dsdevq-common/ui';
 
+import {MerchantCategoryUtils} from '../../../../shared/utils/merchant-category.utils';
 import {type DashboardData} from '../../models/dashboard/dashboard.model';
 
 interface StateSignals {
@@ -65,7 +66,7 @@ export function dashboardComputed(store: StateSignals) {
 
     categoryChartData: computed((): DonutSegment[] =>
       (store.data()?.topCategories ?? []).map(c => ({
-        label: c.category,
+        label: MerchantCategoryUtils.format(c.category),
         value: c.totalSpend,
       }))
     ),

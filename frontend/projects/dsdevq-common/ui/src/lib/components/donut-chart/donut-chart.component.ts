@@ -41,7 +41,7 @@ const DEFAULT_COLORS = [
       >
         {{ label() }}
       </span>
-      <div class="relative mx-auto h-48 w-48">
+      <div class="relative w-full" style="min-height: 280px">
         <canvas #chartCanvas></canvas>
       </div>
     </div>

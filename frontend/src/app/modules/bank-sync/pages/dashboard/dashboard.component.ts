@@ -42,7 +42,7 @@ const CATEGORY_COLUMNS: TableColumn<CategoryStat>[] = [
   providers: [DashboardStore],
   template: `
     <div class="p-cmn-6">
-      <div class="mx-auto max-w-screen-xl space-y-cmn-6">
+      <div class="mx-auto max-w-screen-xl space-y-cmn-8">
         @if (store.errorMessage()) {
           <cmn-alert variant="error">{{ store.errorMessage() }}</cmn-alert>
         }
@@ -94,6 +94,7 @@ const CATEGORY_COLUMNS: TableColumn<CategoryStat>[] = [
         <cmn-data-table
           [columns]="categoryColumns"
           [rows]="store.data()?.topCategories ?? []"
+          class="grid gap-4"
           emptyMessage="No spending data available"
         />
       </div>
