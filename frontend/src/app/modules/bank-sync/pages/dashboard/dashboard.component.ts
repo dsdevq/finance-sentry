@@ -8,11 +8,12 @@ import {
   type TableColumn,
 } from '@dsdevq-common/ui';
 
+import {MerchantCategoryUtils} from '../../../../shared/utils/merchant-category.utils';
 import {type CategoryStat} from '../../models/dashboard/dashboard.model';
 import {DashboardStore} from '../../store/dashboard/dashboard.store';
 
 const CATEGORY_COLUMNS: TableColumn<CategoryStat>[] = [
-  {key: 'category', header: 'Category', cell: r => r.category},
+  {key: 'category', header: 'Category', cell: r => MerchantCategoryUtils.format(r.category)},
   {
     key: 'spend',
     header: 'Total Spend',
@@ -41,7 +42,7 @@ const CATEGORY_COLUMNS: TableColumn<CategoryStat>[] = [
   providers: [DashboardStore],
   template: `
     <div class="p-cmn-6">
-      <div class="mx-auto max-w-screen-xl space-y-cmn-6">
+      <div class="mx-auto max-w-screen-xl space-y-cmn-8">
         @if (store.errorMessage()) {
           <cmn-alert variant="error">{{ store.errorMessage() }}</cmn-alert>
         }
@@ -93,6 +94,7 @@ const CATEGORY_COLUMNS: TableColumn<CategoryStat>[] = [
         <cmn-data-table
           [columns]="categoryColumns"
           [rows]="store.data()?.topCategories ?? []"
+          class="grid gap-4"
           emptyMessage="No spending data available"
         />
       </div>

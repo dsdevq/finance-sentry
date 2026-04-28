@@ -1,0 +1,46 @@
+<form (ngSubmit)="submit()" class="flex flex-col gap-cmn-6">
+  <cmn-form-field
+    [control]="tokenControl"
+    [errorMessage]="tokenError()"
+    label="Personal Token"
+    hint="Get your token in the Monobank app under Settings → API. Finance Sentry connects read-only."
+  >
+    <cmn-input
+      [formControl]="tokenControl"
+      [hasError]="!!tokenError()"
+      (paste)="onPaste($event)"
+      type="password"
+      autocomplete="off"
+      placeholder="Paste your Monobank token here"
+    />
+  </cmn-form-field>
+
+  @if (isDuplicateError()) {
+    <cmn-alert variant="error">
+      <div class="flex flex-col gap-cmn-2">
+        <span>{{ store.errorMessage() }}</span>
+        <cmn-button (clicked)="disconnectExisting()" variant="secondary" size="sm">
+          Disconnect existing
+        </cmn-button>
+      </div>
+    </cmn-alert>
+  } @else if (store.errorMessage()) {
+    <cmn-alert variant="error">{{ store.errorMessage() }}</cmn-alert>
+  }
+
+  <cmn-alert variant="accent" icon="ShieldCheck" title="Institutional Grade Security">
+    Tokens are encrypted at rest using AES-256 and never shared with third parties.
+  </cmn-alert>
+
+  <cmn-dialog-actions align="between">
+    <cmn-button (clicked)="back()" variant="secondary" icon="ArrowLeft">Back</cmn-button>
+    <cmn-button
+      [loading]="store.isBusy()"
+      [disabled]="tokenControl.invalid || store.isBusy()"
+      variant="primary"
+      type="submit"
+    >
+      Connect Monobank
+    </cmn-button>
+  </cmn-dialog-actions>
+</form>

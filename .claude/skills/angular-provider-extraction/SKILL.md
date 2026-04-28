@@ -58,9 +58,37 @@ providers: [
 
 - One provider concern per file. Don't bundle unrelated providers (e.g. error handler + analytics) into one factory — create two.
 - If the provider takes configuration (timeout, URL, feature flag), the factory accepts a typed `config` arg: `provideAnalytics(config: AnalyticsConfig): EnvironmentProviders`.
-- If the provider is scoped to a route (not the root `appConfig`), still create it under `core/providers/` unless it is truly feature-specific — in that case put it under `modules/<feature>/providers/`.
+- **Register at the narrowest scope that serves the consumer.** A provider must live where it is actually used, not at app root by default:
+  - **App-wide** (`app.config.ts`) — only when every authenticated route or the bootstrapped shell consumes it (auth, error handler, app icons, http interceptors, error-message registry). If only one feature module reads the token, it does not belong here.
+  - **Feature route group** (`modules/<feature>/<feature>.routes.ts`, in the route's `providers: []`) — when the feature owns the providers and they should tear down with the route. Use this for things like multi-token strategy registries that only one feature needs.
+  - **Page/component** (`@Component({providers: [...]})`) — when the providers' lifetime should match a single page or modal (e.g. page-scoped signal stores, per-form `useValue` tokens supplied via `Injector.create`).
+  - **Library** (`@dsdevq-common/ui` `provide*()` helpers) — when the provider belongs to a reusable primitive shipped via the library (e.g. dialog overlay container, icon registry).
+- File location follows scope: app-wide → `frontend/src/app/core/providers/`; feature-scoped → `modules/<feature>/providers/` or alongside the consumer (e.g. `modules/<feature>/strategies/provide-*.ts`); library-scoped → inside the library package.
 - Return type is always `EnvironmentProviders` — never `Provider[]`. This keeps composition correct with Angular's environment-injector model.
 - Never skip the factory for "just one provider" — the point is the pattern, not line count.
+
+## Anti-pattern: feature provider at app root
+
+```ts
+// ❌ app.config.ts pulling in a bank-sync-only multi-provider registry
+providers: [
+  provideRouter(APP_ROUTES),
+  provideConnectStrategies(),  // ← only consumed by ConnectStore inside bank-sync
+],
+```
+
+Move it to the feature's route group so it loads with the feature and tears down with it:
+
+```ts
+// ✅ modules/bank-sync/bank-sync.routes.ts
+export const BANK_SYNC_ROUTES: Routes = [
+  {
+    path: '',
+    providers: [provideConnectStrategies()],
+    children: [/* feature pages */],
+  },
+];
+```
 
 ## After extracting
 

@@ -1,3 +1,4 @@
+using FinanceSentry.Modules.BrokerageSync.Domain.Exceptions;
 using FinanceSentry.Modules.BrokerageSync.Domain.Interfaces;
 
 namespace FinanceSentry.Modules.BrokerageSync.Infrastructure.IBKR;
@@ -13,16 +14,20 @@ public sealed class IBKRAdapter : IBrokerAdapter
 
     public string BrokerName => "IBKR";
 
-    public async Task AuthenticateAsync(string username, string password, CancellationToken ct = default)
+    public async Task EnsureSessionAsync(CancellationToken ct = default)
     {
-        await _client.AuthenticateAsync(username, password, ct);
+        var status = await _client.GetAuthStatusAsync(ct);
+        if (!status.Authenticated)
+            throw new BrokerAuthException(
+                "IBKR gateway is not authenticated. Configure IBKR_ACCOUNT/IBKR_PASSWORD in docker/.env and ensure the ibkr-gateway container is running.",
+                "IBKR");
     }
 
     public async Task<string> GetAccountIdAsync(CancellationToken ct = default)
     {
         var accountsResponse = await _client.GetAccountsAsync(ct);
         if (accountsResponse.Accounts.Count == 0)
-            throw new InvalidOperationException("No IBKR accounts found for the authenticated user.");
+            throw new InvalidOperationException("No IBKR accounts found for the authenticated session.");
 
         return accountsResponse.Accounts[0];
     }

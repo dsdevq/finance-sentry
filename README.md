@@ -25,7 +25,7 @@ All `docker compose` commands assume `cd docker` first. The compose file is `doc
 | Service | Container | Port |
 |---|---|---|
 | Frontend (Angular dev server) | `finance-sentry-frontend` | 4200 |
-| Backend API (.NET 9) | `finance-sentry-api` | 5050 |
+| Backend API (.NET 9) | `finance-sentry-api` | 5001 (host) → 5000 (container) |
 | PostgreSQL 14 | `finance-sentry-postgres` | 5432 |
 
 Startup order enforced by health checks: `postgres → api → frontend`.
@@ -33,10 +33,10 @@ Startup order enforced by health checks: `postgres → api → frontend`.
 | URL | What |
 |---|---|
 | http://localhost:4200 | Angular SPA |
-| http://localhost:5050/api/v1 | REST API |
-| http://localhost:5050/api/v1/health | Health probe |
-| http://localhost:5050/swagger | Swagger UI |
-| http://localhost:5050/hangfire | Hangfire dashboard |
+| http://localhost:5001/api/v1 | REST API |
+| http://localhost:5001/api/v1/health | Health probe |
+| http://localhost:5001/swagger | Swagger UI |
+| http://localhost:5001/hangfire | Hangfire dashboard |
 
 ### Run everything together
 

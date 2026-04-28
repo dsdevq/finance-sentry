@@ -21,7 +21,8 @@ public sealed class EventBus(IServiceProvider services) : IEventBus
     public async Task Publish<TEvent>(TEvent @event, CancellationToken cancellationToken = default)
         where TEvent : IEvent
     {
-        var handlers = services.GetServices<IEventHandler<TEvent>>();
+        await using var scope = services.CreateAsyncScope();
+        var handlers = scope.ServiceProvider.GetServices<IEventHandler<TEvent>>();
         foreach (var handler in handlers)
         {
             await handler.Handle(@event, cancellationToken);

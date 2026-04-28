@@ -79,7 +79,7 @@ public class WealthAggregationServiceTests
 
         result.TotalNetWorth.Should().Be(500m);
         result.Categories.Single().Accounts.Should().HaveCount(2);
-        result.Categories.Single().Accounts.First(a => a.NativeBalance is null).BalanceInBaseCurrency.Should().BeNull();
+        result.Categories.Single().Accounts.First(a => a.CurrentBalance is null).BalanceInBaseCurrency.Should().BeNull();
     }
 
     [Fact]
@@ -105,7 +105,7 @@ public class WealthAggregationServiceTests
         var result = await svc.GetWealthSummaryAsync(UserId, "banking", null);
 
         result.Categories.Should().HaveCount(1);
-        result.Categories.Single().Name.Should().Be("banking");
+        result.Categories.Single().Category.Should().Be("banking");
         result.TotalNetWorth.Should().Be(1000m);
     }
 

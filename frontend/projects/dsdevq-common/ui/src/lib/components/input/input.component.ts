@@ -47,6 +47,7 @@ const ERROR_BORDER = 'border-status-error';
       [readOnly]="readonly()"
       [placeholder]="placeholder()"
       [attr.aria-invalid]="hasError() ? true : null"
+      [attr.autocomplete]="autocomplete()"
       [class]="classes()"
       (input)="onInput($event)"
       (blur)="onBlur()"
@@ -60,6 +61,7 @@ export class InputComponent implements ControlValueAccessor {
   public readonly placeholder = input<string>('');
   public readonly readonly = input<boolean>(false);
   public readonly hasError = input<boolean>(false);
+  public readonly autocomplete = input<string | null>(null);
 
   // Public computed
   public readonly classes = computed(() => {

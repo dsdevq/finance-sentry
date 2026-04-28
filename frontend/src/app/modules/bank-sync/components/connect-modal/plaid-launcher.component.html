@@ -1,0 +1,17 @@
+<div class="flex flex-col gap-cmn-6">
+  <p class="text-cmn-sm text-text-secondary">
+    Plaid Link will open in a secure popup. Sign in to your bank to authorize access.
+  </p>
+
+  <cmn-dialog-actions align="between">
+    <cmn-button (clicked)="back()" variant="secondary" icon="ArrowLeft">Back</cmn-button>
+    <cmn-button
+      [loading]="store.isInitializing()"
+      [disabled]="store.isBusy()"
+      (clicked)="launch()"
+      variant="primary"
+    >
+      Open Plaid Link
+    </cmn-button>
+  </cmn-dialog-actions>
+</div>

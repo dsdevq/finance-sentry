@@ -1,8 +1,8 @@
 import {inject} from '@angular/core';
 import {rxMethod} from '@ngrx/signals/rxjs-interop';
-import {catchError, EMPTY, pipe, switchMap, tap} from 'rxjs';
+import {pipe, switchMap, tap} from 'rxjs';
 
-import {ErrorUtils} from '../../../../shared/utils/error.utils';
+import {StoreErrorUtils} from '../../../../shared/utils/store-error.utils';
 import {type GlobalTransactionDto} from '../../models/transaction/transaction.model';
 import {BankSyncService} from '../../services/bank-sync.service';
 import {PAGE_SIZE} from './transaction-ledger.state';
@@ -27,10 +27,7 @@ export function transactionLedgerEffects(store: EffectsStore) {
         switchMap(() =>
           bankSyncService.getAllTransactions({offset: 0, limit: PAGE_SIZE}).pipe(
             tap(res => store.setTransactions(res.transactions, res.totalCount, res.hasMore)),
-            catchError((err: unknown) => {
-              store.setError(ErrorUtils.extractCode(err));
-              return EMPTY;
-            })
+            StoreErrorUtils.catchAndSetError(store)
           )
         )
       )

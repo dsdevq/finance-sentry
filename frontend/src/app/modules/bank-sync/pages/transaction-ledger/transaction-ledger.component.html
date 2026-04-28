@@ -105,7 +105,7 @@
               </td>
               <td class="py-cmn-4 px-cmn-4">
                 @if (t.merchantCategory) {
-                  <cmn-badge variant="neutral">{{ t.merchantCategory }}</cmn-badge>
+                  <cmn-badge variant="neutral">{{ t.merchantCategory | merchantCategory }}</cmn-badge>
                 } @else {
                   <span class="text-text-secondary text-cmn-xs">—</span>
                 }

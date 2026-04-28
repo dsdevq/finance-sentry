@@ -36,10 +36,10 @@ Startup order enforced by health checks: `postgres → api → frontend`
 | Service | URL |
 |---|---|
 | Frontend (Angular) | http://localhost:4200 |
-| Backend API | http://localhost:5050/api/v1 |
-| Health check | http://localhost:5050/api/v1/health |
-| Swagger | http://localhost:5050/swagger |
-| Hangfire dashboard | http://localhost:5050/hangfire |
+| Backend API | http://localhost:5001/api/v1 |
+| Health check | http://localhost:5001/api/v1/health |
+| Swagger | http://localhost:5001/swagger |
+| Hangfire dashboard | http://localhost:5001/hangfire |
 | PostgreSQL | localhost:5432 (user: finance_user / pw: finance_password / db: finance_sentry) |
 
 For faster frontend iteration, run `ng serve` locally while keeping API + DB in Docker:
@@ -278,13 +278,36 @@ This project uses a two-model pipeline. [`.specify/memory/pipeline.md`](.specify
 
 ---
 
+## QA — Test User Credentials
+
+| Field | Value |
+|---|---|
+| Email | test@gmail.com |
+| Password | Darkfly21 |
+
+This account has connected accounts across Plaid (banking), Monobank (banking), Binance (crypto), and IBKR (brokerage).
+
+### Key test scenarios (check before declaring any fix done)
+
+| Page | Golden path | Key assertions |
+|---|---|---|
+| **Login** | Enter creds → Submit | Redirects to `/accounts/list`; no JS errors |
+| **Accounts** | Load page | Banking/Brokerage/Digital Assets tables render; totalConnections > 0; Net worth shown |
+| **Dashboard** | Load page | Total Balance ≠ $0.00 (if accounts exist); category table shows human-readable labels (not `FOOD_AND_DRINK`) |
+| **Transactions** | Load page | Transaction rows render; categories human-readable; no spinner stuck |
+| **Holdings** | Load page | Summary cards have labels; breakdown table has data |
+| **Connect (Plaid)** | Click "Connect Account" → select Plaid | Modal opens; no 422/500 on link token request |
+| **Disconnect** | Click Disconnect on any account | Confirmation dialog opens; account removed on confirm |
+
+---
+
 ## QA — End-to-End Testing After Implementation
 
 After **all tasks in a feature are complete**, act as a QA engineer: spin up the app and test the feature through the browser using Playwright MCP.
 
 **Steps (mandatory):**
 1. Ensure the full Docker stack is running: `cd docker && docker compose -f docker-compose.dev.yml up -d`
-2. Wait for health check: `GET http://localhost:5050/api/v1/health` → `{"status":"healthy"}`
+2. Wait for health check: `GET http://localhost:5001/api/v1/health` → `{"status":"healthy"}`
 3. Open `http://localhost:4200` via Playwright
 4. Navigate the golden path of the feature as a real user would — click buttons, fill forms, follow redirects
 5. Also test key error/edge cases (invalid input, cancelled flows, etc.)
@@ -305,6 +328,8 @@ After **all tasks in a feature are complete**, act as a QA engineer: spin up the
 - Do not create markdown files at the repo root. Only `README.md` and `CLAUDE.md` belong there. Session artifacts, debug notes, and how-to docs do not get their own files — put relevant content in `README.md` or the appropriate `.specify/` artifact.
 
 ## Active Technologies
+- TypeScript 5.x strict, Angular 21.2 (frontend only — no backend changes) + `@ngrx/signals` 21.1, `@dsdevq-common/ui` (local lib), Angular ReactiveForms, Plaid Link client SDK (already loaded by `PlaidLinkService`) (011-connect-providers)
+- N/A on frontend; credentials are transient form state, never persisted (011-connect-providers)
 
 - `@ngrx/signals` 21.1.0 (NgRx SignalStore) — pilot AuthStore 2026-04-24, extended to DashboardStore + AccountsStore same day
 - C# 13 / .NET 9 (backend) · TypeScript 5.x strict (frontend) + ASP.NET Core 9, EF Core 9, MediatR, ASP.NET Core Identity (`Microsoft.AspNetCore.Identity.EntityFrameworkCore`), Npgsql.EF Core (backend) · Angular 20, RxJS, Angular standalone routing (frontend) (003-auth-flow)

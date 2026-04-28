@@ -64,6 +64,9 @@
                 <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Account Type</th>
                 <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Connectivity</th>
                 <th class="text-right py-cmn-3 px-cmn-4 font-medium" scope="col">Balance</th>
+                <th class="text-right py-cmn-3 px-cmn-4 font-medium" scope="col">
+                  <span class="sr-only">Actions</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -72,21 +75,34 @@
                   class="border-b border-border-default last:border-0 hover:bg-surface-bg transition-colors"
                 >
                   <td class="py-cmn-4 px-cmn-4">
-                    <p class="font-medium text-text-primary">{{ account.bankName }}</p>
-                    <p class="text-cmn-xs text-text-secondary">
-                      •••• {{ account.accountNumberLast4 }}
-                    </p>
+                    <div class="flex items-center gap-cmn-3">
+                      <cmn-institution-avatar [name]="account.bankName" />
+                      <div>
+                        <p class="font-medium text-text-primary">{{ account.bankName }}</p>
+                        <p class="text-cmn-xs text-text-secondary">
+                          •••• {{ account.accountNumberLast4 }}
+                        </p>
+                      </div>
+                    </div>
                   </td>
                   <td class="py-cmn-4 px-cmn-4 text-text-secondary">{{ account.accountType }}</td>
                   <td class="py-cmn-4 px-cmn-4">
-                    <cmn-badge [variant]="account.syncStatus | syncStatusVariant">{{
-                      account.syncStatus | syncStatusLabel
-                    }}</cmn-badge>
+                    <cmn-status-indicator
+                      [variant]="account.syncStatus | syncStatusVariant"
+                      [timestampLabel]="account.lastSyncTimestamp | relativeTime"
+                    >
+                      {{ account.syncStatus | syncStatusLabel }}
+                    </cmn-status-indicator>
                   </td>
                   <td
                     class="py-cmn-4 px-cmn-4 text-right font-mono tabular-nums font-medium text-text-primary"
                   >
                     {{ account | accountBalance }}
+                  </td>
+                  <td class="py-cmn-4 px-cmn-4 text-right">
+                    <cmn-button (clicked)="disconnect(account)" variant="secondary" size="sm">
+                      Disconnect
+                    </cmn-button>
                   </td>
                 </tr>
               }
@@ -126,16 +142,24 @@
                   class="border-b border-border-default last:border-0 hover:bg-surface-bg transition-colors"
                 >
                   <td class="py-cmn-4 px-cmn-4">
-                    <p class="font-medium text-text-primary">{{ account.bankName }}</p>
-                    <p class="text-cmn-xs text-text-secondary">
-                      •••• {{ account.accountNumberLast4 }}
-                    </p>
+                    <div class="flex items-center gap-cmn-3">
+                      <cmn-institution-avatar [name]="account.bankName" />
+                      <div>
+                        <p class="font-medium text-text-primary">{{ account.bankName }}</p>
+                        <p class="text-cmn-xs text-text-secondary">
+                          •••• {{ account.accountNumberLast4 }}
+                        </p>
+                      </div>
+                    </div>
                   </td>
                   <td class="py-cmn-4 px-cmn-4 text-text-secondary">{{ account.accountType }}</td>
                   <td class="py-cmn-4 px-cmn-4">
-                    <cmn-badge [variant]="account.syncStatus | syncStatusVariant">{{
-                      account.syncStatus | syncStatusLabel
-                    }}</cmn-badge>
+                    <cmn-status-indicator
+                      [variant]="account.syncStatus | syncStatusVariant"
+                      [timestampLabel]="account.lastSyncTimestamp | relativeTime"
+                    >
+                      {{ account.syncStatus | syncStatusLabel }}
+                    </cmn-status-indicator>
                   </td>
                   <td
                     class="py-cmn-4 px-cmn-4 text-right font-mono tabular-nums font-medium text-text-primary"
@@ -178,14 +202,22 @@
                   class="border-b border-border-default last:border-0 hover:bg-surface-bg transition-colors"
                 >
                   <td class="py-cmn-4 px-cmn-4">
-                    <p class="font-medium text-text-primary">{{ account.bankName }}</p>
-                    <p class="text-cmn-xs text-text-secondary">{{ account.provider }}</p>
+                    <div class="flex items-center gap-cmn-3">
+                      <cmn-institution-avatar [name]="account.bankName" />
+                      <div>
+                        <p class="font-medium text-text-primary">{{ account.bankName }}</p>
+                        <p class="text-cmn-xs text-text-secondary">{{ account.provider }}</p>
+                      </div>
+                    </div>
                   </td>
                   <td class="py-cmn-4 px-cmn-4 text-text-secondary">{{ account.accountType }}</td>
                   <td class="py-cmn-4 px-cmn-4">
-                    <cmn-badge [variant]="account.syncStatus | syncStatusVariant">{{
-                      account.syncStatus | syncStatusLabel
-                    }}</cmn-badge>
+                    <cmn-status-indicator
+                      [variant]="account.syncStatus | syncStatusVariant"
+                      [timestampLabel]="account.lastSyncTimestamp | relativeTime"
+                    >
+                      {{ account.syncStatus | syncStatusLabel }}
+                    </cmn-status-indicator>
                   </td>
                   <td
                     class="py-cmn-4 px-cmn-4 text-right font-mono tabular-nums font-medium text-text-primary"

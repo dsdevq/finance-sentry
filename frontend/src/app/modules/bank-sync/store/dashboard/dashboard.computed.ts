@@ -1,6 +1,7 @@
 import {computed, inject, type Signal} from '@angular/core';
 import {type ChartPoint, type DonutSegment, ErrorMessageService} from '@dsdevq-common/ui';
 
+import {MerchantCategoryUtils} from '../../../../shared/utils/merchant-category.utils';
 import {type DashboardData} from '../../models/dashboard/dashboard.model';
 
 interface StateSignals {
@@ -40,11 +41,9 @@ export function dashboardComputed(store: StateSignals) {
     currencyEntries: computed(() => Object.entries(store.data()?.aggregatedBalance ?? {})),
     accountTypeEntries: computed(() => Object.entries(store.data()?.accountsByType ?? {})),
 
-    totalBalanceFormatted: computed(() => {
-      const bal = store.data()?.aggregatedBalance ?? {};
-      const usd = bal['USD'] ?? Object.values(bal)[0] ?? 0;
-      return USD_FORMATTER.format(usd);
-    }),
+    totalBalanceFormatted: computed(() =>
+      USD_FORMATTER.format(store.data()?.totalNetWorthUsd ?? 0)
+    ),
 
     latestInflowFormatted: computed(() => {
       const flows = store.data()?.monthlyFlow ?? [];
@@ -67,7 +66,7 @@ export function dashboardComputed(store: StateSignals) {
 
     categoryChartData: computed((): DonutSegment[] =>
       (store.data()?.topCategories ?? []).map(c => ({
-        label: c.category,
+        label: MerchantCategoryUtils.format(c.category),
         value: c.totalSpend,
       }))
     ),

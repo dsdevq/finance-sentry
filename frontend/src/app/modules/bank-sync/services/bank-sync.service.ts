@@ -126,6 +126,10 @@ export class BankSyncService {
     return this.http.delete<void>(`${this.baseUrl}/${accountId}`);
   }
 
+  public disconnectMonobank(): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/monobank`);
+  }
+
   public getDashboardData(): Observable<DashboardData> {
     return this.http.get<DashboardData>(`${environment.apiBaseUrl}/dashboard/aggregated`);
   }

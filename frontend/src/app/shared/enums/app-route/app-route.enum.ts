@@ -4,7 +4,6 @@ export enum AppRoute {
   Register = '/register',
   Accounts = '/accounts',
   AccountsList = '/accounts/list',
-  AccountConnect = '/accounts/connect',
   Dashboard = '/dashboard',
   Transactions = '/transactions',
   Holdings = '/holdings',

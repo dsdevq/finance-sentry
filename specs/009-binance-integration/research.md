@@ -8,16 +8,17 @@
 
 **Decision**: Use Binance REST API at `https://api.binance.com`. Authentication via `X-MBX-APIKEY` header (API key) + HMAC-SHA256 signature on query parameters using the secret key. Requests to signed endpoints append `timestamp` (Unix ms) and `signature` query params.
 
-**Endpoints used**:
+**Endpoints used** (updated 2026-04-26 to span Spot + Funding + Simple Earn):
 
 | Endpoint | Auth | Purpose | Weight |
 |---|---|---|---|
-| `GET /api/v3/ping` | None | Health check / connectivity test | 1 |
-| `GET /api/v3/account` | Signed | Fetch all asset balances (free + locked) | 20 |
-| `GET /api/v3/ticker/price` | None | Current USD price for a single symbol (e.g. BTCUSDT) | 2 |
-| `GET /api/v3/ticker/price` (no symbol) | None | All prices in one call | 4 |
+| `GET /api/v3/account` | Signed | Spot wallet — free + locked per asset (also used for credential validation) | 20 |
+| `POST /sapi/v1/asset/get-funding-asset` | Signed | Funding wallet — fiat deposits, P2P, gift cards | 1 |
+| `GET /sapi/v1/simple-earn/flexible/position` | Signed | Simple Earn flexible positions (paginated, `size=100`) | 150 |
+| `GET /sapi/v1/simple-earn/locked/position` | Signed | Simple Earn locked-stake positions (paginated, `size=100`) | 150 |
+| `GET /api/v3/ticker/price` | None | All symbol prices in one call | 4 |
 
-**Rate limits**: Weight-based — 1200 weight per minute per IP. A full sync for one user costs ≤ 25 weight (20 for `/account` + 4 for all-prices bulk call), comfortably within limits even for many users.
+**Rate limits**: Weight-based — 1200 weight per minute per IP. A full per-user sync costs ≤ 325 weight (20 + 1 + 150 + 150 + 4). The Earn endpoints carry the bulk of the cost; for the typical personal-finance instance with one user every 15 min this is negligible.
 
 **Error body shape**:
 ```json
@@ -25,7 +26,9 @@
 ```
 HTTP 429 = rate limit exceeded. HTTP 418 = IP temporarily banned (after repeated 429s).
 
-**Rationale**: Only spot balance retrieval is needed. `/api/v3/account` returns the full spot wallet in a single call. Bulk price fetch (`GET /api/v3/ticker/price` without `symbol`) returns all prices, eliminating N+1 price lookups.
+**Permission scope**: Read-Only API keys cover Spot account, Funding wallet, and Simple Earn endpoints. If the user scoped the key narrower, individual endpoints return 401/403; the adapter logs a warning per source and continues — Spot remains the source of truth for credential health, so a hard failure there still throws.
+
+**Rationale**: A single Spot call leaves Earn balances invisible — the most common holding pattern for personal users. Funding adds fiat / off-trading-desk balances. The two Simple Earn endpoints capture flexible savings + locked staking. Bulk price fetch (`GET /api/v3/ticker/price` without `symbol`) eliminates N+1 lookups across all aggregated assets.
 
 ---
 
@@ -133,3 +136,35 @@ public record CryptoHoldingSummary(string Asset, decimal Quantity, decimal UsdVa
 `CryptoSync` implements `CryptoHoldingsReader`. `WealthAggregationService` (BankSync) injects `ICryptoHoldingsReader` and adds crypto holdings as `AccountBalanceDto` rows under category `"crypto"` in the summary. When no crypto holdings exist, the category is simply omitted.
 
 **Rationale**: Clean cross-module contract via Core — `BankSync` never references `CryptoSync` directly. Follows the same pattern the spec references ("consistent with the existing adapter pattern"). Minimal change to `WealthAggregationService` (add holdings aggregation after bank accounts loop).
+
+---
+
+## Decision 10: Wallet Aggregation — Spot + Funding + Simple Earn (added 2026-04-26)
+
+**Decision**: `BinanceAdapter.GetHoldingsAsync` fans out to four endpoints in parallel and aggregates per asset symbol before pricing and dust-filtering:
+
+1. `GET /api/v3/account` — Spot.
+2. `POST /sapi/v1/asset/get-funding-asset` — Funding wallet.
+3. `GET /sapi/v1/simple-earn/flexible/position?size=100&current=1` — Simple Earn flexible.
+4. `GET /sapi/v1/simple-earn/locked/position?size=100&current=1` — Simple Earn locked.
+
+For each `(asset, free, locked)` produced by the four sources, the adapter accumulates into a `Dictionary<string,(decimal Free, decimal Locked)>` keyed by asset symbol (case-insensitive). Earn balances treat flexible positions as "free" (redeemable on demand) and locked positions as "locked" (cannot be moved until maturity). Dust filtering runs **after** aggregation so a tiny Spot balance plus a real Earn position aren't accidentally filtered.
+
+**Permission handling**: Each non-Spot source is wrapped in a `SafeFetchAsync<T>(fetcher, label, fallback)` helper that catches `BinanceException` and logs a warning with the failed source label, then returns the fallback (empty list / empty page). Spot stays as the source of truth for credential validity — a hard failure there still throws and the whole sync aborts. This means a key scoped without Earn read still surfaces Spot/Funding holdings instead of nuking the entire sync.
+
+**Pagination**: Earn endpoints are paginated (default page size 10, max 100). The adapter requests `size=100&current=1` — sufficient for personal-finance use (single user, rarely 100+ Earn positions). If a user ever has more, the first page wins; this is a known follow-up if it bites anyone.
+
+**Rationale**:
+- Original Spot-only scope produced the symptom that motivated this decision: a real account with funds parked in Earn showed only its dust Spot balance in the UI.
+- The web Binance Overview page is exactly this aggregation — Spot + Funding + Earn (+ Futures/Margin/Options for power users). Mirroring it covers the personal-finance happy path.
+- Futures (USD-M, Coin-M) and Options live on different hosts (`fapi.binance.com`, `eapi.binance.com`) and use distinct margin/PnL semantics — out of scope until a power user asks. Margin (cross/isolated) is similarly excluded; most personal users don't use leverage.
+
+**Alternatives considered**:
+- `GET /sapi/v1/asset/wallet/balance` (per-wallet BTC totals) — gives the right total but loses per-asset detail. Useful only as a sanity-check sum; not a substitute for per-asset aggregation.
+- `POST /sapi/v3/asset/getUserAsset` (consolidated user-asset endpoint) — looked promising as a single call, but Binance docs indicate it covers Spot only and excludes Funding + Earn. Not the silver bullet the name suggests.
+
+**Migration path for Futures/Options support**: add a new `BinanceFuturesClient` (different host, identical signing) calling `/fapi/v2/account` (USD-M) and `/dapi/v1/account` (Coin-M); add a new contributor method (`AddFuturesBalances`) to `BinanceHoldingsAggregator`; thread the new responses through `BinanceAdapter.GetHoldingsAsync` alongside the existing four. Estimated half-day work when needed.
+
+### Aggregation/orchestration split
+
+`BinanceAdapter` does HTTP orchestration only: parallel fan-out, `SafeFetchAsync` permission tolerance, hands raw responses to the aggregator. `BinanceHoldingsAggregator` is a pure-function class (no IO, no DI) that takes the four wallet responses + price ticker list + dust threshold and returns the per-asset `CryptoAssetBalance` list. This keeps the aggregator unit-testable with hand-rolled fixtures (no HTTP mocks needed), and limits adapter contract tests to "did we sign and call the right endpoints". Adding a new wallet source = one new contributor method on the aggregator + one new endpoint call in the adapter, rather than a sprawl in a single class.

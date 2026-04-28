@@ -14,6 +14,11 @@ public interface IAggregationService
     Task<Dictionary<string, decimal>> GetAggregatedBalanceAsync(Guid userId, CancellationToken ct = default);
 
     /// <summary>
+    /// Returns the USD-equivalent total of all active bank account balances.
+    /// </summary>
+    Task<decimal> GetTotalNetWorthUsdAsync(Guid userId, CancellationToken ct = default);
+
+    /// <summary>
     /// Returns a dictionary of account type → count for all active accounts.
     /// </summary>
     Task<Dictionary<string, int>> GetAccountCountByTypeAsync(Guid userId, CancellationToken ct = default);
@@ -33,6 +38,16 @@ public class AggregationService(IBankAccountRepository accounts) : IAggregationS
             .Where(a => a.IsActive && a.CurrentBalance.HasValue)
             .GroupBy(a => a.Currency)
             .ToDictionary(g => g.Key, g => g.Sum(a => a.CurrentBalance!.Value));
+    }
+
+    /// <inheritdoc />
+    public async Task<decimal> GetTotalNetWorthUsdAsync(Guid userId, CancellationToken ct = default)
+    {
+        var accounts = await _accounts.GetByUserIdAsync(userId, ct);
+
+        return accounts
+            .Where(a => a.IsActive && a.CurrentBalance.HasValue)
+            .Sum(a => CurrencyConverter.ToUsd(a.CurrentBalance!.Value, a.Currency));
     }
 
     /// <inheritdoc />

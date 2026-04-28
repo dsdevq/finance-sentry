@@ -19,54 +19,37 @@ public class IBKRAdapterContractTests
                 ["IBKR:GatewayBaseUrl"] = "http://ibkr-gateway:5000",
             })
             .Build();
-        return new IBKRGatewayClient(http, config);
+        return new IBKRGatewayClient(http, config, Microsoft.Extensions.Logging.Abstractions.NullLogger<IBKRGatewayClient>.Instance);
     }
 
     private static IBKRAdapter CreateAdapter(IBKRGatewayClient client) => new(client);
 
     [Fact]
-    public async Task AuthenticateAsync_Succeeds_WhenGatewayReturnsAuthenticated()
+    public async Task EnsureSessionAsync_Succeeds_WhenGatewayReturnsAuthenticated()
     {
         var handler = new FakeIBKRMultiHandler(new Dictionary<string, (string body, HttpStatusCode code)>
         {
-            ["/v1/api/iserver/auth/ssodh/init"] = (@"{}", HttpStatusCode.OK),
             ["/v1/api/iserver/auth/status"] = (@"{""authenticated"":true,""connected"":true}", HttpStatusCode.OK),
         });
 
         var adapter = CreateAdapter(CreateClient(handler));
-        var act = async () => await adapter.AuthenticateAsync("user", "pass");
+        var act = async () => await adapter.EnsureSessionAsync();
         await act.Should().NotThrowAsync();
     }
 
     [Fact]
-    public async Task AuthenticateAsync_ThrowsBrokerAuthException_WhenInitFails()
+    public async Task EnsureSessionAsync_ThrowsBrokerAuthException_WhenStatusNotAuthenticated()
     {
         var handler = new FakeIBKRMultiHandler(new Dictionary<string, (string body, HttpStatusCode code)>
         {
-            ["/v1/api/iserver/auth/ssodh/init"] = (@"{""error"":""Invalid credentials""}", HttpStatusCode.Unauthorized),
-        });
-
-        var adapter = CreateAdapter(CreateClient(handler));
-        var act = async () => await adapter.AuthenticateAsync("user", "wrong");
-
-        await act.Should().ThrowAsync<BrokerAuthException>()
-            .WithMessage("*authentication failed*");
-    }
-
-    [Fact]
-    public async Task AuthenticateAsync_ThrowsBrokerAuthException_WhenStatusNotAuthenticated()
-    {
-        var handler = new FakeIBKRMultiHandler(new Dictionary<string, (string body, HttpStatusCode code)>
-        {
-            ["/v1/api/iserver/auth/ssodh/init"] = (@"{}", HttpStatusCode.OK),
             ["/v1/api/iserver/auth/status"] = (@"{""authenticated"":false,""connected"":false}", HttpStatusCode.OK),
         });
 
         var adapter = CreateAdapter(CreateClient(handler));
-        var act = async () => await adapter.AuthenticateAsync("user", "pass");
+        var act = async () => await adapter.EnsureSessionAsync();
 
         await act.Should().ThrowAsync<BrokerAuthException>()
-            .WithMessage("*did not confirm authentication*");
+            .WithMessage("*not authenticated*");
     }
 
     [Fact]

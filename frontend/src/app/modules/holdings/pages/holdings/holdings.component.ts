@@ -1,15 +1,18 @@
 import {DecimalPipe} from '@angular/common';
-import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject, ViewContainerRef} from '@angular/core';
 import {
   AlertComponent,
   BadgeComponent,
   ButtonComponent,
   CardComponent,
+  CmnDialogService,
   StatCardComponent,
 } from '@dsdevq-common/ui';
+import {take} from 'rxjs';
 
 import {SyncStatusLabelPipe} from '../../../../shared/pipes/sync-status-label.pipe';
 import {SyncStatusVariantPipe} from '../../../../shared/pipes/sync-status-variant.pipe';
+import {DisconnectDialogComponent} from '../../../bank-sync/components/disconnect-dialog/disconnect-dialog.component';
 import {CategoryLabelPipe} from '../../pipes/category-label.pipe';
 import {CurrencyAmountPipe} from '../../pipes/currency-amount.pipe';
 import {HoldingBalancePipe} from '../../pipes/holding-balance.pipe';
@@ -35,5 +38,37 @@ import {HoldingsStore} from '../../store/holdings.store';
   providers: [HoldingsStore],
 })
 export class HoldingsComponent {
+  private readonly dialog = inject(CmnDialogService);
+  private readonly viewContainerRef = inject(ViewContainerRef);
+
   public readonly store = inject(HoldingsStore);
+
+  public canDisconnect(provider: string): boolean {
+    return provider === 'binance' || provider === 'ibkr';
+  }
+
+  public disconnect(provider: string, displayName: string): void {
+    if (!this.canDisconnect(provider)) {
+      return;
+    }
+    const ref = this.dialog.open<boolean>(DisconnectDialogComponent, {
+      title: `Disconnect ${displayName}`,
+      size: 'sm',
+      viewContainerRef: this.viewContainerRef,
+      data: {providerName: displayName},
+    });
+    ref
+      .afterClosed()
+      .pipe(take(1))
+      .subscribe(confirmed => {
+        if (confirmed !== true) {
+          return;
+        }
+        if (provider === 'binance') {
+          this.store.disconnectBinance();
+        } else if (provider === 'ibkr') {
+          this.store.disconnectIBKR();
+        }
+      });
+  }
 }

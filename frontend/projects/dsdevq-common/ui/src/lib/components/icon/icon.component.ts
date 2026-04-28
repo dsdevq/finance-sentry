@@ -1,8 +1,14 @@
-import {ChangeDetectionStrategy, Component, computed, effect, input} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, inject, input} from '@angular/core';
+import {takeUntilDestroyed, toObservable, toSignal} from '@angular/core/rxjs-interop';
+import {type SafeHtml} from '@angular/platform-browser';
+import {of, switchMap} from 'rxjs';
 import {icons, LUCIDE_ICONS, LucideAngularModule, LucideIconProvider} from 'lucide-angular';
+
+import {CmnIconRegistry} from '../../services/icon-registry/icon-registry.service';
 
 export type IconSize = 'sm' | 'md' | 'lg';
 export type LucideIconName = keyof typeof icons;
+export type IconName = LucideIconName | (string & {});
 
 const SIZE_PX: Record<IconSize, number> = {
   sm: 16,
@@ -22,7 +28,18 @@ const SIZE_PX: Record<IconSize, number> = {
     },
   ],
   template: `
-    @if (isKnown()) {
+    @if (customSvg(); as svg) {
+      <span
+        [innerHTML]="svg"
+        [style.display]="'inline-flex'"
+        [style.width.px]="resolvedSize()"
+        [style.height.px]="resolvedSize()"
+        [style.color]="color()"
+        [attr.aria-hidden]="ariaLabel() ? null : 'true'"
+        [attr.aria-label]="ariaLabel() || null"
+        class="cmn-icon-custom"
+      ></span>
+    } @else if (isLucide()) {
       <lucide-icon
         [name]="name()"
         [size]="resolvedSize()"
@@ -42,22 +59,23 @@ const SIZE_PX: Record<IconSize, number> = {
   `,
 })
 export class IconComponent {
-  public readonly name = input.required<LucideIconName>();
+  private readonly registry = inject(CmnIconRegistry);
+
+  public readonly name = input.required<IconName>();
   public readonly size = input<IconSize>('md');
   public readonly color = input<string>('currentColor');
   public readonly ariaLabel = input<string>('');
 
   public readonly resolvedSize = computed(() => SIZE_PX[this.size()]);
-
-  public readonly isKnown = computed(() =>
+  public readonly isLucide = computed(() =>
     Object.prototype.hasOwnProperty.call(icons, this.name())
   );
 
-  constructor() {
-    effect(() => {
-      if (!this.isKnown()) {
-        console.warn(`[cmn-icon] Unknown icon name: "${this.name()}"`);
-      }
-    });
-  }
+  protected readonly customSvg = toSignal<SafeHtml | null>(
+    toObservable(this.name).pipe(
+      switchMap(n => (this.registry.has(n) ? this.registry.resolve(n) : of(null))),
+      takeUntilDestroyed()
+    ),
+    {initialValue: null}
+  );
 }

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import {TestBed} from '@angular/core/testing';
 import {Router} from '@angular/router';
 import {of, throwError} from 'rxjs';
@@ -9,170 +8,108 @@ import {
   type BankAccount,
 } from '../../models/bank-account/bank-account.model';
 import {BankSyncService} from '../../services/bank-sync.service';
-import {PlaidLinkService} from '../../services/plaid-link.service';
+import {type ConnectStrategy} from '../../strategies/connect-strategy';
 import {connectEffects} from './connect.effects';
 
 function buildStore() {
   return {
-    setInitializing: vi.fn(),
-    setReady: vi.fn(),
     setSyncing: vi.fn(),
     setPolling: vi.fn(),
     setSuccess: vi.fn(),
     setError: vi.fn(),
+    setInstitutionType: vi.fn(),
+    status: vi.fn().mockReturnValue('idle' as const),
+    institutionType: vi.fn().mockReturnValue(null),
   };
 }
 
-function buildService() {
+function buildBankSync() {
   return {
-    getLinkToken: vi.fn(),
-    exchangePublicToken: vi.fn(),
-    connectMonobank: vi.fn(),
     getAccounts: vi.fn(),
   };
-}
-
-function buildPlaid() {
-  return {
-    prepare: vi.fn().mockReturnValue(of(undefined)),
-    open: vi.fn(),
-    destroy: vi.fn(),
-  };
-}
-
-function configure(
-  service: ReturnType<typeof buildService>,
-  plaid: ReturnType<typeof buildPlaid>,
-  router = {navigate: vi.fn()} as unknown as Router
-) {
-  TestBed.configureTestingModule({
-    providers: [
-      {provide: BankSyncService, useValue: service},
-      {provide: PlaidLinkService, useValue: plaid},
-      {provide: Router, useValue: router},
-    ],
-  });
 }
 
 const ACTIVE_RESPONSE: AccountsResponse = {
   accounts: [{accountId: 'a1', syncStatus: 'active'} as unknown as BankAccount],
   totalCount: 1,
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   currency_totals: {},
 };
 
-describe('connectEffects', () => {
+function configure(bankSync: ReturnType<typeof buildBankSync>): void {
+  TestBed.configureTestingModule({
+    providers: [
+      {provide: BankSyncService, useValue: bankSync},
+      {provide: Router, useValue: {navigateByUrl: vi.fn()} as unknown as Router},
+    ],
+  });
+}
+
+function plaidStrategy(submitImpl: () => ReturnType<ConnectStrategy['submit']>): ConnectStrategy {
+  return {
+    slug: 'plaid',
+    formComponent: class {} as unknown as ConnectStrategy['formComponent'],
+    submit: vi.fn().mockImplementation(submitImpl),
+  };
+}
+
+describe('connectEffects.connect', () => {
   beforeEach(() => {
     TestBed.resetTestingModule();
   });
 
-  describe('initPlaid', () => {
-    it('sets initializing, fetches token, prepares plaid, then sets ready', () => {
-      const store = buildStore();
-      const service = buildService();
-      service.getLinkToken.mockReturnValue(of({linkToken: 't'}));
-      const plaid = buildPlaid();
-      configure(service, plaid);
+  it('marks syncing, calls strategy.submit, and triggers polling for bank outcomes', () => {
+    const store = buildStore();
+    const bankSync = buildBankSync();
+    bankSync.getAccounts.mockReturnValue(of(ACTIVE_RESPONSE));
+    const strategy = plaidStrategy(() =>
+      of({successCode: 'POLLING', count: 1, institutionType: 'bank'})
+    );
+    configure(bankSync);
 
-      TestBed.runInInjectionContext(() => connectEffects(store).initPlaid());
-
-      expect(store.setInitializing).toHaveBeenCalled();
-      expect(service.getLinkToken).toHaveBeenCalled();
-      expect(plaid.prepare).toHaveBeenCalled();
-      expect(store.setReady).toHaveBeenCalled();
-      expect(store.setError).not.toHaveBeenCalled();
+    TestBed.runInInjectionContext(() => {
+      connectEffects(store).connect({strategy, payload: undefined});
     });
 
-    it('sets error on getLinkToken failure', () => {
-      const store = buildStore();
-      const service = buildService();
-      service.getLinkToken.mockReturnValue(throwError(() => ({error: {errorCode: 'PLAID_DOWN'}})));
-      const plaid = buildPlaid();
-      configure(service, plaid);
-
-      TestBed.runInInjectionContext(() => connectEffects(store).initPlaid());
-
-      expect(store.setError).toHaveBeenCalledWith('PLAID_DOWN');
-      expect(plaid.prepare).not.toHaveBeenCalled();
-    });
+    expect(store.setInstitutionType).toHaveBeenCalledWith('bank');
+    expect(store.setSyncing).toHaveBeenCalled();
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(strategy.submit).toHaveBeenCalledWith(undefined);
+    expect(store.setPolling).toHaveBeenCalled();
   });
 
-  describe('openPlaid', () => {
-    it('delegates to PlaidLinkService.open', () => {
-      const plaid = buildPlaid();
-      configure(buildService(), plaid);
+  it('non-bank outcome marks success directly without polling', () => {
+    const store = buildStore();
+    const bankSync = buildBankSync();
+    const strategy: ConnectStrategy = {
+      slug: 'binance',
+      formComponent: class {} as unknown as ConnectStrategy['formComponent'],
+      submit: vi
+        .fn()
+        .mockReturnValue(of({successCode: 'POLLING', count: 1, institutionType: 'crypto'})),
+    };
+    configure(bankSync);
 
-      TestBed.runInInjectionContext(() => connectEffects(buildStore()).openPlaid());
-
-      expect(plaid.open).toHaveBeenCalled();
+    TestBed.runInInjectionContext(() => {
+      connectEffects(store).connect({strategy, payload: {apiKey: 'k', apiSecret: 's'}});
     });
+
+    expect(store.setSuccess).toHaveBeenCalled();
+    expect(store.setPolling).not.toHaveBeenCalled();
   });
 
-  describe('connectMonobank', () => {
-    it('success path sets syncing, calls service, and kicks off polling', () => {
-      const store = buildStore();
-      const service = buildService();
-      service.connectMonobank.mockReturnValue(of({accounts: []}));
-      service.getAccounts.mockReturnValue(of(ACTIVE_RESPONSE));
-      configure(service, buildPlaid());
+  it('error path forwards errorCode from strategy submit', () => {
+    const store = buildStore();
+    const bankSync = buildBankSync();
+    const strategy = plaidStrategy(() =>
+      throwError(() => Object.assign(new Error('x'), {errorCode: 'PLAID_LINK_FAILED'}))
+    );
+    configure(bankSync);
 
-      TestBed.runInInjectionContext(() => connectEffects(store).connectMonobank('token'));
-
-      expect(store.setSyncing).toHaveBeenCalledWith('Connecting your Monobank account...');
-      expect(service.connectMonobank).toHaveBeenCalledWith('token');
-      expect(store.setPolling).toHaveBeenCalled();
+    TestBed.runInInjectionContext(() => {
+      connectEffects(store).connect({strategy, payload: undefined});
     });
 
-    it('error path maps errorCode', () => {
-      const store = buildStore();
-      const service = buildService();
-      service.connectMonobank.mockReturnValue(
-        throwError(() => ({error: {errorCode: 'MONOBANK_TOKEN_INVALID'}}))
-      );
-      configure(service, buildPlaid());
-
-      TestBed.runInInjectionContext(() => connectEffects(store).connectMonobank('bad'));
-
-      expect(store.setError).toHaveBeenCalledWith('MONOBANK_TOKEN_INVALID');
-    });
-  });
-
-  describe('exchangePlaidToken', () => {
-    it('success triggers polling', () => {
-      const store = buildStore();
-      const service = buildService();
-      service.exchangePublicToken.mockReturnValue(of({} as unknown));
-      service.getAccounts.mockReturnValue(of(ACTIVE_RESPONSE));
-      configure(service, buildPlaid());
-
-      TestBed.runInInjectionContext(() =>
-        connectEffects(store).exchangePlaidToken({
-          publicToken: 'pt',
-          metadata: {
-            institution: {name: 'Chase', institution_id: 'ins_1'},
-            accounts: [],
-            link_session_id: 's',
-          },
-        })
-      );
-
-      expect(service.exchangePublicToken).toHaveBeenCalledWith('pt', 'Chase');
-      expect(store.setPolling).toHaveBeenCalled();
-    });
-
-    it('falls back to PLAID_LINK_FAILED on unstructured errors', () => {
-      const store = buildStore();
-      const service = buildService();
-      service.exchangePublicToken.mockReturnValue(throwError(() => new Error('net')));
-      configure(service, buildPlaid());
-
-      TestBed.runInInjectionContext(() =>
-        connectEffects(store).exchangePlaidToken({
-          publicToken: 'pt',
-          metadata: {institution: null, accounts: [], link_session_id: 's'},
-        })
-      );
-
-      expect(store.setError).toHaveBeenCalledWith('PLAID_LINK_FAILED');
-    });
+    expect(store.setError).toHaveBeenCalledWith('PLAID_LINK_FAILED');
   });
 });

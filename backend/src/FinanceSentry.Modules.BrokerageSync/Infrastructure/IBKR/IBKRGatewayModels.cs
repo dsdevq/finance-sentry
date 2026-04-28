@@ -1,22 +1,18 @@
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace FinanceSentry.Modules.BrokerageSync.Infrastructure.IBKR;
 
-public sealed record IBKRAuthInitRequest(
-    [property: JsonProperty("username")] string Username,
-    [property: JsonProperty("password")] string Password);
-
 public sealed record IBKRAuthStatusResponse(
-    [property: JsonProperty("authenticated")] bool Authenticated,
-    [property: JsonProperty("connected")] bool Connected);
+    [property: JsonPropertyName("authenticated")] bool Authenticated,
+    [property: JsonPropertyName("connected")] bool Connected);
 
 public sealed record IBKRAccountsResponse(
-    [property: JsonProperty("accounts")] List<string> Accounts);
+    [property: JsonPropertyName("accounts")] List<string> Accounts);
 
 public sealed record IBKRPositionResponse(
-    [property: JsonProperty("conid")] long Conid,
-    [property: JsonProperty("contractDesc")] string ContractDesc,
-    [property: JsonProperty("assetClass")] string AssetClass,
-    [property: JsonProperty("position")] decimal Position,
-    [property: JsonProperty("mktPrice")] decimal MktPrice,
-    [property: JsonProperty("mktValue")] decimal MktValue);
+    [property: JsonPropertyName("conid")] long Conid,
+    [property: JsonPropertyName("contractDesc")] string ContractDesc,
+    [property: JsonPropertyName("assetClass")] string AssetClass,
+    [property: JsonPropertyName("position")] decimal Position,
+    [property: JsonPropertyName("mktPrice")] decimal MktPrice,
+    [property: JsonPropertyName("mktValue")] decimal MktValue);

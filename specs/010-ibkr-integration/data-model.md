@@ -12,27 +12,26 @@ All new entities live in the `BrokerageSync` module's own `BrokerageSyncDbContex
 
 ## Entity: IBKRCredential
 
-**Purpose**: Stores encrypted IBKR username and password for a single user, plus the discovered account ID. One record per user.
+**Purpose** (revised 2026-04-26): Records that a user has linked their IBKR portfolio to Finance Sentry, plus the discovered IBKR account ID. **No per-user credentials are stored** — under the single-tenant gateway model the IBeam sidecar holds the IBKR session for the entire deployment using `IBKR_ACCOUNT` / `IBKR_PASSWORD` env vars. One record per user.
 
 | Column | Type | Constraints | Notes |
 |---|---|---|---|
 | `Id` | `UUID` | PK | |
 | `UserId` | `UUID` | NOT NULL, UNIQUE | FK to identity user; unique index enforces one-per-user |
-| `EncryptedUsername` | `BYTEA` | NOT NULL | AES-256-GCM ciphertext |
-| `UsernameIv` | `BYTEA` | NOT NULL | 12-byte GCM nonce |
-| `UsernameAuthTag` | `BYTEA` | NOT NULL | 16-byte GCM auth tag |
-| `EncryptedPassword` | `BYTEA` | NOT NULL | AES-256-GCM ciphertext |
-| `PasswordIv` | `BYTEA` | NOT NULL | 12-byte GCM nonce |
-| `PasswordAuthTag` | `BYTEA` | NOT NULL | 16-byte GCM auth tag |
-| `KeyVersion` | `INT` | NOT NULL, DEFAULT 1 | Supports future key rotation |
-| `AccountId` | `VARCHAR(20)` | NULLABLE | Discovered from IBKR on first connect; stored in plaintext (not a secret) |
+| `AccountId` | `VARCHAR(20)` | NULLABLE | Discovered from IBKR on first connect via `/iserver/accounts`; not a secret |
 | `IsActive` | `BOOL` | NOT NULL, DEFAULT true | Set to false on disconnect |
 | `LastSyncAt` | `TIMESTAMP` | NULLABLE | UTC; updated after each successful sync |
 | `LastSyncError` | `TEXT` | NULLABLE | Error message from last failed sync |
 | `CreatedAt` | `TIMESTAMP` | DEFAULT NOW() | |
 
 **Indexes**:
-- `UNIQUE (UserId)` — enforces one IBKR account per user
+- `UNIQUE (UserId)` — enforces one IBKR link per user
+
+**Schema history**:
+- M001 (2026-04-22): created table with encrypted `(EncryptedUsername, UsernameIv, UsernameAuthTag, EncryptedPassword, PasswordIv, PasswordAuthTag, KeyVersion)` columns under the original multi-tenant design.
+- M002 (2026-04-26): dropped all seven encrypted-credential columns when the model collapsed to single-tenant. The seven dropped columns are restored in `Down()` with empty defaults so the migration is reversible.
+
+**Multi-tenant migration (forward, when going public)**: add encrypted `(AccessToken, AccessTokenIv, AccessTokenAuthTag, RefreshToken, RefreshTokenIv, RefreshTokenAuthTag, KeyVersion, ExpiresAt)` columns and switch to IBKR's OAuth Web API. Different shape from the original encrypted username/password columns dropped in M002 — OAuth has refresh-token mechanics that username/password did not.
 
 ---
 

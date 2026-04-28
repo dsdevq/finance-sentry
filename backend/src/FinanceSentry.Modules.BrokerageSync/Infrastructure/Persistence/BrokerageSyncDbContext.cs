@@ -22,13 +22,6 @@ public sealed class BrokerageSyncDbContext : DbContext
             entity.ToTable("IBKRCredentials");
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.UserId).IsUnique();
-            entity.Property(e => e.EncryptedUsername).IsRequired();
-            entity.Property(e => e.UsernameIv).IsRequired();
-            entity.Property(e => e.UsernameAuthTag).IsRequired();
-            entity.Property(e => e.EncryptedPassword).IsRequired();
-            entity.Property(e => e.PasswordIv).IsRequired();
-            entity.Property(e => e.PasswordAuthTag).IsRequired();
-            entity.Property(e => e.KeyVersion).IsRequired();
             entity.Property(e => e.AccountId).HasMaxLength(20);
             entity.Property(e => e.IsActive).IsRequired();
             entity.Property(e => e.CreatedAt).IsRequired();

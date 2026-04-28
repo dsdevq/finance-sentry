@@ -3,6 +3,7 @@ import {rxMethod} from '@ngrx/signals/rxjs-interop';
 import {catchError, EMPTY, pipe, switchMap, tap, timer} from 'rxjs';
 
 import {ErrorUtils} from '../../../../shared/utils/error.utils';
+import {StoreErrorUtils} from '../../../../shared/utils/store-error.utils';
 import {type DashboardData} from '../../models/dashboard/dashboard.model';
 import {BankSyncService} from '../../services/bank-sync.service';
 
@@ -27,10 +28,7 @@ export function dashboardEffects(store: EffectsStore) {
         switchMap(() =>
           bankSyncService.getDashboardData().pipe(
             tap(data => store.setData(data)),
-            catchError((err: unknown) => {
-              store.setError(ErrorUtils.extractCode(err));
-              return EMPTY;
-            })
+            StoreErrorUtils.catchAndSetError(store)
           )
         )
       )

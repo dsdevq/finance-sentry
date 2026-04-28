@@ -1,0 +1,61 @@
+<form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-cmn-6">
+  <cmn-form-field
+    [control]="form.controls.apiKey"
+    label="API key"
+    hint="Read-only key. Finance Sentry never asks for trading or withdrawal scopes."
+  >
+    <cmn-input
+      formControlName="apiKey"
+      type="password"
+      autocomplete="off"
+      placeholder="Binance API key"
+    />
+  </cmn-form-field>
+
+  <cmn-form-field [control]="form.controls.apiSecret" label="API secret">
+    <cmn-input
+      formControlName="apiSecret"
+      type="password"
+      autocomplete="off"
+      placeholder="Binance API secret"
+    />
+  </cmn-form-field>
+
+  @if (isDuplicateError()) {
+    <cmn-alert variant="error">
+      <div class="flex flex-col gap-cmn-2">
+        <span>{{ store.errorMessage() }}</span>
+        <cmn-button (clicked)="disconnectExisting()" variant="secondary" size="sm">
+          Disconnect existing
+        </cmn-button>
+      </div>
+    </cmn-alert>
+  } @else if (store.errorMessage()) {
+    <cmn-alert variant="error">{{ store.errorMessage() }}</cmn-alert>
+  }
+
+  <a
+    [href]="helpUrl"
+    target="_blank"
+    rel="noopener"
+    class="text-cmn-xs text-accent-default hover:underline"
+  >
+    How to create a read-only Binance API key →
+  </a>
+
+  <cmn-alert variant="accent" icon="ShieldCheck" title="Institutional Grade Security">
+    Credentials are encrypted at rest using AES-256 and never shared with third parties.
+  </cmn-alert>
+
+  <cmn-dialog-actions align="between">
+    <cmn-button (clicked)="back()" variant="secondary" icon="ArrowLeft">Back</cmn-button>
+    <cmn-button
+      [loading]="store.isBusy()"
+      [disabled]="form.invalid || store.isBusy()"
+      variant="primary"
+      type="submit"
+    >
+      Connect Binance
+    </cmn-button>
+  </cmn-dialog-actions>
+</form>

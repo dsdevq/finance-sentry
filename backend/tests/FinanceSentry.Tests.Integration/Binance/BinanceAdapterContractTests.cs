@@ -4,6 +4,7 @@ using FinanceSentry.Modules.CryptoSync.Domain.Exceptions;
 using FinanceSentry.Modules.CryptoSync.Infrastructure.Binance;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace FinanceSentry.Tests.Integration.Binance;
@@ -34,7 +35,7 @@ public class BinanceAdapterContractTests
                 ["Binance:DustThresholdUsd"] = "0.01",
             })
             .Build();
-        return new BinanceAdapter(httpClient, config);
+        return new BinanceAdapter(httpClient, new BinanceHoldingsAggregator(), NullLogger<BinanceAdapter>.Instance, config);
     }
 
     [Fact]

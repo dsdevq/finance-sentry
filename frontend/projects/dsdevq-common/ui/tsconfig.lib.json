@@ -10,6 +10,6 @@
     "declarationMap": true,
     "types": ["google.accounts"]
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "src/**/*.d.ts"],
   "exclude": ["**/*.spec.ts"]
 }

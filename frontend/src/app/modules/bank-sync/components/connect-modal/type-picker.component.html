@@ -1,0 +1,23 @@
+<p class="text-cmn-sm text-text-secondary mb-cmn-4">
+  Choose a provider type to begin syncing your assets.
+</p>
+
+<div class="grid grid-cols-3 gap-cmn-3">
+  @for (tile of tiles; track tile.id) {
+    <cmn-selectable-card (clicked)="select(tile.id)" orientation="vertical">
+      <div
+        leading
+        class="w-12 h-12 rounded-full bg-surface-raised flex items-center justify-center text-cmn-lg font-semibold text-accent-default"
+      >
+        {{ tile.label.charAt(0) }}
+      </div>
+      <span class="font-medium text-text-primary">{{ tile.label }}</span>
+      <span class="text-cmn-xs text-text-secondary">{{ tile.description }}</span>
+      @if (connectionsByType()[tile.id] > 0) {
+        <cmn-badge trailing variant="success">
+          {{ connectionsByType()[tile.id] }} connected
+        </cmn-badge>
+      }
+    </cmn-selectable-card>
+  }
+</div>

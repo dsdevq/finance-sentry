@@ -77,10 +77,11 @@ export class FormFieldComponent implements ControlValueAccessor, AfterContentIni
 
   protected readonly resolvedError = computed(() => {
     this.controlChanges();
-    if (this.errorMessage()) {
+    const ctrl = this.control();
+    const showStatic = !ctrl || ctrl.touched;
+    if (showStatic && this.errorMessage()) {
       return this.errorMessage();
     }
-    const ctrl = this.control();
     if (!ctrl?.touched || !ctrl.errors) {
       return '';
     }

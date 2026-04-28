@@ -43,8 +43,7 @@ public class BrokerageControllerDisconnectContractTests : IClassFixture<Brokerag
     [Fact]
     public async Task Disconnect_ValidAccount_Returns204()
     {
-        var credential = new IBKRCredential(
-            _factory.TestUserId, [1], [2], [3], [4], [5], [6], 1, "U1234567");
+        var credential = new IBKRCredential(_factory.TestUserId, "U1234567");
 
         _factory.CredentialRepoMock
             .Setup(r => r.GetByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))

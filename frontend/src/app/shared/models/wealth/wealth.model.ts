@@ -10,6 +10,7 @@ export interface AccountBalanceItem extends AccountIdentity {
   currentBalance: number;
   balanceInBaseCurrency: Nullable<number>;
   syncStatus: SyncStatus;
+  lastSyncTimestamp: Nullable<string>;
 }
 
 export interface CategorySummary {

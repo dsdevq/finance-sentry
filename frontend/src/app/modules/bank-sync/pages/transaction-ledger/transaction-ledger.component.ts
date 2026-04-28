@@ -8,6 +8,7 @@ import {
   StatCardComponent,
 } from '@dsdevq-common/ui';
 
+import {MerchantCategoryPipe} from '../../../../shared/pipes/merchant-category.pipe';
 import {TransactionAmountPipe} from '../../pipes/transaction-amount.pipe';
 import {TransactionAmountClassPipe} from '../../pipes/transaction-amount-class.pipe';
 import {TransactionLedgerStore} from '../../store/transaction-ledger/transaction-ledger.store';
@@ -21,6 +22,7 @@ import {TransactionLedgerStore} from '../../store/transaction-ledger/transaction
     CardComponent,
     DatePipe,
     DecimalPipe,
+    MerchantCategoryPipe,
     StatCardComponent,
     TransactionAmountClassPipe,
     TransactionAmountPipe,

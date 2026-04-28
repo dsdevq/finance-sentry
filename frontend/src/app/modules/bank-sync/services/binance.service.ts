@@ -16,4 +16,8 @@ export class BinanceService {
   public connect(request: ConnectBinanceRequest): Observable<ConnectBinanceResponse> {
     return this.http.post<ConnectBinanceResponse>(`${this.baseUrl}/connect`, request);
   }
+
+  public disconnect(): Observable<void> {
+    return this.http.delete<void>(this.baseUrl);
+  }
 }

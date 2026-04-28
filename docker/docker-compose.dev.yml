@@ -22,7 +22,7 @@ services:
     container_name: finance-sentry-api
     environment:
       ASPNETCORE_ENVIRONMENT: Development
-      ASPNETCORE_URLS: http://+:5050
+      ASPNETCORE_URLS: http://+:5000
       ConnectionStrings__Default: "Host=postgres;Port=5432;Database=finance_sentry;Username=finance_user;Password=finance_password;"
       Plaid__BaseUrl: https://sandbox.plaid.com
       Plaid__ClientId: ${PLAID_CLIENT_ID}
@@ -33,20 +33,45 @@ services:
       Encryption__MasterKey: ${ENCRYPTION_MASTER_KEY:-change-this-master-key-in-production}
       Deduplication__MasterKeyBase64: dGVzdC1kZWR1cGxpY2F0aW9uLWtleS1jaGFuZ2UtaW4tcHJvZHVjdGlvbg==
       GOOGLEOAUTH__CLIENTID: "${GOOGLE_CLIENT_ID:-}"
+      IBKR__GatewayBaseUrl: "https://ibkr-gateway:5000"
+      IBKR__AllowSelfSignedCert: "true"
     ports:
-      - "5050:5050"
+      - "5001:5000"
     depends_on:
       postgres:
         condition: service_healthy
     networks:
       - finance-sentry-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5050/api/v1/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/v1/health"]
       interval: 10s
       timeout: 5s
       retries: 5
     volumes:
       - ./logs:/app/logs
+
+  ibkr-gateway:
+    image: voyz/ibeam:latest
+    container_name: finance-sentry-ibkr-gateway
+    environment:
+      IBEAM_ACCOUNT: ${IBKR_ACCOUNT:-}
+      IBEAM_PASSWORD: ${IBKR_PASSWORD:-}
+      IBEAM_GATEWAY_BASE_URL: "https://localhost:5000"
+      IBEAM_LOG_LEVEL: INFO
+      IBEAM_ERROR_SCREENSHOTS: "True"
+    volumes:
+      - ./ibkr/conf.yaml:/srv/inputs/conf.yaml
+    ports:
+      - "5055:5000"
+    networks:
+      - finance-sentry-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-skf", "https://localhost:5000/v1/api/iserver/auth/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   postgres:
     image: postgres:14-alpine
