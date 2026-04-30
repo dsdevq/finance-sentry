@@ -59,9 +59,19 @@
   }
 
   @if (store.isLoading()) {
-    <div class="flex items-center justify-center py-cmn-16 text-text-secondary">
-      Loading transactions…
-    </div>
+    <cmn-card>
+      <div class="p-cmn-4 space-y-cmn-3">
+        @for (_ of skeletonRows; track $index) {
+          <div class="flex gap-cmn-4">
+            <cmn-skeleton height="1rem" width="15%" />
+            <cmn-skeleton height="1rem" width="30%" />
+            <cmn-skeleton height="1rem" width="20%" />
+            <cmn-skeleton height="1rem" width="20%" />
+            <cmn-skeleton height="1rem" width="15%" />
+          </div>
+        }
+      </div>
+    </cmn-card>
   }
 
   @if (!store.isLoading() && store.isEmpty()) {
@@ -124,7 +134,7 @@
 
       @if (store.hasMore()) {
         <div class="flex justify-center p-cmn-4 border-t border-border-default">
-          <cmn-button (clicked)="store.load()" variant="secondary" size="sm">Load More</cmn-button>
+          <cmn-button (clicked)="store.loadMore()" variant="secondary" size="sm">Load More</cmn-button>
         </div>
       }
     </cmn-card>

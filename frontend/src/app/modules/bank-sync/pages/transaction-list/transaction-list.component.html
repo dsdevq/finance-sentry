@@ -1,100 +1,88 @@
-<div class="transaction-list">
-  <div class="transaction-header">
-    <button (click)="goBack()" class="btn-back" aria-label="Back to accounts">← Back</button>
-    <h2>{{ store.bankName() || 'Account' }} Transactions</h2>
-    @if (store.currency()) {
-      <span class="currency-badge">{{ store.currency() }}</span>
-    }
+<div class="p-cmn-6 max-w-screen-xl mx-auto">
+  <!-- Header -->
+  <div class="flex items-center gap-cmn-4 mb-cmn-6">
+    <cmn-button (clicked)="goBack()" variant="secondary" size="sm">← Back</cmn-button>
+    <div>
+      <h1 class="font-headline text-cmn-2xl font-bold text-text-primary">
+        {{ store.bankName() || 'Account' }} Transactions
+      </h1>
+      @if (store.currency()) {
+        <span class="text-cmn-sm text-text-secondary">{{ store.currency() }}</span>
+      }
+    </div>
   </div>
 
-  <div class="filters" role="search" aria-label="Filter transactions">
-    <label for="startDate">From</label>
-    <input [(ngModel)]="startDate" id="startDate" type="date" aria-label="Start date filter" />
-    <label for="endDate">To</label>
-    <input [(ngModel)]="endDate" id="endDate" type="date" aria-label="End date filter" />
-    <button (click)="applyFilters()" class="btn-secondary">Apply</button>
-  </div>
-
-  @if (store.isLoading()) {
-    <div class="loading-state" role="status" aria-live="polite">
-      <p>Loading transactions...</p>
-    </div>
-  }
-
-  @if (store.errorMessage()) {
-    <div class="error-state" role="alert">
-      <p class="error-message">{{ store.errorMessage() }}</p>
-      <button (click)="retry()" class="btn-secondary">Retry</button>
-    </div>
-  }
-
-  @if (!store.isLoading() && !store.errorMessage()) {
-    @if (store.transactions().length === 0) {
-      <div class="empty-state">
-        <p>No transactions found for the selected period.</p>
+  <!-- Filters -->
+  <cmn-card class="mb-cmn-6">
+    <div class="flex items-end gap-cmn-4">
+      <div class="flex flex-col gap-cmn-1">
+        <label class="text-cmn-sm font-medium text-text-secondary" for="startDate">From</label>
+        <input
+          [(ngModel)]="startDate"
+          id="startDate"
+          type="date"
+          aria-label="Start date filter"
+          class="rounded border border-neutral-300 px-cmn-3 py-cmn-2 text-cmn-sm text-text-primary bg-surface focus:outline-none focus:ring-2 focus:ring-primary"
+        />
       </div>
-    } @else {
-      <table class="transactions-table" aria-label="Account transactions">
-        <thead>
-          <tr>
-            <th scope="col">Date</th>
-            <th scope="col">Description</th>
-            <th scope="col">Amount</th>
-            <th scope="col">Type</th>
-            <th scope="col">Category</th>
-            <th scope="col">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (tx of store.transactions(); track tx.transactionId) {
-            <tr [class.pending]="tx.isPending">
-              <td>{{ tx.postedDate ?? tx.pendingDate | date: 'mediumDate' }}</td>
-              <td>{{ tx.description }}</td>
-              <td
-                [class.debit]="tx.transactionType === 'debit'"
-                [class.credit]="tx.transactionType === 'credit'"
-              >
-                {{ tx.transactionType === 'debit' ? '-' : '+' }}{{ tx.amount | number: '1.2-2' }}
-                {{ store.currency() }}
-              </td>
-              <td>
-                <span
-                  [class]="
-                    'badge ' + (tx.transactionType === 'debit' ? 'badge-danger' : 'badge-success')
-                  "
-                >
-                  {{ tx.transactionType | titlecase }}
-                </span>
-              </td>
-              <td>{{ tx.merchantCategory ?? '—' }}</td>
-              <td>
-                <span [class]="'badge ' + (tx.isPending ? 'badge-warning' : 'badge-secondary')">
-                  {{ tx.isPending ? 'Pending' : 'Posted' }}
-                </span>
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
+      <div class="flex flex-col gap-cmn-1">
+        <label class="text-cmn-sm font-medium text-text-secondary" for="endDate">To</label>
+        <input
+          [(ngModel)]="endDate"
+          id="endDate"
+          type="date"
+          aria-label="End date filter"
+          class="rounded border border-neutral-300 px-cmn-3 py-cmn-2 text-cmn-sm text-text-primary bg-surface focus:outline-none focus:ring-2 focus:ring-primary"
+        />
+      </div>
+      <cmn-button (clicked)="applyFilters()" variant="secondary">Apply</cmn-button>
+    </div>
+  </cmn-card>
 
-      <div class="pagination" role="navigation" aria-label="Transaction pagination">
-        <button
+  <!-- Error -->
+  @if (store.errorMessage()) {
+    <cmn-alert variant="error" class="mb-cmn-4">
+      {{ store.errorMessage() }}
+      <cmn-button (clicked)="retry()" variant="secondary" size="sm">Retry</cmn-button>
+    </cmn-alert>
+  }
+
+  <!-- Content -->
+  @if (!store.errorMessage()) {
+    <cmn-data-table
+      [columns]="columns"
+      [rows]="store.transactions()"
+      [loading]="store.isLoading()"
+      emptyMessage="No transactions found for the selected period."
+    />
+
+    @if (!store.isLoading() && store.transactions().length > 0) {
+      <div
+        class="flex items-center justify-between mt-cmn-4"
+        role="navigation"
+        aria-label="Transaction pagination"
+      >
+        <cmn-button
           [disabled]="!store.hasPrevious()"
-          (click)="previousPage()"
-          class="btn-secondary"
+          (clicked)="previousPage()"
+          variant="secondary"
+          size="sm"
           aria-label="Previous page"
         >
           Previous
-        </button>
-        <span class="page-info">Page {{ store.currentPage() }} of {{ store.totalPages() }}</span>
-        <button
+        </cmn-button>
+        <span class="text-cmn-sm text-text-secondary">
+          Page {{ store.currentPage() }} of {{ store.totalPages() }}
+        </span>
+        <cmn-button
           [disabled]="!store.hasNext()"
-          (click)="nextPage()"
-          class="btn-secondary"
+          (clicked)="nextPage()"
+          variant="secondary"
+          size="sm"
           aria-label="Next page"
         >
           Next
-        </button>
+        </cmn-button>
       </div>
     }
   }

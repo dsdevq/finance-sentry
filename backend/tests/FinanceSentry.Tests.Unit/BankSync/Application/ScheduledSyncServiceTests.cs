@@ -24,7 +24,7 @@ public class ScheduledSyncServiceTests
     private static BankAccount MakeActiveAccount()
     {
         var account = new BankAccount(UserId, "item_abc", "Test Bank", "checking", "1234", "Jane", "EUR", UserId);
-        account.StartSync();
+        account.BeginSync();
         account.MarkActive(1000m);
         return account;
     }

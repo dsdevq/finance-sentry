@@ -8,6 +8,6 @@ export interface DashboardState {
 
 export const initialDashboardState: DashboardState = {
   data: null,
-  status: 'loading',
+  status: 'idle',
   errorCode: null,
 };

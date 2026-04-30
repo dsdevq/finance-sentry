@@ -16,7 +16,7 @@ public class WealthAggregationServiceTests
         var a = new BankAccount(UserId, $"ext_{Guid.NewGuid():N}", "Test Bank", "checking", "1234", "Owner", currency, UserId, provider);
         if (balance.HasValue)
         {
-            a.StartSync();
+            a.BeginSync();
             a.MarkActive(balance.Value);
         }
         return a;

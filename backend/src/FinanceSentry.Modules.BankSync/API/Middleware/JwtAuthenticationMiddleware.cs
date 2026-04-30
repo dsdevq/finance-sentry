@@ -2,6 +2,7 @@ namespace FinanceSentry.Modules.BankSync.API.Middleware;
 
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
+using FinanceSentry.Core.Api;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -64,7 +65,7 @@ public class JwtAuthenticationMiddleware
         if (string.IsNullOrWhiteSpace(token))
         {
             context.Response.StatusCode = 401;
-            await context.Response.WriteAsJsonAsync(new { error = "Authentication required.", errorCode = "UNAUTHORIZED" });
+            await context.Response.WriteAsJsonAsync(new ApiErrorBody("Authentication required.", "UNAUTHORIZED"));
             return;
         }
 
@@ -79,13 +80,13 @@ public class JwtAuthenticationMiddleware
         {
             _logger.LogWarning("Expired JWT token received.");
             context.Response.StatusCode = 401;
-            await context.Response.WriteAsJsonAsync(new { error = "Token has expired. Please sign in again.", errorCode = "TOKEN_EXPIRED" });
+            await context.Response.WriteAsJsonAsync(new ApiErrorBody("Token has expired. Please sign in again.", "TOKEN_EXPIRED"));
         }
         catch (SecurityTokenException ex)
         {
             _logger.LogWarning("Invalid JWT token: {Message}", ex.Message);
             context.Response.StatusCode = 401;
-            await context.Response.WriteAsJsonAsync(new { error = "Invalid authentication token.", errorCode = "TOKEN_INVALID" });
+            await context.Response.WriteAsJsonAsync(new ApiErrorBody("Invalid authentication token.", "TOKEN_INVALID"));
         }
     }
 

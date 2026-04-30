@@ -1,14 +1,11 @@
 namespace FinanceSentry.Modules.BankSync.API.Controllers;
 
 using FinanceSentry.Core.Auth;
+using FinanceSentry.Modules.BankSync.API.Responses;
 using FinanceSentry.Modules.BankSync.Application.Services;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
-/// <summary>
-/// Dashboard endpoints — aggregated balance, money flow, category stats, and transfer detection.
-/// All endpoints are user-scoped (FR-009). userId is extracted from the JWT claim `sub`.
-/// </summary>
 [ApiController]
 [Route("dashboard")]
 public class DashboardController(
@@ -22,10 +19,6 @@ public class DashboardController(
 
     // ── GET /api/dashboard/aggregated ── T408 ─────────────────────────────────
 
-    /// <summary>
-    /// Returns the full dashboard payload for the user:
-    /// aggregated balances, account counts, monthly flow, top categories, last sync timestamp.
-    /// </summary>
     [HttpGet("aggregated")]
     public async Task<IActionResult> GetAggregated(CancellationToken ct)
     {
@@ -35,19 +28,15 @@ public class DashboardController(
 
     // ── GET /api/dashboard/transfers ── T410 ──────────────────────────────────
 
-    /// <summary>
-    /// Returns pairs of transactions that are likely internal transfers between accounts.
-    /// </summary>
     [HttpGet("transfers")]
     public async Task<IActionResult> GetTransfers(CancellationToken ct)
     {
         var allTx = (await _transactions.GetByUserIdAsync(User.RequireUserId(), ct)).ToList();
 
-        // Separate debits and credits that are candidates for transfer pairing
         var debits = allTx.Where(t => t.TransactionType == "debit" && !t.IsPending).ToList();
         var credits = allTx.Where(t => t.TransactionType == "credit" && !t.IsPending).ToList();
 
-        var pairs = new List<object>();
+        var pairs = new List<TransferPairDto>();
 
         foreach (var debit in debits)
         {
@@ -55,29 +44,17 @@ public class DashboardController(
             {
                 if (_transferDetection.IsLikelyTransfer(debit, credit))
                 {
-                    pairs.Add(new
-                    {
-                        debit = new
-                        {
-                            transactionId = debit.Id,
-                            accountId = debit.AccountId,
-                            amount = debit.Amount,
-                            date = debit.PostedDate ?? debit.TransactionDate,
-                            description = debit.Description
-                        },
-                        credit = new
-                        {
-                            transactionId = credit.Id,
-                            accountId = credit.AccountId,
-                            amount = credit.Amount,
-                            date = credit.PostedDate ?? credit.TransactionDate,
-                            description = credit.Description
-                        }
-                    });
+                    pairs.Add(new TransferPairDto(
+                        new TransferItemDto(
+                            debit.Id, debit.AccountId, debit.Amount,
+                            debit.PostedDate ?? debit.TransactionDate, debit.Description),
+                        new TransferItemDto(
+                            credit.Id, credit.AccountId, credit.Amount,
+                            credit.PostedDate ?? credit.TransactionDate, credit.Description)));
                 }
             }
         }
 
-        return Ok(new { transfers = pairs, count = pairs.Count });
+        return Ok(new TransferPairsResponse(pairs, pairs.Count));
     }
 }

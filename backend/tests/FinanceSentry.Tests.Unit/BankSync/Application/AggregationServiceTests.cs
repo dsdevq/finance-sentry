@@ -18,8 +18,7 @@ public class AggregationServiceTests
     private static BankAccount MakeAccount(string currency, decimal? balance, string accountType = "checking")
     {
         var a = new BankAccount(UserId, $"item_{Guid.NewGuid():N}", "Test Bank", accountType, "1234", "Owner", currency, UserId);
-        // StartSync then MarkActive to set balance, or just set via property
-        a.StartSync();
+        a.BeginSync();
         if (balance.HasValue)
             a.MarkActive(balance.Value);
         return a;

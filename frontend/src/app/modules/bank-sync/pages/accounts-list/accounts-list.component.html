@@ -18,9 +18,19 @@
   </div>
 
   @if (store.isLoading()) {
-    <div class="flex items-center justify-center py-cmn-16 text-text-secondary">
-      Loading accounts…
-    </div>
+    <cmn-card>
+      <div class="p-cmn-4 space-y-cmn-3">
+        @for (_ of skeletonRows; track $index) {
+          <div class="flex gap-cmn-4">
+            <cmn-skeleton height="1rem" width="5%" />
+            <cmn-skeleton height="1rem" width="25%" />
+            <cmn-skeleton height="1rem" width="20%" />
+            <cmn-skeleton height="1rem" width="30%" />
+            <cmn-skeleton height="1rem" width="20%" />
+          </div>
+        }
+      </div>
+    </cmn-card>
   }
 
   @if (store.errorMessage()) {

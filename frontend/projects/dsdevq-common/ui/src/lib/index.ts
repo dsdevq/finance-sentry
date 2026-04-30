@@ -1,6 +1,6 @@
 // Components
-export * from './components/app-layout/app-layout.component';
 export * from './components/alert/alert.component';
+export * from './components/app-layout/app-layout.component';
 export * from './components/badge/badge.component';
 export * from './components/button/button.component';
 export * from './components/card/card.component';
@@ -18,6 +18,7 @@ export * from './components/institution-avatar/institution-avatar.component';
 export * from './components/line-chart/line-chart.component';
 export * from './components/selectable-card/selectable-card.component';
 export * from './components/sidebar-nav/sidebar-nav.component';
+export * from './components/skeleton/skeleton.component';
 export * from './components/stat-card/stat-card.component';
 export * from './components/status-indicator/status-indicator.component';
 export * from './components/toast/toast.component';
@@ -25,6 +26,7 @@ export * from './components/toast/toast.service';
 export * from './components/top-bar/top-bar.component';
 
 // Directives
+export * from './directives/skeleton/skeleton.directive';
 export * from './directives/typography/typography.directive';
 
 // Services

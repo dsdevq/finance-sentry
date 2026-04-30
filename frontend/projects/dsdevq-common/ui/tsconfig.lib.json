@@ -11,5 +11,5 @@
     "types": ["google.accounts"]
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts"],
-  "exclude": ["**/*.spec.ts"]
+  "exclude": ["**/*.spec.ts", "**/*.stories.ts"]
 }

@@ -1,4 +1,5 @@
 import {inject, type Signal} from '@angular/core';
+import {ActivatedRoute} from '@angular/router';
 import {rxMethod} from '@ngrx/signals/rxjs-interop';
 import {EMPTY, pipe, switchMap, tap} from 'rxjs';
 
@@ -13,6 +14,7 @@ interface EffectsStore {
   endDate: Signal<string>;
   offset: Signal<number>;
   setLoading: () => void;
+  setAccountId: (id: string) => void;
   setResponse: (res: TransactionListResponse) => void;
   setError: (code: Nullable<string>) => void;
 }
@@ -35,7 +37,6 @@ export function transactionsEffects(store: EffectsStore) {
               limit: PAGE_SIZE,
               startDate: store.startDate() || undefined,
               endDate: store.endDate() || undefined,
-              sort: 'date:desc',
             })
             .pipe(
               tap(res => store.setResponse(res)),
@@ -44,5 +45,17 @@ export function transactionsEffects(store: EffectsStore) {
         })
       )
     ),
+  };
+}
+
+export function transactionsHooks(store: ReturnType<typeof transactionsEffects> & EffectsStore) {
+  const route = inject(ActivatedRoute);
+
+  return {
+    onInit: () => {
+      const accountId = route.snapshot.paramMap.get('accountId') ?? '';
+      store.setAccountId(accountId);
+      store.load();
+    },
   };
 }

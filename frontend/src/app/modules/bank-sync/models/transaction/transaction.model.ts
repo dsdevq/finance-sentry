@@ -1,3 +1,4 @@
+import {type PagedRequest, type PagedResponse} from '../../../../shared/models/api/api.model';
 import {type Timestamped} from '../../../../shared/models/timestamped/timestamped.model';
 
 export type TransactionType = 'debit' | 'credit';
@@ -15,11 +16,7 @@ export interface GlobalTransactionDto extends Timestamped {
   isPending: boolean;
 }
 
-export interface GlobalTransactionsResponse {
-  transactions: GlobalTransactionDto[];
-  totalCount: number;
-  hasMore: boolean;
-}
+export type GlobalTransactionsResponse = PagedResponse<GlobalTransactionDto>;
 
 export interface Transaction extends Timestamped {
   transactionId: string;
@@ -34,17 +31,19 @@ export interface Transaction extends Timestamped {
   syncedAt: string;
 }
 
-export interface TransactionListResponse {
+export interface TransactionListResponse extends PagedResponse<Transaction> {
   accountId: string;
   bankName: string;
   currency: string;
-  transactions: Transaction[];
-  pagination: OffsetPagination;
 }
 
-export interface TransactionQueryParams extends OffsetPaginationParams {
+export interface TransactionQueryParams extends PagedRequest {
   startDate?: string;
   endDate?: string;
   status?: 'posted' | 'pending' | 'all';
-  sort?: string;
+}
+
+export interface GetAllTransactionsParams extends PagedRequest {
+  from?: string;
+  to?: string;
 }

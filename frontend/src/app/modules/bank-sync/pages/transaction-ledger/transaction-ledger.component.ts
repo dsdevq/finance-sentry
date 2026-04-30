@@ -5,6 +5,7 @@ import {
   BadgeComponent,
   ButtonComponent,
   CardComponent,
+  SkeletonComponent,
   StatCardComponent,
 } from '@dsdevq-common/ui';
 
@@ -12,6 +13,8 @@ import {MerchantCategoryPipe} from '../../../../shared/pipes/merchant-category.p
 import {TransactionAmountPipe} from '../../pipes/transaction-amount.pipe';
 import {TransactionAmountClassPipe} from '../../pipes/transaction-amount-class.pipe';
 import {TransactionLedgerStore} from '../../store/transaction-ledger/transaction-ledger.store';
+
+const SKELETON_ROWS = 8;
 
 @Component({
   selector: 'fns-transaction-ledger',
@@ -23,6 +26,7 @@ import {TransactionLedgerStore} from '../../store/transaction-ledger/transaction
     DatePipe,
     DecimalPipe,
     MerchantCategoryPipe,
+    SkeletonComponent,
     StatCardComponent,
     TransactionAmountClassPipe,
     TransactionAmountPipe,
@@ -33,4 +37,5 @@ import {TransactionLedgerStore} from '../../store/transaction-ledger/transaction
 })
 export class TransactionLedgerComponent {
   public readonly store = inject(TransactionLedgerStore);
+  public readonly skeletonRows = Array.from({length: SKELETON_ROWS});
 }

@@ -1,6 +1,7 @@
 namespace FinanceSentry.Modules.BankSync.API.Controllers;
 
 using System.Text.Json;
+using FinanceSentry.Core.Api;
 using FinanceSentry.Infrastructure.Logging;
 using FinanceSentry.Modules.BankSync.Application.Services;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
@@ -52,7 +53,7 @@ public class WebhookController(
         var webhookKey = _config["Plaid:WebhookKey"] ?? string.Empty;
 
         if (!_signatureValidator.IsValid(rawBody, signatureHeader, webhookKey))
-            return Unauthorized(new { error = "Invalid webhook signature." });
+            return Unauthorized(new ApiErrorBody("Invalid webhook signature.", "INVALID_SIGNATURE"));
 
         // Parse payload
         JsonElement root;
@@ -62,7 +63,7 @@ public class WebhookController(
         }
         catch
         {
-            return BadRequest(new { error = "Invalid JSON payload." });
+            return BadRequest(new ApiErrorBody("Invalid JSON payload.", "INVALID_PAYLOAD"));
         }
 
         var webhookType = root.TryGetProperty("webhook_type", out var wt) ? wt.GetString() ?? "" : "";

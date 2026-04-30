@@ -1,5 +1,6 @@
 namespace FinanceSentry.Modules.BankSync.Application.Queries;
 
+using FinanceSentry.Core.Api;
 using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
 
@@ -21,14 +22,15 @@ public record GlobalTransactionDto(
 public record AllTransactionsResult(
     IReadOnlyList<GlobalTransactionDto> Transactions,
     int TotalCount,
-    bool HasMore);
+    bool HasMore,
+    int Offset,
+    int Limit);
 
 // ── Query ────────────────────────────────────────────────────────────────────
 
 public record GetAllTransactionsQuery(
     Guid UserId,
-    int Offset = 0,
-    int Limit = 50,
+    PagedRequest Paging,
     DateTime? From = null,
     DateTime? To = null
 ) : IQuery<AllTransactionsResult>;
@@ -62,7 +64,7 @@ public class GetAllTransactionsQueryHandler(
             .ToList();
 
         var totalCount = ordered.Count;
-        var page = ordered.Skip(request.Offset).Take(request.Limit).ToList();
+        var page = ordered.Skip(request.Paging.Offset).Take(request.Paging.Limit).ToList();
 
         var dtos = page.Select(t => new GlobalTransactionDto(
             t.Id,
@@ -78,6 +80,6 @@ public class GetAllTransactionsQueryHandler(
             t.CreatedAt
         )).ToList();
 
-        return new AllTransactionsResult(dtos, totalCount, request.Offset + request.Limit < totalCount);
+        return new AllTransactionsResult(dtos, totalCount, request.Paging.Offset + request.Paging.Limit < totalCount, request.Paging.Offset, request.Paging.Limit);
     }
 }

@@ -60,10 +60,10 @@ public class BankAccountTests
     // ── State machine transitions ───────────────────────────────────────────
 
     [Fact]
-    public void StartSync_FromPending_TransitionsToSyncing()
+    public void BeginSync_FromPending_TransitionsToSyncing()
     {
         var account = MakeAccount();
-        account.StartSync();
+        account.BeginSync();
 
         account.SyncStatus.Should().Be("syncing");
     }
@@ -72,7 +72,7 @@ public class BankAccountTests
     public void MarkActive_FromSyncing_TransitionsToActive()
     {
         var account = MakeAccount();
-        account.StartSync();
+        account.BeginSync();
         account.MarkActive(balance: 1500.00m);
 
         account.SyncStatus.Should().Be("active");
@@ -83,7 +83,7 @@ public class BankAccountTests
     public void MarkFailed_FromSyncing_TransitionsToFailed()
     {
         var account = MakeAccount();
-        account.StartSync();
+        account.BeginSync();
         account.MarkFailed("INSTITUTION_NOT_RESPONDING");
 
         account.SyncStatus.Should().Be("failed");
@@ -93,7 +93,7 @@ public class BankAccountTests
     public void MarkReauthRequired_FromAnyStatus_TransitionsToReauthRequired()
     {
         var account = MakeAccount();
-        account.StartSync();
+        account.BeginSync();
         account.MarkActive(1000m);
         account.MarkReauthRequired();
 
@@ -101,16 +101,26 @@ public class BankAccountTests
     }
 
     [Fact]
-    public void StartSync_FromActive_ThrowsInvalidOperationException()
+    public void BeginSync_WhileAlreadySyncing_ThrowsInvalidOperationException()
     {
         var account = MakeAccount();
-        account.StartSync();
-        account.MarkActive(500m);
+        account.BeginSync();
 
-        var act = () => account.StartSync();
+        var act = () => account.BeginSync();
 
-        act.Should().Throw<InvalidOperationException>(
-            "cannot start sync when already active (use MarkSyncing to re-trigger)");
+        act.Should().Throw<InvalidOperationException>("cannot sync an account that is already syncing");
+    }
+
+    [Fact]
+    public void BeginSync_FromFailed_TransitionsToSyncing()
+    {
+        var account = MakeAccount();
+        account.BeginSync();
+        account.MarkFailed("TIMEOUT");
+
+        account.BeginSync();
+
+        account.SyncStatus.Should().Be("syncing");
     }
 
     [Fact]

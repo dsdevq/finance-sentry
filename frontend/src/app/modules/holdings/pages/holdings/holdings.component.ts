@@ -10,6 +10,7 @@ import {
 } from '@dsdevq-common/ui';
 import {take} from 'rxjs';
 
+import {type Provider} from '../../../../shared/models/provider/provider.model';
 import {SyncStatusLabelPipe} from '../../../../shared/pipes/sync-status-label.pipe';
 import {SyncStatusVariantPipe} from '../../../../shared/pipes/sync-status-variant.pipe';
 import {DisconnectDialogComponent} from '../../../bank-sync/components/disconnect-dialog/disconnect-dialog.component';
@@ -17,6 +18,8 @@ import {CategoryLabelPipe} from '../../pipes/category-label.pipe';
 import {CurrencyAmountPipe} from '../../pipes/currency-amount.pipe';
 import {HoldingBalancePipe} from '../../pipes/holding-balance.pipe';
 import {HoldingsStore} from '../../store/holdings.store';
+
+const DISCONNECTABLE_PROVIDERS = new Set<Provider>(['binance', 'ibkr']);
 
 @Component({
   selector: 'fns-holdings',
@@ -44,7 +47,7 @@ export class HoldingsComponent {
   public readonly store = inject(HoldingsStore);
 
   public canDisconnect(provider: string): boolean {
-    return provider === 'binance' || provider === 'ibkr';
+    return DISCONNECTABLE_PROVIDERS.has(provider as Provider);
   }
 
   public disconnect(provider: string, displayName: string): void {

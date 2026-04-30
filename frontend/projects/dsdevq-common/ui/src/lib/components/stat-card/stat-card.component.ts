@@ -1,6 +1,7 @@
 import {ChangeDetectionStrategy, Component, computed, input} from '@angular/core';
 
 import {IconComponent, LucideIconName} from '../icon/icon.component';
+import {SkeletonComponent} from '../skeleton/skeleton.component';
 
 const POSITIVE_DELTA_CLASSES = 'text-status-success';
 const NEGATIVE_DELTA_CLASSES = 'text-status-error';
@@ -9,11 +10,15 @@ const NEUTRAL_DELTA_CLASSES = 'text-text-secondary';
 @Component({
   selector: 'cmn-stat-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent],
+  imports: [IconComponent, SkeletonComponent],
   template: `
-    <div class="flex flex-col gap-cmn-2 rounded-cmn-lg border border-border-default bg-surface-card p-cmn-4">
+    <div
+      class="flex flex-col gap-cmn-2 rounded-cmn-lg border border-border-default bg-surface-card p-cmn-4"
+    >
       <div class="flex items-center justify-between">
-        <span class="font-label text-cmn-xs font-semibold uppercase tracking-wide text-text-secondary">
+        <span
+          class="font-label text-cmn-xs font-semibold uppercase tracking-wide text-text-secondary"
+        >
           {{ label() }}
         </span>
         @if (icon()) {
@@ -22,8 +27,8 @@ const NEUTRAL_DELTA_CLASSES = 'text-text-secondary';
       </div>
 
       @if (loading()) {
-        <div class="h-8 w-3/4 animate-pulse rounded-cmn-sm bg-surface-raised"></div>
-        <div class="h-4 w-1/2 animate-pulse rounded-cmn-sm bg-surface-raised"></div>
+        <cmn-skeleton height="2rem" width="75%" className="mb-cmn-2" />
+        <cmn-skeleton height="1rem" width="50%" />
       } @else {
         <span class="font-mono text-cmn-2xl font-semibold tabular-nums text-text-primary">
           {{ value() }}
@@ -32,10 +37,10 @@ const NEUTRAL_DELTA_CLASSES = 'text-text-secondary';
           <div class="flex items-center gap-1">
             <cmn-icon
               [name]="delta()! >= 0 ? 'TrendingUp' : 'TrendingDown'"
-              size="sm"
               [class]="deltaClasses()"
+              size="sm"
             />
-            <span class="font-label text-cmn-xs font-medium" [class]="deltaClasses()">
+            <span [class]="deltaClasses()" class="font-label text-cmn-xs font-medium">
               {{ deltaLabel() }}
             </span>
           </div>
@@ -54,7 +59,9 @@ export class StatCardComponent {
 
   public readonly deltaClasses = computed(() => {
     const d = this.delta();
-    if (d === null) return NEUTRAL_DELTA_CLASSES;
+    if (d === null) {
+      return NEUTRAL_DELTA_CLASSES;
+    }
     return d >= 0 ? POSITIVE_DELTA_CLASSES : NEGATIVE_DELTA_CLASSES;
   });
 }

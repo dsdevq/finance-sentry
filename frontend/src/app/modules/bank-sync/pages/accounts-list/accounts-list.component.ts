@@ -6,6 +6,7 @@ import {
   CardComponent,
   CmnDialogService,
   InstitutionAvatarComponent,
+  SkeletonComponent,
   StatusIndicatorComponent,
 } from '@dsdevq-common/ui';
 import {take} from 'rxjs';
@@ -20,6 +21,8 @@ import {AccountBalancePipe} from '../../pipes/account-balance.pipe';
 import {AccountsStore} from '../../store/accounts/accounts.store';
 import {ConnectStore} from '../../store/connect/connect.store';
 
+const SKELETON_ROWS = 5;
+
 @Component({
   selector: 'fns-accounts-list',
   imports: [
@@ -30,6 +33,7 @@ import {ConnectStore} from '../../store/connect/connect.store';
     DecimalPipe,
     InstitutionAvatarComponent,
     RelativeTimePipe,
+    SkeletonComponent,
     StatusIndicatorComponent,
     SyncStatusLabelPipe,
     SyncStatusVariantPipe,
@@ -44,6 +48,7 @@ export class AccountsListComponent {
   private readonly connectStore = inject(ConnectStore);
 
   public readonly store = inject(AccountsStore);
+  public readonly skeletonRows = Array.from({length: SKELETON_ROWS});
 
   public connectAccount(): void {
     this.connectStore.openModal();

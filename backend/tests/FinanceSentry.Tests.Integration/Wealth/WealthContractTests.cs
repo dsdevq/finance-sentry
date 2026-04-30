@@ -54,7 +54,7 @@ public class WealthSummaryContractTests(WealthApiFactory factory) : IClassFixtur
     {
         var userId = _factory.TestUserId;
         var acc = new BankAccount(userId, "ext_001", "Chase", "checking", "1234", "Owner", "USD", userId, "plaid");
-        acc.StartSync();
+        acc.BeginSync();
         acc.MarkActive(1000m);
 
         _factory.BankAccountRepoMock

@@ -1,7 +1,7 @@
 import {patchState, type WritableStateSource} from '@ngrx/signals';
 
 import {type GlobalTransactionDto} from '../../models/transaction/transaction.model';
-import {type TransactionLedgerState} from './transaction-ledger.state';
+import {PAGE_SIZE, type TransactionLedgerState} from './transaction-ledger.state';
 
 export function transactionLedgerMethods(store: WritableStateSource<TransactionLedgerState>) {
   return {
@@ -20,6 +20,22 @@ export function transactionLedgerMethods(store: WritableStateSource<TransactionL
     },
     setOffset(offset: number): void {
       patchState(store, {offset});
+    },
+    nextPage(): void {
+      patchState(store, state => ({offset: state.offset + PAGE_SIZE}));
+    },
+    appendTransactions(
+      transactions: GlobalTransactionDto[],
+      totalCount: number,
+      hasMore: boolean
+    ): void {
+      patchState(store, state => ({
+        transactions: [...state.transactions, ...transactions],
+        totalCount,
+        hasMore,
+        status: 'idle' as AsyncStatus,
+        errorCode: null,
+      }));
     },
   };
 }

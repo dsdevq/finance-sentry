@@ -4,6 +4,7 @@ services:
   postgres:
     image: postgres:14-alpine
     container_name: finance-sentry-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_USER: finance_user
       POSTGRES_PASSWORD: finance_password

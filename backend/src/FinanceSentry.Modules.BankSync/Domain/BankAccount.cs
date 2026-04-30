@@ -66,15 +66,6 @@ public class BankAccount : Entity
         SyncStatus = "pending";
     }
 
-    public void StartSync()
-    {
-        if (SyncStatus != "pending" && SyncStatus != "reauth_required")
-            throw new InvalidOperationException(
-                $"Cannot start sync from status '{SyncStatus}'.");
-        SyncStatus = "syncing";
-        UpdatedAt = DateTime.UtcNow;
-    }
-
     public void MarkActive(decimal balance)
     {
         if (SyncStatus != "syncing")

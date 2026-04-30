@@ -1,7 +1,10 @@
 namespace FinanceSentry.Modules.BankSync.API.Controllers;
 
+using FinanceSentry.Core.Api;
 using FinanceSentry.Core.Auth;
 using FinanceSentry.Core.Cqrs;
+using FinanceSentry.Modules.BankSync.API.Extensions;
+using FinanceSentry.Modules.BankSync.API.Responses;
 using FinanceSentry.Modules.BankSync.Application.Commands;
 using FinanceSentry.Modules.BankSync.Application.Queries;
 using FinanceSentry.Modules.BankSync.Application.Services;
@@ -38,12 +41,10 @@ public class BankSyncController(
     public async Task<IActionResult> Connect(CancellationToken ct)
     {
         var result = await _plaid.CreateLinkTokenAsync(User.RequireUserId(), ct);
-        return Ok(new
-        {
-            linkToken = result.LinkToken,
-            expiresIn = (int)result.ExpiresIn.TotalSeconds,
-            requestId = result.RequestId
-        });
+        return Ok(new LinkTokenResponse(
+            result.LinkToken,
+            (int)result.ExpiresIn.TotalSeconds,
+            result.RequestId));
     }
 
     // ── POST /api/accounts/link ── T206 ──────────────────────────────────────
@@ -82,14 +83,10 @@ public class BankSyncController(
         CancellationToken ct = default)
     {
         var result = await _allTransactionsHandler.Handle(
-            new GetAllTransactionsQuery(User.RequireUserId(), offset, limit, from, to), ct);
+            new GetAllTransactionsQuery(User.RequireUserId(), new PagedRequest(offset, limit), from, to), ct);
 
-        return Ok(new
-        {
-            transactions = result.Transactions,
-            totalCount = result.TotalCount,
-            hasMore = result.HasMore
-        });
+        return Ok(PaginationExtensions.CreatePaginatedResponse(
+            result.Transactions, result.TotalCount, result.Offset, result.Limit));
     }
 
     // ── GET /api/accounts/{accountId}/transactions ── T208 ───────────────────
@@ -107,97 +104,92 @@ public class BankSyncController(
 
         var account = await _accounts.GetByIdAsync(accountId, ct);
         if (account == null || account.UserId != userId)
-            return NotFound(new { error = "Account not found." });
+            return NotFound(new ApiErrorBody("Account not found.", "ACCOUNT_NOT_FOUND"));
 
-        var transactions = (await _transactions.GetByAccountIdAsync(accountId, offset, limit, ct)).ToList();
+        var txList = (await _transactions.GetByAccountIdAsync(accountId, offset, limit, ct)).ToList();
         var totalCount = await _transactions.CountByAccountIdAsync(accountId, ct);
 
-        return Ok(new
-        {
-            transactions = transactions.Select(t => new
-            {
-                transactionId = t.Id,
-                amount = t.Amount,
-                date = t.TransactionDate,
-                postedDate = t.PostedDate,
-                description = t.Description,
-                transactionType = t.TransactionType,
-                merchantCategory = t.MerchantCategory,
-                isPending = t.IsPending,
-                createdAt = t.CreatedAt
-            }),
+        var items = txList.Select(t => new TransactionDto(
+            t.Id,
+            t.AccountId,
+            t.Amount,
+            t.TransactionDate,
+            t.PostedDate,
+            t.Description,
+            t.TransactionType,
+            t.MerchantCategory,
+            t.IsPending,
+            t.CreatedAt
+        )).ToList();
+
+        return Ok(new TransactionPageResponse(
+            account.Id.ToString(),
+            account.BankName,
+            account.Currency,
+            items,
             totalCount,
-            hasMore = (offset + limit) < totalCount
-        });
+            offset,
+            limit,
+            (offset + items.Count) < totalCount));
     }
 
     // ── POST /api/accounts/{accountId}/sync ── T308 ──────────────────────────
 
     [HttpPost("{accountId:guid}/sync")]
-    public async Task<IActionResult> TriggerSync(
-        Guid accountId,
-        CancellationToken ct)
+    public async Task<IActionResult> TriggerSync(Guid accountId, CancellationToken ct)
     {
         var userId = User.RequireUserId();
 
         var account = await _accounts.GetByIdAsync(accountId, ct);
         if (account == null || account.UserId != userId)
-            return NotFound(new { error = "Account not found." });
+            return NotFound(new ApiErrorBody("Account not found.", "ACCOUNT_NOT_FOUND"));
 
         if (await _syncJobs.HasRunningJobAsync(accountId, ct))
-            return Conflict(new { error = "A sync is already in progress for this account." });
+            return Conflict(new ApiErrorBody("A sync is already in progress for this account.", "SYNC_IN_PROGRESS"));
 
         var hangfireJobId = _backgroundJobs.Enqueue<Infrastructure.Jobs.ScheduledSyncJob>(
             job => job.ExecuteSyncAsync(accountId));
 
-        return Accepted(new
-        {
-            jobId = hangfireJobId,
-            message = "Sync enqueued. Use GET /api/accounts/{accountId}/sync-status to track progress."
-        });
+        return Accepted(new SyncEnqueuedResponse(
+            hangfireJobId,
+            "Sync enqueued. Use GET /api/accounts/{accountId}/sync-status to track progress."));
     }
 
     // ── GET /api/accounts/{accountId}/sync-status ── T309 ───────────────────
 
     [HttpGet("{accountId:guid}/sync-status")]
-    public async Task<IActionResult> GetSyncStatus(
-        Guid accountId,
-        CancellationToken ct)
+    public async Task<IActionResult> GetSyncStatus(Guid accountId, CancellationToken ct)
     {
         var userId = User.RequireUserId();
 
         var account = await _accounts.GetByIdAsync(accountId, ct);
         if (account == null || account.UserId != userId)
-            return NotFound(new { error = "Account not found." });
+            return NotFound(new ApiErrorBody("Account not found.", "ACCOUNT_NOT_FOUND"));
 
         var latestJob = await _syncJobs.GetLatestByAccountIdAsync(accountId, ct);
         if (latestJob == null)
-            return Ok(new { status = "never_synced", message = "No sync history for this account." });
+            return Ok(new SyncStatusResponse("never_synced", 0, 0, null, null, null, null));
 
-        return Ok(new
-        {
-            status = latestJob.Status,
-            transactionCountFetched = latestJob.TransactionCountFetched,
-            transactionCountDeduped = latestJob.TransactionCountDeduped,
-            errorMessage = latestJob.ErrorMessage,
-            lastSyncTimestamp = latestJob.CompletedAt,
-            startedAt = latestJob.StartedAt,
-            webhookTriggered = latestJob.WebhookTriggered
-        });
+        return Ok(new SyncStatusResponse(
+            latestJob.Status,
+            latestJob.TransactionCountFetched,
+            latestJob.TransactionCountDeduped,
+            latestJob.ErrorMessage,
+            latestJob.CompletedAt,
+            latestJob.StartedAt,
+            latestJob.CompletedAt));
     }
 
     // ── DELETE /api/accounts/{accountId} ── T309-A ───────────────────────────
 
     [HttpDelete("{accountId:guid}")]
-    public async Task<IActionResult> DeleteAccount(
-        Guid accountId,
-        CancellationToken ct)
+    public async Task<IActionResult> DeleteAccount(Guid accountId, CancellationToken ct)
     {
         var userId = User.RequireUserId();
 
         var account = await _accounts.GetByIdAsync(accountId, ct);
         if (account == null || account.UserId != userId)
-            return NotFound(new { error = "Account not found." });
+            return NotFound(new ApiErrorBody("Account not found.", "ACCOUNT_NOT_FOUND"));
 
         await _transactions.SoftDeleteByAccountIdAsync(accountId, ct);
         await _accounts.DeleteAsync(accountId, ct);
@@ -217,4 +209,3 @@ public class BankSyncController(
         return StatusCode(201, result);
     }
 }
-

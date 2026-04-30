@@ -9,12 +9,5 @@
       "@modules/*": ["./src/app/modules/*"]
     }
   },
-  "references": [
-    {
-      "path": "./projects/dsdevq-common/ui/tsconfig.lib.json"
-    },
-    {
-      "path": "./projects/dsdevq-common/ui/tsconfig.spec.json"
-    }
-  ]
+  "exclude": ["**/*.spec.ts", "**/*.stories.ts"]
 }

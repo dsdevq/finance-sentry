@@ -54,7 +54,7 @@ public class BankAccountConnectedEventHandler(
 
         try
         {
-            account.StartSync();
+            account.BeginSync();
             await _accounts.UpdateAsync(account, cancellationToken);
 
             // Decrypt access token (FR-003: never logged)

@@ -13,9 +13,10 @@ import {
 import {DashboardData} from '../models/dashboard/dashboard.model';
 import {SyncStatusResponse, TriggerSyncResponse} from '../models/sync/sync.model';
 import {
-  GlobalTransactionsResponse,
-  TransactionListResponse,
-  TransactionQueryParams,
+  type GetAllTransactionsParams,
+  type GlobalTransactionsResponse,
+  type TransactionListResponse,
+  type TransactionQueryParams,
 } from '../models/transaction/transaction.model';
 
 export type {DashboardData, SyncStatusResponse, TriggerSyncResponse};
@@ -60,10 +61,10 @@ export class BankSyncService {
   ): Observable<TransactionListResponse> {
     let params = new HttpParams();
     if (queryParams?.startDate) {
-      params = params.set('start_date', queryParams.startDate);
+      params = params.set('startDate', queryParams.startDate);
     }
     if (queryParams?.endDate) {
-      params = params.set('end_date', queryParams.endDate);
+      params = params.set('endDate', queryParams.endDate);
     }
     if (queryParams?.offset !== undefined) {
       params = params.set('offset', queryParams.offset.toString());
@@ -74,20 +75,14 @@ export class BankSyncService {
     if (queryParams?.status) {
       params = params.set('status', queryParams.status);
     }
-    if (queryParams?.sort) {
-      params = params.set('sort', queryParams.sort);
-    }
     return this.http.get<TransactionListResponse>(`${this.baseUrl}/${accountId}/transactions`, {
       params,
     });
   }
 
-  public getAllTransactions(params?: {
-    offset?: number;
-    limit?: number;
-    from?: string;
-    to?: string;
-  }): Observable<GlobalTransactionsResponse> {
+  public getAllTransactions(
+    params?: GetAllTransactionsParams
+  ): Observable<GlobalTransactionsResponse> {
     let httpParams = new HttpParams();
     if (params?.offset !== undefined) {
       httpParams = httpParams.set('offset', params.offset.toString());

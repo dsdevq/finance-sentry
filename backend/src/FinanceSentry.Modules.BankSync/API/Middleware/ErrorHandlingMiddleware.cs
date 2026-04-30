@@ -1,6 +1,7 @@
 namespace FinanceSentry.Modules.BankSync.API.Middleware;
 
 using System.Text.Json;
+using FinanceSentry.Core.Api;
 using FinanceSentry.Core.Exceptions;
 using FluentValidation;
 using Microsoft.AspNetCore.Http;
@@ -43,12 +44,9 @@ public class ErrorHandlingMiddleware(RequestDelegate next, ILogger<ErrorHandling
             context.Response.StatusCode = 400;
             context.Response.ContentType = "application/json";
 
-            var validationBody = new
-            {
-                error = "Validation failed.",
-                errorCode = "VALIDATION_ERROR",
-                details = validation.Errors.Select(e => e.ErrorMessage),
-            };
+            var validationBody = ApiErrorBody.From(
+                "Validation failed.", "VALIDATION_ERROR",
+                validation.Errors.Select(e => e.ErrorMessage));
             await context.Response.WriteAsync(JsonSerializer.Serialize(validationBody, _jsonOptions));
             return;
         }
@@ -70,7 +68,7 @@ public class ErrorHandlingMiddleware(RequestDelegate next, ILogger<ErrorHandling
         context.Response.StatusCode = statusCode;
         context.Response.ContentType = "application/json";
 
-        var response = new { error = userMessage, errorCode };
+        var response = new ApiErrorBody(userMessage, errorCode);
         await context.Response.WriteAsync(JsonSerializer.Serialize(response, _jsonOptions));
     }
 }

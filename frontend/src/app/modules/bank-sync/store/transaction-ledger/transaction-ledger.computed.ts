@@ -30,8 +30,7 @@ export function transactionLedgerComputed(store: StateSignals) {
       const now = new Date();
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
       return store
-        .transactions()
-        .filter(t => {
+        .transactions()?.filter(t => {
           const date = new Date(t.postedDate ?? t.date);
           return t.transactionType === 'debit' && date >= monthStart;
         })

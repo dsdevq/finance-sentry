@@ -19,8 +19,8 @@ export function transactionsMethods(store: WritableStateSource<TransactionsState
     },
     setResponse(res: TransactionListResponse): void {
       patchState(store, {
-        transactions: res.transactions,
-        totalCount: res.pagination.totalCount,
+        transactions: res.items,
+        totalCount: res.totalCount,
         bankName: res.bankName,
         currency: res.currency,
         status: 'idle',

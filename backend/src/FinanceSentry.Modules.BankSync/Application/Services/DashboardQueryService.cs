@@ -1,5 +1,6 @@
 namespace FinanceSentry.Modules.BankSync.Application.Services;
 
+using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
 
 /// <summary>
@@ -30,12 +31,16 @@ public class DashboardQueryService(
     IAggregationService aggregation,
     IMoneyFlowStatisticsService moneyFlow,
     IMerchantCategoryStatisticsService categories,
-    ISyncJobRepository syncJobs) : IDashboardQueryService
+    ISyncJobRepository syncJobs,
+    ICryptoHoldingsReader? cryptoHoldingsReader = null,
+    IBrokerageHoldingsReader? brokerageHoldingsReader = null) : IDashboardQueryService
 {
     private readonly IAggregationService _aggregation = aggregation ?? throw new ArgumentNullException(nameof(aggregation));
     private readonly IMoneyFlowStatisticsService _moneyFlow = moneyFlow ?? throw new ArgumentNullException(nameof(moneyFlow));
     private readonly IMerchantCategoryStatisticsService _categories = categories ?? throw new ArgumentNullException(nameof(categories));
     private readonly ISyncJobRepository _syncJobs = syncJobs ?? throw new ArgumentNullException(nameof(syncJobs));
+    private readonly ICryptoHoldingsReader? _cryptoHoldingsReader = cryptoHoldingsReader;
+    private readonly IBrokerageHoldingsReader? _brokerageHoldingsReader = brokerageHoldingsReader;
 
     /// <inheritdoc />
     public async Task<DashboardData> GetDashboardDataAsync(Guid userId, CancellationToken ct = default)
@@ -43,17 +48,25 @@ public class DashboardQueryService(
         // Sequential — DbContext is scoped per request and not thread-safe.
         // Fan-out would require IDbContextFactory.
         var balance = await _aggregation.GetAggregatedBalanceAsync(userId, ct);
-        var totalUsd = await _aggregation.GetTotalNetWorthUsdAsync(userId, ct);
+        var bankTotalUsd = await _aggregation.GetTotalNetWorthUsdAsync(userId, ct);
         var byType = await _aggregation.GetAccountCountByTypeAsync(userId, ct);
         var flow = await _moneyFlow.GetMonthlyFlowAsync(userId, 6, ct);
         var topCats = await _categories.GetTopCategoriesAsync(userId, 10, ct);
         var lastSync = await _syncJobs.GetLatestSuccessfulByUserIdAsync(userId, ct);
 
+        var cryptoTotalUsd = _cryptoHoldingsReader is not null
+            ? (await _cryptoHoldingsReader.GetHoldingsAsync(userId, ct)).Sum(h => h.UsdValue)
+            : 0m;
+
+        var brokerageTotalUsd = _brokerageHoldingsReader is not null
+            ? (await _brokerageHoldingsReader.GetHoldingsAsync(userId, ct)).Sum(h => h.UsdValue)
+            : 0m;
+
         var accountCount = byType.Values.Sum();
 
         return new DashboardData(
             balance,
-            totalUsd,
+            bankTotalUsd + cryptoTotalUsd + brokerageTotalUsd,
             accountCount,
             byType,
             flow,

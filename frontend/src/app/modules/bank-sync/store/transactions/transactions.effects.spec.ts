@@ -12,8 +12,11 @@ const SAMPLE_RESPONSE: TransactionListResponse = {
   accountId: 'a1',
   bankName: 'Chase',
   currency: 'USD',
-  transactions: [],
-  pagination: {offset: 0, limit: PAGE_SIZE, totalCount: 0, hasMore: false},
+  items: [],
+  totalCount: 0,
+  offset: 0,
+  limit: PAGE_SIZE,
+  hasMore: false,
 };
 
 function buildStore(accountId: string) {
@@ -23,6 +26,7 @@ function buildStore(accountId: string) {
     endDate: signal(''),
     offset: signal(0),
     setLoading: vi.fn(),
+    setAccountId: vi.fn(),
     setResponse: vi.fn(),
     setError: vi.fn(),
   };
@@ -71,7 +75,6 @@ describe('transactionsEffects', () => {
       limit: PAGE_SIZE,
       startDate: '2025-01-01',
       endDate: '2025-01-31',
-      sort: 'date:desc',
     });
     expect(store.setResponse).toHaveBeenCalledWith(SAMPLE_RESPONSE);
   });

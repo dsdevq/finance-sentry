@@ -12,7 +12,3 @@ export interface AuthResponse {
   user: UserDto;
   expiresAt: string;
 }
-
-export interface ApiError {
-  error: {errorCode?: string};
-}

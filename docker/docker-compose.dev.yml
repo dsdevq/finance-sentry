@@ -4,6 +4,7 @@ services:
       context: ..
       dockerfile: docker/Dockerfile.frontend
     container_name: finance-sentry-frontend
+    restart: unless-stopped
     ports:
       - "4200:4200"
     depends_on:
@@ -20,6 +21,7 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: finance-sentry-api
+    restart: unless-stopped
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:5000
@@ -53,6 +55,7 @@ services:
   ibkr-gateway:
     image: voyz/ibeam:latest
     container_name: finance-sentry-ibkr-gateway
+    restart: unless-stopped
     environment:
       IBEAM_ACCOUNT: ${IBKR_ACCOUNT:-}
       IBEAM_PASSWORD: ${IBKR_PASSWORD:-}
@@ -65,7 +68,6 @@ services:
       - "5055:5000"
     networks:
       - finance-sentry-network
-    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-skf", "https://localhost:5000/v1/api/iserver/auth/status"]
       interval: 30s
@@ -76,6 +78,7 @@ services:
   postgres:
     image: postgres:14-alpine
     container_name: finance-sentry-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_USER: finance_user
       POSTGRES_PASSWORD: finance_password
