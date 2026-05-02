@@ -1,11 +1,14 @@
 // Components
 export * from './components/alert/alert.component';
+export * from './components/command-palette/command-palette.component';
+export * from './components/command-palette/command-palette-item.model';
 export * from './components/app-layout/app-layout.component';
 export * from './components/badge/badge.component';
 export * from './components/button/button.component';
 export * from './components/card/card.component';
 export * from './components/data-table/data-table.component';
 export * from './components/dialog/dialog-actions.component';
+export * from './components/dialog/dialog-bare-container.component';
 export * from './components/dialog/dialog-config';
 export * from './components/dialog/dialog-container.component';
 export * from './components/dialog/dialog-ref';
@@ -23,6 +26,7 @@ export * from './components/stat-card/stat-card.component';
 export * from './components/status-indicator/status-indicator.component';
 export * from './components/toast/toast.component';
 export * from './components/toast/toast.service';
+export * from './components/toggle/toggle.component';
 export * from './components/top-bar/top-bar.component';
 
 // Directives

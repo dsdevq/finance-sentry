@@ -25,10 +25,10 @@ export class CmnDialogService {
     cdkConfig.autoFocus = config.autoFocus ?? 'first-tabbable';
     cdkConfig.title = config.title;
     cdkConfig.size = config.size ?? 'md';
-    cdkConfig.hasBackdrop = true;
-    cdkConfig.panelClass = ['cmn-dialog-panel', `cmn-dialog-panel--${cdkConfig.size}`];
-    cdkConfig.backdropClass = 'cmn-dialog-backdrop';
-    cdkConfig.container = CmnDialogContainerComponent;
+    cdkConfig.hasBackdrop = config.hasBackdrop ?? true;
+    cdkConfig.panelClass = config.panelClass ?? ['cmn-dialog-panel', `cmn-dialog-panel--${cdkConfig.size}`];
+    cdkConfig.backdropClass = config.hasBackdrop === false ? '' : 'cmn-dialog-backdrop';
+    cdkConfig.container = config.container ?? CmnDialogContainerComponent;
     cdkConfig.viewContainerRef = config.viewContainerRef;
     cdkConfig.injector = config.injector;
     const dataValue = config.data ?? null;

@@ -1,0 +1,26 @@
+import {patchState, type WritableStateSource} from '@ngrx/signals';
+
+import {type UserProfile} from '../../models/settings/settings.model';
+import {type SettingsState} from './settings.state';
+
+export function settingsMethods(store: WritableStateSource<SettingsState>) {
+  return {
+    setProfile(profile: UserProfile): void {
+      patchState(store, {profile, status: 'idle'});
+    },
+    updateProfile(partial: Partial<UserProfile>): void {
+      patchState(store, (s: SettingsState) => ({
+        profile: s.profile ? {...s.profile, ...partial} : s.profile,
+      }));
+    },
+    setProfileSaving(saving: boolean): void {
+      patchState(store, {profileSaving: saving});
+    },
+    setPasswordSaving(saving: boolean): void {
+      patchState(store, {passwordSaving: saving});
+    },
+    setShowDeleteConfirm(show: boolean): void {
+      patchState(store, {showDeleteConfirm: show});
+    },
+  };
+}

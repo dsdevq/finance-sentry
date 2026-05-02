@@ -1,4 +1,6 @@
+import {CdkDialogContainer} from '@angular/cdk/dialog';
 import {DialogConfig} from '@angular/cdk/dialog';
+import {type ComponentType} from '@angular/cdk/portal';
 import {type Injector, InjectionToken, type ViewContainerRef} from '@angular/core';
 
 export type CmnDialogSize = 'sm' | 'md' | 'lg' | 'full';
@@ -13,6 +15,10 @@ export interface CmnDialogOpenConfig<D = unknown> {
   autoFocus?: CmnDialogAutoFocus;
   viewContainerRef?: ViewContainerRef;
   injector?: Injector;
+  // Overrides for custom dialogs that manage their own overlay/chrome.
+  container?: ComponentType<CdkDialogContainer>;
+  hasBackdrop?: boolean;
+  panelClass?: string | string[];
 }
 
 export class CmnDialogConfig<D = unknown> extends DialogConfig<D> {

@@ -1,0 +1,21 @@
+export type BaseCurrency = 'USD' | 'EUR' | 'GBP' | 'UAH' | 'BTC';
+export type ThemePreference = 'system' | 'light' | 'dark';
+
+export interface UserProfile {
+  firstName: string;
+  lastName: string;
+  email: string;
+  baseCurrency: BaseCurrency;
+  theme: ThemePreference;
+  emailAlerts: boolean;
+  lowBalanceAlerts: boolean;
+  lowBalanceThreshold: number;
+  syncFailureAlerts: boolean;
+  twoFactor: boolean;
+}
+
+export interface PasswordForm {
+  current: string;
+  next: string;
+  confirm: string;
+}

@@ -50,6 +50,30 @@ export const APP_ROUTES: Routes = [
             m => m.HoldingsComponent
           ),
       },
+      {
+        path: AppRoute.Budgets.slice(1),
+        loadComponent: () =>
+          import('./modules/budgets/pages/budgets/budgets.component').then(m => m.BudgetsComponent),
+      },
+      {
+        path: AppRoute.Subscriptions.slice(1),
+        loadComponent: () =>
+          import('./modules/subscriptions/pages/subscriptions/subscriptions.component').then(
+            m => m.SubscriptionsComponent
+          ),
+      },
+      {
+        path: AppRoute.Alerts.slice(1),
+        loadComponent: () =>
+          import('./modules/alerts/pages/alerts/alerts.component').then(m => m.AlertsComponent),
+      },
+      {
+        path: AppRoute.Settings.slice(1),
+        loadComponent: () =>
+          import('./modules/settings/pages/settings/settings.component').then(
+            m => m.SettingsComponent
+          ),
+      },
       {path: '', redirectTo: AppRoute.Accounts, pathMatch: 'full'},
     ],
   },

@@ -2,7 +2,7 @@ import {computed, inject, type Signal} from '@angular/core';
 import {type ChartPoint, type DonutSegment, ErrorMessageService} from '@dsdevq-common/ui';
 
 import {MerchantCategoryUtils} from '../../../../shared/utils/merchant-category.utils';
-import {type DashboardData} from '../../models/dashboard/dashboard.model';
+import {type DashboardData, NET_WORTH_HISTORY_MOCK} from '../../models/dashboard/dashboard.model';
 
 interface StateSignals {
   data: Signal<Nullable<DashboardData>>;
@@ -69,6 +69,10 @@ export function dashboardComputed(store: StateSignals) {
         label: MerchantCategoryUtils.format(c.category),
         value: c.totalSpend,
       }))
+    ),
+
+    netWorthHistoryData: computed((): ChartPoint[] =>
+      NET_WORTH_HISTORY_MOCK.map(p => ({label: p.month, value: p.total}))
     ),
   };
 }

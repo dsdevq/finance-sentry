@@ -1,0 +1,311 @@
+<div class="p-cmn-6">
+  <div class="mx-auto max-w-[900px] space-y-cmn-10">
+    @if (store.profile(); as profile) {
+      <!-- ── Profile ── -->
+      <div
+        class="grid grid-cols-1 gap-cmn-10 border-b border-border-default pb-cmn-9 md:grid-cols-[280px_1fr]"
+      >
+        <div>
+          <h2 class="font-label text-cmn-sm font-semibold text-text-primary">Profile</h2>
+          <p class="mt-1 text-cmn-xs text-text-secondary leading-relaxed">
+            Your name and contact information shown throughout Finance Sentry.
+          </p>
+        </div>
+        <div class="space-y-cmn-4">
+          <div class="flex items-center gap-cmn-4">
+            <div
+              class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-accent-default font-bold text-lg text-white"
+            >
+              {{ store.avatarInitials() }}
+            </div>
+            <div>
+              <div class="font-label text-cmn-sm font-semibold text-text-primary">
+                {{ store.fullName() }}
+              </div>
+              <div class="text-cmn-xs text-text-secondary">{{ profile.email }}</div>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 gap-cmn-3 sm:grid-cols-2">
+            <cmn-form-field label="First Name" fieldId="s-first">
+              <cmn-input
+                [ngModel]="profile.firstName"
+                (ngModelChange)="store.updateProfile({firstName: $event})"
+                id="s-first"
+              />
+            </cmn-form-field>
+            <cmn-form-field label="Last Name" fieldId="s-last">
+              <cmn-input
+                [ngModel]="profile.lastName"
+                (ngModelChange)="store.updateProfile({lastName: $event})"
+                id="s-last"
+              />
+            </cmn-form-field>
+          </div>
+          <cmn-form-field label="Email Address" fieldId="s-email">
+            <cmn-input
+              [ngModel]="profile.email"
+              (ngModelChange)="store.updateProfile({email: $event})"
+              id="s-email"
+              type="email"
+            />
+          </cmn-form-field>
+          <div class="flex justify-end">
+            <cmn-button [loading]="store.profileSaving()" (clicked)="saveProfile()"
+              >Save Profile</cmn-button
+            >
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Preferences ── -->
+      <div
+        class="grid grid-cols-1 gap-cmn-10 border-b border-border-default pb-cmn-9 md:grid-cols-[280px_1fr]"
+      >
+        <div>
+          <h2 class="font-label text-cmn-sm font-semibold text-text-primary">Preferences</h2>
+          <p class="mt-1 text-cmn-xs text-text-secondary leading-relaxed">
+            Display settings and regional configuration.
+          </p>
+        </div>
+        <div class="space-y-cmn-4">
+          <div>
+            <label
+              for="s-currency"
+              class="font-label text-cmn-xs font-semibold uppercase tracking-widest text-text-secondary block mb-cmn-1"
+            >
+              Base Currency
+            </label>
+            <select
+              [ngModel]="profile.baseCurrency"
+              (ngModelChange)="store.updateProfile({baseCurrency: $event})"
+              id="s-currency"
+              class="w-full rounded-cmn-md border border-border-default bg-surface-card px-cmn-3 py-cmn-2 text-cmn-sm text-text-primary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-border-focus"
+            >
+              @for (opt of currencyOptions; track opt.value) {
+                <option [value]="opt.value">{{ opt.label }}</option>
+              }
+            </select>
+          </div>
+          <div>
+            <label
+              for="s-theme"
+              class="font-label text-cmn-xs font-semibold uppercase tracking-widest text-text-secondary block mb-cmn-1"
+            >
+              Theme
+            </label>
+            <select
+              [ngModel]="profile.theme"
+              (ngModelChange)="store.updateProfile({theme: $event})"
+              id="s-theme"
+              class="w-full rounded-cmn-md border border-border-default bg-surface-card px-cmn-3 py-cmn-2 text-cmn-sm text-text-primary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-border-focus"
+            >
+              @for (opt of themeOptions; track opt.value) {
+                <option [value]="opt.value">{{ opt.label }}</option>
+              }
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Notifications ── -->
+      <div
+        class="grid grid-cols-1 gap-cmn-10 border-b border-border-default pb-cmn-9 md:grid-cols-[280px_1fr]"
+      >
+        <div>
+          <h2 class="font-label text-cmn-sm font-semibold text-text-primary">Notifications</h2>
+          <p class="mt-1 text-cmn-xs text-text-secondary leading-relaxed">
+            Control when and how Finance Sentry alerts you.
+          </p>
+        </div>
+        <div class="space-y-cmn-5">
+          <div class="flex items-start justify-between gap-cmn-4">
+            <div>
+              <div class="font-label text-cmn-sm font-medium text-text-primary">Email alerts</div>
+              <div class="text-cmn-xs text-text-secondary mt-0.5 leading-relaxed">
+                Receive weekly digest and important account notifications.
+              </div>
+            </div>
+            <cmn-toggle
+              [checked]="profile.emailAlerts"
+              (toggled)="store.updateProfile({emailAlerts: $event})"
+              label="Email alerts"
+            />
+          </div>
+          <div class="flex items-start justify-between gap-cmn-4">
+            <div>
+              <div class="font-label text-cmn-sm font-medium text-text-primary">
+                Low balance warnings
+              </div>
+              <div class="text-cmn-xs text-text-secondary mt-0.5 leading-relaxed">
+                Get notified when an account drops below your threshold.
+              </div>
+            </div>
+            <cmn-toggle
+              [checked]="profile.lowBalanceAlerts"
+              (toggled)="store.updateProfile({lowBalanceAlerts: $event})"
+              label="Low balance warnings"
+            />
+          </div>
+          @if (profile.lowBalanceAlerts) {
+            <cmn-form-field label="Low balance threshold (USD)" fieldId="s-thresh">
+              <cmn-input
+                [ngModel]="profile.lowBalanceThreshold.toString()"
+                (ngModelChange)="store.updateProfile({lowBalanceThreshold: +$event || 0})"
+                id="s-thresh"
+                type="text"
+              />
+            </cmn-form-field>
+          }
+          <div class="flex items-start justify-between gap-cmn-4">
+            <div>
+              <div class="font-label text-cmn-sm font-medium text-text-primary">
+                Sync failure alerts
+              </div>
+              <div class="text-cmn-xs text-text-secondary mt-0.5 leading-relaxed">
+                Notify when a provider fails to sync for more than 24 hours.
+              </div>
+            </div>
+            <cmn-toggle
+              [checked]="profile.syncFailureAlerts"
+              (toggled)="store.updateProfile({syncFailureAlerts: $event})"
+              label="Sync failure alerts"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Security ── -->
+      <div
+        class="grid grid-cols-1 gap-cmn-10 border-b border-border-default pb-cmn-9 md:grid-cols-[280px_1fr]"
+      >
+        <div>
+          <h2 class="font-label text-cmn-sm font-semibold text-text-primary">Security</h2>
+          <p class="mt-1 text-cmn-xs text-text-secondary leading-relaxed">
+            Manage your password and two-factor authentication.
+          </p>
+        </div>
+        <div class="space-y-cmn-5">
+          <div class="flex items-start justify-between gap-cmn-4">
+            <div>
+              <div class="font-label text-cmn-sm font-medium text-text-primary">
+                Two-factor authentication
+              </div>
+              <div class="text-cmn-xs text-text-secondary mt-0.5 leading-relaxed">
+                Add an extra layer of security with an authenticator app.
+              </div>
+            </div>
+            <cmn-toggle
+              [checked]="profile.twoFactor"
+              (toggled)="store.updateProfile({twoFactor: $event})"
+              label="Two-factor authentication"
+            />
+          </div>
+
+          <!-- Change password form -->
+          <form
+            (submit)="$event.preventDefault(); changePassword()"
+            class="space-y-cmn-3 border-t border-border-default pt-cmn-4"
+          >
+            <div
+              class="font-label text-cmn-xs font-semibold uppercase tracking-widest text-text-secondary"
+            >
+              Change Password
+            </div>
+            <input [value]="profile.email" type="text" autocomplete="username" class="hidden" />
+            <cmn-form-field label="Current Password" fieldId="s-cpw">
+              <cmn-input
+                [ngModel]="pwCurrent()"
+                (ngModelChange)="pwCurrent.set($event)"
+                id="s-cpw"
+                name="s-cpw"
+                type="password"
+                autocomplete="current-password"
+                placeholder="••••••••"
+              />
+            </cmn-form-field>
+            <div class="grid grid-cols-1 gap-cmn-3 sm:grid-cols-2">
+              <cmn-form-field label="New Password" fieldId="s-npw">
+                <cmn-input
+                  [ngModel]="pwNext()"
+                  (ngModelChange)="pwNext.set($event)"
+                  id="s-npw"
+                  name="s-npw"
+                  type="password"
+                  autocomplete="new-password"
+                  placeholder="Min 8 chars"
+                />
+              </cmn-form-field>
+              <cmn-form-field label="Confirm Password" fieldId="s-rpw">
+                <cmn-input
+                  [ngModel]="pwConfirm()"
+                  (ngModelChange)="pwConfirm.set($event)"
+                  id="s-rpw"
+                  name="s-rpw"
+                  type="password"
+                  autocomplete="new-password"
+                  placeholder="Repeat"
+                />
+              </cmn-form-field>
+            </div>
+            <div class="flex justify-end">
+              <cmn-button
+                [loading]="store.passwordSaving()"
+                (clicked)="changePassword()"
+                variant="secondary"
+                icon="KeyRound"
+                >Update Password</cmn-button
+              >
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- ── Danger zone ── -->
+      <div
+        class="flex items-center justify-between gap-cmn-4 rounded-cmn-lg border border-status-error/30 bg-status-error/[0.04] p-cmn-5"
+      >
+        <div>
+          <div class="font-label text-cmn-sm font-semibold text-status-error">Danger Zone</div>
+          <div class="mt-1 text-cmn-xs text-text-secondary leading-relaxed">
+            Permanently delete your account and all associated data. This cannot be undone.
+          </div>
+        </div>
+        <cmn-button (clicked)="store.setShowDeleteConfirm(true)" variant="destructive" size="sm">
+          Delete Account
+        </cmn-button>
+      </div>
+
+      <!-- Sign out -->
+      <div class="flex justify-end pb-cmn-6">
+        <cmn-button (clicked)="signOut()" variant="secondary" icon="LogOut">Sign out</cmn-button>
+      </div>
+    }
+
+    <!-- Delete confirm dialog -->
+    @if (store.showDeleteConfirm()) {
+      <div
+        (click)="store.setShowDeleteConfirm(false)"
+        class="fixed inset-0 z-50 flex items-center justify-center p-cmn-4"
+      >
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+        <cmn-card (click)="$event.stopPropagation()" class="relative z-10 w-full max-w-sm">
+          <h2 class="font-headline text-base font-semibold text-text-primary mb-cmn-2">
+            Delete your account?
+          </h2>
+          <p class="text-cmn-sm text-text-secondary mb-cmn-4 leading-relaxed">
+            All your connected accounts, transactions, and settings will be permanently erased. This
+            action cannot be reversed.
+          </p>
+          <div class="flex justify-end gap-cmn-2">
+            <cmn-button (clicked)="store.setShowDeleteConfirm(false)" variant="secondary"
+              >Cancel</cmn-button
+            >
+            <cmn-button (clicked)="deleteAccount()" variant="destructive"
+              >Delete Forever</cmn-button
+            >
+          </div>
+        </cmn-card>
+      </div>
+    }
+  </div>
+</div>

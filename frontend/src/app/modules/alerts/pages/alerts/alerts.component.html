@@ -1,0 +1,126 @@
+<div class="p-cmn-6">
+  <div class="mx-auto max-w-[860px] space-y-cmn-5">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="font-headline text-2xl font-bold text-text-primary">Alerts</h1>
+        <p class="mt-1 text-cmn-sm text-text-secondary">
+          @if (store.unreadCount() > 0) {
+            {{ store.unreadCount() }} unread {{ store.unreadCount() === 1 ? 'alert' : 'alerts' }}
+          } @else {
+            All caught up
+          }
+        </p>
+      </div>
+      <div class="flex gap-cmn-2">
+        @if (store.unreadCount() > 0) {
+          <cmn-button (clicked)="markAllRead()" variant="secondary" size="sm" icon="CheckCheck">
+            Mark all read
+          </cmn-button>
+        }
+        @if (store.alerts().length > 0) {
+          <cmn-button (clicked)="clearAll()" variant="secondary" size="sm">Clear all</cmn-button>
+        }
+      </div>
+    </div>
+
+    <!-- Filter chips -->
+    <div class="flex flex-wrap gap-cmn-2">
+      @for (opt of filterOptions; track opt.id) {
+        <button
+          [class.border-accent-default]="store.filter() === opt.id"
+          [class.bg-accent-subtle]="store.filter() === opt.id"
+          [class.text-accent-default]="store.filter() === opt.id"
+          [class.border-border-default]="store.filter() !== opt.id"
+          [class.text-text-secondary]="store.filter() !== opt.id"
+          (click)="store.setFilter(opt.id)"
+          class="rounded-full border px-cmn-3 py-cmn-1 font-label text-cmn-xs font-medium transition-colors"
+        >
+          {{ opt.label() }}
+        </button>
+      }
+    </div>
+
+    <!-- Alert list -->
+    @if (store.filtered().length === 0) {
+      <cmn-card>
+        <div class="flex flex-col items-center py-cmn-12 text-center">
+          <cmn-icon name="CheckCircle2" size="lg" class="mb-cmn-3 text-status-success" />
+          <div class="font-label text-cmn-sm font-semibold text-text-primary mb-1">
+            {{ store.filter() === 'all' ? 'No alerts' : 'No ' + store.filter() + ' alerts' }}
+          </div>
+          <div class="text-cmn-xs text-text-secondary">
+            {{
+              store.filter() === 'all'
+                ? 'All your accounts are healthy.'
+                : 'Try a different filter.'
+            }}
+          </div>
+        </div>
+      </cmn-card>
+    } @else {
+      <div class="space-y-cmn-2">
+        @for (alert of store.filtered(); track alert.id) {
+          @let color = colorFor(alert.severity);
+          <div
+            [class.border-border-default]="alert.read"
+            [class.bg-surface-card]="alert.read"
+            [style.border-color]="!alert.read ? color + '30' : ''"
+            [style.background]="!alert.read ? color + '08' : ''"
+            (click)="!alert.read && store.markRead(alert.id)"
+            class="relative flex cursor-pointer items-start gap-cmn-3 rounded-cmn-lg border p-cmn-4 transition-colors"
+          >
+            <!-- Unread dot -->
+            @if (!alert.read) {
+              <div
+                [style.background]="color"
+                class="absolute right-cmn-3 top-cmn-3 h-2 w-2 rounded-full"
+              ></div>
+            }
+
+            <!-- Icon -->
+            <div
+              [style.background]="color + '18'"
+              class="flex h-9 w-9 shrink-0 items-center justify-center rounded-cmn-md"
+            >
+              <cmn-icon [name]="iconFor(alert.type)" [style.color]="color" size="sm" />
+            </div>
+
+            <!-- Content -->
+            <div class="flex-1 min-w-0">
+              <div class="mb-cmn-1 flex flex-wrap items-center gap-cmn-2">
+                <span
+                  [class.text-text-primary]="alert.read"
+                  [style.color]="!alert.read ? color : ''"
+                  class="font-label text-cmn-sm font-semibold"
+                  >{{ alert.title }}</span
+                >
+                <cmn-badge [variant]="alert.severity">{{ alert.type.replace('_', ' ') }}</cmn-badge>
+                @if (alert.account) {
+                  <span
+                    class="rounded bg-surface-raised px-1.5 py-0.5 text-[11px] text-text-disabled"
+                    >{{ alert.account }}</span
+                  >
+                }
+              </div>
+              <p class="mb-cmn-2 text-cmn-xs leading-relaxed text-text-secondary">
+                {{ alert.body }}
+              </p>
+              <span class="text-[11px] text-text-disabled">{{
+                relativeTime(alert.timestamp)
+              }}</span>
+            </div>
+
+            <!-- Dismiss button -->
+            <button
+              (click)="$event.stopPropagation(); dismiss(alert.id)"
+              class="flex shrink-0 rounded p-1 text-text-disabled transition-colors hover:bg-surface-raised hover:text-text-primary"
+            >
+              <cmn-icon name="X" size="sm" />
+            </button>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>

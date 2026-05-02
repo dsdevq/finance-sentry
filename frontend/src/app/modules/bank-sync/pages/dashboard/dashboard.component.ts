@@ -42,7 +42,12 @@ const CATEGORY_COLUMNS: TableColumn<CategoryStat>[] = [
   providers: [DashboardStore],
   template: `
     <div class="p-cmn-6">
-      <div class="mx-auto max-w-screen-xl space-y-cmn-8">
+      <div class="mx-auto max-w-screen-lg space-y-cmn-6">
+        <div>
+          <h1 class="font-headline text-2xl font-bold text-text-primary">Dashboard</h1>
+          <p class="mt-1 text-cmn-sm text-text-secondary">Your financial overview at a glance</p>
+        </div>
+
         @if (store.errorMessage()) {
           <cmn-alert variant="error">{{ store.errorMessage() }}</cmn-alert>
         }
@@ -73,6 +78,12 @@ const CATEGORY_COLUMNS: TableColumn<CategoryStat>[] = [
             icon="TrendingDown"
           />
         </div>
+
+        <cmn-line-chart
+          [data]="store.netWorthHistoryData()"
+          label="Net Worth History (13 months)"
+          currency="USD"
+        />
 
         <div class="grid grid-cols-1 gap-cmn-4 lg:grid-cols-3">
           <div class="lg:col-span-2">
