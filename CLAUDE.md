@@ -330,6 +330,8 @@ After **all tasks in a feature are complete**, act as a QA engineer: spin up the
 ## Active Technologies
 - TypeScript 5.x strict, Angular 21.2 (frontend only — no backend changes) + `@ngrx/signals` 21.1, `@dsdevq-common/ui` (local lib), Angular ReactiveForms, Plaid Link client SDK (already loaded by `PlaidLinkService`) (011-connect-providers)
 - N/A on frontend; credentials are transient form state, never persisted (011-connect-providers)
+- C# 13/.NET 9 (backend) · TypeScript 5.x strict / Angular 21.2 (frontend) + ASP.NET Core 9, EF Core 9, MediatR, Hangfire · NgRx SignalStore 21.1, @dsdevq-common/ui (015-net-worth-history)
+- PostgreSQL 14 — new `net_worth_snapshots` table in `NetWorthHistoryDbContext` (015-net-worth-history)
 
 - `@ngrx/signals` 21.1.0 (NgRx SignalStore) — pilot AuthStore 2026-04-24, extended to DashboardStore + AccountsStore same day
 - C# 13 / .NET 9 (backend) · TypeScript 5.x strict (frontend) + ASP.NET Core 9, EF Core 9, MediatR, ASP.NET Core Identity (`Microsoft.AspNetCore.Identity.EntityFrameworkCore`), Npgsql.EF Core (backend) · Angular 20, RxJS, Angular standalone routing (frontend) (003-auth-flow)
