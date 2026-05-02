@@ -82,6 +82,7 @@ const CATEGORY_COLUMNS: TableColumn<CategoryStat>[] = [
         <cmn-line-chart
           [data]="store.netWorthHistoryData()"
           label="Net Worth History (13 months)"
+          class="flex mt-4"
           currency="USD"
         />
 

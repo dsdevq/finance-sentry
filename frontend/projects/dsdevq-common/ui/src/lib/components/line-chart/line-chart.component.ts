@@ -31,7 +31,7 @@ export interface ChartPoint {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div
-      class="flex flex-col gap-cmn-3 rounded-cmn-lg border border-border-default bg-surface-card p-cmn-4"
+      class="flex w-full flex-col gap-cmn-3 rounded-cmn-lg border border-border-default bg-surface-card p-cmn-4"
     >
       <span
         class="font-label text-cmn-xs font-semibold uppercase tracking-wide text-text-secondary"
