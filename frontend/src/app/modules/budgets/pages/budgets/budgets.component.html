@@ -17,9 +17,9 @@
           [class.text-text-primary]="store.totalSpent() <= store.totalBudget()"
           class="mt-1 font-mono text-xl font-bold"
         >
-          {{ fmt(store.totalSpent()) }}
+          {{ store.totalSpent() | appCurrency }}
           <span class="text-cmn-sm font-normal text-text-secondary"
-            >/ {{ fmt(store.totalBudget()) }}</span
+            >/ {{ store.totalBudget() | appCurrency }}</span
           >
         </div>
       </div>
@@ -46,7 +46,7 @@
           [class.text-text-primary]="store.totalSpent() <= store.totalBudget()"
           class="font-mono text-cmn-sm font-semibold"
         >
-          {{ store.overallPct().toFixed(0) }}%
+          {{ store.overallPct() | appDecimal: '1.0-0' }}%
         </span>
       </div>
       <!-- Main bar -->
@@ -64,7 +64,7 @@
           <div
             [style.flex]="b.spent"
             [style.background]="b.color"
-            [title]="b.category + ': ' + fmt(b.spent)"
+            [title]="b.category + ': ' + (b.spent | appCurrency)"
             class="min-w-[2px] transition-[flex] duration-300"
           ></div>
         }
@@ -119,7 +119,7 @@
               [class.text-status-error]="over"
               [class.text-text-primary]="!over"
               class="font-mono text-base font-bold"
-              >{{ fmt(b.spent) }}</span
+              >{{ b.spent | appCurrency }}</span
             >
 
             @if (isEditing) {
@@ -140,7 +140,7 @@
                 (click)="startEdit(b.category, b.limit)"
                 class="rounded px-1 py-0.5 font-mono text-cmn-xs text-text-disabled transition-colors hover:bg-accent-subtle hover:text-accent-default"
               >
-                / {{ fmt(b.limit) }} ✎
+                / {{ b.limit | appCurrency }} ✎
               </button>
             }
           </div>
@@ -152,9 +152,10 @@
             class="text-cmn-xs"
           >
             @if (over) {
-              {{ fmt(b.spent - b.limit) }} over budget
+              {{ b.spent - b.limit | appCurrency }} over budget
             } @else {
-              {{ fmt(b.limit - b.spent) }} remaining · {{ pct.toFixed(0) }}% used
+              {{ b.limit - b.spent | appCurrency }} remaining ·
+              {{ pct | appDecimal: '1.0-0' }}% used
             }
           </div>
         </cmn-card>

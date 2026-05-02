@@ -12,8 +12,16 @@
 
     <!-- Summary cards -->
     <div class="grid grid-cols-1 gap-cmn-4 sm:grid-cols-3">
-      <cmn-stat-card [value]="fmt(store.monthlyTotal())" label="Monthly Cost" icon="Zap" />
-      <cmn-stat-card [value]="fmt(store.yearlyTotal())" label="Annual Cost" icon="TrendingUp" />
+      <cmn-stat-card
+        [value]="(store.monthlyTotal() | appCurrency) ?? ''"
+        label="Monthly Cost"
+        icon="Zap"
+      />
+      <cmn-stat-card
+        [value]="(store.yearlyTotal() | appCurrency) ?? ''"
+        label="Annual Cost"
+        icon="TrendingUp"
+      />
       <cmn-stat-card
         [value]="store.activeSubscriptions().length.toString() + ' subscriptions'"
         label="Active"
@@ -77,7 +85,7 @@
                 [class.text-text-secondary]="!soon"
                 class="text-cmn-xs"
               >
-                {{ fmtDate(sub.nextDate) }}
+                {{ sub.nextDate | date: 'mediumDate' }}
               </div>
               <div
                 [class.text-status-warning]="soon"
@@ -91,7 +99,7 @@
             <!-- Amount -->
             <div class="min-w-[72px] text-right">
               <div class="font-mono text-cmn-sm font-semibold text-text-primary">
-                {{ fmt(sub.amount) }}
+                {{ sub.amount | appCurrency }}
               </div>
               <div class="text-[10px] text-text-disabled">/ mo</div>
             </div>
@@ -147,7 +155,7 @@
               </div>
               <div class="min-w-[72px] text-right">
                 <div class="font-mono text-cmn-sm font-semibold text-text-primary">
-                  {{ fmt(sub.amount) }}
+                  {{ sub.amount | appCurrency }}
                 </div>
                 <div class="text-[10px] text-text-disabled">/ mo</div>
               </div>

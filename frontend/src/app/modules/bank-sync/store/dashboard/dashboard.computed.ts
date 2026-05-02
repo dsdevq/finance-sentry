@@ -1,3 +1,4 @@
+import {CurrencyPipe} from '@angular/common';
 import {computed, inject, type Signal} from '@angular/core';
 import {type ChartPoint, type DonutSegment, ErrorMessageService} from '@dsdevq-common/ui';
 
@@ -12,13 +13,6 @@ interface StateSignals {
 
 const DEFAULT_ERROR_MESSAGE = 'Failed to load dashboard data. Please try again.';
 
-const USD_FORMATTER = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
 const COMPACT_FORMATTER = new Intl.NumberFormat('en-US', {
   style: 'currency',
   currency: 'USD',
@@ -29,6 +23,7 @@ const COMPACT_FORMATTER = new Intl.NumberFormat('en-US', {
 
 export function dashboardComputed(store: StateSignals) {
   const errorMessages = inject(ErrorMessageService);
+  const currency = inject(CurrencyPipe);
 
   return {
     isLoading: computed(() => store.status() === 'loading'),
@@ -41,8 +36,8 @@ export function dashboardComputed(store: StateSignals) {
     currencyEntries: computed(() => Object.entries(store.data()?.aggregatedBalance ?? {})),
     accountTypeEntries: computed(() => Object.entries(store.data()?.accountsByType ?? {})),
 
-    totalBalanceFormatted: computed(() =>
-      USD_FORMATTER.format(store.data()?.totalNetWorthUsd ?? 0)
+    totalBalanceFormatted: computed(
+      () => currency.transform(store.data()?.totalNetWorthUsd ?? 0) ?? ''
     ),
 
     latestInflowFormatted: computed(() => {

@@ -2,15 +2,23 @@ import {ChangeDetectionStrategy, Component, inject, signal} from '@angular/core'
 import {FormsModule} from '@angular/forms';
 import {AlertComponent, BadgeComponent, CardComponent} from '@dsdevq-common/ui';
 
+import {AppCurrencyPipe} from '../../../../core/pipes/app-currency.pipe';
+import {AppDecimalPipe} from '../../../../core/pipes/app-decimal.pipe';
 import {BudgetsStore} from '../../store/budgets/budgets.store';
 
-const USD = new Intl.NumberFormat('en-US', {style: 'currency', currency: 'USD'});
 const PCT_MAX = 100;
 const PCT_WARNING_THRESHOLD = 80;
 
 @Component({
   selector: 'fns-budgets',
-  imports: [AlertComponent, BadgeComponent, CardComponent, FormsModule],
+  imports: [
+    AlertComponent,
+    AppCurrencyPipe,
+    AppDecimalPipe,
+    BadgeComponent,
+    CardComponent,
+    FormsModule,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [BudgetsStore],
   templateUrl: './budgets.component.html',
@@ -19,10 +27,6 @@ export class BudgetsComponent {
   public readonly store = inject(BudgetsStore);
 
   public readonly editValue = signal('');
-
-  public fmt(n: number): string {
-    return USD.format(n);
-  }
 
   public barPct(spent: number, limit: number): number {
     return Math.min((spent / limit) * PCT_MAX, PCT_MAX);

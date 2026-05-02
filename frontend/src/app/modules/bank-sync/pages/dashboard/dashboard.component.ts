@@ -1,3 +1,4 @@
+import {CurrencyPipe, DecimalPipe} from '@angular/common';
 import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
 import {
   AlertComponent,
@@ -12,22 +13,7 @@ import {MerchantCategoryUtils} from '../../../../shared/utils/merchant-category.
 import {type CategoryStat} from '../../models/dashboard/dashboard.model';
 import {DashboardStore} from '../../store/dashboard/dashboard.store';
 
-const CATEGORY_COLUMNS: TableColumn<CategoryStat>[] = [
-  {key: 'category', header: 'Category', cell: r => MerchantCategoryUtils.format(r.category)},
-  {
-    key: 'spend',
-    header: 'Total Spend',
-    align: 'right',
-    cell: r =>
-      new Intl.NumberFormat('en-US', {style: 'currency', currency: 'USD'}).format(r.totalSpend),
-  },
-  {
-    key: 'pct',
-    header: '% of Total',
-    align: 'right',
-    cell: r => `${r.percentOfTotal.toFixed(1)}%`,
-  },
-];
+const PERCENT_DIGITS = '1.1-1';
 
 @Component({
   selector: 'fns-dashboard',
@@ -114,6 +100,23 @@ const CATEGORY_COLUMNS: TableColumn<CategoryStat>[] = [
   `,
 })
 export class DashboardComponent {
+  private readonly currency = inject(CurrencyPipe);
+  private readonly decimal = inject(DecimalPipe);
+
   public readonly store = inject(DashboardStore);
-  public readonly categoryColumns = CATEGORY_COLUMNS;
+  public readonly categoryColumns: TableColumn<CategoryStat>[] = [
+    {key: 'category', header: 'Category', cell: r => MerchantCategoryUtils.format(r.category)},
+    {
+      key: 'spend',
+      header: 'Total Spend',
+      align: 'right',
+      cell: r => this.currency.transform(r.totalSpend) ?? '',
+    },
+    {
+      key: 'pct',
+      header: '% of Total',
+      align: 'right',
+      cell: r => `${this.decimal.transform(r.percentOfTotal, PERCENT_DIGITS)}%`,
+    },
+  ];
 }
