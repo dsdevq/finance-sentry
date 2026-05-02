@@ -1,7 +1,9 @@
 import {provideHttpClient, withInterceptors} from '@angular/common/http';
 import {type ApplicationConfig} from '@angular/core';
 import {provideRouter} from '@angular/router';
+import {provideApiBaseUrl} from '@dsdevq-common/core';
 
+import {environment} from '../environments/environment';
 import {APP_ROUTES} from './app.routes';
 import {provideAppIcons} from './core/providers/app-icons.provider';
 import {provideAppInit} from './core/providers/app-init.provider';
@@ -15,6 +17,7 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(APP_ROUTES),
     provideHttpClient(withInterceptors([authInterceptor])),
+    provideApiBaseUrl(environment.apiBaseUrl),
     provideErrorHandler(),
     provideErrorMessages(),
     provideAppIcons(),

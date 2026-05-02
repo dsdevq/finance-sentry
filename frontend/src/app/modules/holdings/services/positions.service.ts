@@ -1,9 +1,8 @@
-import {HttpClient} from '@angular/common/http';
-import {inject, Injectable} from '@angular/core';
+import {Injectable} from '@angular/core';
+import {ApiService} from '@dsdevq-common/core';
 import {forkJoin, map, type Observable, of} from 'rxjs';
 import {catchError} from 'rxjs/operators';
 
-import {environment} from '../../../../environments/environment';
 import {
   type BrokerageHoldingsDto,
   type CryptoHoldingsDto,
@@ -25,18 +24,17 @@ function mockPnl(symbol: string): number {
 }
 
 @Injectable({providedIn: 'root'})
-export class PositionsService {
-  private readonly http = inject(HttpClient);
-  private readonly baseUrl = environment.apiBaseUrl;
+export class PositionsService extends ApiService {
+  constructor() {
+    super('');
+  }
 
   public getPositions(): Observable<Position[]> {
-    const brokerage$ = this.http
-      .get<BrokerageHoldingsDto>(`${this.baseUrl}/brokerage/holdings`)
-      .pipe(catchError(() => of(null)));
+    const brokerage$ = this.get<BrokerageHoldingsDto>('brokerage/holdings').pipe(
+      catchError(() => of(null))
+    );
 
-    const crypto$ = this.http
-      .get<CryptoHoldingsDto>(`${this.baseUrl}/crypto/holdings`)
-      .pipe(catchError(() => of(null)));
+    const crypto$ = this.get<CryptoHoldingsDto>('crypto/holdings').pipe(catchError(() => of(null)));
 
     return forkJoin([brokerage$, crypto$]).pipe(
       map(([brokerage, crypto]) => {

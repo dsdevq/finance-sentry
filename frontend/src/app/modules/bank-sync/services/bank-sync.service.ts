@@ -1,5 +1,5 @@
-import {HttpClient, HttpParams} from '@angular/common/http';
-import {inject, Injectable} from '@angular/core';
+import {Injectable} from '@angular/core';
+import {ApiService} from '@dsdevq-common/core';
 import {Observable, timer} from 'rxjs';
 import {shareReplay, switchMap, takeWhile} from 'rxjs/operators';
 
@@ -21,95 +21,58 @@ import {
 
 export type {DashboardData, SyncStatusResponse, TriggerSyncResponse};
 
+const DEFAULT_SYNC_POLL_INTERVAL_MS = 2000;
+
 @Injectable({providedIn: 'root'})
-export class BankSyncService {
-  private readonly http = inject(HttpClient);
-  private readonly baseUrl = `${environment.apiBaseUrl}/accounts`;
+export class BankSyncService extends ApiService {
+  constructor() {
+    super('accounts');
+  }
 
   public connectMonobank(token: string): Observable<ConnectMonobankResponse> {
-    return this.http.post<ConnectMonobankResponse>(`${this.baseUrl}/monobank/connect`, {token});
+    return this.post<ConnectMonobankResponse>('monobank/connect', {token});
   }
 
   public getLinkToken(): Observable<ConnectResponse> {
-    return this.http.post<ConnectResponse>(`${this.baseUrl}/connect`, {});
+    return this.post<ConnectResponse>('connect');
   }
 
   public exchangePublicToken(
     publicToken: string,
     institutionName: string
   ): Observable<LinkAccountResponse> {
-    return this.http.post<LinkAccountResponse>(`${this.baseUrl}/link`, {
-      publicToken,
-      institutionName,
-    });
+    return this.post<LinkAccountResponse>('link', {publicToken, institutionName});
   }
 
   public getAccounts(status?: string, currency?: string): Observable<AccountsResponse> {
-    let params = new HttpParams();
-    if (status) {
-      params = params.set('status', status);
-    }
-    if (currency) {
-      params = params.set('currency', currency);
-    }
-    return this.http.get<AccountsResponse>(this.baseUrl, {params});
+    return this.get<AccountsResponse>('', {status, currency});
   }
 
   public getTransactions(
     accountId: string,
     queryParams?: TransactionQueryParams
   ): Observable<TransactionListResponse> {
-    let params = new HttpParams();
-    if (queryParams?.startDate) {
-      params = params.set('startDate', queryParams.startDate);
-    }
-    if (queryParams?.endDate) {
-      params = params.set('endDate', queryParams.endDate);
-    }
-    if (queryParams?.offset !== undefined) {
-      params = params.set('offset', queryParams.offset.toString());
-    }
-    if (queryParams?.limit !== undefined) {
-      params = params.set('limit', queryParams.limit.toString());
-    }
-    if (queryParams?.status) {
-      params = params.set('status', queryParams.status);
-    }
-    return this.http.get<TransactionListResponse>(`${this.baseUrl}/${accountId}/transactions`, {
-      params,
-    });
+    return this.get<TransactionListResponse>(`${accountId}/transactions`, queryParams);
   }
 
   public getAllTransactions(
     params?: GetAllTransactionsParams
   ): Observable<GlobalTransactionsResponse> {
-    let httpParams = new HttpParams();
-    if (params?.offset !== undefined) {
-      httpParams = httpParams.set('offset', params.offset.toString());
-    }
-    if (params?.limit !== undefined) {
-      httpParams = httpParams.set('limit', params.limit.toString());
-    }
-    if (params?.from) {
-      httpParams = httpParams.set('from', params.from);
-    }
-    if (params?.to) {
-      httpParams = httpParams.set('to', params.to);
-    }
-    return this.http.get<GlobalTransactionsResponse>(`${this.baseUrl}/transactions`, {
-      params: httpParams,
-    });
+    return this.get<GlobalTransactionsResponse>('transactions', params);
   }
 
   public triggerSync(accountId: string): Observable<TriggerSyncResponse> {
-    return this.http.post<TriggerSyncResponse>(`${this.baseUrl}/${accountId}/sync`, {});
+    return this.post<TriggerSyncResponse>(`${accountId}/sync`);
   }
 
   public getSyncStatus(accountId: string): Observable<SyncStatusResponse> {
-    return this.http.get<SyncStatusResponse>(`${this.baseUrl}/${accountId}/sync-status`);
+    return this.get<SyncStatusResponse>(`${accountId}/sync-status`);
   }
 
-  public pollSyncStatus(accountId: string, intervalMs = 2000): Observable<SyncStatusResponse> {
+  public pollSyncStatus(
+    accountId: string,
+    intervalMs = DEFAULT_SYNC_POLL_INTERVAL_MS
+  ): Observable<SyncStatusResponse> {
     return timer(0, intervalMs).pipe(
       switchMap(() => this.getSyncStatus(accountId)),
       takeWhile(s => s.status !== 'success' && s.status !== 'failed', true),
@@ -118,11 +81,11 @@ export class BankSyncService {
   }
 
   public disconnectAccount(accountId: string): Observable<void> {
-    return this.http.delete<void>(`${this.baseUrl}/${accountId}`);
+    return this.delete<void>(accountId);
   }
 
   public disconnectMonobank(): Observable<void> {
-    return this.http.delete<void>(`${this.baseUrl}/monobank`);
+    return this.delete<void>('monobank');
   }
 
   public getDashboardData(): Observable<DashboardData> {

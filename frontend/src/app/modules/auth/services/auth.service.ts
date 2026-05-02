@@ -1,36 +1,36 @@
-import {HttpClient} from '@angular/common/http';
-import {inject, Injectable} from '@angular/core';
+import {Injectable} from '@angular/core';
+import {ApiService} from '@dsdevq-common/core';
 import {Observable} from 'rxjs';
 
-import {environment} from '../../../../environments/environment';
 import {AuthRequest, AuthResponse} from '../models/auth/auth.model';
 
 @Injectable({providedIn: 'root'})
-export class AuthService {
-  private readonly http = inject(HttpClient);
-  private readonly apiUrl = `${environment.apiBaseUrl}/auth`;
+export class AuthService extends ApiService {
+  constructor() {
+    super('auth');
+  }
 
   public getMe(): Observable<AuthResponse> {
-    return this.http.get<AuthResponse>(`${this.apiUrl}/me`);
+    return this.get<AuthResponse>('me');
   }
 
   public login(req: AuthRequest): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/login`, req);
+    return this.post<AuthResponse>('login', req);
   }
 
   public register(req: AuthRequest): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/register`, req);
+    return this.post<AuthResponse>('register', req);
   }
 
   public refresh(): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/refresh`, null);
+    return this.post<AuthResponse>('refresh');
   }
 
   public verifyGoogleCredential(credential: string): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/google/verify`, {credential});
+    return this.post<AuthResponse>('google/verify', {credential});
   }
 
   public logout(): Observable<unknown> {
-    return this.http.post(`${this.apiUrl}/logout`, null);
+    return this.post<unknown>('logout');
   }
 }

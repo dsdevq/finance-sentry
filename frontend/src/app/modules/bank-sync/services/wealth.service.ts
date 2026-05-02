@@ -1,16 +1,16 @@
-import {HttpClient} from '@angular/common/http';
-import {inject, Injectable} from '@angular/core';
+import {Injectable} from '@angular/core';
+import {ApiService} from '@dsdevq-common/core';
 import {type Observable} from 'rxjs';
 
-import {environment} from '../../../../environments/environment';
 import {type WealthSummaryResponse} from '../../../shared/models/wealth/wealth.model';
 
 @Injectable({providedIn: 'root'})
-export class WealthService {
-  private readonly http = inject(HttpClient);
-  private readonly baseUrl = `${environment.apiBaseUrl}/wealth`;
+export class WealthService extends ApiService {
+  constructor() {
+    super('wealth');
+  }
 
   public getSummary(): Observable<WealthSummaryResponse> {
-    return this.http.get<WealthSummaryResponse>(`${this.baseUrl}/summary`);
+    return this.get<WealthSummaryResponse>('summary');
   }
 }

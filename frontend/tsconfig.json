@@ -4,6 +4,7 @@
     "types": ["node", "google.accounts"],
     "paths": {
       "@core/*": ["./src/app/core/*"],
+      "@dsdevq-common/core": ["./projects/dsdevq-common/core/src/public-api.ts"],
       "@dsdevq-common/ui": ["./projects/dsdevq-common/ui/src/public-api.ts"],
       "@shared/*": ["./src/app/shared/*"],
       "@modules/*": ["./src/app/modules/*"]
