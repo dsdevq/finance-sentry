@@ -23,14 +23,12 @@ const SORT_OPTIONS: {value: SubscriptionSort; label: string}[] = [
 @Component({
   selector: 'fns-subscriptions',
   imports: [
-    AppCurrencyPipe,
-    BadgeComponent,
     ButtonComponent,
     CardComponent,
-    DatePipe,
-    IconComponent,
     StatCardComponent,
-  ],
+    AppCurrencyPipe,
+    DatePipe,
+],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [SubscriptionsStore],
   templateUrl: './subscriptions.component.html',

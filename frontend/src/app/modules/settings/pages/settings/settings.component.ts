@@ -37,8 +37,6 @@ const MIN_PASSWORD_LENGTH = 8;
 @Component({
   selector: 'fns-settings',
   imports: [
-    AlertComponent,
-    BadgeComponent,
     ButtonComponent,
     CardComponent,
     FormFieldComponent,
