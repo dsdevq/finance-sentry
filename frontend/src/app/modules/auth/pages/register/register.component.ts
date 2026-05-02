@@ -5,6 +5,7 @@ import {RouterLink} from '@angular/router';
 import {
   AlertComponent,
   ButtonComponent,
+  CmnPasswordStrengthComponent,
   FormFieldComponent,
   GoogleSignInButtonComponent,
   InputComponent,
@@ -15,9 +16,6 @@ import {AppRoute} from '../../../../shared/enums/app-route/app-route.enum';
 import {AuthStore} from '../../store/auth.store';
 
 const MIN_PASSWORD_LENGTH = 8;
-const STRENGTH_FAIR = 2;
-const STRENGTH_GOOD = 3;
-const STRENGTH_STRONG = 4;
 
 @Component({
   selector: 'fns-register',
@@ -26,6 +24,7 @@ const STRENGTH_STRONG = 4;
     RouterLink,
     AlertComponent,
     ButtonComponent,
+    CmnPasswordStrengthComponent,
     FormFieldComponent,
     GoogleSignInButtonComponent,
     InputComponent,
@@ -65,23 +64,6 @@ export class RegisterComponent {
       score++;
     }
     return score;
-  });
-
-  public readonly strengthLabel = computed(() => {
-    const score = this.passwordStrength();
-    if (score === 0) {
-      return '';
-    }
-    if (score < STRENGTH_FAIR) {
-      return 'Weak';
-    }
-    if (score < STRENGTH_GOOD) {
-      return 'Fair';
-    }
-    if (score < STRENGTH_STRONG) {
-      return 'Good';
-    }
-    return 'Strong';
   });
 
   public readonly googleClientId = environment.googleClientId;

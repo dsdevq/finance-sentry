@@ -1,5 +1,5 @@
 import {DecimalPipe} from '@angular/common';
-import {ChangeDetectionStrategy, Component, inject, ViewContainerRef} from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject, signal, ViewContainerRef} from '@angular/core';
 import {
   AlertComponent,
   BadgeComponent,
@@ -20,6 +20,8 @@ import {HoldingBalancePipe} from '../../pipes/holding-balance.pipe';
 import {HoldingsStore} from '../../store/holdings.store';
 
 const DISCONNECTABLE_PROVIDERS = new Set<Provider>(['binance', 'ibkr']);
+
+export type HoldingsTab = 'holdings' | 'positions';
 
 @Component({
   selector: 'fns-holdings',
@@ -45,6 +47,14 @@ export class HoldingsComponent {
   private readonly viewContainerRef = inject(ViewContainerRef);
 
   public readonly store = inject(HoldingsStore);
+  public readonly activeTab = signal<HoldingsTab>('holdings');
+
+  public switchTab(tab: HoldingsTab): void {
+    this.activeTab.set(tab);
+    if (tab === 'positions' && !this.store.positionsLoaded()) {
+      this.store.loadPositions();
+    }
+  }
 
   public canDisconnect(provider: string): boolean {
     return DISCONNECTABLE_PROVIDERS.has(provider as Provider);

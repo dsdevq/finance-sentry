@@ -1,5 +1,6 @@
 // Components
 export * from './components/alert/alert.component';
+export * from './components/password-strength/password-strength.component';
 export * from './components/command-palette/command-palette.component';
 export * from './components/command-palette/command-palette-item.model';
 export * from './components/app-layout/app-layout.component';
@@ -9,6 +10,9 @@ export * from './components/card/card.component';
 export * from './components/data-table/data-table.component';
 export * from './components/dialog/dialog-actions.component';
 export * from './components/dialog/dialog-bare-container.component';
+export * from './components/drawer/drawer-config';
+export * from './components/drawer/drawer-container.component';
+export * from './components/drawer/drawer-ref';
 export * from './components/dialog/dialog-config';
 export * from './components/dialog/dialog-container.component';
 export * from './components/dialog/dialog-ref';
@@ -35,6 +39,7 @@ export * from './directives/typography/typography.directive';
 
 // Services
 export * from './services/dialog/dialog.service';
+export * from './services/drawer/drawer.service';
 export * from './services/error-message/error-message.service';
 export * from './services/icon-registry/icon-registry.service';
 export * from './services/theme/theme.service';

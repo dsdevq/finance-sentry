@@ -102,7 +102,8 @@
         <tbody>
           @for (t of store.transactions(); track t.transactionId) {
             <tr
-              class="border-b border-border-default last:border-0 hover:bg-surface-bg transition-colors"
+              (click)="openDrawer(t)"
+              class="cursor-pointer border-b border-border-default last:border-0 hover:bg-surface-bg transition-colors"
             >
               <td class="py-cmn-4 px-cmn-4 text-text-secondary whitespace-nowrap">
                 {{ t.postedDate ?? t.date | date: 'MMM d, y' }}

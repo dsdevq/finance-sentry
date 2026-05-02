@@ -76,29 +76,7 @@
             <cmn-input type="password" placeholder="Min 8 characters" />
           </cmn-form-field>
 
-          @if (passwordStrength() > 0) {
-            <div class="mt-cmn-2">
-              <div class="flex gap-1 mb-cmn-1">
-                @for (segment of [1, 2, 3, 4]; track segment) {
-                  <div
-                    [class]="
-                      segment <= passwordStrength()
-                        ? passwordStrength() === 1
-                          ? 'bg-red-500'
-                          : passwordStrength() === 2
-                            ? 'bg-amber-400'
-                            : passwordStrength() === 3
-                              ? 'bg-blue-500'
-                              : 'bg-green-500'
-                        : 'bg-border-default'
-                    "
-                    class="h-1 flex-1 rounded-full transition-colors"
-                  ></div>
-                }
-              </div>
-              <span class="text-cmn-xs text-text-secondary">{{ strengthLabel() }}</span>
-            </div>
-          }
+          <cmn-password-strength [score]="passwordStrength()" class="mt-cmn-2 block" />
         </div>
 
         <label class="flex items-center gap-cmn-3 mb-cmn-6 cursor-pointer">
