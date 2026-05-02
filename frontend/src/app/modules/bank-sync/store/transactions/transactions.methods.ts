@@ -1,40 +1,22 @@
 import {patchState, type WritableStateSource} from '@ngrx/signals';
 
 import {type TransactionListResponse} from '../../models/transaction/transaction.model';
-import {PAGE_SIZE, type TransactionsState} from './transactions.state';
+import {type TransactionsState} from './transactions.state';
 
 export function transactionsMethods(store: WritableStateSource<TransactionsState>) {
   return {
     setAccountId(accountId: string): void {
-      patchState(store, {accountId, offset: 0});
+      patchState(store, {accountId});
     },
     setDateRange(startDate: string, endDate: string): void {
-      patchState(store, {startDate, endDate, offset: 0});
-    },
-    setOffset(offset: number): void {
-      patchState(store, {offset});
-    },
-    setLoading(): void {
-      patchState(store, {status: 'loading', errorCode: null});
+      patchState(store, {startDate, endDate});
     },
     setResponse(res: TransactionListResponse): void {
       patchState(store, {
         transactions: res.items,
-        totalCount: res.totalCount,
         bankName: res.bankName,
         currency: res.currency,
-        status: 'idle',
-        errorCode: null,
       });
-    },
-    setError(errorCode: Nullable<string>): void {
-      patchState(store, {status: 'error', errorCode});
-    },
-    nextPage(): void {
-      patchState(store, state => ({offset: state.offset + PAGE_SIZE}));
-    },
-    previousPage(): void {
-      patchState(store, state => ({offset: Math.max(0, state.offset - PAGE_SIZE)}));
     },
   };
 }

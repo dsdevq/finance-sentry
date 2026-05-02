@@ -2,12 +2,8 @@ import {type WealthSummaryResponse} from '../../../../shared/models/wealth/wealt
 
 export interface AccountsState {
   summary: Nullable<WealthSummaryResponse>;
-  status: AsyncStatus;
-  errorCode: Nullable<string>;
 }
 
 export const initialAccountsState: AccountsState = {
   summary: null,
-  status: 'idle',
-  errorCode: null,
 };

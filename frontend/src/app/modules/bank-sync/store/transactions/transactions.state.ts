@@ -12,12 +12,8 @@ export interface TransactionsState {
   bankName: string;
   currency: string;
   transactions: Transaction[];
-  totalCount: number;
-  offset: number;
   startDate: string;
   endDate: string;
-  status: AsyncStatus;
-  errorCode: Nullable<string>;
 }
 
 export const PAGE_SIZE = 50;
@@ -27,10 +23,6 @@ export const initialTransactionsState: TransactionsState = {
   bankName: '',
   currency: '',
   transactions: [],
-  totalCount: 0,
-  offset: 0,
   startDate: '',
   endDate: '',
-  status: 'idle',
-  errorCode: null,
 };

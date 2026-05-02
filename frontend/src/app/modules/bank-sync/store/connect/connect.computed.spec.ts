@@ -1,6 +1,6 @@
 import {signal} from '@angular/core';
 import {TestBed} from '@angular/core/testing';
-import {ERROR_MESSAGES} from '@dsdevq-common/ui';
+import {ERROR_MESSAGES} from '@dsdevq-common/core';
 import {beforeEach, describe, expect, it} from 'vitest';
 
 import {ERROR_MESSAGES_REGISTRY} from '../../../../core/errors/error-messages.registry';

@@ -1,4 +1,4 @@
-import {type ErrorMessagesMap} from '@dsdevq-common/ui';
+import {type ErrorMessagesMap} from '@dsdevq-common/core';
 
 export const ERROR_MESSAGES_REGISTRY: ErrorMessagesMap = {
   GOOGLE_ACCOUNT_ONLY: "This account uses Google sign-in. Click 'Continue with Google' instead.",

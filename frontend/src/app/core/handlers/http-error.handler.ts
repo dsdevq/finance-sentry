@@ -1,6 +1,7 @@
 import {HttpErrorResponse} from '@angular/common/http';
 import {type ErrorHandler, inject, Injectable} from '@angular/core';
-import {ErrorMessageService, ToastService} from '@dsdevq-common/ui';
+import {ToastService} from '@dsdevq-common/ui';
+import {ErrorMessageService} from '@dsdevq-common/core';
 
 const UNAUTHORIZED_STATUS = 401;
 const GENERIC_ERROR = 'An unexpected error occurred.';

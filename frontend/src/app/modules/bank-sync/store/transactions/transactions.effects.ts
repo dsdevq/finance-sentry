@@ -1,22 +1,24 @@
 import {inject, type Signal} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
+import {extractErrorCode} from '@dsdevq-common/core';
 import {rxMethod} from '@ngrx/signals/rxjs-interop';
-import {EMPTY, pipe, switchMap, tap} from 'rxjs';
+import {catchError, EMPTY, pipe, switchMap, tap} from 'rxjs';
 
-import {StoreErrorUtils} from '../../../../shared/utils/store-error.utils';
 import {type TransactionListResponse} from '../../models/transaction/transaction.model';
 import {BankSyncService} from '../../services/bank-sync.service';
-import {PAGE_SIZE} from './transactions.state';
 
 interface EffectsStore {
   accountId: Signal<string>;
   startDate: Signal<string>;
   endDate: Signal<string>;
   offset: Signal<number>;
+  limit: Signal<number>;
   setLoading: () => void;
+  setSuccess: () => void;
+  setError: (code: Nullable<string>) => void;
   setAccountId: (id: string) => void;
   setResponse: (res: TransactionListResponse) => void;
-  setError: (code: Nullable<string>) => void;
+  setTotalCount: (count: number) => void;
 }
 
 export function transactionsEffects(store: EffectsStore) {
@@ -34,13 +36,20 @@ export function transactionsEffects(store: EffectsStore) {
           return bankSyncService
             .getTransactions(accountId, {
               offset: store.offset(),
-              limit: PAGE_SIZE,
+              limit: store.limit(),
               startDate: store.startDate() || undefined,
               endDate: store.endDate() || undefined,
             })
             .pipe(
-              tap(res => store.setResponse(res)),
-              StoreErrorUtils.catchAndSetError(store)
+              tap(res => {
+                store.setResponse(res);
+                store.setTotalCount(res.totalCount);
+                store.setSuccess();
+              }),
+              catchError((err: unknown) => {
+                store.setError(extractErrorCode(err));
+                return EMPTY;
+              })
             );
         })
       )

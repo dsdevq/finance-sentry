@@ -1,7 +1,12 @@
 import {Dialog, type DialogConfig, type DialogRef} from '@angular/cdk/dialog';
 import {type ComponentType} from '@angular/cdk/portal';
 import {inject, Injectable} from '@angular/core';
+import {map, type Observable} from 'rxjs';
 
+import {
+  ConfirmDialogComponent,
+  type ConfirmDialogData,
+} from '../../components/dialog/confirm-dialog.component';
 import {
   CmnDialogConfig,
   CMN_DIALOG_DATA,
@@ -39,5 +44,15 @@ export class CmnDialogService {
       cdkConfig as unknown as DialogConfig<D, DialogRef<R, C>>
     );
     return new CmnDialogRef<R, C>(ref);
+  }
+
+  public confirm(data: ConfirmDialogData): Observable<boolean> {
+    return this.open<boolean, ConfirmDialogData>(ConfirmDialogComponent, {
+      data,
+      title: data.title,
+      size: 'sm',
+    })
+      .afterClosed()
+      .pipe(map(result => result === true));
   }
 }

@@ -1,6 +1,6 @@
 import {inject, Injectable} from '@angular/core';
 
-import {ERROR_MESSAGES} from '../../tokens/error-messages.token';
+import {ERROR_MESSAGES} from './error-messages.token';
 
 @Injectable({providedIn: 'root'})
 export class ErrorMessageService {

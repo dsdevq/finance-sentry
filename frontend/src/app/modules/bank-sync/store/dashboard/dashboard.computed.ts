@@ -1,17 +1,13 @@
 import {CurrencyPipe} from '@angular/common';
 import {computed, inject, type Signal} from '@angular/core';
-import {type ChartPoint, type DonutSegment, ErrorMessageService} from '@dsdevq-common/ui';
+import {type ChartPoint, type DonutSegment} from '@dsdevq-common/ui';
 
 import {MerchantCategoryUtils} from '../../../../shared/utils/merchant-category.utils';
 import {type DashboardData, NET_WORTH_HISTORY_MOCK} from '../../models/dashboard/dashboard.model';
 
 interface StateSignals {
   data: Signal<Nullable<DashboardData>>;
-  status: Signal<AsyncStatus>;
-  errorCode: Signal<Nullable<string>>;
 }
-
-const DEFAULT_ERROR_MESSAGE = 'Failed to load dashboard data. Please try again.';
 
 const COMPACT_FORMATTER = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -22,17 +18,9 @@ const COMPACT_FORMATTER = new Intl.NumberFormat('en-US', {
 });
 
 export function dashboardComputed(store: StateSignals) {
-  const errorMessages = inject(ErrorMessageService);
   const currency = inject(CurrencyPipe);
 
   return {
-    isLoading: computed(() => store.status() === 'loading'),
-    errorMessage: computed(() => {
-      if (store.status() !== 'error') {
-        return '';
-      }
-      return errorMessages.resolve(store.errorCode()) ?? DEFAULT_ERROR_MESSAGE;
-    }),
     currencyEntries: computed(() => Object.entries(store.data()?.aggregatedBalance ?? {})),
     accountTypeEntries: computed(() => Object.entries(store.data()?.accountsByType ?? {})),
 

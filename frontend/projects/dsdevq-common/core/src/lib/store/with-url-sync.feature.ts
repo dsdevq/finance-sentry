@@ -1,6 +1,6 @@
 import {effect, inject, untracked} from '@angular/core';
 import {ActivatedRoute, Router} from '@angular/router';
-import {patchState, signalStoreFeature, type, withHooks} from '@ngrx/signals';
+import {patchState, signalStoreFeature, withHooks} from '@ngrx/signals';
 
 export interface UrlParamCodec<T> {
   encode: (value: T) => string;
@@ -63,31 +63,28 @@ export function withUrlSync<TState extends object>(schema: UrlSyncSchema<TState>
   const entries = Object.entries(schema) as [keyof TState & string, UrlParamSchema<unknown>][];
 
   return signalStoreFeature(
-    {state: type<TState>()},
     withHooks({
       onInit(store) {
         const route = inject(ActivatedRoute);
         const router = inject(Router);
 
         const params = route.snapshot.queryParamMap;
-        const hydrated: Partial<TState> = {};
+        const hydrated: Record<string, unknown> = {};
         for (const [field, cfg] of entries) {
           const raw = params.get(cfg.param);
           if (raw !== null) {
-            hydrated[field] = resolveCodec(cfg.codec).decode(raw) as TState[typeof field];
+            hydrated[field] = resolveCodec(cfg.codec).decode(raw);
           }
         }
         if (Object.keys(hydrated).length > 0) {
-          patchState(store, hydrated);
+          patchState(store, hydrated as Partial<object>);
         }
 
         let firstRun = true;
         effect(() => {
           const queryParams: Record<string, string | null> = {};
           for (const [field, cfg] of entries) {
-            const value = (store as unknown as Record<string, () => unknown>)[
-              field
-            ]() as TState[typeof field];
+            const value = (store as unknown as Record<string, () => unknown>)[field]();
             queryParams[cfg.param] = valuesEqual(value, cfg.default)
               ? null
               : resolveCodec(cfg.codec).encode(value);

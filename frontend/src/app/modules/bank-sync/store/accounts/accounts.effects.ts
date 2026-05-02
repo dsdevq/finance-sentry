@@ -1,16 +1,17 @@
 import {inject} from '@angular/core';
+import {extractErrorCode} from '@dsdevq-common/core';
 import {rxMethod} from '@ngrx/signals/rxjs-interop';
-import {pipe, switchMap, tap} from 'rxjs';
+import {catchError, EMPTY, pipe, switchMap, tap} from 'rxjs';
 
 import {type WealthSummaryResponse} from '../../../../shared/models/wealth/wealth.model';
-import {StoreErrorUtils} from '../../../../shared/utils/store-error.utils';
 import {BankSyncService} from '../../services/bank-sync.service';
 import {WealthService} from '../../services/wealth.service';
 
 interface EffectsStore {
   setLoading: () => void;
-  setSummary: (summary: WealthSummaryResponse) => void;
+  setSuccess: () => void;
   setError: (errorCode: Nullable<string>) => void;
+  setSummary: (summary: WealthSummaryResponse) => void;
 }
 
 export function accountsEffects(store: EffectsStore) {
@@ -22,8 +23,14 @@ export function accountsEffects(store: EffectsStore) {
       tap(() => store.setLoading()),
       switchMap(() =>
         wealthService.getSummary().pipe(
-          tap(summary => store.setSummary(summary)),
-          StoreErrorUtils.catchAndSetError(store)
+          tap(summary => {
+            store.setSummary(summary);
+            store.setSuccess();
+          }),
+          catchError((err: unknown) => {
+            store.setError(extractErrorCode(err));
+            return EMPTY;
+          })
         )
       )
     )
@@ -34,7 +41,10 @@ export function accountsEffects(store: EffectsStore) {
       switchMap(() =>
         bankSyncService.disconnectMonobank().pipe(
           tap(() => load()),
-          StoreErrorUtils.catchAndSetError(store)
+          catchError((err: unknown) => {
+            store.setError(extractErrorCode(err));
+            return EMPTY;
+          })
         )
       )
     )
@@ -45,7 +55,10 @@ export function accountsEffects(store: EffectsStore) {
       switchMap(accountId =>
         bankSyncService.disconnectAccount(accountId).pipe(
           tap(() => load()),
-          StoreErrorUtils.catchAndSetError(store)
+          catchError((err: unknown) => {
+            store.setError(extractErrorCode(err));
+            return EMPTY;
+          })
         )
       )
     )

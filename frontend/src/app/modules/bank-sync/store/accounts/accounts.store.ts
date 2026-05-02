@@ -1,3 +1,4 @@
+import {withAsyncStatus} from '@dsdevq-common/core';
 import {signalStore, withComputed, withHooks, withMethods, withState} from '@ngrx/signals';
 
 import {accountsComputed} from './accounts.computed';
@@ -7,6 +8,7 @@ import {initialAccountsState} from './accounts.state';
 
 export const AccountsStore = signalStore(
   withState(initialAccountsState),
+  withAsyncStatus({defaultErrorMessage: 'Failed to load accounts. Please try again.'}),
   withMethods(accountsMethods),
   withComputed(accountsComputed),
   withMethods(accountsEffects),

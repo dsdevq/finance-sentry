@@ -1,16 +1,16 @@
 import {inject, untracked} from '@angular/core';
+import {extractErrorCode} from '@dsdevq-common/core';
 import {rxMethod} from '@ngrx/signals/rxjs-interop';
 import {catchError, EMPTY, pipe, switchMap, tap, timer} from 'rxjs';
 
-import {ErrorUtils} from '../../../../shared/utils/error.utils';
-import {StoreErrorUtils} from '../../../../shared/utils/store-error.utils';
 import {type DashboardData} from '../../models/dashboard/dashboard.model';
 import {BankSyncService} from '../../services/bank-sync.service';
 
 interface EffectsStore {
   setLoading: () => void;
-  setData: (data: DashboardData) => void;
+  setSuccess: () => void;
   setError: (errorCode: Nullable<string>) => void;
+  setData: (data: DashboardData) => void;
 }
 
 const MINUTES_PER_REFRESH = 5;
@@ -27,8 +27,14 @@ export function dashboardEffects(store: EffectsStore) {
         tap(() => store.setLoading()),
         switchMap(() =>
           bankSyncService.getDashboardData().pipe(
-            tap(data => store.setData(data)),
-            StoreErrorUtils.catchAndSetError(store)
+            tap(data => {
+              store.setData(data);
+              store.setSuccess();
+            }),
+            catchError((err: unknown) => {
+              store.setError(extractErrorCode(err));
+              return EMPTY;
+            })
           )
         )
       )
@@ -52,7 +58,7 @@ export function dashboardHooks(store: HookStore): void {
           switchMap(() => bankSyncService.getDashboardData()),
           tap(data => untracked(() => store.setData(data))),
           catchError((err: unknown) => {
-            untracked(() => store.setError(ErrorUtils.extractCode(err)));
+            untracked(() => store.setError(extractErrorCode(err)));
             return EMPTY;
           })
         )

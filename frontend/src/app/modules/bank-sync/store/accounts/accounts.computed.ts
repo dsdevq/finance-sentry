@@ -1,5 +1,4 @@
-import {computed, inject, type Signal} from '@angular/core';
-import {ErrorMessageService} from '@dsdevq-common/ui';
+import {computed, type Signal} from '@angular/core';
 
 import {
   type CategorySummary,
@@ -8,26 +7,14 @@ import {
 
 interface StateSignals {
   summary: Signal<Nullable<WealthSummaryResponse>>;
-  status: Signal<AsyncStatus>;
-  errorCode: Signal<Nullable<string>>;
+  status: Signal<'idle' | 'loading' | 'success' | 'error'>;
 }
 
-const DEFAULT_ERROR_MESSAGE = 'Failed to load accounts. Please try again.';
-
 export function accountsComputed(store: StateSignals) {
-  const errorMessages = inject(ErrorMessageService);
-
   return {
-    isLoading: computed(() => store.status() === 'loading'),
     isEmpty: computed(
-      () => store.status() === 'idle' && (store.summary()?.categories ?? []).length === 0
+      () => store.status() === 'success' && (store.summary()?.categories ?? []).length === 0
     ),
-    errorMessage: computed(() => {
-      if (store.status() !== 'error') {
-        return '';
-      }
-      return errorMessages.resolve(store.errorCode()) ?? DEFAULT_ERROR_MESSAGE;
-    }),
     totalNetWorth: computed(() => store.summary()?.totalNetWorth ?? 0),
     baseCurrency: computed(() => store.summary()?.baseCurrency ?? 'USD'),
     bankingCategory: computed<Nullable<CategorySummary>>(
