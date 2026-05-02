@@ -51,33 +51,21 @@ describe('transactionsComputed', () => {
     });
   });
 
-  it('currentPage derives from offset', () => {
-    const store = build({offset: PAGE_SIZE * 2});
-    TestBed.runInInjectionContext(() => {
-      expect(transactionsComputed(store).currentPage()).toBe(3);
-    });
-  });
-
-  it('totalPages is at least 1 for empty result', () => {
-    const store = build({totalCount: 0});
-    TestBed.runInInjectionContext(() => {
-      expect(transactionsComputed(store).totalPages()).toBe(1);
-    });
-  });
-
-  it('hasPrevious / hasNext reflect offset + totalCount', () => {
+  it('pagination mirrors offset/totalCount with PAGE_SIZE limit', () => {
     const store = build({offset: PAGE_SIZE, totalCount: PAGE_SIZE * 3});
     TestBed.runInInjectionContext(() => {
-      const c = transactionsComputed(store);
-      expect(c.hasPrevious()).toBe(true);
-      expect(c.hasNext()).toBe(true);
+      const p = transactionsComputed(store).pagination();
+      expect(p.offset).toBe(PAGE_SIZE);
+      expect(p.limit).toBe(PAGE_SIZE);
+      expect(p.totalCount).toBe(PAGE_SIZE * 3);
+      expect(p.hasMore).toBe(true);
     });
   });
 
-  it('hasNext is false on last page', () => {
+  it('pagination.hasMore is false on last page', () => {
     const store = build({offset: PAGE_SIZE * 2, totalCount: PAGE_SIZE * 3});
     TestBed.runInInjectionContext(() => {
-      expect(transactionsComputed(store).hasNext()).toBe(false);
+      expect(transactionsComputed(store).pagination().hasMore).toBe(false);
     });
   });
 });

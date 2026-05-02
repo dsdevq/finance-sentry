@@ -1,5 +1,5 @@
 import {computed, inject, type Signal} from '@angular/core';
-import {ErrorMessageService} from '@dsdevq-common/ui';
+import {type CmnTablePagination, ErrorMessageService} from '@dsdevq-common/ui';
 
 import {PAGE_SIZE} from './transactions.state';
 
@@ -23,9 +23,11 @@ export function transactionsComputed(store: StateSignals) {
       }
       return errorMessages.resolve(store.errorCode()) ?? DEFAULT_ERROR;
     }),
-    currentPage: computed(() => Math.floor(store.offset() / PAGE_SIZE) + 1),
-    totalPages: computed(() => Math.max(1, Math.ceil(store.totalCount() / PAGE_SIZE))),
-    hasPrevious: computed(() => store.offset() > 0),
-    hasNext: computed(() => store.offset() + PAGE_SIZE < store.totalCount()),
+    pagination: computed<CmnTablePagination>(() => ({
+      totalCount: store.totalCount(),
+      offset: store.offset(),
+      limit: PAGE_SIZE,
+      hasMore: store.offset() + PAGE_SIZE < store.totalCount(),
+    })),
   };
 }

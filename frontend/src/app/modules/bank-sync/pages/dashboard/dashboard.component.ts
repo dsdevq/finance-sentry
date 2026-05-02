@@ -1,27 +1,31 @@
-import {CurrencyPipe, DecimalPipe} from '@angular/common';
 import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
 import {
   AlertComponent,
+  CmnCellDirective,
+  CmnColumnComponent,
   DataTableComponent,
   DonutChartComponent,
   LineChartComponent,
   StatCardComponent,
-  type TableColumn,
 } from '@dsdevq-common/ui';
 
-import {MerchantCategoryUtils} from '../../../../shared/utils/merchant-category.utils';
-import {type CategoryStat} from '../../models/dashboard/dashboard.model';
+import {AppCurrencyPipe} from '../../../../core/pipes/app-currency.pipe';
+import {AppDecimalPipe} from '../../../../core/pipes/app-decimal.pipe';
+import {MerchantCategoryPipe} from '../../../../shared/pipes/merchant-category.pipe';
 import {DashboardStore} from '../../store/dashboard/dashboard.store';
-
-const PERCENT_DIGITS = '1.1-1';
 
 @Component({
   selector: 'fns-dashboard',
   imports: [
     AlertComponent,
+    AppCurrencyPipe,
+    AppDecimalPipe,
+    CmnCellDirective,
+    CmnColumnComponent,
     DataTableComponent,
     DonutChartComponent,
     LineChartComponent,
+    MerchantCategoryPipe,
     StatCardComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -90,33 +94,26 @@ const PERCENT_DIGITS = '1.1-1';
         </div>
 
         <cmn-data-table
-          [columns]="categoryColumns"
           [rows]="store.data()?.topCategories ?? []"
           class="grid gap-4"
           emptyMessage="No spending data available"
-        />
+        >
+          <cmn-column key="category" header="Category">
+            <ng-template let-row cmnCell>{{ row.category | merchantCategory }}</ng-template>
+          </cmn-column>
+          <cmn-column key="spend" header="Total Spend" align="right">
+            <ng-template let-row cmnCell>{{ row.totalSpend | appCurrency }}</ng-template>
+          </cmn-column>
+          <cmn-column key="pct" header="% of Total" align="right">
+            <ng-template let-row cmnCell
+              >{{ row.percentOfTotal | appDecimal: '1.1-1' }}%</ng-template
+            >
+          </cmn-column>
+        </cmn-data-table>
       </div>
     </div>
   `,
 })
 export class DashboardComponent {
-  private readonly currency = inject(CurrencyPipe);
-  private readonly decimal = inject(DecimalPipe);
-
   public readonly store = inject(DashboardStore);
-  public readonly categoryColumns: TableColumn<CategoryStat>[] = [
-    {key: 'category', header: 'Category', cell: r => MerchantCategoryUtils.format(r.category)},
-    {
-      key: 'spend',
-      header: 'Total Spend',
-      align: 'right',
-      cell: r => this.currency.transform(r.totalSpend) ?? '',
-    },
-    {
-      key: 'pct',
-      header: '% of Total',
-      align: 'right',
-      cell: r => `${this.decimal.transform(r.percentOfTotal, PERCENT_DIGITS)}%`,
-    },
-  ];
 }

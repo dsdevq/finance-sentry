@@ -6,50 +6,29 @@ import {
   AlertComponent,
   ButtonComponent,
   CardComponent,
+  CmnCellDirective,
+  CmnColumnComponent,
   DataTableComponent,
-  TableColumn,
 } from '@dsdevq-common/ui';
 
-import {MerchantCategoryUtils} from '../../../../shared/utils/merchant-category.utils';
-import {type Transaction} from '../../models/transaction/transaction.model';
+import {MerchantCategoryPipe} from '../../../../shared/pipes/merchant-category.pipe';
+import {TransactionAmountPipe} from '../../pipes/transaction-amount.pipe';
 import {TransactionsStore} from '../../store/transactions/transactions.store';
-
-const DATE_PIPE = new DatePipe('en-US');
-const AMOUNT_DECIMALS = 2;
-
-const TRANSACTION_COLUMNS: TableColumn<Transaction>[] = [
-  {
-    key: 'date',
-    header: 'Date',
-    cell: tx => DATE_PIPE.transform(tx.postedDate ?? tx.pendingDate, 'mediumDate') ?? '—',
-  },
-  {key: 'description', header: 'Description', cell: tx => tx.description},
-  {
-    key: 'amount',
-    header: 'Amount',
-    align: 'right',
-    cell: tx => {
-      const sign = tx.transactionType === 'credit' ? '+' : '-';
-      return `${sign}${Math.abs(tx.amount).toFixed(AMOUNT_DECIMALS)}`;
-    },
-  },
-  {key: 'type', header: 'Type', align: 'center', cell: tx => tx.transactionType ?? '—'},
-  {
-    key: 'category',
-    header: 'Category',
-    cell: tx => (tx.merchantCategory ? MerchantCategoryUtils.format(tx.merchantCategory) : '—'),
-  },
-  {
-    key: 'status',
-    header: 'Status',
-    align: 'center',
-    cell: tx => (tx.isPending ? 'Pending' : 'Posted'),
-  },
-];
 
 @Component({
   selector: 'fns-transaction-list',
-  imports: [AlertComponent, ButtonComponent, CardComponent, DataTableComponent, FormsModule],
+  imports: [
+    AlertComponent,
+    ButtonComponent,
+    CardComponent,
+    CmnCellDirective,
+    CmnColumnComponent,
+    DataTableComponent,
+    DatePipe,
+    FormsModule,
+    MerchantCategoryPipe,
+    TransactionAmountPipe,
+  ],
   templateUrl: './transaction-list.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [TransactionsStore],
@@ -58,7 +37,6 @@ export class TransactionListComponent {
   private readonly router = inject(Router);
 
   public readonly store = inject(TransactionsStore);
-  public readonly columns = TRANSACTION_COLUMNS;
   public startDate = '';
   public endDate = '';
 

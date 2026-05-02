@@ -50,40 +50,35 @@
   <!-- Content -->
   @if (!store.errorMessage()) {
     <cmn-data-table
-      [columns]="columns"
       [rows]="store.transactions()"
       [loading]="store.isLoading()"
+      [pagination]="store.pagination()"
+      (previousPage)="previousPage()"
+      (nextPage)="nextPage()"
       emptyMessage="No transactions found for the selected period."
-    />
-
-    @if (!store.isLoading() && store.transactions().length > 0) {
-      <div
-        class="flex items-center justify-between mt-cmn-4"
-        role="navigation"
-        aria-label="Transaction pagination"
-      >
-        <cmn-button
-          [disabled]="!store.hasPrevious()"
-          (clicked)="previousPage()"
-          variant="secondary"
-          size="sm"
-          aria-label="Previous page"
-        >
-          Previous
-        </cmn-button>
-        <span class="text-cmn-sm text-text-secondary">
-          Page {{ store.currentPage() }} of {{ store.totalPages() }}
-        </span>
-        <cmn-button
-          [disabled]="!store.hasNext()"
-          (clicked)="nextPage()"
-          variant="secondary"
-          size="sm"
-          aria-label="Next page"
-        >
-          Next
-        </cmn-button>
-      </div>
-    }
+    >
+      <cmn-column key="date" header="Date">
+        <ng-template let-row cmnCell>
+          {{ row.postedDate ?? row.pendingDate | date: 'mediumDate' }}
+        </ng-template>
+      </cmn-column>
+      <cmn-column key="description" header="Description">
+        <ng-template let-row cmnCell>{{ row.description }}</ng-template>
+      </cmn-column>
+      <cmn-column key="amount" header="Amount" align="right">
+        <ng-template let-row cmnCell>{{ row | transactionAmount }}</ng-template>
+      </cmn-column>
+      <cmn-column key="type" header="Type" align="center">
+        <ng-template let-row cmnCell>{{ row.transactionType }}</ng-template>
+      </cmn-column>
+      <cmn-column key="category" header="Category">
+        <ng-template let-row cmnCell>
+          {{ row.merchantCategory ? (row.merchantCategory | merchantCategory) : '—' }}
+        </ng-template>
+      </cmn-column>
+      <cmn-column key="status" header="Status" align="center">
+        <ng-template let-row cmnCell>{{ row.isPending ? 'Pending' : 'Posted' }}</ng-template>
+      </cmn-column>
+    </cmn-data-table>
   }
 </div>
