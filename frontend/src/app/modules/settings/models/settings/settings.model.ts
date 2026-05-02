@@ -14,6 +14,17 @@ export interface UserProfile {
   twoFactor: boolean;
 }
 
+export interface UpdateProfileRequest {
+  firstName: string;
+  lastName: string;
+  baseCurrency: BaseCurrency;
+  theme: ThemePreference;
+  emailAlerts: boolean;
+  lowBalanceAlerts: boolean;
+  lowBalanceThreshold: number;
+  syncFailureAlerts: boolean;
+}
+
 export interface PasswordForm {
   current: string;
   next: string;

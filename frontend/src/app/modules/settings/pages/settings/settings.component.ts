@@ -1,9 +1,6 @@
 import {ChangeDetectionStrategy, Component, inject, signal} from '@angular/core';
 import {FormsModule} from '@angular/forms';
-import {Router} from '@angular/router';
 import {
-  AlertComponent,
-  BadgeComponent,
   ButtonComponent,
   CardComponent,
   FormFieldComponent,
@@ -12,7 +9,7 @@ import {
   ToggleComponent,
 } from '@dsdevq-common/ui';
 
-import {AppRoute} from '../../../../shared/enums/app-route/app-route.enum';
+import {AuthStore} from '../../../auth/store/auth.store';
 import {type BaseCurrency, type ThemePreference} from '../../models/settings/settings.model';
 import {SettingsStore} from '../../store/settings/settings.store';
 
@@ -30,8 +27,6 @@ const THEME_OPTIONS: {value: ThemePreference; label: string}[] = [
   {value: 'dark', label: 'Dark'},
 ];
 
-const PROFILE_SAVE_DELAY_MS = 900;
-const PASSWORD_SAVE_DELAY_MS = 1100;
 const MIN_PASSWORD_LENGTH = 8;
 
 @Component({
@@ -49,7 +44,7 @@ const MIN_PASSWORD_LENGTH = 8;
   templateUrl: './settings.component.html',
 })
 export class SettingsComponent {
-  private readonly router = inject(Router);
+  private readonly authStore = inject(AuthStore);
   private readonly toast = inject(ToastService);
 
   public readonly store = inject(SettingsStore);
@@ -61,11 +56,21 @@ export class SettingsComponent {
   public readonly pwConfirm = signal('');
 
   public saveProfile(): void {
-    this.store.setProfileSaving(true);
-    setTimeout(() => {
-      this.store.setProfileSaving(false);
-      this.toast.show('Profile saved successfully', 'success');
-    }, PROFILE_SAVE_DELAY_MS);
+    const p = this.store.profile();
+    if (!p) {
+      return;
+    }
+    this.store.saveProfile({
+      firstName: p.firstName,
+      lastName: p.lastName,
+      baseCurrency: p.baseCurrency,
+      theme: p.theme,
+      emailAlerts: p.emailAlerts,
+      lowBalanceAlerts: p.lowBalanceAlerts,
+      lowBalanceThreshold: p.lowBalanceThreshold,
+      syncFailureAlerts: p.syncFailureAlerts,
+    });
+    this.toast.show('Profile saved successfully', 'success');
   }
 
   public changePassword(): void {
@@ -81,18 +86,18 @@ export class SettingsComponent {
       this.toast.show('Passwords do not match', 'error');
       return;
     }
-    this.store.setPasswordSaving(true);
-    setTimeout(() => {
-      this.store.setPasswordSaving(false);
-      this.pwCurrent.set('');
-      this.pwNext.set('');
-      this.pwConfirm.set('');
-      this.toast.show('Password updated', 'success');
-    }, PASSWORD_SAVE_DELAY_MS);
+    this.store.changePassword({
+      currentPassword: this.pwCurrent(),
+      newPassword: this.pwNext(),
+    });
+    this.pwCurrent.set('');
+    this.pwNext.set('');
+    this.pwConfirm.set('');
+    this.toast.show('Password updated', 'success');
   }
 
   public signOut(): void {
-    void this.router.navigateByUrl(AppRoute.Login);
+    this.authStore.logout();
   }
 
   public deleteAccount(): void {

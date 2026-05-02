@@ -6,7 +6,10 @@ import {type SettingsState} from './settings.state';
 export function settingsMethods(store: WritableStateSource<SettingsState>) {
   return {
     setProfile(profile: UserProfile): void {
-      patchState(store, {profile, status: 'idle'});
+      patchState(store, {profile, status: 'idle', errorCode: null});
+    },
+    setLoadError(errorCode: Nullable<string>): void {
+      patchState(store, {status: 'error', errorCode});
     },
     updateProfile(partial: Partial<UserProfile>): void {
       patchState(store, (s: SettingsState) => ({
@@ -14,10 +17,16 @@ export function settingsMethods(store: WritableStateSource<SettingsState>) {
       }));
     },
     setProfileSaving(saving: boolean): void {
-      patchState(store, {profileSaving: saving});
+      patchState(store, {profileSaving: saving, profileErrorCode: null});
+    },
+    setProfileSaveError(errorCode: Nullable<string>): void {
+      patchState(store, {profileSaving: false, profileErrorCode: errorCode});
     },
     setPasswordSaving(saving: boolean): void {
-      patchState(store, {passwordSaving: saving});
+      patchState(store, {passwordSaving: saving, passwordErrorCode: null});
+    },
+    setPasswordSaveError(errorCode: Nullable<string>): void {
+      patchState(store, {passwordSaving: false, passwordErrorCode: errorCode});
     },
     setShowDeleteConfirm(show: boolean): void {
       patchState(store, {showDeleteConfirm: show});

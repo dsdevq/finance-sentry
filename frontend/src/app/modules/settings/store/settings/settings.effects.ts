@@ -1,33 +1,66 @@
+import {inject} from '@angular/core';
+import {extractErrorCode} from '@dsdevq-common/core';
 import {rxMethod} from '@ngrx/signals/rxjs-interop';
-import {of, pipe, switchMap, tap} from 'rxjs';
+import {catchError, EMPTY, pipe, switchMap, tap} from 'rxjs';
 
-import {type UserProfile} from '../../models/settings/settings.model';
-
-const MOCK_PROFILE: UserProfile = {
-  firstName: 'John',
-  lastName: 'Doe',
-  email: 'john.doe@example.com',
-  baseCurrency: 'USD',
-  theme: 'system',
-  emailAlerts: true,
-  lowBalanceAlerts: true,
-  lowBalanceThreshold: 500,
-  syncFailureAlerts: true,
-  twoFactor: false,
-};
+import {type UpdateProfileRequest, type UserProfile} from '../../models/settings/settings.model';
+import {type ChangePasswordRequest, SettingsService} from '../../services/settings.service';
 
 interface EffectsStore {
   setProfile: (profile: UserProfile) => void;
+  setLoadError: (errorCode: Nullable<string>) => void;
   setProfileSaving: (saving: boolean) => void;
+  setProfileSaveError: (errorCode: Nullable<string>) => void;
   setPasswordSaving: (saving: boolean) => void;
+  setPasswordSaveError: (errorCode: Nullable<string>) => void;
 }
 
 export function settingsEffects(store: EffectsStore) {
+  const service = inject(SettingsService);
+
   return {
     load: rxMethod<void>(
       pipe(
-        switchMap(() => of(MOCK_PROFILE)),
-        tap(profile => store.setProfile(profile))
+        switchMap(() =>
+          service.getProfile().pipe(
+            tap(profile => store.setProfile(profile)),
+            catchError(err => {
+              store.setLoadError(extractErrorCode(err));
+              return EMPTY;
+            })
+          )
+        )
+      )
+    ),
+    saveProfile: rxMethod<UpdateProfileRequest>(
+      pipe(
+        tap(() => store.setProfileSaving(true)),
+        switchMap(request =>
+          service.updateProfile(request).pipe(
+            tap(profile => {
+              store.setProfile(profile);
+              store.setProfileSaving(false);
+            }),
+            catchError(err => {
+              store.setProfileSaveError(extractErrorCode(err));
+              return EMPTY;
+            })
+          )
+        )
+      )
+    ),
+    changePassword: rxMethod<ChangePasswordRequest>(
+      pipe(
+        tap(() => store.setPasswordSaving(true)),
+        switchMap(request =>
+          service.changePassword(request).pipe(
+            tap(() => store.setPasswordSaving(false)),
+            catchError(err => {
+              store.setPasswordSaveError(extractErrorCode(err));
+              return EMPTY;
+            })
+          )
+        )
       )
     ),
   };

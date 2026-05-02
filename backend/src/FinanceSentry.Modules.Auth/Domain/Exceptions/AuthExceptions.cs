@@ -16,3 +16,9 @@ public sealed class DuplicateEmailException()
 
 public sealed class InvalidGoogleCredentialException()
     : ApiException(400, "INVALID_GOOGLE_CREDENTIAL", "Invalid Google credential.");
+
+public sealed class UserNotFoundException()
+    : ApiException(404, "USER_NOT_FOUND", "User not found.");
+
+public sealed class InvalidCurrentPasswordException()
+    : ApiException(400, "INVALID_CURRENT_PASSWORD", "Current password is incorrect.");
