@@ -152,7 +152,7 @@ public class PlaidAdapterTests
                         IsoCurrencyCode: "EUR",
                         Name: "Tesco Metro Dublin",
                         MerchantName: "Tesco",
-                        PersonalFinanceCategory: "Groceries",
+                        PersonalFinanceCategory: "FOOD_AND_DRINK",
                         Date: new DateTime(2026, 1, 15),
                         AuthorizedDate: new DateTime(2026, 1, 14),
                         Pending: false)
@@ -172,7 +172,7 @@ public class PlaidAdapterTests
         tx.UserId.Should().Be(userId);
         tx.Amount.Should().Be(45.99m);
         tx.Description.Should().Be("Tesco Metro Dublin");
-        tx.MerchantCategory.Should().Be("Groceries");
+        tx.MerchantCategory.Should().Be("food_and_drink");
         tx.IsPending.Should().BeFalse();
     }
 
