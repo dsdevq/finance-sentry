@@ -6,8 +6,8 @@
       <h1 class="font-headline text-cmn-2xl font-bold text-text-primary">
         {{ store.bankName() || 'Account' }} Transactions
       </h1>
-      @if (store.currency()) {
-        <span class="text-cmn-sm text-text-secondary">{{ store.currency() }}</span>
+      @if (store.currency(); as currency) {
+        <span class="text-cmn-sm text-text-secondary">{{ currency }}</span>
       }
     </div>
   </div>
@@ -40,9 +40,9 @@
   </cmn-card>
 
   <!-- Error -->
-  @if (store.errorMessage()) {
+  @if (store.errorMessage(); as errorMessage) {
     <cmn-alert variant="error" class="mb-cmn-4">
-      {{ store.errorMessage() }}
+      {{ errorMessage }}
       <cmn-button (clicked)="retry()" variant="secondary" size="sm">Retry</cmn-button>
     </cmn-alert>
   }

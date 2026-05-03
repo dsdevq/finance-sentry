@@ -1,17 +1,19 @@
 import {NgClass} from '@angular/common';
 import {ChangeDetectionStrategy, Component, input, output, signal} from '@angular/core';
 
+import {BadgeComponent} from '../badge/badge.component';
 import {IconComponent, LucideIconName} from '../icon/icon.component';
 
 export interface NavItem {
   label: string;
   icon: LucideIconName;
   route: string;
+  badge?: () => number;
 }
 
 @Component({
   selector: 'cmn-sidebar-nav',
-  imports: [NgClass, IconComponent],
+  imports: [NgClass, IconComponent, BadgeComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <aside
@@ -44,7 +46,9 @@ export interface NavItem {
             [title]="collapsed() ? item.label : ''"
             (click)="navClick.emit(item)"
           >
-            <cmn-icon [name]="item.icon" size="md" class="shrink-0" />
+            <cmn-badge [count]="item.badge ? item.badge() : 0" status="error">
+              <cmn-icon [name]="item.icon" size="md" />
+            </cmn-badge>
             @if (!collapsed()) {
               <span class="truncate font-label text-cmn-sm font-medium">{{ item.label }}</span>
             }

@@ -1,6 +1,6 @@
 import {DatePipe} from '@angular/common';
 import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
-import {BadgeComponent, CMN_DRAWER_DATA} from '@dsdevq-common/ui';
+import {CMN_DRAWER_DATA, TagComponent} from '@dsdevq-common/ui';
 
 import {MerchantCategoryPipe} from '../../../../shared/pipes/merchant-category.pipe';
 import {type GlobalTransactionDto} from '../../models/transaction/transaction.model';
@@ -11,7 +11,7 @@ import {TransactionAmountClassPipe} from '../../pipes/transaction-amount-class.p
   selector: 'fns-transaction-drawer',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    BadgeComponent,
+    TagComponent,
     DatePipe,
     MerchantCategoryPipe,
     TransactionAmountClassPipe,
@@ -45,16 +45,16 @@ import {TransactionAmountClassPipe} from '../../pipes/transaction-amount-class.p
         <dt class="text-text-secondary">Status</dt>
         <dd>
           @if (tx.isPending) {
-            <cmn-badge variant="warning">Pending</cmn-badge>
+            <cmn-tag variant="warning">Pending</cmn-tag>
           } @else {
-            <cmn-badge variant="success">Posted</cmn-badge>
+            <cmn-tag variant="success">Posted</cmn-tag>
           }
         </dd>
 
         @if (tx.merchantCategory) {
           <dt class="text-text-secondary">Category</dt>
           <dd>
-            <cmn-badge variant="neutral">{{ tx.merchantCategory | merchantCategory }}</cmn-badge>
+            <cmn-tag variant="neutral">{{ tx.merchantCategory | merchantCategory }}</cmn-tag>
           </dd>
         }
 

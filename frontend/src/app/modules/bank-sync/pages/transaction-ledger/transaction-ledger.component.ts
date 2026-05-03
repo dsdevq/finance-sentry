@@ -2,12 +2,12 @@ import {DatePipe, DecimalPipe} from '@angular/common';
 import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
 import {
   AlertComponent,
-  BadgeComponent,
   ButtonComponent,
   CardComponent,
   CmnDrawerService,
   SkeletonComponent,
   StatCardComponent,
+  TagComponent,
 } from '@dsdevq-common/ui';
 
 import {MerchantCategoryPipe} from '../../../../shared/pipes/merchant-category.pipe';
@@ -23,7 +23,7 @@ const SKELETON_ROWS = 8;
   selector: 'fns-transaction-ledger',
   imports: [
     AlertComponent,
-    BadgeComponent,
+    TagComponent,
     ButtonComponent,
     CardComponent,
     DatePipe,

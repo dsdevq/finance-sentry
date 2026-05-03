@@ -1,6 +1,6 @@
 import {ComponentFixture, TestBed} from '@angular/core/testing';
 
-import {BadgeComponent, BadgeVariant} from './badge.component';
+import {BadgeComponent, BadgeStatus} from './badge.component';
 
 describe('BadgeComponent', () => {
   let fixture: ComponentFixture<BadgeComponent>;
@@ -8,30 +8,76 @@ describe('BadgeComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({imports: [BadgeComponent]}).compileComponents();
     fixture = TestBed.createComponent(BadgeComponent);
-    fixture.componentRef.setInput('variant', 'neutral' as BadgeVariant);
+  });
+
+  function indicator(): HTMLElement | null {
+    return fixture.nativeElement.querySelector('.cmn-badge-indicator');
+  }
+
+  it('renders count when count > 0', () => {
+    fixture.componentRef.setInput('count', 5);
     fixture.detectChanges();
+    expect(indicator()?.textContent?.trim()).toBe('5');
   });
 
-  it('should create', () => {
-    expect(fixture.componentInstance).toBeTruthy();
-  });
-
-  it('should apply success classes for success variant', () => {
-    fixture.componentRef.setInput('variant', 'success' as BadgeVariant);
+  it('hides indicator when count === 0 and showZero is false', () => {
+    fixture.componentRef.setInput('count', 0);
     fixture.detectChanges();
-    const span: HTMLSpanElement = fixture.nativeElement.querySelector('span');
-    expect(span.className).toContain('text-status-success');
+    expect(indicator()).toBeNull();
   });
 
-  it('should apply error classes for error variant', () => {
-    fixture.componentRef.setInput('variant', 'error' as BadgeVariant);
+  it('renders 0 when showZero is true', () => {
+    fixture.componentRef.setInput('count', 0);
+    fixture.componentRef.setInput('showZero', true);
     fixture.detectChanges();
-    const span: HTMLSpanElement = fixture.nativeElement.querySelector('span');
-    expect(span.className).toContain('text-status-error');
+    expect(indicator()?.textContent?.trim()).toBe('0');
   });
 
-  it('should apply neutral classes by default', () => {
-    const span: HTMLSpanElement = fixture.nativeElement.querySelector('span');
-    expect(span.className).toContain('text-text-secondary');
+  it('renders {overflowCount}+ when count > overflowCount (default 99)', () => {
+    fixture.componentRef.setInput('count', 250);
+    fixture.detectChanges();
+    expect(indicator()?.textContent?.trim()).toBe('99+');
+  });
+
+  it('honors custom overflowCount', () => {
+    fixture.componentRef.setInput('count', 12);
+    fixture.componentRef.setInput('overflowCount', 9);
+    fixture.detectChanges();
+    expect(indicator()?.textContent?.trim()).toBe('9+');
+  });
+
+  it('dot mode renders an empty dot regardless of count', () => {
+    fixture.componentRef.setInput('dot', true);
+    fixture.componentRef.setInput('count', 7);
+    fixture.detectChanges();
+    expect(indicator()?.textContent?.trim()).toBe('');
+    expect(indicator()?.className).toContain('w-2');
+    expect(indicator()?.className).toContain('h-2');
+  });
+
+  it.each<[BadgeStatus, string]>([
+    ['default', 'bg-neutral-500'],
+    ['success', 'bg-status-success'],
+    ['processing', 'bg-status-info'],
+    ['error', 'bg-status-error'],
+    ['warning', 'bg-status-warning'],
+  ])('applies background class for status "%s"', (status, expectedClass) => {
+    fixture.componentRef.setInput('count', 1);
+    fixture.componentRef.setInput('status', status);
+    fixture.detectChanges();
+    expect(indicator()?.className).toContain(expectedClass);
+  });
+
+  it('uses inline (non-absolute) positioning when standalone is true', () => {
+    fixture.componentRef.setInput('count', 3);
+    fixture.componentRef.setInput('standalone', true);
+    fixture.detectChanges();
+    expect(indicator()?.className).not.toContain('absolute');
+  });
+
+  it('uses absolute positioning by default', () => {
+    fixture.componentRef.setInput('count', 3);
+    fixture.detectChanges();
+    expect(indicator()?.className).toContain('absolute');
   });
 });

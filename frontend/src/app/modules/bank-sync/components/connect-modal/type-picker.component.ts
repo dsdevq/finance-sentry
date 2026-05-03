@@ -1,5 +1,5 @@
 import {ChangeDetectionStrategy, Component, computed, inject} from '@angular/core';
-import {BadgeComponent, SelectableCardComponent} from '@dsdevq-common/ui';
+import {SelectableCardComponent, TagComponent} from '@dsdevq-common/ui';
 
 import {type Provider} from '../../../../shared/models/provider/provider.model';
 import {type InstitutionType} from '../../../../shared/models/provider/provider.model';
@@ -27,7 +27,7 @@ const PROVIDERS_FOR_TYPE: Record<InstitutionType, readonly Provider[]> = {
 @Component({
   selector: 'fns-type-picker',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [BadgeComponent, SelectableCardComponent],
+  imports: [TagComponent, SelectableCardComponent],
   templateUrl: './type-picker.component.html',
 })
 export class TypePickerComponent {
