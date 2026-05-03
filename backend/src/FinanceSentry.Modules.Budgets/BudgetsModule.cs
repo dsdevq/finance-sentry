@@ -1,5 +1,24 @@
 namespace FinanceSentry.Modules.Budgets;
 
+using FinanceSentry.Modules.Budgets.Application.Services;
+using FinanceSentry.Modules.Budgets.Domain.Repositories;
+using FinanceSentry.Modules.Budgets.Infrastructure.Persistence;
+using FinanceSentry.Modules.Budgets.Infrastructure.Persistence.Repositories;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+
 public static class BudgetsModule
 {
+    public static IServiceCollection AddBudgetsModule(
+        this IServiceCollection services, IConfiguration config)
+    {
+        services.AddDbContext<BudgetsDbContext>(
+            o => o.UseNpgsql(config.GetConnectionString("Default")!));
+
+        services.AddScoped<IBudgetRepository, BudgetRepository>();
+        services.AddScoped<ICategoryNormalizationService, CategoryNormalizationService>();
+
+        return services;
+    }
 }

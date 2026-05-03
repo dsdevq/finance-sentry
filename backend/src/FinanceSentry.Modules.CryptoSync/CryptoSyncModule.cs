@@ -1,5 +1,33 @@
 namespace FinanceSentry.Modules.CryptoSync;
 
-public sealed class CryptoSyncModule
+using FinanceSentry.Core.Interfaces;
+using FinanceSentry.Modules.CryptoSync.Application.Services;
+using FinanceSentry.Modules.CryptoSync.Domain.Interfaces;
+using FinanceSentry.Modules.CryptoSync.Domain.Repositories;
+using FinanceSentry.Modules.CryptoSync.Infrastructure.Binance;
+using FinanceSentry.Modules.CryptoSync.Infrastructure.Jobs;
+using FinanceSentry.Modules.CryptoSync.Infrastructure.Persistence;
+using FinanceSentry.Modules.CryptoSync.Infrastructure.Persistence.Repositories;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+
+public static class CryptoSyncModule
 {
+    public static IServiceCollection AddCryptoSyncModule(
+        this IServiceCollection services, IConfiguration config)
+    {
+        services.AddDbContext<CryptoSyncDbContext>(
+            o => o.UseNpgsql(config.GetConnectionString("Default")!));
+
+        services.AddHttpClient<BinanceHttpClient>();
+        services.AddSingleton<BinanceHoldingsAggregator>();
+        services.AddScoped<ICryptoExchangeAdapter, BinanceAdapter>();
+        services.AddScoped<IBinanceCredentialRepository, BinanceCredentialRepository>();
+        services.AddScoped<ICryptoHoldingRepository, CryptoHoldingRepository>();
+        services.AddScoped<ICryptoHoldingsReader, CryptoHoldingsReader>();
+        services.AddScoped<BinanceSyncJob>();
+
+        return services;
+    }
 }
