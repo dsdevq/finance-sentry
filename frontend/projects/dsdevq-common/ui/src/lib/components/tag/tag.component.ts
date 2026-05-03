@@ -1,12 +1,12 @@
 import {ChangeDetectionStrategy, Component, computed, input} from '@angular/core';
 
-export type BadgeVariant = 'success' | 'error' | 'warning' | 'info' | 'neutral';
+export type TagVariant = 'success' | 'error' | 'warning' | 'info' | 'neutral';
 
-const VARIANT_CLASSES: Record<BadgeVariant, string> = {
+const VARIANT_CLASSES: Record<TagVariant, string> = {
   success: 'bg-status-success/15 text-status-success',
-  error:   'bg-status-error/15 text-status-error',
+  error: 'bg-status-error/15 text-status-error',
   warning: 'bg-status-warning/15 text-status-warning',
-  info:    'bg-status-info/15 text-status-info',
+  info: 'bg-status-info/15 text-status-info',
   neutral: 'bg-surface-raised text-text-secondary',
 };
 
@@ -15,12 +15,12 @@ const BASE_CLASSES =
   'text-cmn-xs font-label font-semibold uppercase tracking-wide';
 
 @Component({
-  selector: 'cmn-badge',
+  selector: 'cmn-tag',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<span [class]="classes()"><ng-content /></span>`,
+  template: '<span [class]="classes()"><ng-content /></span>',
 })
-export class BadgeComponent {
-  public readonly variant = input<BadgeVariant>('neutral');
+export class TagComponent {
+  public readonly variant = input<TagVariant>('neutral');
 
   public readonly classes = computed(() => `${BASE_CLASSES} ${VARIANT_CLASSES[this.variant()]}`);
 }

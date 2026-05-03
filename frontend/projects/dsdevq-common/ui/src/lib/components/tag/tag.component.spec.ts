@@ -1,14 +1,14 @@
 import {ComponentFixture, TestBed} from '@angular/core/testing';
 
-import {BadgeComponent, BadgeVariant} from './badge.component';
+import {TagComponent, TagVariant} from './tag.component';
 
-describe('BadgeComponent', () => {
-  let fixture: ComponentFixture<BadgeComponent>;
+describe('TagComponent', () => {
+  let fixture: ComponentFixture<TagComponent>;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({imports: [BadgeComponent]}).compileComponents();
-    fixture = TestBed.createComponent(BadgeComponent);
-    fixture.componentRef.setInput('variant', 'neutral' as BadgeVariant);
+    await TestBed.configureTestingModule({imports: [TagComponent]}).compileComponents();
+    fixture = TestBed.createComponent(TagComponent);
+    fixture.componentRef.setInput('variant', 'neutral' as TagVariant);
     fixture.detectChanges();
   });
 
@@ -17,14 +17,14 @@ describe('BadgeComponent', () => {
   });
 
   it('should apply success classes for success variant', () => {
-    fixture.componentRef.setInput('variant', 'success' as BadgeVariant);
+    fixture.componentRef.setInput('variant', 'success' as TagVariant);
     fixture.detectChanges();
     const span: HTMLSpanElement = fixture.nativeElement.querySelector('span');
     expect(span.className).toContain('text-status-success');
   });
 
   it('should apply error classes for error variant', () => {
-    fixture.componentRef.setInput('variant', 'error' as BadgeVariant);
+    fixture.componentRef.setInput('variant', 'error' as TagVariant);
     fixture.detectChanges();
     const span: HTMLSpanElement = fixture.nativeElement.querySelector('span');
     expect(span.className).toContain('text-status-error');
