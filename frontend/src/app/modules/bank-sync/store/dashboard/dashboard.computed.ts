@@ -3,10 +3,13 @@ import {computed, inject, type Signal} from '@angular/core';
 import {type ChartPoint, type DonutSegment} from '@dsdevq-common/ui';
 
 import {MerchantCategoryUtils} from '../../../../shared/utils/merchant-category.utils';
-import {type DashboardData, NET_WORTH_HISTORY_MOCK} from '../../models/dashboard/dashboard.model';
+import {type DashboardData, type NetWorthSnapshotDto} from '../../models/dashboard/dashboard.model';
 
 interface StateSignals {
   data: Signal<Nullable<DashboardData>>;
+  netWorthHistory: Signal<NetWorthSnapshotDto[]>;
+  historyLoading: Signal<boolean>;
+  historyError: Signal<string | null>;
 }
 
 const COMPACT_FORMATTER = new Intl.NumberFormat('en-US', {
@@ -16,6 +19,8 @@ const COMPACT_FORMATTER = new Intl.NumberFormat('en-US', {
   minimumFractionDigits: 0,
   maximumFractionDigits: 1,
 });
+
+const MONTH_FORMATTER = new Intl.DateTimeFormat('en-US', {month: 'short', year: '2-digit'});
 
 export function dashboardComputed(store: StateSignals) {
   const currency = inject(CurrencyPipe);
@@ -55,7 +60,13 @@ export function dashboardComputed(store: StateSignals) {
     ),
 
     netWorthHistoryData: computed((): ChartPoint[] =>
-      NET_WORTH_HISTORY_MOCK.map(p => ({label: p.month, value: p.total}))
+      store.netWorthHistory().map(s => ({
+        label: MONTH_FORMATTER.format(new Date(s.snapshotDate)),
+        value: s.totalNetWorth,
+      }))
     ),
+
+    isHistoryLoading: computed(() => store.historyLoading()),
+    historyErrorMessage: computed(() => store.historyError()),
   };
 }

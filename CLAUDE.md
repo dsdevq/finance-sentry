@@ -330,6 +330,8 @@ After **all tasks in a feature are complete**, act as a QA engineer: spin up the
 ## Active Technologies
 - TypeScript 5.x strict, Angular 21.2 (frontend only — no backend changes) + `@ngrx/signals` 21.1, `@dsdevq-common/ui` (local lib), Angular ReactiveForms, Plaid Link client SDK (already loaded by `PlaidLinkService`) (011-connect-providers)
 - N/A on frontend; credentials are transient form state, never persisted (011-connect-providers)
+- C# 13/.NET 9 (backend) · TypeScript 5.x strict / Angular 21.2 (frontend) + ASP.NET Core 9, EF Core 9, MediatR, Hangfire · NgRx SignalStore 21.1, @dsdevq-common/ui (015-net-worth-history)
+- PostgreSQL 14 — new `net_worth_snapshots` table in `NetWorthHistoryDbContext` (015-net-worth-history)
 - C# 13/.NET 9 (backend) · TypeScript 5.x strict / Angular 21.2 (frontend) + ASP.NET Core 9, EF Core 9, MediatR, Hangfire · NgRx SignalStore 21.1, @dsdevq-common/ui (014-subscriptions)
 - PostgreSQL 14 — new `detected_subscriptions` table in `SubscriptionsDbContext` (014-subscriptions)
 - C# 13/.NET 9 (backend) · TypeScript 5.x strict / Angular 21.2 (frontend) + ASP.NET Core 9, EF Core 9, MediatR · NgRx SignalStore 21.1, @dsdevq-common/ui (013-budgets)

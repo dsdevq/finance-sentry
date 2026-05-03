@@ -1,6 +1,7 @@
 import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
 import {
   AlertComponent,
+  ButtonComponent,
   CmnCellDirective,
   CmnColumnComponent,
   DataTableComponent,
@@ -12,7 +13,15 @@ import {
 import {AppCurrencyPipe} from '../../../../core/pipes/app-currency.pipe';
 import {AppDecimalPipe} from '../../../../core/pipes/app-decimal.pipe';
 import {MerchantCategoryPipe} from '../../../../shared/pipes/merchant-category.pipe';
+import {type HistoryRange} from '../../models/dashboard/dashboard.model';
 import {DashboardStore} from '../../store/dashboard/dashboard.store';
+
+const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
+  {label: '3M', value: '3m'},
+  {label: '6M', value: '6m'},
+  {label: '1Y', value: '1y'},
+  {label: 'All', value: 'all'},
+];
 
 @Component({
   selector: 'fns-dashboard',
@@ -20,6 +29,7 @@ import {DashboardStore} from '../../store/dashboard/dashboard.store';
     AlertComponent,
     AppCurrencyPipe,
     AppDecimalPipe,
+    ButtonComponent,
     CmnCellDirective,
     CmnColumnComponent,
     DataTableComponent,
@@ -69,12 +79,35 @@ import {DashboardStore} from '../../store/dashboard/dashboard.store';
           />
         </div>
 
-        <cmn-line-chart
-          [data]="store.netWorthHistoryData()"
-          label="Net Worth History (13 months)"
-          class="flex mt-4"
-          currency="USD"
-        />
+        <div>
+          <div class="mb-cmn-3 flex items-center justify-between">
+            <span class="text-cmn-sm font-medium text-text-secondary">Net Worth History</span>
+            <div class="flex gap-cmn-1">
+              @for (r of ranges; track r.value) {
+                <cmn-button
+                  [variant]="store.historyRange() === r.value ? 'primary' : 'secondary'"
+                  (clicked)="store.setHistoryRange(r.value)"
+                  size="sm"
+                  >{{ r.label }}</cmn-button
+                >
+              }
+            </div>
+          </div>
+
+          @if (store.historyErrorMessage()) {
+            <cmn-alert variant="error">{{ store.historyErrorMessage() }}</cmn-alert>
+          } @else if (!store.historyHasHistory() && !store.isHistoryLoading()) {
+            <cmn-alert variant="info"
+              >No history yet. Run the net worth snapshot job to populate the chart.</cmn-alert
+            >
+          } @else {
+            <cmn-line-chart
+              [data]="store.netWorthHistoryData()"
+              label="Total Net Worth"
+              currency="USD"
+            />
+          }
+        </div>
 
         <div class="grid grid-cols-1 gap-cmn-4 lg:grid-cols-3">
           <div class="lg:col-span-2">
@@ -116,4 +149,5 @@ import {DashboardStore} from '../../store/dashboard/dashboard.store';
 })
 export class DashboardComponent {
   public readonly store = inject(DashboardStore);
+  public readonly ranges = HISTORY_RANGES;
 }

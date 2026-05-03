@@ -1,9 +1,14 @@
-import {inject, untracked} from '@angular/core';
+import {inject, type Signal, untracked} from '@angular/core';
+import {toObservable} from '@angular/core/rxjs-interop';
 import {extractErrorCode} from '@dsdevq-common/core';
 import {rxMethod} from '@ngrx/signals/rxjs-interop';
 import {catchError, EMPTY, pipe, switchMap, tap, timer} from 'rxjs';
 
-import {type DashboardData} from '../../models/dashboard/dashboard.model';
+import {
+  type DashboardData,
+  type HistoryRange,
+  type NetWorthSnapshotDto,
+} from '../../models/dashboard/dashboard.model';
 import {BankSyncService} from '../../services/bank-sync.service';
 
 interface EffectsStore {
@@ -11,6 +16,11 @@ interface EffectsStore {
   setSuccess: () => void;
   setError: (errorCode: Nullable<string>) => void;
   setData: (data: DashboardData) => void;
+  setNetWorthHistory: (snapshots: NetWorthSnapshotDto[]) => void;
+  setHistoryLoading: (loading: boolean) => void;
+  setHistoryError: (error: string | null) => void;
+  setHistoryHasHistory: (hasHistory: boolean) => void;
+  historyRange: Signal<HistoryRange>;
 }
 
 const MINUTES_PER_REFRESH = 5;
@@ -39,17 +49,44 @@ export function dashboardEffects(store: EffectsStore) {
         )
       )
     ),
+
+    loadNetWorthHistory: rxMethod<HistoryRange>(
+      pipe(
+        tap(() => store.setHistoryLoading(true)),
+        switchMap(range =>
+          bankSyncService.getNetWorthHistory(range).pipe(
+            tap(response => {
+              store.setNetWorthHistory(response.snapshots);
+              store.setHistoryHasHistory(response.hasHistory);
+              store.setHistoryLoading(false);
+              store.setHistoryError(null);
+            }),
+            catchError((err: unknown) => {
+              store.setHistoryError(extractErrorCode(err) ?? 'Failed to load net worth history.');
+              store.setHistoryLoading(false);
+              return EMPTY;
+            })
+          )
+        )
+      )
+    ),
   };
 }
 
 interface HookStore extends EffectsStore {
   load: () => void;
+  loadNetWorthHistory: (range: HistoryRange) => void;
 }
 
 export function dashboardHooks(store: HookStore): void {
   const bankSyncService = inject(BankSyncService);
 
   store.load();
+  store.loadNetWorthHistory(store.historyRange());
+
+  toObservable(store.historyRange)
+    .pipe(tap(range => untracked(() => store.loadNetWorthHistory(range))))
+    .subscribe();
 
   rxMethod<void>(
     pipe(

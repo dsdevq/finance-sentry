@@ -1,8 +1,8 @@
-namespace FinanceSentry.Modules.BankSync.Application.Services;
+namespace FinanceSentry.Core.Utils;
 
 public static class CurrencyConverter
 {
-    private static readonly Dictionary<string, decimal> _rates = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly Dictionary<string, decimal> Rates = new(StringComparer.OrdinalIgnoreCase)
     {
         ["USD"] = 1.00m,
         ["EUR"] = 1.08m,
@@ -12,7 +12,7 @@ public static class CurrencyConverter
 
     public static decimal ToUsd(decimal amount, string currency)
     {
-        if (_rates.TryGetValue(currency, out var rate))
+        if (Rates.TryGetValue(currency, out var rate))
             return amount * rate;
 
         return amount;

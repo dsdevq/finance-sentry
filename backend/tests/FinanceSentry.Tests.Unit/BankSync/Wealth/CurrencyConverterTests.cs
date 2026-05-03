@@ -1,6 +1,6 @@
 namespace FinanceSentry.Tests.Unit.BankSync.Wealth;
 
-using FinanceSentry.Modules.BankSync.Application.Services;
+using FinanceSentry.Core.Utils;
 using FluentAssertions;
 using Xunit;
 

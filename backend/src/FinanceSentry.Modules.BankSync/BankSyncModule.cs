@@ -5,7 +5,6 @@ using FinanceSentry.Modules.BankSync.Application.Services;
 using FinanceSentry.Modules.BankSync.Application.Services.CategoryMapping;
 using FinanceSentry.Modules.BankSync.Domain.Interfaces;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
-using FinanceSentry.Modules.BankSync.Domain.Services;
 using FinanceSentry.Modules.BankSync.Infrastructure.AuditLog;
 using FinanceSentry.Modules.BankSync.Infrastructure.FeatureFlags;
 using FinanceSentry.Modules.BankSync.Infrastructure.Jobs;
@@ -99,7 +98,10 @@ public static class BankSyncModule
         services.AddScoped<IMerchantCategoryStatisticsService, MerchantCategoryStatisticsService>();
         services.AddScoped<IDashboardQueryService, DashboardQueryService>();
         services.AddScoped<ITransferDetectionService, TransferDetectionService>();
-        services.AddScoped<IWealthAggregationService, WealthAggregationService>();
+
+        services.AddScoped<IBankingAccountsReader, BankingAccountsReader>();
+        services.AddScoped<IBankingTransactionReader, BankingTransactionReader>();
+        services.AddScoped<IBankingTotalsReader, BankingTotalsReader>();
 
         services.AddScoped<ScheduledSyncJob>();
         services.AddScoped<SyncScheduler>();
