@@ -9,6 +9,7 @@ public class BudgetsDbContext(DbContextOptions<BudgetsDbContext> options) : DbCo
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.HasDefaultSchema("budgets");
         base.OnModelCreating(modelBuilder);
 
         var bb = modelBuilder.Entity<Budget>();

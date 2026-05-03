@@ -32,7 +32,7 @@ public static class AlertsModule
         this IServiceCollection services, IConfiguration config)
     {
         services.AddDbContext<AlertsDbContext>(
-            o => o.UseNpgsql(config.GetConnectionString("Default")!));
+            o => o.UseNpgsql(config.GetConnectionString("Default")!, b => b.MigrationsHistoryTable("__EFMigrationsHistory", "public")));
 
         services.AddScoped<IAlertRepository, AlertRepository>();
         services.AddScoped<IAlertGeneratorService, AlertGeneratorService>();

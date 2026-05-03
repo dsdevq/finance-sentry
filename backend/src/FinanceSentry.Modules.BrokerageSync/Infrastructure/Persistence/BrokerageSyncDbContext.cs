@@ -15,6 +15,7 @@ public sealed class BrokerageSyncDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.HasDefaultSchema("brokerage_sync");
         base.OnModelCreating(modelBuilder);
 
         modelBuilder.Entity<IBKRCredential>(entity =>

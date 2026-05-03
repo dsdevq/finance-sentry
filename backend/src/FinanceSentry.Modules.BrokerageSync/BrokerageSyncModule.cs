@@ -35,7 +35,7 @@ public static class BrokerageSyncModule
         this IServiceCollection services, IConfiguration config)
     {
         services.AddDbContext<BrokerageSyncDbContext>(
-            o => o.UseNpgsql(config.GetConnectionString("Default")!));
+            o => o.UseNpgsql(config.GetConnectionString("Default")!, b => b.MigrationsHistoryTable("__EFMigrationsHistory", "public")));
 
         services.AddHttpClient<IBKRGatewayClient>(client =>
                 client.DefaultRequestHeaders.UserAgent.ParseAdd("FinanceSentry/1.0"))

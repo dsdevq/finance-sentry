@@ -50,7 +50,7 @@ public static class BankSyncModule
     {
         var connectionString = config.GetConnectionString("Default")!;
 
-        services.AddDbContext<BankSyncDbContext>(o => o.UseNpgsql(connectionString));
+        services.AddDbContext<BankSyncDbContext>(o => o.UseNpgsql(connectionString, b => b.MigrationsHistoryTable("__EFMigrationsHistory", "public")));
 
         services.Configure<EncryptionOptions>(config.GetSection(EncryptionOptions.SectionName));
         services.AddSingleton<ICredentialEncryptionService, CredentialEncryptionService>();

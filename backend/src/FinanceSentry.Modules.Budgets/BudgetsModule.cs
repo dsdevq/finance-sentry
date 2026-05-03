@@ -21,7 +21,7 @@ public static class BudgetsModule
         this IServiceCollection services, IConfiguration config)
     {
         services.AddDbContext<BudgetsDbContext>(
-            o => o.UseNpgsql(config.GetConnectionString("Default")!));
+            o => o.UseNpgsql(config.GetConnectionString("Default")!, b => b.MigrationsHistoryTable("__EFMigrationsHistory", "public")));
 
         services.AddScoped<IBudgetRepository, BudgetRepository>();
         services.AddScoped<ICategoryNormalizationService, CategoryNormalizationService>();

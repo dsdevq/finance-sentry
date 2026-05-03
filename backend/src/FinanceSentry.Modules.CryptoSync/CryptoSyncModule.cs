@@ -34,7 +34,7 @@ public static class CryptoSyncModule
         this IServiceCollection services, IConfiguration config)
     {
         services.AddDbContext<CryptoSyncDbContext>(
-            o => o.UseNpgsql(config.GetConnectionString("Default")!));
+            o => o.UseNpgsql(config.GetConnectionString("Default")!, b => b.MigrationsHistoryTable("__EFMigrationsHistory", "public")));
 
         services.AddHttpClient<BinanceHttpClient>();
         services.AddSingleton<BinanceHoldingsAggregator>();

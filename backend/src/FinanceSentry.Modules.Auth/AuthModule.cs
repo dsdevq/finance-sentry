@@ -24,7 +24,7 @@ public static class AuthModule
     {
         var connectionString = config.GetConnectionString("Default")!;
 
-        services.AddDbContext<AuthDbContext>(o => o.UseNpgsql(connectionString));
+        services.AddDbContext<AuthDbContext>(o => o.UseNpgsql(connectionString, b => b.MigrationsHistoryTable("__EFMigrationsHistory", "public")));
 
         services.AddIdentity<ApplicationUser, IdentityRole>(options =>
             {
