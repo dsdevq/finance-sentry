@@ -1,4 +1,5 @@
 using FinanceSentry.Core.Cqrs;
+using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Modules.BrokerageSync.Domain;
 using FinanceSentry.Modules.BrokerageSync.Domain.Exceptions;
 using FinanceSentry.Modules.BrokerageSync.Domain.Interfaces;
@@ -19,7 +20,8 @@ public sealed record ConnectIBKRResult(int HoldingsCount, DateTime ConnectedAt, 
 public sealed class ConnectIBKRCommandHandler(
     IIBKRCredentialRepository credentialRepository,
     IBrokerAdapter adapter,
-    ICommandHandler<SyncIBKRHoldingsCommand, SyncIBKRHoldingsResult> syncHandler)
+    ICommandHandler<SyncIBKRHoldingsCommand, SyncIBKRHoldingsResult> syncHandler,
+    IHistoricalBackfillScheduler backfillScheduler)
     : ICommandHandler<ConnectIBKRCommand, ConnectIBKRResult>
 {
     public async Task<ConnectIBKRResult> Handle(ConnectIBKRCommand command, CancellationToken cancellationToken)
@@ -39,6 +41,8 @@ public sealed class ConnectIBKRCommandHandler(
         await credentialRepository.SaveChangesAsync(cancellationToken);
 
         var syncResult = await syncHandler.Handle(new SyncIBKRHoldingsCommand(command.UserId), cancellationToken);
+
+        backfillScheduler.ScheduleForUser(command.UserId);
 
         return new ConnectIBKRResult(syncResult.HoldingsCount, syncResult.SyncedAt, accountId);
     }

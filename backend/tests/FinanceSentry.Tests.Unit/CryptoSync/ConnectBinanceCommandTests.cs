@@ -1,4 +1,5 @@
 using FinanceSentry.Core.Cqrs;
+using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Infrastructure.Encryption;
 using FinanceSentry.Modules.CryptoSync.Application.Commands;
 using FinanceSentry.Modules.CryptoSync.Domain;
@@ -17,9 +18,10 @@ public class ConnectBinanceCommandTests
     private readonly Mock<ICryptoExchangeAdapter> _adapter = new(MockBehavior.Strict);
     private readonly Mock<ICredentialEncryptionService> _encryption = new(MockBehavior.Strict);
     private readonly Mock<ICommandHandler<SyncBinanceHoldingsCommand, SyncBinanceHoldingsResult>> _syncHandler = new(MockBehavior.Strict);
+    private readonly Mock<IHistoricalBackfillScheduler> _backfillScheduler = new();
 
     private ConnectBinanceCommandHandler CreateHandler() =>
-        new(_credentialRepo.Object, _adapter.Object, _encryption.Object, _syncHandler.Object);
+        new(_credentialRepo.Object, _adapter.Object, _encryption.Object, _syncHandler.Object, _backfillScheduler.Object);
 
     private static EncryptionResult FakeEncryption() =>
         new(Ciphertext: [1], Iv: [2], AuthTag: [3], KeyVersion: 1);

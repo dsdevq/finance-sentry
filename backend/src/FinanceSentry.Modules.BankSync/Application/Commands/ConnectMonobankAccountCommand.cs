@@ -1,6 +1,7 @@
 namespace FinanceSentry.Modules.BankSync.Application.Commands;
 
 using FinanceSentry.Core.Cqrs;
+using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Infrastructure.Encryption;
 using FinanceSentry.Modules.BankSync.Domain;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
@@ -29,7 +30,8 @@ public class ConnectMonobankAccountCommandHandler(
     ICredentialEncryptionService encryption,
     IBankAccountRepository accounts,
     IMonobankCredentialRepository monobankCredentials,
-    IBackgroundJobClient backgroundJobs) : ICommandHandler<ConnectMonobankAccountCommand, ConnectMonobankResult>
+    IBackgroundJobClient backgroundJobs,
+    IHistoricalBackfillScheduler backfillScheduler) : ICommandHandler<ConnectMonobankAccountCommand, ConnectMonobankResult>
 {
     public async Task<ConnectMonobankResult> Handle(
         ConnectMonobankAccountCommand request, CancellationToken cancellationToken)
@@ -90,6 +92,8 @@ public class ConnectMonobankAccountCommandHandler(
         foreach (var account in created)
             backgroundJobs.Enqueue<FinanceSentry.Modules.BankSync.Infrastructure.Jobs.ScheduledSyncJob>(
                 job => job.ExecuteSyncAsync(account.Id));
+
+        backfillScheduler.ScheduleForUser(request.UserId);
 
         var dtos = created.Select(a => new ConnectedMonobankAccount(
             Id: a.Id,

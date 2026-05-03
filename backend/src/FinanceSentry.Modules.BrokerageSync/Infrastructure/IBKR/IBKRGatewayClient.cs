@@ -68,4 +68,26 @@ public sealed class IBKRGatewayClient(HttpClient http, IConfiguration configurat
 
         return await response.Content.ReadFromJsonAsync<List<IBKRPositionResponse>>(cancellationToken: ct) ?? [];
     }
+
+    public async Task<IBKRPerformanceResponse?> GetPerformanceAsync(string accountId, CancellationToken ct = default)
+    {
+        HttpResponseMessage response;
+        try
+        {
+            response = await _http.GetAsync($"/v1/api/portfolio/{accountId}/performance", ct);
+        }
+        catch (HttpRequestException ex)
+        {
+            logger.LogWarning("IBKR gateway unreachable when fetching performance: {Error}", ex.Message);
+            return null;
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            logger.LogWarning("IBKR performance endpoint returned HTTP {Status}", (int)response.StatusCode);
+            return null;
+        }
+
+        return await response.Content.ReadFromJsonAsync<IBKRPerformanceResponse>(cancellationToken: ct);
+    }
 }

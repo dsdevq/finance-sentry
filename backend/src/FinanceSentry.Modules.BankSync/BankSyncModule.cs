@@ -9,6 +9,7 @@ using FinanceSentry.Modules.BankSync.Infrastructure.AuditLog;
 using FinanceSentry.Modules.BankSync.Infrastructure.FeatureFlags;
 using FinanceSentry.Modules.BankSync.Infrastructure.Jobs;
 using FinanceSentry.Modules.BankSync.Infrastructure.Monobank;
+using FinanceSentry.Modules.BankSync.Infrastructure.Monobank.History;
 using FinanceSentry.Modules.BankSync.Infrastructure.Performance;
 using FinanceSentry.Modules.BankSync.Infrastructure.Persistence;
 using FinanceSentry.Modules.BankSync.Infrastructure.Persistence.Repositories;
@@ -102,6 +103,7 @@ public static class BankSyncModule
         services.AddScoped<IBankingAccountsReader, BankingAccountsReader>();
         services.AddScoped<IBankingTransactionReader, BankingTransactionReader>();
         services.AddScoped<IBankingTotalsReader, BankingTotalsReader>();
+        services.AddScoped<IProviderMonthlyHistorySource, MonobankHistorySource>();
 
         services.AddScoped<ScheduledSyncJob>();
         services.AddScoped<SyncScheduler>();

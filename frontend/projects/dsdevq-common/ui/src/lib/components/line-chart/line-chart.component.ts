@@ -26,6 +26,12 @@ export interface ChartPoint {
   value: number;
 }
 
+export interface ChartSeries {
+  label: string;
+  data: ChartPoint[];
+  color: string;
+}
+
 @Component({
   selector: 'cmn-line-chart',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -38,7 +44,7 @@ export interface ChartPoint {
       >
         {{ label() }}
       </span>
-      <div class="relative h-48">
+      <div class="relative h-56">
         <canvas #chartCanvas></canvas>
       </div>
     </div>
@@ -49,11 +55,27 @@ export class LineChartComponent implements AfterViewInit, OnDestroy {
   private chart: Chart | null = null;
 
   public readonly data = input<ChartPoint[]>([]);
+  public readonly series = input<ChartSeries[]>([]);
   public readonly label = input<string>('');
   public readonly currency = input<string>('USD');
 
   constructor() {
     effect(() => {
+      const seriesList = this.series();
+      if (seriesList.length > 0) {
+        if (this.chart) {
+          const labels = seriesList[0]?.data.map(p => p.label) ?? [];
+          this.chart.data.labels = labels;
+          this.chart.data.datasets = seriesList.map((s, i) =>
+            this.buildDataset(s.label, s.data.map(p => p.value), s.color, i === 0)
+          );
+          if (this.chart.options.plugins?.legend) {
+            this.chart.options.plugins.legend.display = true;
+          }
+          this.chart.update('none');
+        }
+        return;
+      }
       const points = this.data();
       if (this.chart) {
         this.chart.data.labels = points.map(p => p.label);
@@ -70,6 +92,20 @@ export class LineChartComponent implements AfterViewInit, OnDestroy {
   public ngOnDestroy(): void {
     this.chart?.destroy();
     this.chart = null;
+  }
+
+  private buildDataset(seriesLabel: string, values: number[], color: string, fill: boolean) {
+    return {
+      label: seriesLabel,
+      data: values,
+      borderColor: color,
+      backgroundColor: fill ? `${color}1a` : 'transparent',
+      borderWidth: 2,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      fill,
+      tension: 0.3,
+    };
   }
 
   private buildChart(): void {
@@ -89,40 +125,50 @@ export class LineChartComponent implements AfterViewInit, OnDestroy {
       .trim();
 
     const currency = this.currency();
+    const seriesList = this.series();
+    const isMulti = seriesList.length > 0;
     const points = this.data();
+
+    const labels = isMulti
+      ? (seriesList[0]?.data.map(p => p.label) ?? [])
+      : points.map(p => p.label);
+
+    const datasets = isMulti
+      ? seriesList.map((s, i) =>
+          this.buildDataset(s.label, s.data.map(p => p.value), s.color, i === 0)
+        )
+      : [this.buildDataset('', points.map(p => p.value), accent || '#4f46e5', true)];
 
     this.chart = new Chart(ctx, {
       type: 'line',
-      data: {
-        labels: points.map(p => p.label),
-        datasets: [
-          {
-            data: points.map(p => p.value),
-            borderColor: accent || '#4f46e5',
-            backgroundColor: `${accent || '#4f46e5'}1a`,
-            borderWidth: 2,
-            pointRadius: 0,
-            pointHoverRadius: 4,
-            fill: true,
-            tension: 0.3,
-          },
-        ],
-      },
+      data: {labels, datasets},
       options: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: {display: false},
+          legend: {
+            display: isMulti,
+            position: 'bottom',
+            labels: {
+              color: textSecondary || '#464555',
+              font: {family: 'Inter', size: 11},
+              boxWidth: 24,
+              boxHeight: 8,
+              useBorderRadius: true,
+              borderRadius: 2,
+              padding: 12,
+            },
+          },
           tooltip: {
             callbacks: {
               label: ctx => {
                 const val = ctx.parsed.y as number;
-                return new Intl.NumberFormat('en-US', {
+                return `${ctx.dataset.label}: ${new Intl.NumberFormat('en-US', {
                   style: 'currency',
                   currency,
                   minimumFractionDigits: 0,
                   maximumFractionDigits: 0,
-                }).format(val);
+                }).format(val)}`;
               },
             },
           },

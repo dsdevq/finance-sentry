@@ -4,6 +4,7 @@ using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Modules.BrokerageSync.Application.Services;
 using FinanceSentry.Modules.BrokerageSync.Domain.Interfaces;
 using FinanceSentry.Modules.BrokerageSync.Domain.Repositories;
+using FinanceSentry.Modules.BrokerageSync.Infrastructure.History;
 using FinanceSentry.Modules.BrokerageSync.Infrastructure.IBKR;
 using FinanceSentry.Modules.BrokerageSync.Infrastructure.Jobs;
 using FinanceSentry.Modules.BrokerageSync.Infrastructure.Persistence;
@@ -57,6 +58,7 @@ public static class BrokerageSyncModule
         services.AddScoped<IBrokerageHoldingRepository, BrokerageHoldingRepository>();
         services.AddScoped<IBrokerageHoldingsReader, BrokerageHoldingsReader>();
         services.AddScoped<IBKRSyncJob>();
+        services.AddScoped<IProviderMonthlyHistorySource, IBKRHistorySource>();
 
         services.AddSingleton<IJobRegistrar, JobRegistrar>();
 

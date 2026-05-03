@@ -45,7 +45,7 @@ public class MonobankHttpClient(HttpClient http)
         return new MonobankClientInfo(raw.ClientId, raw.Name, accounts);
     }
 
-    public async Task<IReadOnlyList<MonobankTransaction>> GetStatementsAsync(
+    public virtual async Task<IReadOnlyList<MonobankTransaction>> GetStatementsAsync(
         string token, string accountId, DateTimeOffset from, DateTimeOffset to,
         CancellationToken ct = default)
     {

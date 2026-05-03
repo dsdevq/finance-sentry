@@ -1,6 +1,6 @@
 import {CurrencyPipe} from '@angular/common';
 import {computed, inject, type Signal} from '@angular/core';
-import {type ChartPoint, type DonutSegment} from '@dsdevq-common/ui';
+import {type ChartPoint, type ChartSeries, type DonutSegment} from '@dsdevq-common/ui';
 
 import {MerchantCategoryUtils} from '../../../../shared/utils/merchant-category.utils';
 import {type DashboardData, type NetWorthSnapshotDto} from '../../models/dashboard/dashboard.model';
@@ -65,6 +65,31 @@ export function dashboardComputed(store: StateSignals) {
         value: s.totalNetWorth,
       }))
     ),
+
+    netWorthSeriesData: computed((): ChartSeries[] => {
+      const snapshots = store.netWorthHistory();
+      if (snapshots.length === 0) {
+        return [];
+      }
+      const labels = snapshots.map(s => MONTH_FORMATTER.format(new Date(s.snapshotDate)));
+      return [
+        {
+          label: 'Banking',
+          color: '#3b82f6',
+          data: snapshots.map((s, i) => ({label: labels[i], value: s.bankingTotal})),
+        },
+        {
+          label: 'Brokerage',
+          color: '#8b5cf6',
+          data: snapshots.map((s, i) => ({label: labels[i], value: s.brokerageTotal})),
+        },
+        {
+          label: 'Crypto',
+          color: '#f59e0b',
+          data: snapshots.map((s, i) => ({label: labels[i], value: s.cryptoTotal})),
+        },
+      ];
+    }),
 
     isHistoryLoading: computed(() => store.historyLoading()),
     historyErrorMessage: computed(() => store.historyError()),

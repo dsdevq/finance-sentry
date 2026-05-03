@@ -16,3 +16,14 @@ public sealed record IBKRPositionResponse(
     [property: JsonPropertyName("position")] decimal Position,
     [property: JsonPropertyName("mktPrice")] decimal MktPrice,
     [property: JsonPropertyName("mktValue")] decimal MktValue);
+
+// /v1/api/portfolio/{accountId}/performance — NAV time series.
+public sealed record IBKRPerformanceResponse(
+    [property: JsonPropertyName("nav")] IBKRNavData Nav);
+
+public sealed record IBKRNavData(
+    [property: JsonPropertyName("data")] IReadOnlyList<IBKRNavEntry> Data);
+
+public sealed record IBKRNavEntry(
+    [property: JsonPropertyName("date")] string Date,
+    [property: JsonPropertyName("nav")] decimal Nav);

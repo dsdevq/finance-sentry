@@ -338,6 +338,8 @@ After **all tasks in a feature are complete**, act as a QA engineer: spin up the
 - PostgreSQL 14 — new `budgets` table in `BudgetsDbContext`; BankSync M003 adds composite index on `(user_id, merchant_category, posted_date)` (013-budgets)
 - C# 13/.NET 9 (backend) · TypeScript 5.x strict / Angular 21.2 (frontend) + ASP.NET Core 9, EF Core 9, MediatR, Hangfire · NgRx SignalStore 21.1, @dsdevq-common/ui (012-alerts-system)
 - PostgreSQL 14 — new `alerts` table in `AlertsDbContext` with its own migrations (012-alerts-system)
+- C# 13 / .NET 9 (backend only — no frontend changes) + ASP.NET Core 9, EF Core 9, MediatR, Hangfire, `System.Net.Http` (no new NuGet packages required) (016-history-backfill)
+- PostgreSQL 14 — existing `net_worth_snapshots` table; no new migrations (016-history-backfill)
 
 - `@ngrx/signals` 21.1.0 (NgRx SignalStore) — pilot AuthStore 2026-04-24, extended to DashboardStore + AccountsStore same day
 - C# 13 / .NET 9 (backend) · TypeScript 5.x strict (frontend) + ASP.NET Core 9, EF Core 9, MediatR, ASP.NET Core Identity (`Microsoft.AspNetCore.Identity.EntityFrameworkCore`), Npgsql.EF Core (backend) · Angular 20, RxJS, Angular standalone routing (frontend) (003-auth-flow)

@@ -102,8 +102,8 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
             >
           } @else {
             <cmn-line-chart
-              [data]="store.netWorthHistoryData()"
-              label="Total Net Worth"
+              [series]="store.netWorthSeriesData()"
+              label="Net Worth by Provider"
               currency="USD"
             />
           }

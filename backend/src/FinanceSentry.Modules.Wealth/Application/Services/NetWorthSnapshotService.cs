@@ -35,4 +35,26 @@ public class NetWorthSnapshotService(INetWorthSnapshotRepository repository) : I
         var monthEnd = new DateOnly(now.Year, now.Month, DateTime.DaysInMonth(now.Year, now.Month));
         return await _repository.ExistsAsync(userId, monthEnd, ct);
     }
+
+    public async Task ReplaceAllSnapshotsAsync(Guid userId, IReadOnlyList<NetWorthSnapshotData> snapshots, CancellationToken ct = default)
+    {
+        await _repository.DeleteAllByUserIdAsync(userId, ct);
+
+        foreach (var data in snapshots)
+        {
+            var snapshot = new NetWorthSnapshot
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                SnapshotDate = data.SnapshotDate,
+                BankingTotal = data.BankingTotal,
+                BrokerageTotal = data.BrokerageTotal,
+                CryptoTotal = data.CryptoTotal,
+                TotalNetWorth = data.BankingTotal + data.BrokerageTotal + data.CryptoTotal,
+                Currency = data.Currency,
+                TakenAt = DateTimeOffset.UtcNow,
+            };
+            await _repository.PersistAsync(snapshot, ct);
+        }
+    }
 }

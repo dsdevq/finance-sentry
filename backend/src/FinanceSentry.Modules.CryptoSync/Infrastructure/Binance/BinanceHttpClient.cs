@@ -51,6 +51,18 @@ public sealed class BinanceHttpClient
             HttpMethod.Get, "/sapi/v1/simple-earn/locked/position", apiKey, apiSecret,
             queryParams: "size=100&current=1", ct);
 
+    public Task<BinanceSnapshotResponse> GetAccountSnapshotAsync(
+        string apiKey,
+        string apiSecret,
+        long startTime,
+        long endTime,
+        CancellationToken ct = default) =>
+        SendSignedAsync<BinanceSnapshotResponse>(
+            HttpMethod.Get, "/sapi/v1/accountSnapshot",
+            apiKey, apiSecret,
+            queryParams: $"type=SPOT&limit=30&startTime={startTime}&endTime={endTime}",
+            ct);
+
     public async Task<IReadOnlyList<BinancePriceTicker>> GetAllPricesAsync(CancellationToken ct = default)
     {
         var response = await _httpClient.GetAsync($"{_baseUrl}/api/v3/ticker/price", ct);

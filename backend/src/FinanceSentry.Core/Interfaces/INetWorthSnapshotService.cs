@@ -10,6 +10,11 @@ public interface INetWorthSnapshotService
     Task<bool> HasSnapshotForCurrentMonthAsync(
         Guid userId,
         CancellationToken ct = default);
+
+    Task ReplaceAllSnapshotsAsync(
+        Guid userId,
+        IReadOnlyList<NetWorthSnapshotData> snapshots,
+        CancellationToken ct = default);
 }
 
 public record NetWorthSnapshotData(

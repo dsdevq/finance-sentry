@@ -1,4 +1,5 @@
 using FinanceSentry.Core.Cqrs;
+using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Infrastructure.Encryption;
 using FinanceSentry.Modules.CryptoSync.Domain;
 using FinanceSentry.Modules.CryptoSync.Domain.Exceptions;
@@ -22,7 +23,8 @@ public sealed class ConnectBinanceCommandHandler(
     IBinanceCredentialRepository credentialRepository,
     ICryptoExchangeAdapter adapter,
     ICredentialEncryptionService encryption,
-    ICommandHandler<SyncBinanceHoldingsCommand, SyncBinanceHoldingsResult> syncHandler)
+    ICommandHandler<SyncBinanceHoldingsCommand, SyncBinanceHoldingsResult> syncHandler,
+    IHistoricalBackfillScheduler backfillScheduler)
     : ICommandHandler<ConnectBinanceCommand, ConnectBinanceResult>
 {
     public async Task<ConnectBinanceResult> Handle(ConnectBinanceCommand command, CancellationToken cancellationToken)
@@ -54,6 +56,8 @@ public sealed class ConnectBinanceCommandHandler(
         var syncResult = await syncHandler.Handle(
             new SyncBinanceHoldingsCommand(command.UserId),
             cancellationToken);
+
+        backfillScheduler.ScheduleForUser(command.UserId);
 
         return new ConnectBinanceResult(syncResult.HoldingsCount, syncResult.SyncedAt);
     }

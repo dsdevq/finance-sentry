@@ -8,14 +8,20 @@ export type RelativeRange = '3m' | '6m' | '1y' | 'all';
 const ISO_DATE_LENGTH = 10;
 const MONTHS_3 = 3;
 const MONTHS_6 = 6;
+const PAD_WIDTH = 2;
 
 export class DateRangeUtils {
   public static toIsoDate(d: Date): string {
     return d.toISOString().slice(0, ISO_DATE_LENGTH);
   }
 
+  public static endOfMonthUtc(d: Date): string {
+    const daysInMonth = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(PAD_WIDTH, '0')}-${String(daysInMonth).padStart(PAD_WIDTH, '0')}`;
+  }
+
   public static fromRelativeRange(range: RelativeRange, now = new Date()): DateRange {
-    const to = DateRangeUtils.toIsoDate(now);
+    const to = DateRangeUtils.endOfMonthUtc(now);
     const d = new Date(now);
 
     if (range === '3m') {

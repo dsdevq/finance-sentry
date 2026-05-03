@@ -1,4 +1,5 @@
 using FinanceSentry.Core.Cqrs;
+using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Modules.BrokerageSync.Application.Commands;
 using FinanceSentry.Modules.BrokerageSync.Domain;
 using FinanceSentry.Modules.BrokerageSync.Domain.Exceptions;
@@ -15,9 +16,10 @@ public class ConnectIBKRCommandTests
     private readonly Mock<IIBKRCredentialRepository> _credentialRepo = new(MockBehavior.Strict);
     private readonly Mock<IBrokerAdapter> _adapter = new(MockBehavior.Strict);
     private readonly Mock<ICommandHandler<SyncIBKRHoldingsCommand, SyncIBKRHoldingsResult>> _syncHandler = new(MockBehavior.Strict);
+    private readonly Mock<IHistoricalBackfillScheduler> _backfillScheduler = new();
 
     private ConnectIBKRCommandHandler CreateHandler() =>
-        new(_credentialRepo.Object, _adapter.Object, _syncHandler.Object);
+        new(_credentialRepo.Object, _adapter.Object, _syncHandler.Object, _backfillScheduler.Object);
 
     [Fact]
     public async Task Handle_AlreadyConnected_ThrowsBrokerAlreadyConnectedException()

@@ -40,3 +40,17 @@ public sealed record BinanceFlexibleEarnPosition(
 public sealed record BinanceLockedEarnPosition(
     [property: JsonPropertyName("asset")] string Asset,
     [property: JsonPropertyName("amount")] string Amount);
+
+// /sapi/v1/accountSnapshot?type=SPOT — daily portfolio snapshots.
+public sealed record BinanceSnapshotResponse(
+    [property: JsonPropertyName("code")] int Code,
+    [property: JsonPropertyName("snapshotVos")] IReadOnlyList<BinanceSnapshotVo> SnapshotVos);
+
+public sealed record BinanceSnapshotVo(
+    [property: JsonPropertyName("type")] string Type,
+    [property: JsonPropertyName("updateTime")] long UpdateTime,
+    [property: JsonPropertyName("data")] BinanceSnapshotData Data);
+
+public sealed record BinanceSnapshotData(
+    [property: JsonPropertyName("totalAssetOfBtc")] string TotalAssetOfBtc,
+    [property: JsonPropertyName("balances")] IReadOnlyList<BinanceBalance> Balances);

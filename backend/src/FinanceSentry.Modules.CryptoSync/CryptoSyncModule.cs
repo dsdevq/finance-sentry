@@ -5,6 +5,7 @@ using FinanceSentry.Modules.CryptoSync.Application.Services;
 using FinanceSentry.Modules.CryptoSync.Domain.Interfaces;
 using FinanceSentry.Modules.CryptoSync.Domain.Repositories;
 using FinanceSentry.Modules.CryptoSync.Infrastructure.Binance;
+using FinanceSentry.Modules.CryptoSync.Infrastructure.History;
 using FinanceSentry.Modules.CryptoSync.Infrastructure.Jobs;
 using FinanceSentry.Modules.CryptoSync.Infrastructure.Persistence;
 using FinanceSentry.Modules.CryptoSync.Infrastructure.Persistence.Repositories;
@@ -43,6 +44,7 @@ public static class CryptoSyncModule
         services.AddScoped<ICryptoHoldingRepository, CryptoHoldingRepository>();
         services.AddScoped<ICryptoHoldingsReader, CryptoHoldingsReader>();
         services.AddScoped<BinanceSyncJob>();
+        services.AddScoped<IProviderMonthlyHistorySource, BinanceHistorySource>();
 
         services.AddSingleton<IJobRegistrar, JobRegistrar>();
 

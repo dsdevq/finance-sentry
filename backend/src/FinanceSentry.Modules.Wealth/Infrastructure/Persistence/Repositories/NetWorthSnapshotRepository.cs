@@ -29,4 +29,9 @@ public class NetWorthSnapshotRepository(WealthDbContext db) : INetWorthSnapshotR
 
         return await query.OrderBy(s => s.SnapshotDate).ToListAsync(ct);
     }
+
+    public async Task DeleteAllByUserIdAsync(Guid userId, CancellationToken ct = default)
+        => await _db.NetWorthSnapshots
+            .Where(s => s.UserId == userId)
+            .ExecuteDeleteAsync(ct);
 }

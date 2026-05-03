@@ -45,6 +45,8 @@ public static class WealthModule
         services.AddScoped<IWealthAggregationService, WealthAggregationService>();
 
         services.AddScoped<NetWorthSnapshotJob>();
+        services.AddScoped<HistoricalBackfillJob>();
+        services.AddScoped<IHistoricalBackfillScheduler, HistoricalBackfillJobScheduler>();
 
         services.AddSingleton<IJobRegistrar, JobRegistrar>();
 
