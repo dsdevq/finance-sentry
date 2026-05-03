@@ -17,10 +17,10 @@
 
 **Purpose**: Create the `FinanceSentry.Modules.Alerts` project and wire it into the solution.
 
-- [ ] T001 Create `FinanceSentry.Modules.Alerts` csproj and add it to the solution: `backend/src/FinanceSentry.Modules.Alerts/FinanceSentry.Modules.Alerts.csproj` + add references to `FinanceSentry.Core` and `FinanceSentry.Infrastructure`
-- [ ] T002 Add project reference from `backend/src/FinanceSentry.API/FinanceSentry.API.csproj` → `FinanceSentry.Modules.Alerts`
-- [ ] T003 [P] Create module marker class `backend/src/FinanceSentry.Modules.Alerts/AlertsModule.cs`
-- [ ] T004 [P] Create `backend/src/FinanceSentry.Modules.Alerts/Infrastructure/Persistence/AlertsDbContextFactory.cs` (IDesignTimeDbContextFactory, mirrors BankSyncDbContextFactory)
+- [X] T001 Create `FinanceSentry.Modules.Alerts` csproj and add it to the solution: `backend/src/FinanceSentry.Modules.Alerts/FinanceSentry.Modules.Alerts.csproj` + add references to `FinanceSentry.Core` and `FinanceSentry.Infrastructure`
+- [X] T002 Add project reference from `backend/src/FinanceSentry.API/FinanceSentry.API.csproj` → `FinanceSentry.Modules.Alerts`
+- [X] T003 [P] Create module marker class `backend/src/FinanceSentry.Modules.Alerts/AlertsModule.cs`
+- [X] T004 [P] Create `backend/src/FinanceSentry.Modules.Alerts/Infrastructure/Persistence/AlertsDbContextFactory.cs` (IDesignTimeDbContextFactory, mirrors BankSyncDbContextFactory)
 
 **Checkpoint**: `dotnet build backend/` passes with zero warnings.
 
@@ -32,17 +32,17 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T005 Define `IAlertGeneratorService` interface in `backend/src/FinanceSentry.Core/Interfaces/IAlertGeneratorService.cs` — five methods: GenerateLowBalanceAlertAsync, ResolveLowBalanceAlertAsync, GenerateSyncFailureAlertAsync, ResolveSyncFailureAlertAsync, GenerateUnusualSpendAlertAsync (signatures from data-model.md)
-- [ ] T006 [P] Create `AlertType` string-constant enum: `backend/src/FinanceSentry.Modules.Alerts/Domain/AlertType.cs` (LowBalance, SyncFailure, UnusualSpend)
-- [ ] T007 [P] Create `AlertSeverity` string-constant enum: `backend/src/FinanceSentry.Modules.Alerts/Domain/AlertSeverity.cs` (Error, Warning, Info)
-- [ ] T008 Create `Alert` domain entity: `backend/src/FinanceSentry.Modules.Alerts/Domain/Alert.cs` — all fields from data-model.md (Id, UserId, Type, Severity, Title, Message, ReferenceId, ReferenceLabel, IsRead, IsResolved, IsDismissed, CreatedAt, UpdatedAt, ResolvedAt)
-- [ ] T009 Create `IAlertRepository` interface: `backend/src/FinanceSentry.Modules.Alerts/Domain/Repositories/IAlertRepository.cs` — methods: GetPagedAsync, GetUnreadCountAsync, FindActiveAsync (dedup check), MarkReadAsync, MarkAllReadAsync, DismissAsync, ResolveAsync, PurgeOldAsync
-- [ ] T010 Create `AlertsDbContext`: `backend/src/FinanceSentry.Modules.Alerts/Infrastructure/Persistence/AlertsDbContext.cs` — DbSet<Alert>, OnModelCreating with all indexes from data-model.md (idx_alert_user_created, idx_alert_dedup partial unique, idx_alert_purge)
-- [ ] T011 Create `AlertRepository`: `backend/src/FinanceSentry.Modules.Alerts/Infrastructure/Persistence/Repositories/AlertRepository.cs` — implement all IAlertRepository methods using AlertsDbContext
-- [ ] T012 Create EF Core migration M001: `backend/src/FinanceSentry.Modules.Alerts/Migrations/` — run `dotnet ef migrations add M001_InitialSchema --project ... --context AlertsDbContext`
-- [ ] T013 Register Alerts module in `backend/src/FinanceSentry.API/Program.cs`: add AlertsModule assembly to AddCqrs, register AlertsDbContext with Npgsql, register IAlertGeneratorService→AlertGeneratorService, add migration block, bump API version 0.7.0 → 0.8.0 in `backend/src/FinanceSentry.API/FinanceSentry.API.csproj`
-- [ ] T014 Implement `AlertGeneratorService`: `backend/src/FinanceSentry.Modules.Alerts/Application/Services/AlertGeneratorService.cs` — implements IAlertGeneratorService; deduplication via FindActiveAsync before insert; auto-resolution sets IsResolved=true, ResolvedAt; all five methods
-- [ ] T015 Unit test `AlertGeneratorService` deduplication and auto-resolution: `backend/tests/FinanceSentry.Modules.Alerts.Tests/AlertGeneratorServiceTests.cs` — test: no duplicate alert created when unresolved exists; low-balance alert resolved when balance recovers; sync-failure resolved on success
+- [X] T005 Define `IAlertGeneratorService` interface in `backend/src/FinanceSentry.Core/Interfaces/IAlertGeneratorService.cs` — five methods: GenerateLowBalanceAlertAsync, ResolveLowBalanceAlertAsync, GenerateSyncFailureAlertAsync, ResolveSyncFailureAlertAsync, GenerateUnusualSpendAlertAsync (signatures from data-model.md)
+- [X] T006 [P] Create `AlertType` string-constant enum: `backend/src/FinanceSentry.Modules.Alerts/Domain/AlertType.cs` (LowBalance, SyncFailure, UnusualSpend)
+- [X] T007 [P] Create `AlertSeverity` string-constant enum: `backend/src/FinanceSentry.Modules.Alerts/Domain/AlertSeverity.cs` (Error, Warning, Info)
+- [X] T008 Create `Alert` domain entity: `backend/src/FinanceSentry.Modules.Alerts/Domain/Alert.cs` — all fields from data-model.md (Id, UserId, Type, Severity, Title, Message, ReferenceId, ReferenceLabel, IsRead, IsResolved, IsDismissed, CreatedAt, UpdatedAt, ResolvedAt)
+- [X] T009 Create `IAlertRepository` interface: `backend/src/FinanceSentry.Modules.Alerts/Domain/Repositories/IAlertRepository.cs` — methods: GetPagedAsync, GetUnreadCountAsync, FindActiveAsync (dedup check), MarkReadAsync, MarkAllReadAsync, DismissAsync, ResolveAsync, PurgeOldAsync
+- [X] T010 Create `AlertsDbContext`: `backend/src/FinanceSentry.Modules.Alerts/Infrastructure/Persistence/AlertsDbContext.cs` — DbSet<Alert>, OnModelCreating with all indexes from data-model.md (idx_alert_user_created, idx_alert_dedup partial unique, idx_alert_purge)
+- [X] T011 Create `AlertRepository`: `backend/src/FinanceSentry.Modules.Alerts/Infrastructure/Persistence/Repositories/AlertRepository.cs` — implement all IAlertRepository methods using AlertsDbContext
+- [X] T012 Create EF Core migration M001: `backend/src/FinanceSentry.Modules.Alerts/Migrations/` — run `dotnet ef migrations add M001_InitialSchema --project ... --context AlertsDbContext`
+- [X] T013 Register Alerts module in `backend/src/FinanceSentry.API/Program.cs`: add AlertsModule assembly to AddCqrs, register AlertsDbContext with Npgsql, register IAlertGeneratorService→AlertGeneratorService, add migration block, bump API version 0.7.0 → 0.8.0 in `backend/src/FinanceSentry.API/FinanceSentry.API.csproj`
+- [X] T014 Implement `AlertGeneratorService`: `backend/src/FinanceSentry.Modules.Alerts/Application/Services/AlertGeneratorService.cs` — implements IAlertGeneratorService; deduplication via FindActiveAsync before insert; auto-resolution sets IsResolved=true, ResolvedAt; all five methods
+- [X] T015 Unit test `AlertGeneratorService` deduplication and auto-resolution: `backend/tests/FinanceSentry.Modules.Alerts.Tests/AlertGeneratorServiceTests.cs` — test: no duplicate alert created when unresolved exists; low-balance alert resolved when balance recovers; sync-failure resolved on success
 
 **Checkpoint**: `dotnet build backend/` zero warnings. Migration applies cleanly. `IAlertGeneratorService` injectable.
 
@@ -56,34 +56,34 @@
 
 ### Contract Tests for US1
 
-- [ ] T016 [P] [US1] Contract test for `GET /api/v1/alerts`: `backend/tests/FinanceSentry.Modules.Alerts.Tests/Contracts/GetAlertsContractTest.cs` — validates 200 response shape (items[], totalCount, unreadCount, page, pageSize, totalPages), 401 on missing token
-- [ ] T017 [P] [US1] Contract test for `GET /api/v1/alerts/unread-count`: `backend/tests/FinanceSentry.Modules.Alerts.Tests/Contracts/GetUnreadCountContractTest.cs` — validates 200 `{ count: N }` shape
-- [ ] T018 [P] [US1] Contract test for `PATCH /api/v1/alerts/{id}/read`: `backend/tests/FinanceSentry.Modules.Alerts.Tests/Contracts/MarkAlertReadContractTest.cs` — validates 204 on valid id, 404 on unknown id, 401 on missing token
-- [ ] T019 [P] [US1] Contract test for `PATCH /api/v1/alerts/read-all`: `backend/tests/FinanceSentry.Modules.Alerts.Tests/Contracts/MarkAllReadContractTest.cs` — validates 204 on success, 401 on missing token
-- [ ] T020 [P] [US1] Contract test for `DELETE /api/v1/alerts/{id}`: `backend/tests/FinanceSentry.Modules.Alerts.Tests/Contracts/DismissAlertContractTest.cs` — validates 204 on valid id, 404 on unknown id, 401 on missing token
+- [X] T016 [P] [US1] Contract test for `GET /api/v1/alerts`: `backend/tests/FinanceSentry.Modules.Alerts.Tests/Contracts/GetAlertsContractTest.cs` — validates 200 response shape (items[], totalCount, unreadCount, page, pageSize, totalPages), 401 on missing token
+- [X] T017 [P] [US1] Contract test for `GET /api/v1/alerts/unread-count`: `backend/tests/FinanceSentry.Modules.Alerts.Tests/Contracts/GetUnreadCountContractTest.cs` — validates 200 `{ count: N }` shape
+- [X] T018 [P] [US1] Contract test for `PATCH /api/v1/alerts/{id}/read`: `backend/tests/FinanceSentry.Modules.Alerts.Tests/Contracts/MarkAlertReadContractTest.cs` — validates 204 on valid id, 404 on unknown id, 401 on missing token
+- [X] T019 [P] [US1] Contract test for `PATCH /api/v1/alerts/read-all`: `backend/tests/FinanceSentry.Modules.Alerts.Tests/Contracts/MarkAllReadContractTest.cs` — validates 204 on success, 401 on missing token
+- [X] T020 [P] [US1] Contract test for `DELETE /api/v1/alerts/{id}`: `backend/tests/FinanceSentry.Modules.Alerts.Tests/Contracts/DismissAlertContractTest.cs` — validates 204 on valid id, 404 on unknown id, 401 on missing token
 
 ### Backend Implementation for US1
 
-- [ ] T021 [P] [US1] Create response DTOs: `backend/src/FinanceSentry.Modules.Alerts/API/Responses/AlertDto.cs`, `AlertsPageResponse.cs`, `UnreadCountResponse.cs`
-- [ ] T022 [P] [US1] Implement `GetAlertsQuery` + handler: `backend/src/FinanceSentry.Modules.Alerts/Application/Queries/GetAlertsQuery.cs` — parameters: UserId, Filter, Page, PageSize; handler calls IAlertRepository.GetPagedAsync
-- [ ] T023 [P] [US1] Implement `GetUnreadCountQuery` + handler: `backend/src/FinanceSentry.Modules.Alerts/Application/Queries/GetUnreadCountQuery.cs` — calls IAlertRepository.GetUnreadCountAsync
-- [ ] T024 [P] [US1] Implement `MarkAlertReadCommand` + handler: `backend/src/FinanceSentry.Modules.Alerts/Application/Commands/MarkAlertReadCommand.cs` — verifies ownership, calls IAlertRepository.MarkReadAsync, returns 404 if not found
-- [ ] T025 [P] [US1] Implement `MarkAllAlertsReadCommand` + handler: `backend/src/FinanceSentry.Modules.Alerts/Application/Commands/MarkAllAlertsReadCommand.cs` — bulk update for user's unread alerts
-- [ ] T026 [P] [US1] Implement `DismissAlertCommand` + handler: `backend/src/FinanceSentry.Modules.Alerts/Application/Commands/DismissAlertCommand.cs` — verifies ownership, sets IsDismissed=true, returns 404 if not found
-- [ ] T027 [US1] Implement `AlertsController`: `backend/src/FinanceSentry.Modules.Alerts/API/Controllers/AlertsController.cs` — all 5 endpoints wired to CQRS handlers; route `/api/v1/alerts`; extract UserId from JWT claims
+- [X] T021 [P] [US1] Create response DTOs: `backend/src/FinanceSentry.Modules.Alerts/API/Responses/AlertDto.cs`, `AlertsPageResponse.cs`, `UnreadCountResponse.cs`
+- [X] T022 [P] [US1] Implement `GetAlertsQuery` + handler: `backend/src/FinanceSentry.Modules.Alerts/Application/Queries/GetAlertsQuery.cs` — parameters: UserId, Filter, Page, PageSize; handler calls IAlertRepository.GetPagedAsync
+- [X] T023 [P] [US1] Implement `GetUnreadCountQuery` + handler: `backend/src/FinanceSentry.Modules.Alerts/Application/Queries/GetUnreadCountQuery.cs` — calls IAlertRepository.GetUnreadCountAsync
+- [X] T024 [P] [US1] Implement `MarkAlertReadCommand` + handler: `backend/src/FinanceSentry.Modules.Alerts/Application/Commands/MarkAlertReadCommand.cs` — verifies ownership, calls IAlertRepository.MarkReadAsync, returns 404 if not found
+- [X] T025 [P] [US1] Implement `MarkAllAlertsReadCommand` + handler: `backend/src/FinanceSentry.Modules.Alerts/Application/Commands/MarkAllAlertsReadCommand.cs` — bulk update for user's unread alerts
+- [X] T026 [P] [US1] Implement `DismissAlertCommand` + handler: `backend/src/FinanceSentry.Modules.Alerts/Application/Commands/DismissAlertCommand.cs` — verifies ownership, sets IsDismissed=true, returns 404 if not found
+- [X] T027 [US1] Implement `AlertsController`: `backend/src/FinanceSentry.Modules.Alerts/API/Controllers/AlertsController.cs` — all 5 endpoints wired to CQRS handlers; route `/api/v1/alerts`; extract UserId from JWT claims
 
 ### Frontend Implementation for US1
 
-- [ ] T028 [P] [US1] Update `alert.model.ts`: `frontend/src/app/modules/alerts/models/alert/alert.model.ts` — add `dismissed: boolean`, `resolved: boolean`, `resolvedAt: number | null` fields; rename `body` → `message` to match API contract
-- [ ] T029 [P] [US1] Create `alerts.service.ts`: `frontend/src/app/modules/alerts/services/alerts.service.ts` — HTTP methods: getAlerts(filter, page, pageSize), getUnreadCount(), markRead(id), markAllRead(), dismiss(id)
-- [ ] T030 [US1] Update `alerts.state.ts`: `frontend/src/app/modules/alerts/store/alerts/alerts.state.ts` — add `totalCount: number`, `currentPage: number`, `pageSize: number` to AlertsState and initial state
-- [ ] T031 [US1] Update `alerts.methods.ts`: `frontend/src/app/modules/alerts/store/alerts/alerts.methods.ts` — add `setTotalCount`, `setPage`, `setPageSize` patchState mutations
-- [ ] T032 [US1] Update `alerts.effects.ts`: `frontend/src/app/modules/alerts/store/alerts/alerts.effects.ts` — replace ALERT_MOCK_DATA with AlertsService HTTP calls; implement load, markRead, markAllRead, dismiss rxMethods; call getUnreadCount separately for badge refresh
-- [ ] T033 [US1] Update `alerts.store.ts`: `frontend/src/app/modules/alerts/store/alerts/alerts.store.ts` — add `{providedIn: 'root'}` to make store root-scoped (required for sidebar badge)
-- [ ] T034 [US1] Update `alerts.component.ts`: `frontend/src/app/modules/alerts/pages/alerts/alerts.component.ts` — remove `providers: [AlertsStore]` if present (now root-scoped); bind all actions to store methods
-- [ ] T035 [US1] Update `app-shell.component.ts`: `frontend/src/app/core/shell/app-shell.component.ts` — inject AlertsStore, add unread count badge to the `Alerts` NavItem's Bell icon (bind `alertsStore.unreadCount()`)
-- [ ] T036 [P] [US1] Add `ALERT_NOT_FOUND` to error registry: `frontend/src/app/core/errors/error-messages.registry.ts`
-- [ ] T037 [P] [US1] Bump frontend version `0.7.0 → 0.8.0` in `frontend/package.json`
+- [X] T028 [P] [US1] Update `alert.model.ts`: `frontend/src/app/modules/alerts/models/alert/alert.model.ts` — add `dismissed: boolean`, `resolved: boolean`, `resolvedAt: number | null` fields; rename `body` → `message` to match API contract
+- [X] T029 [P] [US1] Create `alerts.service.ts`: `frontend/src/app/modules/alerts/services/alerts.service.ts` — HTTP methods: getAlerts(filter, page, pageSize), getUnreadCount(), markRead(id), markAllRead(), dismiss(id)
+- [X] T030 [US1] Update `alerts.state.ts`: `frontend/src/app/modules/alerts/store/alerts/alerts.state.ts` — add `totalCount: number`, `currentPage: number`, `pageSize: number` to AlertsState and initial state
+- [X] T031 [US1] Update `alerts.methods.ts`: `frontend/src/app/modules/alerts/store/alerts/alerts.methods.ts` — add `setTotalCount`, `setPage`, `setPageSize` patchState mutations
+- [X] T032 [US1] Update `alerts.effects.ts`: `frontend/src/app/modules/alerts/store/alerts/alerts.effects.ts` — replace ALERT_MOCK_DATA with AlertsService HTTP calls; implement load, markRead, markAllRead, dismiss rxMethods; call getUnreadCount separately for badge refresh
+- [X] T033 [US1] Update `alerts.store.ts`: `frontend/src/app/modules/alerts/store/alerts/alerts.store.ts` — add `{providedIn: 'root'}` to make store root-scoped (required for sidebar badge)
+- [X] T034 [US1] Update `alerts.component.ts`: `frontend/src/app/modules/alerts/pages/alerts/alerts.component.ts` — remove `providers: [AlertsStore]` if present (now root-scoped); bind all actions to store methods
+- [X] T035 [US1] Update `app-shell.component.ts`: `frontend/src/app/core/shell/app-shell.component.ts` — inject AlertsStore, add unread count badge to the `Alerts` NavItem's Bell icon (bind `alertsStore.unreadCount()`)
+- [X] T036 [P] [US1] Add `ALERT_NOT_FOUND` to error registry: `frontend/src/app/core/errors/error-messages.registry.ts`
+- [X] T037 [P] [US1] Bump frontend version `0.7.0 → 0.8.0` in `frontend/package.json`
 
 **Checkpoint**: `GET /api/v1/alerts` returns 200 with empty list. Angular alerts page loads with empty state. Sidebar badge shows 0. All 5 endpoints return correct status codes.
 
@@ -97,11 +97,11 @@
 
 ### Implementation for US2
 
-- [ ] T038 Extend `AccountSyncCompletedEvent`: `backend/src/FinanceSentry.Modules.BankSync/Domain/Events/AccountSyncCompletedEvent.cs` — add `UserId` (string), `Provider` (string), `BalanceAfterSync` (decimal?), `ErrorCode` (string?) to the record
-- [ ] T039 Update all publish calls for `AccountSyncCompletedEvent` in `backend/src/FinanceSentry.Modules.BankSync/Application/Services/ScheduledSyncService.cs` — pass new fields (UserId from account, Provider from account.Provider, BalanceAfterSync from fetched balance, ErrorCode from exception)
-- [ ] T040 Add `IAlertGeneratorService` injection and call sites to `ScheduledSyncService`: `backend/src/FinanceSentry.Modules.BankSync/Application/Services/ScheduledSyncService.cs` — after successful sync call `GenerateLowBalanceAlertAsync` (if balance < threshold AND LowBalanceAlerts=true) and `ResolveLowBalanceAlertAsync` (if balance ≥ threshold); read threshold from `ApplicationUser` via UserManager
-- [ ] T041 Add failure call site to `ScheduledSyncService` — in the exception handler call `GenerateSyncFailureAlertAsync` (if SyncFailureAlerts=true); on success call `ResolveSyncFailureAlertAsync`
-- [ ] T042 Unit test low-balance alert lifecycle in `AlertGeneratorService`: `backend/tests/FinanceSentry.Modules.Alerts.Tests/AlertGeneratorServiceTests.cs` — alert created when balance < threshold; no duplicate when already active; alert resolved when balance ≥ threshold
+- [X] T038 Extend `AccountSyncCompletedEvent`: `backend/src/FinanceSentry.Modules.BankSync/Domain/Events/AccountSyncCompletedEvent.cs` — add `UserId` (string), `Provider` (string), `BalanceAfterSync` (decimal?), `ErrorCode` (string?) to the record
+- [X] T039 Update all publish calls for `AccountSyncCompletedEvent` in `backend/src/FinanceSentry.Modules.BankSync/Application/Services/ScheduledSyncService.cs` — pass new fields (UserId from account, Provider from account.Provider, BalanceAfterSync from fetched balance, ErrorCode from exception)
+- [X] T040 Add `IAlertGeneratorService` injection and call sites to `ScheduledSyncService`: `backend/src/FinanceSentry.Modules.BankSync/Application/Services/ScheduledSyncService.cs` — after successful sync call `GenerateLowBalanceAlertAsync` (if balance < threshold AND LowBalanceAlerts=true) and `ResolveLowBalanceAlertAsync` (if balance ≥ threshold); read threshold from `ApplicationUser` via UserManager
+- [X] T041 Add failure call site to `ScheduledSyncService` — in the exception handler call `GenerateSyncFailureAlertAsync` (if SyncFailureAlerts=true); on success call `ResolveSyncFailureAlertAsync`
+- [X] T042 Unit test low-balance alert lifecycle in `AlertGeneratorService`: `backend/tests/FinanceSentry.Modules.Alerts.Tests/AlertGeneratorServiceTests.cs` — alert created when balance < threshold; no duplicate when already active; alert resolved when balance ≥ threshold
 
 **Checkpoint**: After a sync with balance below threshold, `GET /api/v1/alerts` returns a LowBalance alert. After recovery sync, alert `isResolved=true`.
 
@@ -115,9 +115,9 @@
 
 ### Implementation for US3
 
-- [ ] T043 Inject `IAlertGeneratorService` into `BinanceSyncJob`: `backend/src/FinanceSentry.Modules.CryptoSync/Infrastructure/Jobs/BinanceSyncJob.cs` — in the per-user catch block call `GenerateSyncFailureAlertAsync`; after success call `ResolveSyncFailureAlertAsync`; wrap with null-check: only if SyncFailureAlerts is enabled (requires fetching user preference via UserManager or passing it through credential)
-- [ ] T044 Inject `IAlertGeneratorService` into `IBKRSyncJob`: `backend/src/FinanceSentry.Modules.BrokerageSync/Infrastructure/Jobs/IBKRSyncJob.cs` — same pattern as T043
-- [ ] T045 Unit test sync-failure alert lifecycle in `AlertGeneratorService`: `backend/tests/FinanceSentry.Modules.Alerts.Tests/AlertGeneratorServiceTests.cs` — failure alert created; no duplicate on repeated failures; resolved after success
+- [X] T043 Inject `IAlertGeneratorService` into `BinanceSyncJob`: `backend/src/FinanceSentry.Modules.CryptoSync/Infrastructure/Jobs/BinanceSyncJob.cs` — in the per-user catch block call `GenerateSyncFailureAlertAsync`; after success call `ResolveSyncFailureAlertAsync`; wrap with null-check: only if SyncFailureAlerts is enabled (requires fetching user preference via UserManager or passing it through credential)
+- [X] T044 Inject `IAlertGeneratorService` into `IBKRSyncJob`: `backend/src/FinanceSentry.Modules.BrokerageSync/Infrastructure/Jobs/IBKRSyncJob.cs` — same pattern as T043
+- [X] T045 Unit test sync-failure alert lifecycle in `AlertGeneratorService`: `backend/tests/FinanceSentry.Modules.Alerts.Tests/AlertGeneratorServiceTests.cs` — failure alert created; no duplicate on repeated failures; resolved after success
 
 **Checkpoint**: Manual Binance/IBKR credential invalidation triggers SyncFailure alert. Restore → alert resolved.
 
@@ -131,9 +131,9 @@
 
 ### Implementation for US4
 
-- [ ] T046 Implement `UnusualSpendDetectionJob`: `backend/src/FinanceSentry.Modules.BankSync/Infrastructure/Jobs/UnusualSpendDetectionJob.cs` — queries `Transactions` grouped by UserId and MerchantCategory; computes 3-month rolling average; identifies categories where current month > 2× average and user has ≥ 3 months of history; calls `IAlertGeneratorService.GenerateUnusualSpendAlertAsync`; skips users without sufficient history
-- [ ] T047 Register `UnusualSpendDetectionJob` in Hangfire: `backend/src/FinanceSentry.Modules.BankSync/Infrastructure/Jobs/HangfireSetup.cs` — add recurring job `unusual-spend-detection` with `Cron.Daily()` (runs nightly)
-- [ ] T048 Unit test unusual-spend detection logic in `UnusualSpendDetectionJob`: `backend/tests/FinanceSentry.Modules.BankSync.Tests/UnusualSpendDetectionJobTests.cs` — correctly identifies 2× threshold breach; skips users with < 3 months history; no duplicate alert when one already active
+- [X] T046 Implement `UnusualSpendDetectionJob`: `backend/src/FinanceSentry.Modules.BankSync/Infrastructure/Jobs/UnusualSpendDetectionJob.cs` — queries `Transactions` grouped by UserId and MerchantCategory; computes 3-month rolling average; identifies categories where current month > 2× average and user has ≥ 3 months of history; calls `IAlertGeneratorService.GenerateUnusualSpendAlertAsync`; skips users without sufficient history
+- [X] T047 Register `UnusualSpendDetectionJob` in Hangfire: `backend/src/FinanceSentry.Modules.BankSync/Infrastructure/Jobs/HangfireSetup.cs` — add recurring job `unusual-spend-detection` with `Cron.Daily()` (runs nightly)
+- [X] T048 Unit test unusual-spend detection logic in `UnusualSpendDetectionJob`: `backend/tests/FinanceSentry.Modules.BankSync.Tests/UnusualSpendDetectionJobTests.cs` — correctly identifies 2× threshold breach; skips users with < 3 months history; no duplicate alert when one already active
 
 **Checkpoint**: Running the Hangfire job manually produces UnusualSpend alerts for qualifying users. No duplicates on re-run.
 
@@ -143,11 +143,11 @@
 
 **Purpose**: Purge job, edge-case handling, and final validation.
 
-- [ ] T049 Implement `AlertPurgeJob`: `backend/src/FinanceSentry.Modules.Alerts/Infrastructure/Jobs/AlertPurgeJob.cs` — deletes dismissed/resolved alerts older than 90 days via IAlertRepository.PurgeOldAsync; respects FR-012
-- [ ] T050 Register `AlertPurgeJob` in `AlertsHangfireSetup` and wire in `Program.cs`: `backend/src/FinanceSentry.Modules.Alerts/Infrastructure/Jobs/AlertsHangfireSetup.cs` — recurring job `alert-purge`, `Cron.Monthly()`
-- [ ] T051 [P] Handle disconnected-account alert deletion: add `OnAccountDisconnected` call site in the account disconnect flow (`backend/src/FinanceSentry.Modules.BankSync/Application/Commands/`) — call `IAlertRepository.DeleteByReferenceIdAsync(accountId)` (add method to interface)
-- [ ] T052 [P] Run `dotnet build backend/` and resolve all remaining warnings. Run `npx eslint frontend/src/app/modules/alerts/ --fix` and fix all errors.
-- [ ] T053 Playwright QA: start full Docker stack; navigate to `/alerts` as test user (test@gmail.com); verify empty state → mark-all-read → dismiss flows work end-to-end; verify sidebar badge updates without page reload
+- [X] T049 Implement `AlertPurgeJob`: `backend/src/FinanceSentry.Modules.Alerts/Infrastructure/Jobs/AlertPurgeJob.cs` — deletes dismissed/resolved alerts older than 90 days via IAlertRepository.PurgeOldAsync; respects FR-012
+- [X] T050 Register `AlertPurgeJob` in `AlertsHangfireSetup` and wire in `Program.cs`: `backend/src/FinanceSentry.Modules.Alerts/Infrastructure/Jobs/AlertsHangfireSetup.cs` — recurring job `alert-purge`, `Cron.Monthly()`
+- [X] T051 [P] Handle disconnected-account alert deletion: add `OnAccountDisconnected` call site in the account disconnect flow (`backend/src/FinanceSentry.Modules.BankSync/Application/Commands/`) — call `IAlertRepository.DeleteByReferenceIdAsync(accountId)` (add method to interface)
+- [X] T052 [P] Run `dotnet build backend/` and resolve all remaining warnings. Run `npx eslint frontend/src/app/modules/alerts/ --fix` and fix all errors.
+- [X] T053 Playwright QA: start full Docker stack; navigate to `/alerts` as test user (test@gmail.com); verify empty state → mark-all-read → dismiss flows work end-to-end; verify sidebar badge updates without page reload
 
 ---
 

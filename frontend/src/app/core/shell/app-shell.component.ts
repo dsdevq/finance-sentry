@@ -13,19 +13,9 @@ import {
 } from '@dsdevq-common/ui';
 import {filter, map} from 'rxjs';
 
+import {AlertsStore} from '../../modules/alerts/store/alerts/alerts.store';
 import {AuthStore} from '../../modules/auth/store/auth.store';
 import {AppRoute} from '../../shared/enums/app-route/app-route.enum';
-
-const NAV_ITEMS: NavItem[] = [
-  {label: 'Dashboard', icon: 'LayoutDashboard', route: AppRoute.Dashboard},
-  {label: 'Accounts', icon: 'Building2', route: AppRoute.AccountsList},
-  {label: 'Transactions', icon: 'ArrowLeftRight', route: AppRoute.Transactions},
-  {label: 'Holdings', icon: 'ChartPie', route: AppRoute.Holdings},
-  {label: 'Budgets', icon: 'Zap', route: AppRoute.Budgets},
-  {label: 'Subscriptions', icon: 'RefreshCw', route: AppRoute.Subscriptions},
-  {label: 'Alerts', icon: 'Bell', route: AppRoute.Alerts},
-  {label: 'Settings', icon: 'Settings2', route: AppRoute.Settings},
-];
 
 const PALETTE_ITEMS: CommandPaletteItem[] = [
   {id: AppRoute.Dashboard, label: 'Dashboard', icon: 'LayoutDashboard', group: 'Pages'},
@@ -60,7 +50,6 @@ const PALETTE_ITEMS: CommandPaletteItem[] = [
       <router-outlet />
     </cmn-app-layout>
   `,
-
 })
 export class AppShellComponent {
   private readonly router = inject(Router);
@@ -77,12 +66,28 @@ export class AppShellComponent {
     {initialValue: this.router.url}
   );
 
+  private readonly alertsStore = inject(AlertsStore);
+
   public readonly themeService = inject(ThemeService);
-  public readonly navItems = NAV_ITEMS;
+  public readonly navItems: NavItem[] = [
+    {label: 'Dashboard', icon: 'LayoutDashboard', route: AppRoute.Dashboard},
+    {label: 'Accounts', icon: 'Building2', route: AppRoute.AccountsList},
+    {label: 'Transactions', icon: 'ArrowLeftRight', route: AppRoute.Transactions},
+    {label: 'Holdings', icon: 'ChartPie', route: AppRoute.Holdings},
+    {label: 'Budgets', icon: 'Zap', route: AppRoute.Budgets},
+    {label: 'Subscriptions', icon: 'RefreshCw', route: AppRoute.Subscriptions},
+    {
+      label: 'Alerts',
+      icon: 'Bell',
+      route: AppRoute.Alerts,
+      badge: () => this.alertsStore.unreadCount(),
+    },
+    {label: 'Settings', icon: 'Settings2', route: AppRoute.Settings},
+  ];
   public readonly isDark = computed(() => this.theme() === 'dark');
   public readonly activeRoute = computed(() => {
     const url = this.routerUrl();
-    const match = NAV_ITEMS.find(item => url.startsWith(item.route));
+    const match = this.navItems.find(item => url.startsWith(item.route));
     return match?.route ?? '';
   });
 
