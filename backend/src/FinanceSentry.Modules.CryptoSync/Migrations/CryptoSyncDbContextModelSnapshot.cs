@@ -17,6 +17,7 @@ namespace FinanceSentry.Modules.CryptoSync.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
+                .HasDefaultSchema("crypto_sync")
                 .HasAnnotation("ProductVersion", "9.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
@@ -76,7 +77,7 @@ namespace FinanceSentry.Modules.CryptoSync.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("BinanceCredentials", (string)null);
+                    b.ToTable("BinanceCredentials", "crypto_sync");
                 });
 
             modelBuilder.Entity("FinanceSentry.Modules.CryptoSync.Domain.CryptoHolding", b =>
@@ -120,7 +121,7 @@ namespace FinanceSentry.Modules.CryptoSync.Migrations
                     b.HasIndex("UserId", "Asset")
                         .IsUnique();
 
-                    b.ToTable("CryptoHoldings", (string)null);
+                    b.ToTable("CryptoHoldings", "crypto_sync");
                 });
 #pragma warning restore 612, 618
         }

@@ -1,5 +1,6 @@
 namespace FinanceSentry.Tests.Unit.BankSync.Infrastructure;
 
+using FinanceSentry.Modules.BankSync.Application.Services.CategoryMapping;
 using FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
 using FluentAssertions;
 using Moq;
@@ -14,7 +15,7 @@ public class PlaidAdapterTests
     private static readonly Guid UserId = Guid.Parse("aaaaaaaa-0000-0000-0000-000000000001");
 
     private readonly Mock<IPlaidClient> _clientMock = new(MockBehavior.Strict);
-    private PlaidAdapter CreateSut() => new(_clientMock.Object);
+    private PlaidAdapter CreateSut() => new(_clientMock.Object, new PlaidCategoryMapper());
 
     // ── CreateLinkToken ──────────────────────────────────────────────────────
 
@@ -151,7 +152,7 @@ public class PlaidAdapterTests
                         IsoCurrencyCode: "EUR",
                         Name: "Tesco Metro Dublin",
                         MerchantName: "Tesco",
-                        PersonalFinanceCategory: "Groceries",
+                        PersonalFinanceCategory: "FOOD_AND_DRINK",
                         Date: new DateTime(2026, 1, 15),
                         AuthorizedDate: new DateTime(2026, 1, 14),
                         Pending: false)
@@ -171,7 +172,7 @@ public class PlaidAdapterTests
         tx.UserId.Should().Be(userId);
         tx.Amount.Should().Be(45.99m);
         tx.Description.Should().Be("Tesco Metro Dublin");
-        tx.MerchantCategory.Should().Be("Groceries");
+        tx.MerchantCategory.Should().Be("food_and_drink");
         tx.IsPending.Should().BeFalse();
     }
 

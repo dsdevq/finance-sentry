@@ -25,6 +25,27 @@
       </div>
     </div>
 
+    <!-- Period navigation -->
+    <div class="flex items-center justify-between">
+      <button
+        (click)="previousMonth()"
+        class="rounded px-cmn-2 py-1 text-cmn-sm text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary"
+        aria-label="Previous month"
+      >
+        ‹ Prev
+      </button>
+      <span class="font-label text-cmn-sm font-semibold text-text-primary">
+        {{ store.periodLabel() }}
+      </span>
+      <button
+        (click)="nextMonth()"
+        class="rounded px-cmn-2 py-1 text-cmn-sm text-text-secondary transition-colors hover:bg-surface-raised hover:text-text-primary"
+        aria-label="Next month"
+      >
+        Next ›
+      </button>
+    </div>
+
     <!-- Over-budget warning -->
     @if (store.overBudgetCount() > 0) {
       <cmn-alert variant="warning">
@@ -60,55 +81,116 @@
       </div>
       <!-- Stacked breakdown bar -->
       <div class="mt-2 flex h-1.5 overflow-hidden rounded-full gap-px">
-        @for (b of store.budgets(); track b.category) {
+        @for (b of store.summaryItems(); track b.id) {
           <div
             [style.flex]="b.spent"
-            [style.background]="b.color"
-            [title]="b.category + ': ' + (b.spent | appCurrency)"
+            [style.background]="categoryColor(b.category)"
+            [title]="b.categoryLabel + ': ' + (b.spent | appCurrency)"
             class="min-w-[2px] transition-[flex] duration-300"
           ></div>
         }
       </div>
       <!-- Legend -->
       <div class="mt-cmn-3 flex flex-wrap gap-x-cmn-4 gap-y-cmn-1">
-        @for (b of store.budgets(); track b.category) {
+        @for (b of store.summaryItems(); track b.id) {
           <div class="flex items-center gap-cmn-1">
-            <div [style.background]="b.color" class="h-2 w-2 rounded-sm"></div>
-            <span class="text-cmn-xs text-text-secondary">{{ b.category }}</span>
+            <div [style.background]="categoryColor(b.category)" class="h-2 w-2 rounded-sm"></div>
+            <span class="text-cmn-xs text-text-secondary">{{ b.categoryLabel }}</span>
           </div>
         }
       </div>
     </cmn-card>
 
+    <!-- Add budget form -->
+    <cmn-card>
+      <div class="flex items-end gap-cmn-3">
+        <div class="flex-1">
+          <label
+            for="budget-category"
+            class="mb-1 block font-label text-cmn-xs font-semibold uppercase tracking-widest text-text-secondary"
+          >
+            Category
+          </label>
+          <select
+            [ngModel]="newCategory()"
+            (ngModelChange)="newCategory.set($event)"
+            id="budget-category"
+            class="w-full rounded border border-surface-raised bg-surface-bg px-cmn-2 py-1.5 text-cmn-sm text-text-primary outline-none focus:border-accent-default"
+          >
+            <option value="">Select category…</option>
+            @for (cat of VALID_CATEGORIES; track cat.key) {
+              <option [value]="cat.key">{{ cat.label }}</option>
+            }
+          </select>
+        </div>
+        <div class="w-36">
+          <label
+            for="budget-limit"
+            class="mb-1 block font-label text-cmn-xs font-semibold uppercase tracking-widest text-text-secondary"
+          >
+            Monthly limit
+          </label>
+          <input
+            [ngModel]="newLimit()"
+            (ngModelChange)="newLimit.set($event)"
+            (keydown.enter)="createBudget()"
+            id="budget-limit"
+            type="number"
+            min="1"
+            placeholder="0.00"
+            class="w-full rounded border border-surface-raised bg-surface-bg px-cmn-2 py-1.5 text-right font-mono text-cmn-sm text-text-primary outline-none focus:border-accent-default"
+          />
+        </div>
+        <button
+          (click)="createBudget()"
+          class="rounded bg-accent-default px-cmn-3 py-1.5 text-cmn-sm font-semibold text-white transition-opacity hover:opacity-90"
+        >
+          Add
+        </button>
+      </div>
+    </cmn-card>
+
     <!-- Category cards grid -->
     <div class="grid grid-cols-1 gap-cmn-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      @for (b of store.budgets(); track b.category) {
-        @let pct = barPct(b.spent, b.limit);
-        @let over = b.spent > b.limit;
+      @for (b of store.summaryItems(); track b.id) {
+        @let pct = barPct(b.spent, b.monthlyLimit);
+        @let over = b.isOverBudget;
         @let nearOver = !over && pct >= 80;
-        @let isEditing = store.editingCategory() === b.category;
+        @let isEditing = store.editingId() === b.id;
 
         <cmn-card>
           <!-- Card header -->
           <div class="mb-cmn-3 flex items-center justify-between">
             <div class="flex items-center gap-cmn-2">
-              <div [style.background]="b.color" class="h-2.5 w-2.5 shrink-0 rounded-sm"></div>
+              <div
+                [style.background]="categoryColor(b.category)"
+                class="h-2.5 w-2.5 shrink-0 rounded-sm"
+              ></div>
               <span class="font-label text-cmn-sm font-semibold text-text-primary">{{
-                b.category
+                b.categoryLabel
               }}</span>
             </div>
-            @if (over) {
-              <cmn-tag variant="error">Over</cmn-tag>
-            } @else if (nearOver) {
-              <cmn-tag variant="warning">Near limit</cmn-tag>
-            }
+            <div class="flex items-center gap-cmn-1">
+              @if (over) {
+                <cmn-tag variant="error">Over</cmn-tag>
+              } @else if (nearOver) {
+                <cmn-tag variant="warning">Near limit</cmn-tag>
+              }
+              <button
+                (click)="deleteBudget(b.id)"
+                class="rounded px-1 py-0.5 text-cmn-xs text-text-disabled transition-colors hover:bg-status-error-subtle hover:text-status-error"
+                aria-label="Delete budget"
+              >
+                ✕
+              </button>
+            </div>
           </div>
 
           <!-- Progress bar -->
           <div class="mb-cmn-2 h-1.5 overflow-hidden rounded-full bg-surface-raised">
             <div
               [style.width.%]="pct"
-              [style.background]="barColor(b.spent, b.limit, b.color)"
+              [style.background]="barColor(b.spent, b.monthlyLimit, b.category)"
               class="h-full rounded-full transition-[width] duration-500"
             ></div>
           </div>
@@ -128,8 +210,8 @@
                 <input
                   [ngModel]="editValue()"
                   (ngModelChange)="editValue.set($event)"
-                  (blur)="saveEdit(b.category)"
-                  (keydown.enter)="saveEdit(b.category)"
+                  (blur)="saveEdit(b.id)"
+                  (keydown.enter)="saveEdit(b.id)"
                   (keydown.escape)="cancelEdit()"
                   class="w-20 rounded border border-accent-default bg-surface-bg px-1.5 py-0.5 text-right font-mono text-cmn-sm text-text-primary outline-none"
                   type="text"
@@ -137,10 +219,10 @@
               </div>
             } @else {
               <button
-                (click)="startEdit(b.category, b.limit)"
+                (click)="startEdit(b.id, b.monthlyLimit)"
                 class="rounded px-1 py-0.5 font-mono text-cmn-xs text-text-disabled transition-colors hover:bg-accent-subtle hover:text-accent-default"
               >
-                / {{ b.limit | appCurrency }} ✎
+                / {{ b.monthlyLimit | appCurrency }} ✎
               </button>
             }
           </div>
@@ -152,10 +234,9 @@
             class="text-cmn-xs"
           >
             @if (over) {
-              {{ b.spent - b.limit | appCurrency }} over budget
+              {{ b.spent - b.monthlyLimit | appCurrency }} over budget
             } @else {
-              {{ b.limit - b.spent | appCurrency }} remaining ·
-              {{ pct | appDecimal: '1.0-0' }}% used
+              {{ b.remaining | appCurrency }} remaining · {{ pct | appDecimal: '1.0-0' }}% used
             }
           </div>
         </cmn-card>

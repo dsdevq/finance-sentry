@@ -29,6 +29,7 @@
     <ProjectReference Include="..\..\src\FinanceSentry.Modules.CryptoSync\FinanceSentry.Modules.CryptoSync.csproj" />
     <ProjectReference Include="..\..\src\FinanceSentry.Modules.BrokerageSync\FinanceSentry.Modules.BrokerageSync.csproj" />
     <ProjectReference Include="..\..\src\FinanceSentry.Modules.Alerts\FinanceSentry.Modules.Alerts.csproj" />
+    <ProjectReference Include="..\..\src\FinanceSentry.Modules.Budgets\FinanceSentry.Modules.Budgets.csproj" />
   </ItemGroup>
 
 </Project>

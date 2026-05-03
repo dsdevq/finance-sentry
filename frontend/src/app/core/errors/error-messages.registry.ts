@@ -18,4 +18,9 @@ export const ERROR_MESSAGES_REGISTRY: ErrorMessagesMap = {
   VALIDATION_ERROR: 'Some fields look wrong — please review the highlighted errors.',
   ALERT_NOT_FOUND: 'Alert not found.',
   ALERT_LOAD_FAILED: 'Failed to load alerts.',
+  BUDGET_NOT_FOUND: 'Budget not found.',
+  BUDGET_DUPLICATE_CATEGORY: 'A budget for this category already exists.',
+  BUDGET_INVALID_CATEGORY: 'Invalid budget category.',
+  BUDGET_INVALID_LIMIT: 'Budget limit must be greater than zero.',
+  BUDGET_INVALID_PERIOD: 'Invalid budget period.',
 };

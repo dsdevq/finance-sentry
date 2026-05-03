@@ -17,6 +17,7 @@ namespace FinanceSentry.Modules.BrokerageSync.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
+                .HasDefaultSchema("brokerage_sync")
                 .HasAnnotation("ProductVersion", "9.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
@@ -64,7 +65,7 @@ namespace FinanceSentry.Modules.BrokerageSync.Migrations
                     b.HasIndex("UserId", "Symbol", "Provider")
                         .IsUnique();
 
-                    b.ToTable("BrokerageHoldings", (string)null);
+                    b.ToTable("BrokerageHoldings", "brokerage_sync");
                 });
 
             modelBuilder.Entity("FinanceSentry.Modules.BrokerageSync.Domain.IBKRCredential", b =>
@@ -98,7 +99,7 @@ namespace FinanceSentry.Modules.BrokerageSync.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("IBKRCredentials", (string)null);
+                    b.ToTable("IBKRCredentials", "brokerage_sync");
                 });
 #pragma warning restore 612, 618
         }

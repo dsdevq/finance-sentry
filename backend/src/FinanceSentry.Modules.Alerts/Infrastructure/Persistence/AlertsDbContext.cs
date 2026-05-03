@@ -9,6 +9,7 @@ public class AlertsDbContext(DbContextOptions<AlertsDbContext> options) : DbCont
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.HasDefaultSchema("alerts");
         base.OnModelCreating(modelBuilder);
 
         var ab = modelBuilder.Entity<Alert>();

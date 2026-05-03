@@ -1,12 +1,29 @@
-import {type Budget} from '../../models/budget/budget.model';
+const MONTHS_IN_YEAR = 12;
 
-export const BUDGET_MOCK_DATA: Budget[] = [
-  {category: 'Housing', limit: 2000, spent: 1850, color: '#4f46e5'},
-  {category: 'Food & Drink', limit: 1200, spent: 1060, color: '#818cf8'},
-  {category: 'Transport', limit: 600, spent: 795, color: '#10b981'},
-  {category: 'Shopping', limit: 800, spent: 636, color: '#f59e0b'},
-  {category: 'Entertainment', limit: 400, spent: 530, color: '#ef4444'},
-  {category: 'Health & Fitness', limit: 150, spent: 55, color: '#06b6d4'},
-  {category: 'Utilities', limit: 200, spent: 142, color: '#8b5cf6'},
-  {category: 'Travel', limit: 500, spent: 420, color: '#f97316'},
+export const BUDGETS_MONTHS_IN_YEAR = MONTHS_IN_YEAR;
+
+export const CATEGORY_COLOR_MAP = new Map<string, string>([
+  ['housing', '#4f46e5'],
+  ['food_and_drink', '#818cf8'],
+  ['transport', '#10b981'],
+  ['shopping', '#f59e0b'],
+  ['entertainment', '#ef4444'],
+  ['health', '#06b6d4'],
+  ['utilities', '#8b5cf6'],
+  ['travel', '#f97316'],
+  ['other', '#94a3b8'],
+]);
+
+export const CATEGORY_COLOR_FALLBACK = '#94a3b8';
+
+export const VALID_BUDGET_CATEGORIES: {key: string; label: string}[] = [
+  {key: 'housing', label: 'Housing'},
+  {key: 'food_and_drink', label: 'Food & Drink'},
+  {key: 'transport', label: 'Transport'},
+  {key: 'shopping', label: 'Shopping'},
+  {key: 'entertainment', label: 'Entertainment'},
+  {key: 'health', label: 'Health & Fitness'},
+  {key: 'utilities', label: 'Utilities'},
+  {key: 'travel', label: 'Travel'},
+  {key: 'other', label: 'Other'},
 ];

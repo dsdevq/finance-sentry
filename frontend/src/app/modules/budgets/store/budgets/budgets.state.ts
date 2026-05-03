@@ -1,13 +1,19 @@
-import {type Budget} from '../../models/budget/budget.model';
+import {type BudgetSummaryItem} from '../../models/budget/budget.model';
 
 export interface BudgetsState {
-  budgets: Budget[];
-  editingCategory: Nullable<string>;
+  summaryItems: BudgetSummaryItem[];
+  editingId: Nullable<string>;
   status: AsyncStatus;
+  selectedYear: number;
+  selectedMonth: number;
 }
 
+const now = new Date();
+
 export const initialBudgetsState: BudgetsState = {
-  budgets: [],
-  editingCategory: null,
+  summaryItems: [],
+  editingId: null,
   status: 'idle',
+  selectedYear: now.getFullYear(),
+  selectedMonth: now.getMonth() + 1,
 };
