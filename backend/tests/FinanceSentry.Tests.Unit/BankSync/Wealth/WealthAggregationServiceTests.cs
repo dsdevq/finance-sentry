@@ -1,8 +1,8 @@
 namespace FinanceSentry.Tests.Unit.BankSync.Wealth;
 
-using FinanceSentry.Modules.BankSync.Application.Services;
-using FinanceSentry.Modules.BankSync.Domain;
-using FinanceSentry.Modules.BankSync.Domain.Repositories;
+using FinanceSentry.Core.Interfaces;
+using FinanceSentry.Core.Utils;
+using FinanceSentry.Modules.Wealth.Application.Services;
 using FluentAssertions;
 using Moq;
 using Xunit;
@@ -11,39 +11,26 @@ public class WealthAggregationServiceTests
 {
     private static readonly Guid UserId = Guid.NewGuid();
 
-    private static BankAccount MakeAccount(string provider, string currency, decimal? balance)
-    {
-        var a = new BankAccount(UserId, $"ext_{Guid.NewGuid():N}", "Test Bank", "checking", "1234", "Owner", currency, UserId, provider);
-        if (balance.HasValue)
-        {
-            a.BeginSync();
-            a.MarkActive(balance.Value);
-        }
-        return a;
-    }
+    private static BankingAccountSummary MakeAccount(string provider, string currency, decimal? balance)
+        => new(Guid.NewGuid(), "Test Bank", "checking", "1234", provider, currency,
+               balance, balance.HasValue ? CurrencyConverter.ToUsd(balance.Value, currency) : null, "synced", null);
 
-    private static Transaction MakeTransaction(Guid accountId, decimal amount, string type, DateTime date, bool isPending = false)
-    {
-        var t = new Transaction(accountId, UserId, amount, date, "Desc", Guid.NewGuid().ToString());
-        t.TransactionType = type;
-        t.PostedDate = date;
-        t.IsPending = isPending;
-        return t;
-    }
+    private static BankingTransactionSummary MakeTx(Guid accountId, string provider, decimal amount, string type, DateTime date, bool isPending = false)
+        => new(accountId, provider, type, amount, date, isPending);
 
     private WealthAggregationService BuildService(
-        IEnumerable<BankAccount> accounts,
-        IEnumerable<Transaction>? transactions = null)
+        IEnumerable<BankingAccountSummary> accounts,
+        IEnumerable<BankingTransactionSummary>? transactions = null)
     {
-        var accountMock = new Mock<IBankAccountRepository>();
-        accountMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
-                   .ReturnsAsync(accounts);
+        var accountsMock = new Mock<IBankingAccountsReader>();
+        accountsMock.Setup(r => r.GetAccountSummariesAsync(UserId, It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(accounts.ToList());
 
-        var txMock = new Mock<ITransactionRepository>();
-        txMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
-              .ReturnsAsync(transactions ?? []);
+        var txMock = new Mock<IBankingTransactionReader>();
+        txMock.Setup(r => r.GetTransactionsAsync(UserId, It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+              .ReturnsAsync((transactions ?? []).ToList());
 
-        return new WealthAggregationService(accountMock.Object, txMock.Object);
+        return new WealthAggregationService(accountsMock.Object, txMock.Object);
     }
 
     // ── GetWealthSummaryAsync ─────────────────────────────────────────────────
@@ -60,7 +47,6 @@ public class WealthAggregationServiceTests
         var svc = BuildService(accounts);
         var result = await svc.GetWealthSummaryAsync(UserId, null, null);
 
-        // 1000 USD + 100000 * 0.024 = 1000 + 2400 = 3400
         result.TotalNetWorth.Should().Be(3400m);
         result.BaseCurrency.Should().Be("USD");
     }
@@ -71,7 +57,7 @@ public class WealthAggregationServiceTests
         var accounts = new[]
         {
             MakeAccount("plaid", "USD", 500m),
-            MakeAccount("plaid", "USD", null),
+            new BankingAccountSummary(Guid.NewGuid(), "Test Bank", "checking", "1234", "plaid", "USD", null, null, "synced", null),
         };
 
         var svc = BuildService(accounts);
@@ -119,7 +105,6 @@ public class WealthAggregationServiceTests
         };
 
         var svc = BuildService(accounts);
-        // provider=monobank overrides even if category=banking would match both
         var result = await svc.GetWealthSummaryAsync(UserId, "banking", "monobank");
 
         result.TotalNetWorth.Should().Be(500m);
@@ -129,10 +114,7 @@ public class WealthAggregationServiceTests
     [Fact]
     public async Task GetWealthSummary_UnknownProvider_ReturnsEmpty()
     {
-        var accounts = new[]
-        {
-            MakeAccount("plaid", "USD", 1000m),
-        };
+        var accounts = new[] { MakeAccount("plaid", "USD", 1000m) };
 
         var svc = BuildService(accounts);
         var result = await svc.GetWealthSummaryAsync(UserId, null, "nonexistent_bank");
@@ -155,22 +137,16 @@ public class WealthAggregationServiceTests
     public async Task GetTransactionSummary_DebitCreditSplit_Correct()
     {
         var accountId = Guid.NewGuid();
-        var account = MakeAccount("plaid", "USD", 1000m);
-        // override Id via reflection isn't clean; use the real account id from creation
         var date = new DateTime(2026, 4, 15, 0, 0, 0, DateTimeKind.Utc);
-
-        var accounts = new[] { account };
         var txs = new[]
         {
-            MakeTransaction(account.Id, 100m, "debit", date),
-            MakeTransaction(account.Id, 200m, "debit", date),
-            MakeTransaction(account.Id, 300m, "credit", date),
+            MakeTx(accountId, "plaid", 100m, "debit", date),
+            MakeTx(accountId, "plaid", 200m, "debit", date),
+            MakeTx(accountId, "plaid", 300m, "credit", date),
         };
 
-        var svc = BuildService(accounts, txs);
-        var from = new DateOnly(2026, 4, 1);
-        var to = new DateOnly(2026, 4, 30);
-        var result = await svc.GetTransactionSummaryAsync(UserId, from, to, null, null);
+        var svc = BuildService([MakeAccount("plaid", "USD", 1000m)], txs);
+        var result = await svc.GetTransactionSummaryAsync(UserId, new DateOnly(2026, 4, 1), new DateOnly(2026, 4, 30), null, null);
 
         result.TotalDebits.Should().Be(300m);
         result.TotalCredits.Should().Be(300m);
@@ -180,14 +156,8 @@ public class WealthAggregationServiceTests
     [Fact]
     public async Task GetTransactionSummary_EmptyWindow_ReturnsZeros()
     {
-        var account = MakeAccount("plaid", "USD", 1000m);
-        var txDate = new DateTime(2025, 1, 15, 0, 0, 0, DateTimeKind.Utc);
-        var tx = MakeTransaction(account.Id, 100m, "debit", txDate);
-
-        var svc = BuildService(new[] { account }, new[] { tx });
-        var from = new DateOnly(2026, 4, 1);
-        var to = new DateOnly(2026, 4, 30);
-        var result = await svc.GetTransactionSummaryAsync(UserId, from, to, null, null);
+        var svc = BuildService([MakeAccount("plaid", "USD", 1000m)], []);
+        var result = await svc.GetTransactionSummaryAsync(UserId, new DateOnly(2026, 4, 1), new DateOnly(2026, 4, 30), null, null);
 
         result.TotalDebits.Should().Be(0m);
         result.TotalCredits.Should().Be(0m);
@@ -197,20 +167,15 @@ public class WealthAggregationServiceTests
     [Fact]
     public async Task GetTransactionSummary_ProviderFilter_ScopesTransactions()
     {
-        var plaidAccount = MakeAccount("plaid", "USD", 1000m);
-        var monoAccount = MakeAccount("monobank", "UAH", 50000m);
-
         var date = new DateTime(2026, 4, 15, 0, 0, 0, DateTimeKind.Utc);
         var txs = new[]
         {
-            MakeTransaction(plaidAccount.Id, 100m, "debit", date),
-            MakeTransaction(monoAccount.Id, 200m, "debit", date),
+            MakeTx(Guid.NewGuid(), "plaid", 100m, "debit", date),
+            MakeTx(Guid.NewGuid(), "monobank", 200m, "debit", date),
         };
 
-        var svc = BuildService(new[] { plaidAccount, monoAccount }, txs);
-        var from = new DateOnly(2026, 4, 1);
-        var to = new DateOnly(2026, 4, 30);
-        var result = await svc.GetTransactionSummaryAsync(UserId, from, to, null, "monobank");
+        var svc = BuildService([MakeAccount("plaid", "USD", 1000m), MakeAccount("monobank", "UAH", 50000m)], txs);
+        var result = await svc.GetTransactionSummaryAsync(UserId, new DateOnly(2026, 4, 1), new DateOnly(2026, 4, 30), null, "monobank");
 
         result.TotalDebits.Should().Be(200m);
     }
@@ -218,15 +183,16 @@ public class WealthAggregationServiceTests
     [Fact]
     public async Task GetTransactionSummary_PendingTransactions_Excluded()
     {
-        var account = MakeAccount("plaid", "USD", 1000m);
+        var accountId = Guid.NewGuid();
         var date = new DateTime(2026, 4, 15, 0, 0, 0, DateTimeKind.Utc);
-        var pending = MakeTransaction(account.Id, 999m, "debit", date, isPending: true);
-        var posted = MakeTransaction(account.Id, 50m, "debit", date, isPending: false);
+        var txs = new[]
+        {
+            MakeTx(accountId, "plaid", 999m, "debit", date, isPending: true),
+            MakeTx(accountId, "plaid", 50m, "debit", date, isPending: false),
+        };
 
-        var svc = BuildService(new[] { account }, new[] { pending, posted });
-        var from = new DateOnly(2026, 4, 1);
-        var to = new DateOnly(2026, 4, 30);
-        var result = await svc.GetTransactionSummaryAsync(UserId, from, to, null, null);
+        var svc = BuildService([MakeAccount("plaid", "USD", 1000m)], txs);
+        var result = await svc.GetTransactionSummaryAsync(UserId, new DateOnly(2026, 4, 1), new DateOnly(2026, 4, 30), null, null);
 
         result.TotalDebits.Should().Be(50m);
     }
@@ -234,19 +200,15 @@ public class WealthAggregationServiceTests
     [Fact]
     public async Task GetTransactionSummary_CategoryGrouping_Correct()
     {
-        var plaid = MakeAccount("plaid", "USD", 1000m);
-        var binance = MakeAccount("binance", "USD", 500m);
         var date = new DateTime(2026, 4, 15, 0, 0, 0, DateTimeKind.Utc);
         var txs = new[]
         {
-            MakeTransaction(plaid.Id, 100m, "debit", date),
-            MakeTransaction(binance.Id, 50m, "debit", date),
+            MakeTx(Guid.NewGuid(), "plaid", 100m, "debit", date),
+            MakeTx(Guid.NewGuid(), "binance", 50m, "debit", date),
         };
 
-        var svc = BuildService(new[] { plaid, binance }, txs);
-        var from = new DateOnly(2026, 4, 1);
-        var to = new DateOnly(2026, 4, 30);
-        var result = await svc.GetTransactionSummaryAsync(UserId, from, to, null, null);
+        var svc = BuildService([MakeAccount("plaid", "USD", 1000m), MakeAccount("binance", "USD", 500m)], txs);
+        var result = await svc.GetTransactionSummaryAsync(UserId, new DateOnly(2026, 4, 1), new DateOnly(2026, 4, 30), null, null);
 
         result.Categories.Should().HaveCount(2);
         result.Categories.First(c => c.Category == "banking").TotalDebits.Should().Be(100m);

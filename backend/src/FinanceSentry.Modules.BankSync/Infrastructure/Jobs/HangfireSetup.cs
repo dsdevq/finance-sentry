@@ -56,5 +56,6 @@ public class SyncScheduler(
             "credential-backup",
             job => job.RunAsync(CancellationToken.None),
             Cron.Weekly());
+
     }
 }

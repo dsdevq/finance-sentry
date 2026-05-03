@@ -1,9 +1,7 @@
-namespace FinanceSentry.Modules.BankSync.Application.Queries;
+namespace FinanceSentry.Modules.Wealth.Application.Queries;
 
-using FinanceSentry.Modules.BankSync.Domain.Services;
 using FinanceSentry.Core.Cqrs;
-
-// ── DTOs ─────────────────────────────────────────────────────────────────────
+using FinanceSentry.Modules.Wealth.Domain.Services;
 
 public record AppliedFiltersDto(string? Category, string? Provider);
 
@@ -31,15 +29,10 @@ public record WealthSummaryResponse(
     IReadOnlyList<CategorySummaryDto> Categories,
     AppliedFiltersDto AppliedFilters);
 
-// ── Query ────────────────────────────────────────────────────────────────────
-
 public record GetWealthSummaryQuery(
     Guid UserId,
     string? Category = null,
-    string? Provider = null
-) : IQuery<WealthSummaryResponse>;
-
-// ── Handler ──────────────────────────────────────────────────────────────────
+    string? Provider = null) : IQuery<WealthSummaryResponse>;
 
 public class GetWealthSummaryQueryHandler(IWealthAggregationService service)
     : IQueryHandler<GetWealthSummaryQuery, WealthSummaryResponse>

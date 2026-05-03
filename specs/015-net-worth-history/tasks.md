@@ -18,9 +18,9 @@
 
 **Purpose**: Create new module skeleton and Core interface before any story work begins.
 
-- [ ] T001 Create `FinanceSentry.Modules.NetWorthHistory` classlib project with EF Core 9 + Npgsql + MediatR packages in `backend/src/FinanceSentry.Modules.NetWorthHistory/FinanceSentry.Modules.NetWorthHistory.csproj`
-- [ ] T002 Add project references: NetWorthHistory → Core, NetWorthHistory → Infrastructure; API → NetWorthHistory in `backend/src/FinanceSentry.API/FinanceSentry.API.csproj`
-- [ ] T003 Define `INetWorthSnapshotService` interface and `NetWorthSnapshotData` record in `backend/src/FinanceSentry.Core/Interfaces/INetWorthSnapshotService.cs`
+- [X] T001 Create `FinanceSentry.Modules.NetWorthHistory` classlib project with EF Core 9 + Npgsql + MediatR packages in `backend/src/FinanceSentry.Modules.NetWorthHistory/FinanceSentry.Modules.NetWorthHistory.csproj`
+- [X] T002 Add project references: NetWorthHistory → Core, NetWorthHistory → Infrastructure; API → NetWorthHistory in `backend/src/FinanceSentry.API/FinanceSentry.API.csproj`
+- [X] T003 Define `INetWorthSnapshotService` interface and `NetWorthSnapshotData` record in `backend/src/FinanceSentry.Core/Interfaces/INetWorthSnapshotService.cs`
 
 ---
 
@@ -30,15 +30,15 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T004 [P] Create `NetWorthSnapshot` domain entity (immutable init-only properties, all fields from data-model.md) in `backend/src/FinanceSentry.Modules.NetWorthHistory/Domain/NetWorthSnapshot.cs`
-- [ ] T005 [P] Create `INetWorthSnapshotRepository` with `PersistAsync`, `ExistsAsync`, `GetByUserIdAsync` methods in `backend/src/FinanceSentry.Modules.NetWorthHistory/Domain/Repositories/INetWorthSnapshotRepository.cs`
-- [ ] T006 Create `NetWorthHistoryDbContext` with `NetWorthSnapshot` DbSet, entity config (table name, indexes, unique constraint on `user_id + snapshot_date`) in `backend/src/FinanceSentry.Modules.NetWorthHistory/Infrastructure/Persistence/NetWorthHistoryDbContext.cs`
-- [ ] T007 Create `NetWorthHistoryDbContextFactory` (implements `IDesignTimeDbContextFactory<NetWorthHistoryDbContext>`) in `backend/src/FinanceSentry.Modules.NetWorthHistory/Infrastructure/Persistence/NetWorthHistoryDbContextFactory.cs`
-- [ ] T008 Run EF migration `M001_InitialSchema` for `net_worth_snapshots` table with `idx_net_worth_snapshot_user_date` and unique `idx_net_worth_snapshot_user_date_unique` indexes under `backend/src/FinanceSentry.Modules.NetWorthHistory/Migrations/`
-- [ ] T009 Implement `NetWorthSnapshotRepository` (upsert via `ExistsAsync` guard — no-op if exists; `GetByUserIdAsync` with range filtering) in `backend/src/FinanceSentry.Modules.NetWorthHistory/Infrastructure/Persistence/Repositories/NetWorthSnapshotRepository.cs`
-- [ ] T010 Implement `NetWorthSnapshotService` (implements `INetWorthSnapshotService`; `PersistSnapshotAsync` delegates to repository; `HasSnapshotForCurrentMonthAsync` checks month-end date) in `backend/src/FinanceSentry.Modules.NetWorthHistory/Application/Services/NetWorthSnapshotService.cs`
-- [ ] T011 Create `NetWorthHistoryModule.cs` boilerplate (empty static class or marker) in `backend/src/FinanceSentry.Modules.NetWorthHistory/NetWorthHistoryModule.cs`
-- [ ] T012 Register `NetWorthHistoryDbContext` (UseNpgsql), `INetWorthSnapshotService → NetWorthSnapshotService` (scoped), CQRS assembly, and migration block in `backend/src/FinanceSentry.API/Program.cs`
+- [X] T004 [P] Create `NetWorthSnapshot` domain entity (immutable init-only properties, all fields from data-model.md) in `backend/src/FinanceSentry.Modules.NetWorthHistory/Domain/NetWorthSnapshot.cs`
+- [X] T005 [P] Create `INetWorthSnapshotRepository` with `PersistAsync`, `ExistsAsync`, `GetByUserIdAsync` methods in `backend/src/FinanceSentry.Modules.NetWorthHistory/Domain/Repositories/INetWorthSnapshotRepository.cs`
+- [X] T006 Create `NetWorthHistoryDbContext` with `NetWorthSnapshot` DbSet, entity config (table name, indexes, unique constraint on `user_id + snapshot_date`) in `backend/src/FinanceSentry.Modules.NetWorthHistory/Infrastructure/Persistence/NetWorthHistoryDbContext.cs`
+- [X] T007 Create `NetWorthHistoryDbContextFactory` (implements `IDesignTimeDbContextFactory<NetWorthHistoryDbContext>`) in `backend/src/FinanceSentry.Modules.NetWorthHistory/Infrastructure/Persistence/NetWorthHistoryDbContextFactory.cs`
+- [X] T008 Run EF migration `M001_InitialSchema` for `net_worth_snapshots` table with `idx_net_worth_snapshot_user_date` and unique `idx_net_worth_snapshot_user_date_unique` indexes under `backend/src/FinanceSentry.Modules.NetWorthHistory/Migrations/`
+- [X] T009 Implement `NetWorthSnapshotRepository` (upsert via `ExistsAsync` guard — no-op if exists; `GetByUserIdAsync` with range filtering) in `backend/src/FinanceSentry.Modules.NetWorthHistory/Infrastructure/Persistence/Repositories/NetWorthSnapshotRepository.cs`
+- [X] T010 Implement `NetWorthSnapshotService` (implements `INetWorthSnapshotService`; `PersistSnapshotAsync` delegates to repository; `HasSnapshotForCurrentMonthAsync` checks month-end date) in `backend/src/FinanceSentry.Modules.NetWorthHistory/Application/Services/NetWorthSnapshotService.cs`
+- [X] T011 Create `NetWorthHistoryModule.cs` boilerplate (empty static class or marker) in `backend/src/FinanceSentry.Modules.NetWorthHistory/NetWorthHistoryModule.cs`
+- [X] T012 Register `NetWorthHistoryDbContext` (UseNpgsql), `INetWorthSnapshotService → NetWorthSnapshotService` (scoped), CQRS assembly, and migration block in `backend/src/FinanceSentry.API/Program.cs`
 
 **Checkpoint**: `dotnet build backend/` passes with zero warnings; `net_worth_snapshots` table created on migration.
 
@@ -52,37 +52,37 @@
 
 ### Contract Test
 
-- [ ] T013 [P] [US1] Contract test: `GET /api/v1/net-worth/history` returns `200` with `{ snapshots: [], hasHistory: false, range: "1y" }` when no snapshots exist; returns correct shape when snapshots exist; `400 INVALID_RANGE` on bad `range` param in `backend/tests/FinanceSentry.Modules.NetWorthHistory.Tests/Contracts/GetNetWorthHistoryContractTests.cs`
+- [X] T013 [P] [US1] Contract test: `GET /api/v1/net-worth/history` returns `200` with `{ snapshots: [], hasHistory: false, range: "1y" }` when no snapshots exist; returns correct shape when snapshots exist; `400 INVALID_RANGE` on bad `range` param in `backend/tests/FinanceSentry.Modules.NetWorthHistory.Tests/Contracts/GetNetWorthHistoryContractTests.cs`
 
 ### Backend — Data Generation
 
-- [ ] T014 [US1] Implement `NetWorthSnapshotJob` (enumerate active users via `IBankAccountRepository`; for each user sum banking via `IAggregationService.GetTotalNetWorthUsdAsync`, crypto via `ICryptoHoldingsReader`, brokerage via `IBrokerageHoldingsReader`; compute month-end `DateOnly`; call `INetWorthSnapshotService.PersistSnapshotAsync`) in `backend/src/FinanceSentry.Modules.BankSync/Infrastructure/Jobs/NetWorthSnapshotJob.cs`
-- [ ] T015 [US1] Implement `FirstSyncSnapshotTrigger` (`INotificationHandler<AccountSyncCompletedEvent>`; resolves `UserId` from `AccountId` via `IBankAccountRepository`; if `status == "success"` and `!HasSnapshotForCurrentMonthAsync(userId)`: enqueues `NetWorthSnapshotJob` via `IBackgroundJobClient`) in `backend/src/FinanceSentry.Modules.BankSync/Application/EventHandlers/FirstSyncSnapshotTrigger.cs`
-- [ ] T016 [US1] Register `net-worth-snapshot` recurring job with cron `"0 1 L * *"` in `SyncScheduler.ScheduleAllActiveAccounts` in `backend/src/FinanceSentry.Modules.BankSync/Infrastructure/Jobs/HangfireSetup.cs`
+- [X] T014 [US1] Implement `NetWorthSnapshotJob` (enumerate active users via `IBankAccountRepository`; for each user sum banking via `IAggregationService.GetTotalNetWorthUsdAsync`, crypto via `ICryptoHoldingsReader`, brokerage via `IBrokerageHoldingsReader`; compute month-end `DateOnly`; call `INetWorthSnapshotService.PersistSnapshotAsync`) in `backend/src/FinanceSentry.Modules.BankSync/Infrastructure/Jobs/NetWorthSnapshotJob.cs`
+- [X] T015 [US1] Implement `FirstSyncSnapshotTrigger` (`INotificationHandler<AccountSyncCompletedEvent>`; resolves `UserId` from `AccountId` via `IBankAccountRepository`; if `status == "success"` and `!HasSnapshotForCurrentMonthAsync(userId)`: enqueues `NetWorthSnapshotJob` via `IBackgroundJobClient`) in `backend/src/FinanceSentry.Modules.BankSync/Application/EventHandlers/FirstSyncSnapshotTrigger.cs`
+- [X] T016 [US1] Register `net-worth-snapshot` recurring job with cron `"0 1 L * *"` in `SyncScheduler.ScheduleAllActiveAccounts` in `backend/src/FinanceSentry.Modules.BankSync/Infrastructure/Jobs/HangfireSetup.cs`
 
 ### Backend — REST Endpoint
 
-- [ ] T017 [P] [US1] Create `NetWorthSnapshotDto` (snapshotDate, bankingTotal, brokerageTotal, cryptoTotal, totalNetWorth, currency) and `NetWorthHistoryResponse` (snapshots, hasHistory, range) in `backend/src/FinanceSentry.Modules.NetWorthHistory/API/Responses/`
-- [ ] T018 [US1] Create `GetNetWorthHistoryQuery` record (UserId, Range) and `GetNetWorthHistoryQueryHandler` (fetches from repository, maps to DTOs, sets `hasHistory`) in `backend/src/FinanceSentry.Modules.NetWorthHistory/Application/Queries/GetNetWorthHistoryQuery.cs`
-- [ ] T019 [US1] Create `NetWorthHistoryController` (`GET /api/v1/net-worth/history?range=`; extracts userId from JWT; dispatches `GetNetWorthHistoryQuery`; validates `range` enum; returns `400 INVALID_RANGE` on bad value) in `backend/src/FinanceSentry.Modules.NetWorthHistory/API/Controllers/NetWorthHistoryController.cs`
+- [X] T017 [P] [US1] Create `NetWorthSnapshotDto` (snapshotDate, bankingTotal, brokerageTotal, cryptoTotal, totalNetWorth, currency) and `NetWorthHistoryResponse` (snapshots, hasHistory, range) in `backend/src/FinanceSentry.Modules.NetWorthHistory/API/Responses/`
+- [X] T018 [US1] Create `GetNetWorthHistoryQuery` record (UserId, Range) and `GetNetWorthHistoryQueryHandler` (fetches from repository, maps to DTOs, sets `hasHistory`) in `backend/src/FinanceSentry.Modules.NetWorthHistory/Application/Queries/GetNetWorthHistoryQuery.cs`
+- [X] T019 [US1] Create `NetWorthHistoryController` (`GET /api/v1/net-worth/history?range=`; extracts userId from JWT; dispatches `GetNetWorthHistoryQuery`; validates `range` enum; returns `400 INVALID_RANGE` on bad value) in `backend/src/FinanceSentry.Modules.NetWorthHistory/API/Controllers/NetWorthHistoryController.cs`
 
 ### Frontend — Model + Service
 
-- [ ] T020 [P] [US1] Add `NetWorthSnapshotDto`, `NetWorthHistoryResponse`, and `HistoryRange` type (`'3m' | '6m' | '1y' | 'all'`) to `frontend/src/app/modules/bank-sync/models/dashboard/dashboard.model.ts`
-- [ ] T021 [P] [US1] Add `getNetWorthHistory(range: HistoryRange): Observable<NetWorthHistoryResponse>` to `frontend/src/app/modules/bank-sync/services/bank-sync.service.ts`
+- [X] T020 [P] [US1] Add `NetWorthSnapshotDto`, `NetWorthHistoryResponse`, and `HistoryRange` type (`'3m' | '6m' | '1y' | 'all'`) to `frontend/src/app/modules/bank-sync/models/dashboard/dashboard.model.ts`
+- [X] T021 [P] [US1] Add `getNetWorthHistory(range: HistoryRange): Observable<NetWorthHistoryResponse>` to `frontend/src/app/modules/bank-sync/services/bank-sync.service.ts`
 
 ### Frontend — Store Wiring
 
-- [ ] T022 [US1] Add `netWorthHistory: NetWorthSnapshotDto[] | null`, `historyRange: HistoryRange`, `historyHasHistory: boolean`, `historyLoading: boolean`, `historyError: string | null` to `DashboardState` and `initialDashboardState` in `frontend/src/app/modules/bank-sync/store/dashboard/dashboard.state.ts`
-- [ ] T023 [US1] Add `setNetWorthHistory`, `setHistoryRange`, `setHistoryLoading`, `setHistoryError`, `setHistoryHasHistory` patchState mutations in `frontend/src/app/modules/bank-sync/store/dashboard/dashboard.methods.ts`
-- [ ] T024 [US1] Update `netWorthHistoryData` computed to map `store.netWorthHistory()` to `ChartPoint[]` (remove mock import); add `isHistoryLoading` and `historyErrorMessage` computeds in `frontend/src/app/modules/bank-sync/store/dashboard/dashboard.computed.ts`
-- [ ] T025 [US1] Add `loadNetWorthHistory` rxMethod (calls `bankSyncService.getNetWorthHistory(store.historyRange())`; sets loading/error/data via methods; trigger on `onInit` and whenever `historyRange` changes via `toObservable`) in `frontend/src/app/modules/bank-sync/store/dashboard/dashboard.effects.ts`
-- [ ] T026 [US1] Update `dashboard.component.ts`: remove `NET_WORTH_HISTORY_MOCK` import; bind `[data]="store.netWorthHistoryData()"` to the chart; add empty-state block when `!store.netWorthHistoryHasHistory()` in `frontend/src/app/modules/bank-sync/pages/dashboard/dashboard.component.ts`
+- [X] T022 [US1] Add `netWorthHistory: NetWorthSnapshotDto[] | null`, `historyRange: HistoryRange`, `historyHasHistory: boolean`, `historyLoading: boolean`, `historyError: string | null` to `DashboardState` and `initialDashboardState` in `frontend/src/app/modules/bank-sync/store/dashboard/dashboard.state.ts`
+- [X] T023 [US1] Add `setNetWorthHistory`, `setHistoryRange`, `setHistoryLoading`, `setHistoryError`, `setHistoryHasHistory` patchState mutations in `frontend/src/app/modules/bank-sync/store/dashboard/dashboard.methods.ts`
+- [X] T024 [US1] Update `netWorthHistoryData` computed to map `store.netWorthHistory()` to `ChartPoint[]` (remove mock import); add `isHistoryLoading` and `historyErrorMessage` computeds in `frontend/src/app/modules/bank-sync/store/dashboard/dashboard.computed.ts`
+- [X] T025 [US1] Add `loadNetWorthHistory` rxMethod (calls `bankSyncService.getNetWorthHistory(store.historyRange())`; sets loading/error/data via methods; trigger on `onInit` and whenever `historyRange` changes via `toObservable`) in `frontend/src/app/modules/bank-sync/store/dashboard/dashboard.effects.ts`
+- [X] T026 [US1] Update `dashboard.component.ts`: remove `NET_WORTH_HISTORY_MOCK` import; bind `[data]="store.netWorthHistoryData()"` to the chart; add empty-state block when `!store.netWorthHistoryHasHistory()` in `frontend/src/app/modules/bank-sync/pages/dashboard/dashboard.component.ts`
 
 ### Version Bumps
 
-- [ ] T027 [P] [US1] Bump backend version `0.7.0` → `0.8.0` in `backend/src/FinanceSentry.API/FinanceSentry.API.csproj`
-- [ ] T028 [P] [US1] Bump frontend version `0.7.0` → `0.8.0` in `frontend/package.json`
+- [X] T027 [P] [US1] Bump backend version `0.7.0` → `0.8.0` in `backend/src/FinanceSentry.API/FinanceSentry.API.csproj`
+- [X] T028 [P] [US1] Bump frontend version `0.7.0` → `0.8.0` in `frontend/package.json`
 
 **Checkpoint**: Dashboard chart renders at least one real snapshot after job is manually triggered; empty state shown before job runs; no mock data in production build.
 
@@ -96,7 +96,7 @@
 
 > US2 is inherently enforced by the immutable snapshot design (init-only entity, no-op on duplicate). The single task here validates that guarantee.
 
-- [ ] T029 [US2] Unit test: assert `NetWorthSnapshotService.PersistSnapshotAsync` is a no-op (no INSERT) when a snapshot already exists for the same `(userId, snapshotDate)` — verifies immutability guarantee in `backend/tests/FinanceSentry.Modules.NetWorthHistory.Tests/Unit/NetWorthSnapshotServiceTests.cs`
+- [X] T029 [US2] Unit test: assert `NetWorthSnapshotService.PersistSnapshotAsync` is a no-op (no INSERT) when a snapshot already exists for the same `(userId, snapshotDate)` — verifies immutability guarantee in `backend/tests/FinanceSentry.Modules.NetWorthHistory.Tests/Unit/NetWorthSnapshotServiceTests.cs`
 
 **Checkpoint**: Past snapshot totals are immutable; no retroactive modification possible.
 
@@ -108,8 +108,8 @@
 
 **Independent Test**: With 4+ months of snapshots — select "3m" → chart shows 3 data points; select "all" → chart shows all available points.
 
-- [ ] T030 [US3] Add range selector toggle group (3m / 6m / 1y / all buttons using `cmn-button`) to `dashboard.component.ts`; bind active state to `store.historyRange()`; call `store.setHistoryRange(range)` on selection in `frontend/src/app/modules/bank-sync/pages/dashboard/dashboard.component.ts`
-- [ ] T031 [US3] Add `INVALID_RANGE: 'Invalid date range selection.'` to `frontend/src/app/core/errors/error-messages.registry.ts`
+- [X] T030 [US3] Add range selector toggle group (3m / 6m / 1y / all buttons using `cmn-button`) to `dashboard.component.ts`; bind active state to `store.historyRange()`; call `store.setHistoryRange(range)` on selection in `frontend/src/app/modules/bank-sync/pages/dashboard/dashboard.component.ts`
+- [X] T031 [US3] Add `INVALID_RANGE: 'Invalid date range selection.'` to `frontend/src/app/core/errors/error-messages.registry.ts`
 
 **Checkpoint**: Range selector visible on dashboard; switching range updates chart data points.
 
@@ -117,8 +117,8 @@
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T032 [P] Unit test `NetWorthSnapshotJob` core logic: given mocked balance readers returning fixed values, assert correct `PersistSnapshotAsync` call with summed totals in `backend/tests/FinanceSentry.Modules.BankSync.Tests/Jobs/NetWorthSnapshotJobTests.cs`
-- [ ] T033 Run quickstart.md manual QA: start Docker stack; trigger `net-worth-snapshot` job via Hangfire dashboard; verify snapshot in DB; confirm `GET /api/v1/net-worth/history` returns the snapshot; confirm dashboard chart renders real data; verify empty state on new test user
+- [X] T032 [P] Unit test `NetWorthSnapshotJob` core logic: given mocked balance readers returning fixed values, assert correct `PersistSnapshotAsync` call with summed totals in `backend/tests/FinanceSentry.Modules.BankSync.Tests/Jobs/NetWorthSnapshotJobTests.cs`
+- [X] T033 Run quickstart.md manual QA: start Docker stack; trigger `net-worth-snapshot` job via Hangfire dashboard; verify snapshot in DB; confirm `GET /api/v1/net-worth/history` returns the snapshot; confirm dashboard chart renders real data; verify empty state on new test user
 
 ---
 

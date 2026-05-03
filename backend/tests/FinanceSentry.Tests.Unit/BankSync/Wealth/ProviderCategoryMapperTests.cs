@@ -1,6 +1,6 @@
 namespace FinanceSentry.Tests.Unit.BankSync.Wealth;
 
-using FinanceSentry.Modules.BankSync.Application.Services;
+using FinanceSentry.Core.Utils;
 using FluentAssertions;
 using Xunit;
 
@@ -15,13 +15,13 @@ public class ProviderCategoryMapperTests
     [InlineData("ibkr", "brokerage")]
     public void Map_KnownProvider_ReturnsCorrectCategory(string provider, string expected)
     {
-        ProviderCategoryMapper.Map(provider).Should().Be(expected);
+        ProviderCategoryMapper.GetCategory(provider).Should().Be(expected);
     }
 
     [Fact]
     public void Map_NullProvider_ReturnsOther()
     {
-        ProviderCategoryMapper.Map(null).Should().Be("other");
+        ProviderCategoryMapper.GetCategory(null).Should().Be("other");
     }
 
     [Theory]
@@ -29,12 +29,12 @@ public class ProviderCategoryMapperTests
     [InlineData("   ")]
     public void Map_EmptyOrWhitespace_ReturnsOther(string provider)
     {
-        ProviderCategoryMapper.Map(provider).Should().Be("other");
+        ProviderCategoryMapper.GetCategory(provider).Should().Be("other");
     }
 
     [Fact]
     public void Map_UnknownProvider_ReturnsOther()
     {
-        ProviderCategoryMapper.Map("somefutureprovider").Should().Be("other");
+        ProviderCategoryMapper.GetCategory("somefutureprovider").Should().Be("other");
     }
 }
