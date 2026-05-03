@@ -10,6 +10,7 @@ public class AuthDbContext(DbContextOptions<AuthDbContext> options) : IdentityDb
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
+        builder.HasDefaultSchema("auth");
         base.OnModelCreating(builder);
 
         builder.Entity<RefreshToken>(entity =>

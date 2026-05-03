@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -13,30 +13,27 @@ namespace FinanceSentry.Modules.Auth.Infrastructure.Persistence.Migrations
             migrationBuilder.AddColumn<string>(
                 name: "BaseCurrency",
                 table: "AspNetUsers",
-                type: "character varying(10)",
-                maxLength: 10,
+                type: "text",
                 nullable: false,
-                defaultValue: "USD");
+                defaultValue: "");
 
             migrationBuilder.AddColumn<bool>(
                 name: "EmailAlerts",
                 table: "AspNetUsers",
                 type: "boolean",
                 nullable: false,
-                defaultValue: true);
+                defaultValue: false);
 
             migrationBuilder.AddColumn<string>(
                 name: "FirstName",
                 table: "AspNetUsers",
-                type: "character varying(100)",
-                maxLength: 100,
+                type: "text",
                 nullable: true);
 
             migrationBuilder.AddColumn<string>(
                 name: "LastName",
                 table: "AspNetUsers",
-                type: "character varying(100)",
-                maxLength: 100,
+                type: "text",
                 nullable: true);
 
             migrationBuilder.AddColumn<bool>(
@@ -44,44 +41,64 @@ namespace FinanceSentry.Modules.Auth.Infrastructure.Persistence.Migrations
                 table: "AspNetUsers",
                 type: "boolean",
                 nullable: false,
-                defaultValue: true);
+                defaultValue: false);
 
             migrationBuilder.AddColumn<decimal>(
                 name: "LowBalanceThreshold",
                 table: "AspNetUsers",
-                type: "numeric(18,2)",
-                precision: 18,
-                scale: 2,
+                type: "numeric",
                 nullable: false,
-                defaultValue: 500m);
+                defaultValue: 0m);
 
             migrationBuilder.AddColumn<bool>(
                 name: "SyncFailureAlerts",
                 table: "AspNetUsers",
                 type: "boolean",
                 nullable: false,
-                defaultValue: true);
+                defaultValue: false);
 
             migrationBuilder.AddColumn<string>(
                 name: "Theme",
                 table: "AspNetUsers",
-                type: "character varying(20)",
-                maxLength: 20,
+                type: "text",
                 nullable: false,
-                defaultValue: "system");
+                defaultValue: "");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(name: "BaseCurrency", table: "AspNetUsers");
-            migrationBuilder.DropColumn(name: "EmailAlerts", table: "AspNetUsers");
-            migrationBuilder.DropColumn(name: "FirstName", table: "AspNetUsers");
-            migrationBuilder.DropColumn(name: "LastName", table: "AspNetUsers");
-            migrationBuilder.DropColumn(name: "LowBalanceAlerts", table: "AspNetUsers");
-            migrationBuilder.DropColumn(name: "LowBalanceThreshold", table: "AspNetUsers");
-            migrationBuilder.DropColumn(name: "SyncFailureAlerts", table: "AspNetUsers");
-            migrationBuilder.DropColumn(name: "Theme", table: "AspNetUsers");
+            migrationBuilder.DropColumn(
+                name: "BaseCurrency",
+                table: "AspNetUsers");
+
+            migrationBuilder.DropColumn(
+                name: "EmailAlerts",
+                table: "AspNetUsers");
+
+            migrationBuilder.DropColumn(
+                name: "FirstName",
+                table: "AspNetUsers");
+
+            migrationBuilder.DropColumn(
+                name: "LastName",
+                table: "AspNetUsers");
+
+            migrationBuilder.DropColumn(
+                name: "LowBalanceAlerts",
+                table: "AspNetUsers");
+
+            migrationBuilder.DropColumn(
+                name: "LowBalanceThreshold",
+                table: "AspNetUsers");
+
+            migrationBuilder.DropColumn(
+                name: "SyncFailureAlerts",
+                table: "AspNetUsers");
+
+            migrationBuilder.DropColumn(
+                name: "Theme",
+                table: "AspNetUsers");
         }
     }
 }

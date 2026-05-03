@@ -8,6 +8,10 @@ using FinanceSentry.Core.Cqrs;
 /// </summary>
 public record AccountSyncCompletedEvent(
     Guid AccountId,
+    Guid UserId,
+    string Provider,
     string Status,
     int TransactionCountFetched,
+    decimal? BalanceAfterSync,
+    string? ErrorCode,
     string? ErrorMessage) : IEvent;

@@ -14,9 +14,7 @@
       <span class="font-medium text-text-primary">{{ tile.label }}</span>
       <span class="text-cmn-xs text-text-secondary">{{ tile.description }}</span>
       @if (connectionsByType()[tile.id] > 0) {
-        <cmn-badge trailing variant="success">
-          {{ connectionsByType()[tile.id] }} connected
-        </cmn-badge>
+        <cmn-tag trailing variant="success"> {{ connectionsByType()[tile.id] }} connected </cmn-tag>
       }
     </cmn-selectable-card>
   }

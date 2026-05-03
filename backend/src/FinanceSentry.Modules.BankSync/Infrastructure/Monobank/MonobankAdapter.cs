@@ -1,11 +1,13 @@
 namespace FinanceSentry.Modules.BankSync.Infrastructure.Monobank;
 
 using FinanceSentry.Modules.BankSync.Application.Services;
+using FinanceSentry.Modules.BankSync.Application.Services.CategoryMapping;
 using FinanceSentry.Modules.BankSync.Domain.Interfaces;
 
-public class MonobankAdapter(MonobankHttpClient client) : IMonobankAdapter, IBankProvider
+public class MonobankAdapter(MonobankHttpClient client, MonobankCategoryMapper categoryMapper) : IMonobankAdapter, IBankProvider
 {
     private readonly MonobankHttpClient _client = client;
+    private readonly MonobankCategoryMapper _categoryMapper = categoryMapper;
 
     public string ProviderName => "monobank";
 
@@ -84,7 +86,7 @@ public class MonobankAdapter(MonobankHttpClient client) : IMonobankAdapter, IBan
     Task IBankProvider.DisconnectAsync(string credential, CancellationToken ct)
         => Task.CompletedTask;
 
-    private static IEnumerable<TransactionCandidate> MapTransactions(
+    private IEnumerable<TransactionCandidate> MapTransactions(
         IReadOnlyList<MonobankTransaction> txns, Guid accountId, Guid userId)
     {
         return txns.Select(t =>
@@ -102,7 +104,7 @@ public class MonobankAdapter(MonobankHttpClient client) : IMonobankAdapter, IBan
                 IsPending: t.Hold,
                 TransactionType: txType,
                 MerchantName: t.CounterName,
-                MerchantCategory: t.MCC.ToString(),
+                MerchantCategory: _categoryMapper.Map(t.MCC.ToString()),
                 PlaidTransactionId: null);
         });
     }

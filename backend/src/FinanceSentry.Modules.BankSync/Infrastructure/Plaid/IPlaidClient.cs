@@ -26,6 +26,12 @@ public interface IPlaidClient
 
     /// <summary>Revokes access token and unlinks the Plaid item.</summary>
     Task RevokeAccessAsync(string accessToken, CancellationToken ct = default);
+
+    /// <summary>
+    /// Returns recurring outflow streams (subscriptions, bills) via /transactions/recurring/get.
+    /// Streams with status TOMBSTONED (cancelled by Plaid) are excluded.
+    /// </summary>
+    Task<PlaidRecurringResponse> GetRecurringTransactionsAsync(string accessToken, CancellationToken ct = default);
 }
 
 // ── Response DTOs (Plaid API shapes) ────────────────────────────────────────
@@ -74,3 +80,21 @@ public record PlaidTransaction(
     DateTime Date,
     DateTime? AuthorizedDate,
     bool Pending);
+
+public record PlaidRecurringResponse(
+    IReadOnlyList<PlaidRecurringStream> OutflowStreams);
+
+public record PlaidRecurringStream(
+    string StreamId,
+    string AccountId,
+    string Description,
+    string? MerchantName,
+    string? PersonalFinanceCategory,
+    string? FirstDate,
+    string? LastDate,
+    string Frequency,
+    IReadOnlyList<string> TransactionIds,
+    decimal AverageAmount,
+    string? IsoCurrencyCode,
+    decimal LastAmount,
+    string Status);

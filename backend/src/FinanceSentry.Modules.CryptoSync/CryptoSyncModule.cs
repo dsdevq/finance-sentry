@@ -1,5 +1,51 @@
 namespace FinanceSentry.Modules.CryptoSync;
 
-public sealed class CryptoSyncModule
+using FinanceSentry.Core.Interfaces;
+using FinanceSentry.Modules.CryptoSync.Application.Services;
+using FinanceSentry.Modules.CryptoSync.Domain.Interfaces;
+using FinanceSentry.Modules.CryptoSync.Domain.Repositories;
+using FinanceSentry.Modules.CryptoSync.Infrastructure.Binance;
+using FinanceSentry.Modules.CryptoSync.Infrastructure.Jobs;
+using FinanceSentry.Modules.CryptoSync.Infrastructure.Persistence;
+using FinanceSentry.Modules.CryptoSync.Infrastructure.Persistence.Repositories;
+using Hangfire;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+
+public static class CryptoSyncModule
 {
+    internal sealed class ModuleRegistrar : IModuleRegistrar
+    {
+        public void Register(IServiceCollection services, IConfiguration config)
+            => services.AddCryptoSyncModule(config);
+    }
+
+    private sealed class JobRegistrar : IJobRegistrar
+    {
+        public void RegisterJobs(IServiceProvider sp)
+        {
+            sp.GetRequiredService<IRecurringJobManager>()
+                .AddOrUpdate<BinanceSyncJob>("binance-sync", job => job.ExecuteAsync(), "*/15 * * * *");
+        }
+    }
+
+    public static IServiceCollection AddCryptoSyncModule(
+        this IServiceCollection services, IConfiguration config)
+    {
+        services.AddDbContext<CryptoSyncDbContext>(
+            o => o.UseNpgsql(config.GetConnectionString("Default")!, b => b.MigrationsHistoryTable("__EFMigrationsHistory", "public")));
+
+        services.AddHttpClient<BinanceHttpClient>();
+        services.AddSingleton<BinanceHoldingsAggregator>();
+        services.AddScoped<ICryptoExchangeAdapter, BinanceAdapter>();
+        services.AddScoped<IBinanceCredentialRepository, BinanceCredentialRepository>();
+        services.AddScoped<ICryptoHoldingRepository, CryptoHoldingRepository>();
+        services.AddScoped<ICryptoHoldingsReader, CryptoHoldingsReader>();
+        services.AddScoped<BinanceSyncJob>();
+
+        services.AddSingleton<IJobRegistrar, JobRegistrar>();
+
+        return services;
+    }
 }

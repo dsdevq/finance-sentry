@@ -1,0 +1,117 @@
+namespace FinanceSentry.Modules.Alerts.Infrastructure.Persistence.Repositories;
+
+using FinanceSentry.Modules.Alerts.Domain;
+using FinanceSentry.Modules.Alerts.Domain.Repositories;
+using Microsoft.EntityFrameworkCore;
+
+public class AlertRepository(AlertsDbContext db) : IAlertRepository
+{
+    private readonly AlertsDbContext _db = db;
+
+    public async Task<(IReadOnlyList<Alert> Items, int TotalCount, int UnreadCount)> GetPagedAsync(
+        Guid userId, string filter, int page, int pageSize, CancellationToken ct = default)
+    {
+        var baseQuery = _db.Alerts.AsNoTracking()
+            .Where(a => a.UserId == userId && !a.IsDismissed);
+
+        var filtered = filter?.ToLowerInvariant() switch
+        {
+            "unread" => baseQuery.Where(a => !a.IsRead),
+            "error" => baseQuery.Where(a => a.Severity == AlertSeverity.Error),
+            "warning" => baseQuery.Where(a => a.Severity == AlertSeverity.Warning),
+            "info" => baseQuery.Where(a => a.Severity == AlertSeverity.Info),
+            _ => baseQuery,
+        };
+
+        var totalCount = await filtered.CountAsync(ct);
+        var unreadCount = await baseQuery.CountAsync(a => !a.IsRead, ct);
+
+        var items = await filtered
+            .OrderByDescending(a => a.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(ct);
+
+        return (items, totalCount, unreadCount);
+    }
+
+    public Task<int> GetUnreadCountAsync(Guid userId, CancellationToken ct = default)
+    {
+        return _db.Alerts.AsNoTracking()
+            .CountAsync(a => a.UserId == userId && !a.IsDismissed && !a.IsRead, ct);
+    }
+
+    public Task<Alert?> FindActiveAsync(
+        Guid userId, string type, Guid? referenceId, CancellationToken ct = default)
+    {
+        return _db.Alerts
+            .Where(a => a.UserId == userId
+                     && a.Type == type
+                     && a.ReferenceId == referenceId
+                     && !a.IsResolved
+                     && !a.IsDismissed)
+            .FirstOrDefaultAsync(ct);
+    }
+
+    public async Task<bool> MarkReadAsync(Guid userId, Guid alertId, CancellationToken ct = default)
+    {
+        var alert = await _db.Alerts.FirstOrDefaultAsync(a => a.Id == alertId && a.UserId == userId, ct);
+        if (alert is null) return false;
+        if (alert.IsRead) return true;
+        alert.IsRead = true;
+        alert.UpdatedAt = DateTimeOffset.UtcNow;
+        await _db.SaveChangesAsync(ct);
+        return true;
+    }
+
+    public async Task MarkAllReadAsync(Guid userId, CancellationToken ct = default)
+    {
+        var now = DateTimeOffset.UtcNow;
+        await _db.Alerts
+            .Where(a => a.UserId == userId && !a.IsRead && !a.IsDismissed)
+            .ExecuteUpdateAsync(set => set
+                .SetProperty(a => a.IsRead, true)
+                .SetProperty(a => a.UpdatedAt, now), ct);
+    }
+
+    public async Task<bool> DismissAsync(Guid userId, Guid alertId, CancellationToken ct = default)
+    {
+        var alert = await _db.Alerts.FirstOrDefaultAsync(a => a.Id == alertId && a.UserId == userId, ct);
+        if (alert is null) return false;
+        alert.IsDismissed = true;
+        alert.UpdatedAt = DateTimeOffset.UtcNow;
+        await _db.SaveChangesAsync(ct);
+        return true;
+    }
+
+    public async Task ResolveAsync(Guid alertId, CancellationToken ct = default)
+    {
+        var alert = await _db.Alerts.FirstOrDefaultAsync(a => a.Id == alertId, ct);
+        if (alert is null || alert.IsResolved) return;
+        var now = DateTimeOffset.UtcNow;
+        alert.IsResolved = true;
+        alert.ResolvedAt = now;
+        alert.UpdatedAt = now;
+        await _db.SaveChangesAsync(ct);
+    }
+
+    public Task<int> PurgeOldAsync(DateTimeOffset olderThan, CancellationToken ct = default)
+    {
+        return _db.Alerts
+            .Where(a => (a.IsResolved || a.IsDismissed) && a.CreatedAt < olderThan)
+            .ExecuteDeleteAsync(ct);
+    }
+
+    public async Task DeleteByReferenceIdAsync(Guid referenceId, CancellationToken ct = default)
+    {
+        await _db.Alerts
+            .Where(a => a.ReferenceId == referenceId)
+            .ExecuteDeleteAsync(ct);
+    }
+
+    public async Task AddAsync(Alert alert, CancellationToken ct = default)
+    {
+        _db.Alerts.Add(alert);
+        await _db.SaveChangesAsync(ct);
+    }
+}

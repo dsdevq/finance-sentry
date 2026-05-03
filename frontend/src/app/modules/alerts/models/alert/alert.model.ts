@@ -1,5 +1,5 @@
-export type AlertType = 'sync_error' | 'low_balance' | 'unusual_spend' | 'budget' | 'info';
-export type AlertSeverity = 'error' | 'warning' | 'info';
+export type AlertType = 'LowBalance' | 'SyncFailure' | 'UnusualSpend';
+export type AlertSeverity = 'Error' | 'Warning' | 'Info';
 export type AlertFilter = 'all' | 'unread' | 'error' | 'warning' | 'info';
 
 export interface Alert {
@@ -7,8 +7,24 @@ export interface Alert {
   type: AlertType;
   severity: AlertSeverity;
   title: string;
-  body: string;
-  account: Nullable<string>;
-  timestamp: number;
-  read: boolean;
+  message: string;
+  referenceId: Nullable<string>;
+  referenceLabel: Nullable<string>;
+  isRead: boolean;
+  isResolved: boolean;
+  createdAt: string;
+  resolvedAt: Nullable<string>;
+}
+
+export interface AlertsPageResponse {
+  items: Alert[];
+  totalCount: number;
+  unreadCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface UnreadCountResponse {
+  count: number;
 }

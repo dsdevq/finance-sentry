@@ -15,6 +15,7 @@ public sealed class CryptoSyncDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.HasDefaultSchema("crypto_sync");
         base.OnModelCreating(modelBuilder);
 
         modelBuilder.Entity<BinanceCredential>(entity =>

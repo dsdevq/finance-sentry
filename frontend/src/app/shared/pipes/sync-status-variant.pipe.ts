@@ -2,9 +2,9 @@ import {Pipe, type PipeTransform} from '@angular/core';
 
 import {type SyncStatus} from '../models/wealth/wealth.model';
 
-type BadgeVariant = 'success' | 'warning' | 'error';
+type TagVariant = 'success' | 'warning' | 'error';
 
-const VARIANT_MAP: Record<SyncStatus, BadgeVariant> = {
+const VARIANT_MAP: Record<SyncStatus, TagVariant> = {
   synced: 'success',
   pending: 'warning',
   syncing: 'warning',
@@ -16,7 +16,7 @@ const VARIANT_MAP: Record<SyncStatus, BadgeVariant> = {
 
 @Pipe({name: 'syncStatusVariant'})
 export class SyncStatusVariantPipe implements PipeTransform {
-  public transform(syncStatus: SyncStatus): BadgeVariant {
+  public transform(syncStatus: SyncStatus): TagVariant {
     return VARIANT_MAP[syncStatus];
   }
 }

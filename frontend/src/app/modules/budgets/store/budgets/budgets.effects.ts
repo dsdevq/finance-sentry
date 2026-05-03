@@ -1,28 +1,86 @@
+import {inject} from '@angular/core';
 import {rxMethod} from '@ngrx/signals/rxjs-interop';
-import {of, pipe, switchMap, tap} from 'rxjs';
+import {catchError, EMPTY, pipe, switchMap, tap} from 'rxjs';
 
-import {BUDGET_MOCK_DATA} from '../../constants/budget/budget.constants';
-import {type Budget} from '../../models/budget/budget.model';
+import {type BudgetSummaryItem} from '../../models/budget/budget.model';
+import {BudgetsService} from '../../services/budgets.service';
 
 interface EffectsStore {
-  setData: (budgets: Budget[]) => void;
+  setSummaryItems: (items: BudgetSummaryItem[]) => void;
+  setLoading: () => void;
+  setError: () => void;
+  setEditing: (id: Nullable<string>) => void;
+  updateBudgetInList: (id: string, limit: number) => void;
+  removeBudget: (id: string) => void;
+  setSelectedPeriod: (year: number, month: number) => void;
+  selectedYear: () => number;
+  selectedMonth: () => number;
 }
 
 export function budgetsEffects(store: EffectsStore) {
+  const service = inject(BudgetsService);
+
+  const refreshSummary = () =>
+    service.getBudgetSummary(store.selectedYear(), store.selectedMonth()).pipe(
+      tap(res => store.setSummaryItems(res.items)),
+      catchError(() => {
+        store.setError();
+        return EMPTY;
+      })
+    );
+
   return {
-    load: rxMethod<void>(
+    loadSummary: rxMethod<void>(
       pipe(
-        switchMap(() => of(BUDGET_MOCK_DATA)),
-        tap(budgets => store.setData(budgets))
+        tap(() => store.setLoading()),
+        switchMap(() => refreshSummary())
+      )
+    ),
+
+    create: rxMethod<{category: string; monthlyLimit: number}>(
+      pipe(
+        switchMap(req =>
+          service.createBudget(req).pipe(
+            switchMap(() => refreshSummary()),
+            catchError(() => EMPTY)
+          )
+        )
+      )
+    ),
+
+    update: rxMethod<{id: string; monthlyLimit: number}>(
+      pipe(
+        switchMap(({id, monthlyLimit}) =>
+          service.updateBudget(id, {monthlyLimit}).pipe(
+            tap(() => store.updateBudgetInList(id, monthlyLimit)),
+            switchMap(() => refreshSummary()),
+            catchError(() => EMPTY)
+          )
+        )
+      )
+    ),
+
+    remove: rxMethod<string>(
+      pipe(
+        switchMap(id =>
+          service.deleteBudget(id).pipe(
+            tap(() => store.removeBudget(id)),
+            switchMap(() => refreshSummary()),
+            catchError(() => EMPTY)
+          )
+        )
+      )
+    ),
+
+    navigateToPeriod: rxMethod<{year: number; month: number}>(
+      pipe(
+        tap(({year, month}) => store.setSelectedPeriod(year, month)),
+        switchMap(() => refreshSummary())
       )
     ),
   };
 }
 
-interface HookStore extends EffectsStore {
-  load: () => void;
-}
-
-export function budgetsHooks(store: HookStore): void {
-  store.load();
+export function budgetsHooks(store: {loadSummary: () => void}): void {
+  store.loadSummary();
 }

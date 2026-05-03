@@ -2,9 +2,9 @@
 
   <PropertyGroup>
     <InvariantGlobalization>false</InvariantGlobalization>
-    <Version>0.7.0</Version>
-    <AssemblyVersion>0.7.0</AssemblyVersion>
-    <FileVersion>0.7.0</FileVersion>
+    <Version>0.9.0</Version>
+    <AssemblyVersion>0.9.0</AssemblyVersion>
+    <FileVersion>0.9.0</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -33,6 +33,9 @@
     <ProjectReference Include="..\FinanceSentry.Infrastructure\FinanceSentry.Infrastructure.csproj" />
     <ProjectReference Include="..\FinanceSentry.Modules.CryptoSync\FinanceSentry.Modules.CryptoSync.csproj" />
     <ProjectReference Include="..\FinanceSentry.Modules.BrokerageSync\FinanceSentry.Modules.BrokerageSync.csproj" />
+    <ProjectReference Include="..\FinanceSentry.Modules.Alerts\FinanceSentry.Modules.Alerts.csproj" />
+    <ProjectReference Include="..\FinanceSentry.Modules.Budgets\FinanceSentry.Modules.Budgets.csproj" />
+    <ProjectReference Include="..\FinanceSentry.Modules.Subscriptions\FinanceSentry.Modules.Subscriptions.csproj" />
   </ItemGroup>
 
 </Project>

@@ -110,6 +110,31 @@ public class PlaidHttpClient(HttpClient http, IConfiguration config) : IPlaidCli
         await PostAsync<PlaidRevokeRaw>("/item/remove", body, ct);
     }
 
+    public async Task<PlaidRecurringResponse> GetRecurringTransactionsAsync(
+        string accessToken, CancellationToken ct = default)
+    {
+        var body = new { client_id = _clientId, secret = _secret, access_token = accessToken };
+        var response = await PostAsync<PlaidRecurringRaw>("/transactions/recurring/get", body, ct);
+        var streams = response.OutflowStreams
+            .Where(s => s.Status != "TOMBSTONED")
+            .Select(s => new PlaidRecurringStream(
+                s.StreamId,
+                s.AccountId,
+                s.Description,
+                s.MerchantName,
+                s.PersonalFinanceCategory?.Primary,
+                s.FirstDate,
+                s.LastDate,
+                s.Frequency,
+                s.TransactionIds ?? [],
+                s.AverageAmount?.Amount ?? 0m,
+                s.AverageAmount?.IsoCurrencyCode,
+                s.LastAmount?.Amount ?? 0m,
+                s.Status))
+            .ToList();
+        return new PlaidRecurringResponse(streams);
+    }
+
     private static PlaidTransaction MapTransaction(PlaidTransactionRaw t) => new(
         t.TransactionId, t.AccountId, t.Amount,
         t.IsoCurrencyCode, t.Name, t.MerchantName,
@@ -196,4 +221,25 @@ public class PlaidHttpClient(HttpClient http, IConfiguration config) : IPlaidCli
     private record PlaidErrorRaw(
         [property: JsonPropertyName("error_code")] string? ErrorCode,
         [property: JsonPropertyName("error_message")] string? ErrorMessage);
+
+    private record PlaidRecurringRaw(
+        [property: JsonPropertyName("outflow_streams")] List<PlaidRecurringStreamRaw> OutflowStreams);
+
+    private record PlaidRecurringStreamRaw(
+        [property: JsonPropertyName("stream_id")] string StreamId,
+        [property: JsonPropertyName("account_id")] string AccountId,
+        [property: JsonPropertyName("description")] string Description,
+        [property: JsonPropertyName("merchant_name")] string? MerchantName,
+        [property: JsonPropertyName("personal_finance_category")] PlaidCategoryRaw? PersonalFinanceCategory,
+        [property: JsonPropertyName("first_date")] string? FirstDate,
+        [property: JsonPropertyName("last_date")] string? LastDate,
+        [property: JsonPropertyName("frequency")] string Frequency,
+        [property: JsonPropertyName("transaction_ids")] List<string>? TransactionIds,
+        [property: JsonPropertyName("average_amount")] PlaidAmountRaw? AverageAmount,
+        [property: JsonPropertyName("last_amount")] PlaidAmountRaw? LastAmount,
+        [property: JsonPropertyName("status")] string Status);
+
+    private record PlaidAmountRaw(
+        [property: JsonPropertyName("amount")] decimal Amount,
+        [property: JsonPropertyName("iso_currency_code")] string? IsoCurrencyCode);
 }

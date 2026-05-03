@@ -1,9 +1,9 @@
 import {DecimalPipe} from '@angular/common';
 import {inject, Pipe, type PipeTransform} from '@angular/core';
 
-import {Transaction, type TransactionType} from '../models/transaction/transaction.model';
+import {GlobalTransactionDto} from '../models/transaction/transaction.model';
 
-type SignedAmount = Pick<Transaction, 'amount' | 'transactionType'>;
+type SignedAmount = Pick<GlobalTransactionDto, 'amount' | 'transactionType'>;
 @Pipe({name: 'transactionAmount'})
 export class TransactionAmountPipe implements PipeTransform {
   private readonly decimalPipe = inject(DecimalPipe);
