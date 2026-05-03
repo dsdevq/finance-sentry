@@ -8,6 +8,7 @@ using FinanceSentry.Modules.BrokerageSync.Infrastructure.IBKR;
 using FinanceSentry.Modules.BrokerageSync.Infrastructure.Jobs;
 using FinanceSentry.Modules.BrokerageSync.Infrastructure.Persistence;
 using FinanceSentry.Modules.BrokerageSync.Infrastructure.Persistence.Repositories;
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,6 +16,21 @@ using Microsoft.Extensions.Hosting;
 
 public static class BrokerageSyncModule
 {
+    internal sealed class ModuleRegistrar : IModuleRegistrar
+    {
+        public void Register(IServiceCollection services, IConfiguration config)
+            => services.AddBrokerageSyncModule(config);
+    }
+
+    private sealed class JobRegistrar : IJobRegistrar
+    {
+        public void RegisterJobs(IServiceProvider sp)
+        {
+            sp.GetRequiredService<IRecurringJobManager>()
+                .AddOrUpdate<IBKRSyncJob>("ibkr-sync", job => job.ExecuteAsync(), "*/15 * * * *");
+        }
+    }
+
     public static IServiceCollection AddBrokerageSyncModule(
         this IServiceCollection services, IConfiguration config)
     {
@@ -41,6 +57,8 @@ public static class BrokerageSyncModule
         services.AddScoped<IBrokerageHoldingRepository, BrokerageHoldingRepository>();
         services.AddScoped<IBrokerageHoldingsReader, BrokerageHoldingsReader>();
         services.AddScoped<IBKRSyncJob>();
+
+        services.AddSingleton<IJobRegistrar, JobRegistrar>();
 
         return services;
     }

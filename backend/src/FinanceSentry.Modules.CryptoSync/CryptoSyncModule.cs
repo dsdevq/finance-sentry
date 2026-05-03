@@ -8,12 +8,28 @@ using FinanceSentry.Modules.CryptoSync.Infrastructure.Binance;
 using FinanceSentry.Modules.CryptoSync.Infrastructure.Jobs;
 using FinanceSentry.Modules.CryptoSync.Infrastructure.Persistence;
 using FinanceSentry.Modules.CryptoSync.Infrastructure.Persistence.Repositories;
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 public static class CryptoSyncModule
 {
+    internal sealed class ModuleRegistrar : IModuleRegistrar
+    {
+        public void Register(IServiceCollection services, IConfiguration config)
+            => services.AddCryptoSyncModule(config);
+    }
+
+    private sealed class JobRegistrar : IJobRegistrar
+    {
+        public void RegisterJobs(IServiceProvider sp)
+        {
+            sp.GetRequiredService<IRecurringJobManager>()
+                .AddOrUpdate<BinanceSyncJob>("binance-sync", job => job.ExecuteAsync(), "*/15 * * * *");
+        }
+    }
+
     public static IServiceCollection AddCryptoSyncModule(
         this IServiceCollection services, IConfiguration config)
     {
@@ -27,6 +43,8 @@ public static class CryptoSyncModule
         services.AddScoped<ICryptoHoldingRepository, CryptoHoldingRepository>();
         services.AddScoped<ICryptoHoldingsReader, CryptoHoldingsReader>();
         services.AddScoped<BinanceSyncJob>();
+
+        services.AddSingleton<IJobRegistrar, JobRegistrar>();
 
         return services;
     }

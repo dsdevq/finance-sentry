@@ -13,6 +13,12 @@ using Microsoft.Extensions.DependencyInjection;
 
 public static class AuthModule
 {
+    internal sealed class ModuleRegistrar : IModuleRegistrar
+    {
+        public void Register(IServiceCollection services, IConfiguration config)
+            => services.AddAuthModule(config);
+    }
+
     public static IServiceCollection AddAuthModule(
         this IServiceCollection services, IConfiguration config)
     {

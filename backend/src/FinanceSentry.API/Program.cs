@@ -1,22 +1,15 @@
 using Serilog;
 using FinanceSentry.API.Conventions;
 using FinanceSentry.API.Hangfire;
-using FinanceSentry.Core.Cqrs;
 using FinanceSentry.API.Migrations;
-using FinanceSentry.Modules.Auth;
-using FinanceSentry.Modules.BankSync;
-using FinanceSentry.Modules.CryptoSync;
-using FinanceSentry.Modules.BrokerageSync;
-using FinanceSentry.Modules.Alerts;
-using FinanceSentry.Modules.Budgets;
+using FinanceSentry.API.Modules;
 using FinanceSentry.Infrastructure.Logging;
-using FinanceSentry.Modules.BankSync.Infrastructure.Jobs;
 using FinanceSentry.Modules.BankSync.API.Middleware;
-using FinanceSentry.Modules.CryptoSync.Infrastructure.Jobs;
-using FinanceSentry.Modules.BrokerageSync.Infrastructure.Jobs;
+using FinanceSentry.Modules.BankSync.Infrastructure.Jobs;
 using Hangfire;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -42,27 +35,14 @@ builder.Services.AddSwaggerGen(c =>
     c.SwaggerDoc("v1", new() { Title = "Finance Sentry API", Version = "v1" });
     c.AddSecurityDefinition("Bearer", new()
     {
-        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Type = SecuritySchemeType.Http,
         Scheme = "bearer",
         BearerFormat = "JWT",
         Description = "Enter JWT Bearer token"
     });
 });
 
-builder.Services.AddCqrs(
-    typeof(FinanceSentry.Modules.Auth.Infrastructure.Services.JwtTokenService).Assembly,
-    typeof(CryptoSyncModule).Assembly,
-    typeof(BrokerageSyncModule).Assembly,
-    typeof(BankSyncModule).Assembly,
-    typeof(AlertsModule).Assembly,
-    typeof(BudgetsModule).Assembly);
-
-builder.Services.AddAuthModule(builder.Configuration);
-builder.Services.AddBankSyncModule(builder.Configuration);
-builder.Services.AddCryptoSyncModule(builder.Configuration);
-builder.Services.AddBrokerageSyncModule(builder.Configuration);
-builder.Services.AddAlertsModule(builder.Configuration);
-builder.Services.AddBudgetsModule(builder.Configuration);
+builder.Services.AddAllModules(builder.Configuration);
 
 builder.Services.AddHangfireServices(builder.Configuration);
 
@@ -119,11 +99,7 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health/ready");
 
-var recurringJobManager = app.Services.GetRequiredService<IRecurringJobManager>();
-recurringJobManager.AddOrUpdate<BinanceSyncJob>("binance-sync", job => job.ExecuteAsync(), "*/15 * * * *");
-recurringJobManager.AddOrUpdate<IBKRSyncJob>("ibkr-sync", job => job.ExecuteAsync(), "*/15 * * * *");
-recurringJobManager.AddOrUpdate<UnusualSpendDetectionJob>("unusual-spend-detection", job => job.ExecuteAsync(CancellationToken.None), Cron.Daily());
-recurringJobManager.AddOrUpdate<FinanceSentry.Modules.Alerts.Infrastructure.Jobs.AlertPurgeJob>("alert-purge", job => job.ExecuteAsync(CancellationToken.None), Cron.Monthly());
+app.RegisterAllModuleJobs();
 
 app.Run();
 

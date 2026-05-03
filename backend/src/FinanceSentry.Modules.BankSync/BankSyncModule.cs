@@ -16,14 +16,35 @@ using FinanceSentry.Modules.BankSync.Infrastructure.Persistence.Repositories;
 using FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
 using FinanceSentry.Modules.BankSync.Infrastructure.Security;
 using FinanceSentry.Modules.BankSync.Infrastructure.Services;
+using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Infrastructure;
 using FinanceSentry.Infrastructure.Encryption;
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 public static class BankSyncModule
 {
+    internal sealed class ModuleRegistrar : IModuleRegistrar
+    {
+        public void Register(IServiceCollection services, IConfiguration config)
+            => services.AddBankSyncModule(config);
+    }
+
+    private sealed class JobRegistrar : IJobRegistrar
+    {
+        public void RegisterJobs(IServiceProvider sp)
+        {
+            var mgr = sp.GetRequiredService<IRecurringJobManager>();
+            mgr.AddOrUpdate<UnusualSpendDetectionJob>(
+                "unusual-spend-detection",
+                job => job.ExecuteAsync(CancellationToken.None),
+                Cron.Daily());
+        }
+    }
+
+
     public static IServiceCollection AddBankSyncModule(
         this IServiceCollection services, IConfiguration config)
     {
@@ -85,6 +106,8 @@ public static class BankSyncModule
         services.AddSingleton<IFeatureFlagService, FeatureFlagService>();
         services.AddSingleton<IAuditLogService, AuditLogService>();
         services.AddScoped<EFQueryLoggerInterceptor>();
+
+        services.AddSingleton<IJobRegistrar, JobRegistrar>();
 
         return services;
     }
