@@ -1,7 +1,6 @@
 namespace FinanceSentry.Tests.Integration.Auth;
 
 using System.Net;
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text;
@@ -32,8 +31,7 @@ public class AccountsAuthContractTests : IClassFixture<AuthApiFactory>
         {
             AllowAutoRedirect = false
         });
-        _authenticatedClient.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", GenerateTestJwt());
+        _authenticatedClient.DefaultRequestHeaders.Add("Cookie", $"fs_access_token={GenerateTestJwt()}");
     }
 
     [Fact]
@@ -69,7 +67,7 @@ public class AccountsAuthContractTests : IClassFixture<AuthApiFactory>
         {
             Subject = new ClaimsIdentity([new Claim("sub", Guid.NewGuid().ToString())]),
             Expires = DateTime.UtcNow.AddHours(1),
-            SigningCredentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256Signature)
+            SigningCredentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256)
         });
         return handler.WriteToken(token);
     }

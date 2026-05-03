@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using FinanceSentry.Modules.CryptoSync.Domain;
@@ -293,8 +292,7 @@ public class CryptoApiFactory : WebApplicationFactory<Program>
     public HttpClient CreateAuthenticatedClient()
     {
         var client = CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
-        client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", GenerateTestJwt(TestUserId));
+        client.DefaultRequestHeaders.Add("Cookie", $"fs_access_token={GenerateTestJwt(TestUserId)}");
         return client;
     }
 
@@ -307,7 +305,7 @@ public class CryptoApiFactory : WebApplicationFactory<Program>
         {
             Subject = new ClaimsIdentity([new Claim("sub", userId.ToString())]),
             Expires = DateTime.UtcNow.AddHours(1),
-            SigningCredentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256Signature),
+            SigningCredentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256),
         });
         return handler.WriteToken(token);
     }

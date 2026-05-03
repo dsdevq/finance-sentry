@@ -1,11 +1,13 @@
 namespace FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
 
 using FinanceSentry.Modules.BankSync.Application.Services;
+using FinanceSentry.Modules.BankSync.Application.Services.CategoryMapping;
 using FinanceSentry.Modules.BankSync.Domain.Interfaces;
 
-public class PlaidAdapter(IPlaidClient client) : IPlaidAdapter, IBankProvider
+public class PlaidAdapter(IPlaidClient client, PlaidCategoryMapper categoryMapper) : IPlaidAdapter, IBankProvider
 {
     private readonly IPlaidClient _client = client;
+    private readonly PlaidCategoryMapper _categoryMapper = categoryMapper;
 
     public string ProviderName => "plaid";
 
@@ -70,7 +72,7 @@ public class PlaidAdapter(IPlaidClient client) : IPlaidAdapter, IBankProvider
                 IsPending: t.Pending,
                 TransactionType: t.Amount > 0 ? "debit" : "credit",
                 MerchantName: t.MerchantName,
-                MerchantCategory: t.PersonalFinanceCategory,
+                MerchantCategory: _categoryMapper.Map(t.PersonalFinanceCategory),
                 PlaidTransactionId: t.TransactionId))
             .ToList();
         return (candidates, null);
@@ -95,7 +97,7 @@ public class PlaidAdapter(IPlaidClient client) : IPlaidAdapter, IBankProvider
                 IsPending: t.Pending,
                 TransactionType: t.Amount > 0 ? "debit" : "credit",
                 MerchantName: t.MerchantName,
-                MerchantCategory: t.PersonalFinanceCategory,
+                MerchantCategory: _categoryMapper.Map(t.PersonalFinanceCategory),
                 PlaidTransactionId: t.TransactionId))
             .ToList();
         return (candidates, response.NextCursor);

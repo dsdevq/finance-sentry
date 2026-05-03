@@ -2,6 +2,7 @@ namespace FinanceSentry.Tests.Integration.BankSync;
 
 using FinanceSentry.Infrastructure.Encryption;
 using FinanceSentry.Modules.BankSync.Application.Services;
+using FinanceSentry.Modules.BankSync.Application.Services.CategoryMapping;
 using FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
 using FluentAssertions;
 using Microsoft.Extensions.Options;
@@ -39,7 +40,7 @@ public class PlaidAdapterIntegrationTests
         new("dGVzdGtleS10ZXN0a2V5LXRlc3RrZXktdGVzdGtleTA=");
 
     private readonly Mock<IPlaidClient> _clientMock = new(MockBehavior.Strict);
-    private PlaidAdapter CreateAdapter() => new(_clientMock.Object);
+    private PlaidAdapter CreateAdapter() => new(_clientMock.Object, new PlaidCategoryMapper());
 
     // ── Account link flow ────────────────────────────────────────────────────
 

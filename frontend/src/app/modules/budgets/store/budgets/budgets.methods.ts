@@ -1,21 +1,44 @@
 import {patchState, type WritableStateSource} from '@ngrx/signals';
 
-import {type Budget} from '../../models/budget/budget.model';
+import {type BudgetSummaryItem} from '../../models/budget/budget.model';
 import {type BudgetsState} from './budgets.state';
 
 export function budgetsMethods(store: WritableStateSource<BudgetsState>) {
   return {
-    setData(budgets: Budget[]): void {
-      patchState(store, {budgets, status: 'idle'});
+    setSummaryItems(summaryItems: BudgetSummaryItem[]): void {
+      patchState(store, {summaryItems, status: 'idle'});
     },
-    setEditing(category: Nullable<string>): void {
-      patchState(store, {editingCategory: category});
+    setEditing(id: Nullable<string>): void {
+      patchState(store, {editingId: id});
     },
-    updateLimit(category: string, limit: number): void {
+    setLoading(): void {
+      patchState(store, {status: 'loading'});
+    },
+    setError(): void {
+      patchState(store, {status: 'error'});
+    },
+    updateBudgetInList(id: string, monthlyLimit: number): void {
       patchState(store, (s: BudgetsState) => ({
-        budgets: s.budgets.map(b => (b.category === category ? {...b, limit} : b)),
-        editingCategory: null,
+        summaryItems: s.summaryItems.map(b =>
+          b.id === id
+            ? {
+                ...b,
+                monthlyLimit,
+                remaining: monthlyLimit - b.spent,
+                isOverBudget: b.spent > monthlyLimit,
+              }
+            : b
+        ),
+        editingId: null,
       }));
+    },
+    removeBudget(id: string): void {
+      patchState(store, (s: BudgetsState) => ({
+        summaryItems: s.summaryItems.filter(b => b.id !== id),
+      }));
+    },
+    setSelectedPeriod(year: number, month: number): void {
+      patchState(store, {selectedYear: year, selectedMonth: month});
     },
   };
 }
