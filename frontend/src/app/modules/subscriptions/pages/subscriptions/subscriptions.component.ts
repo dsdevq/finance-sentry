@@ -1,12 +1,6 @@
 import {DatePipe} from '@angular/common';
 import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
-import {
-  BadgeComponent,
-  ButtonComponent,
-  CardComponent,
-  IconComponent,
-  StatCardComponent,
-} from '@dsdevq-common/ui';
+import {ButtonComponent, CardComponent, StatCardComponent} from '@dsdevq-common/ui';
 
 import {AppCurrencyPipe} from '../../../../core/pipes/app-currency.pipe';
 import {type SubscriptionSort} from '../../models/subscription/subscription.model';
@@ -22,13 +16,7 @@ const SORT_OPTIONS: {value: SubscriptionSort; label: string}[] = [
 
 @Component({
   selector: 'fns-subscriptions',
-  imports: [
-    ButtonComponent,
-    CardComponent,
-    StatCardComponent,
-    AppCurrencyPipe,
-    DatePipe,
-],
+  imports: [AppCurrencyPipe, ButtonComponent, CardComponent, DatePipe, StatCardComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [SubscriptionsStore],
   templateUrl: './subscriptions.component.html',

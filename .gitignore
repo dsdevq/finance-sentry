@@ -92,6 +92,7 @@ frontend/dist/
 frontend/.angular/
 frontend/out-tsc/
 frontend/**/*.tsbuildinfo
+docs/superpowers
 
 # Backend
 backend/bin/

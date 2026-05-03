@@ -60,11 +60,14 @@ public class ScheduledSyncServiceTests
 
         var providerFactory = new Mock<IBankProviderFactory>();
         var monobankCreds = new Mock<IMonobankCredentialRepository>();
+        var alertGen = new Mock<FinanceSentry.Core.Interfaces.IAlertGeneratorService>();
+        var userPrefs = new Mock<FinanceSentry.Core.Interfaces.IUserAlertPreferencesReader>();
 
         var sut = new ScheduledSyncService(
             accountRepo.Object, txRepo.Object, jobRepo.Object, credRepo.Object,
             encryption.Object, plaid.Object, dedup.Object, logger.Object,
-            providerFactory.Object, monobankCreds.Object);
+            providerFactory.Object, monobankCreds.Object,
+            alertGen.Object, userPrefs.Object);
 
         return (sut, accountRepo, txRepo, jobRepo, credRepo, encryption, plaid, dedup, logger);
     }

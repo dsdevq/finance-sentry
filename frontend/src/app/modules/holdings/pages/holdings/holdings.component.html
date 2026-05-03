@@ -138,9 +138,9 @@
                     <span class="block text-xs text-neutral-400">{{ account.currency }}</span>
                   </td>
                   <td class="py-3 px-4 text-center">
-                    <cmn-badge [variant]="account.syncStatus | syncStatusVariant">{{
+                    <cmn-tag [variant]="account.syncStatus | syncStatusVariant">{{
                       account.syncStatus | syncStatusLabel
-                    }}</cmn-badge>
+                    }}</cmn-tag>
                   </td>
                   <td
                     class="py-3 text-right font-mono tabular-nums font-medium text-neutral-900 dark:text-neutral-100"

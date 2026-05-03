@@ -1,5 +1,6 @@
 namespace FinanceSentry.Modules.BankSync.Application.Services;
 
+using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Infrastructure.Encryption;
 using FinanceSentry.Infrastructure.Logging;
 using FinanceSentry.Modules.BankSync.Domain;
@@ -41,7 +42,9 @@ public class ScheduledSyncService(
     ITransactionDeduplicationService dedup,
     IBankSyncLogger logger,
     IBankProviderFactory providerFactory,
-    IMonobankCredentialRepository monobankCredentials) : IScheduledSyncService
+    IMonobankCredentialRepository monobankCredentials,
+    IAlertGeneratorService alerts,
+    IUserAlertPreferencesReader userPreferences) : IScheduledSyncService
 {
     private readonly IBankAccountRepository _accounts = accounts;
     private readonly ITransactionRepository _transactions = transactions;
@@ -53,6 +56,8 @@ public class ScheduledSyncService(
     private readonly IBankSyncLogger _logger = logger;
     private readonly IBankProviderFactory _providerFactory = providerFactory;
     private readonly IMonobankCredentialRepository _monobankCredentials = monobankCredentials;
+    private readonly IAlertGeneratorService _alerts = alerts;
+    private readonly IUserAlertPreferencesReader _userPreferences = userPreferences;
 
     /// <inheritdoc />
     public async Task<SyncResult> PerformFullSyncAsync(
@@ -88,6 +93,8 @@ public class ScheduledSyncService(
             else
                 result = await SyncPlaidAsync(account, job, webhookTriggered, startedAt, ct);
 
+            await EvaluateAlertsAfterSuccessAsync(account, ct);
+
             return result;
         }
         catch (Exception ex)
@@ -118,7 +125,56 @@ public class ScheduledSyncService(
             _logger.SyncFailed(job.CorrelationId ?? job.Id.ToString(), accountId,
                 errorCode ?? "UNKNOWN", ex.Message, job.RetryCount);
 
+            await EvaluateSyncFailureAlertAsync(account, errorCode, ct);
+
             return new SyncResult(false, 0, 0, errorCode, ex.Message);
+        }
+    }
+
+    private async Task EvaluateAlertsAfterSuccessAsync(Domain.BankAccount account, CancellationToken ct)
+    {
+        try
+        {
+            var prefs = await _userPreferences.GetAsync(account.UserId, ct);
+            if (prefs is null) return;
+
+            if (prefs.SyncFailureAlerts)
+                await _alerts.ResolveSyncFailureAlertAsync(account.UserId, account.Provider, account.Id, ct);
+
+            if (prefs.LowBalanceAlerts && account.CurrentBalance.HasValue)
+            {
+                var balance = account.CurrentBalance.Value;
+                if (balance < prefs.LowBalanceThreshold)
+                {
+                    await _alerts.GenerateLowBalanceAlertAsync(
+                        account.UserId, account.Id, account.BankName,
+                        balance, prefs.LowBalanceThreshold, ct);
+                }
+                else
+                {
+                    await _alerts.ResolveLowBalanceAlertAsync(account.UserId, account.Id, ct);
+                }
+            }
+        }
+        catch
+        {
+            // best-effort: alert generation failure must not break sync
+        }
+    }
+
+    private async Task EvaluateSyncFailureAlertAsync(Domain.BankAccount account, string? errorCode, CancellationToken ct)
+    {
+        try
+        {
+            var prefs = await _userPreferences.GetAsync(account.UserId, ct);
+            if (prefs is null || !prefs.SyncFailureAlerts) return;
+
+            await _alerts.GenerateSyncFailureAlertAsync(
+                account.UserId, account.Provider, account.Id, account.BankName, errorCode, ct);
+        }
+        catch
+        {
+            // best-effort
         }
     }
 

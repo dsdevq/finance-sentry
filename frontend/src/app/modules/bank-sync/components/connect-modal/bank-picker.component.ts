@@ -1,10 +1,10 @@
 import {NgOptimizedImage} from '@angular/common';
 import {ChangeDetectionStrategy, Component, computed, inject} from '@angular/core';
 import {
-  BadgeComponent,
   ButtonComponent,
   DialogActionsComponent,
   SelectableCardComponent,
+  TagComponent,
 } from '@dsdevq-common/ui';
 
 import {PROVIDER_CATALOG} from '../../../../shared/constants/providers/providers.constants';
@@ -22,7 +22,7 @@ const BANK_PROVIDERS: readonly ProviderDescriptor[] = PROVIDER_CATALOG.filter(
   selector: 'fns-bank-picker',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    BadgeComponent,
+    TagComponent,
     ButtonComponent,
     DialogActionsComponent,
     NgOptimizedImage,
