@@ -3,7 +3,6 @@ namespace FinanceSentry.Tests.Unit.Alerts;
 using FinanceSentry.Modules.Alerts.Application.Services;
 using FinanceSentry.Modules.Alerts.Domain;
 using FinanceSentry.Modules.Alerts.Domain.Repositories;
-using FluentAssertions;
 using Moq;
 using Xunit;
 

@@ -30,15 +30,15 @@ public class AlertsDbContext(DbContextOptions<AlertsDbContext> options) : DbCont
         ab.HasIndex(a => new { a.UserId, a.CreatedAt })
             .HasDatabaseName("idx_alert_user_created")
             .IsDescending(false, true)
-            .HasFilter("is_dismissed = false");
+            .HasFilter("\"IsDismissed\" = false");
 
         ab.HasIndex(a => new { a.UserId, a.Type, a.ReferenceId })
             .IsUnique()
             .HasDatabaseName("idx_alert_dedup")
-            .HasFilter("is_resolved = false AND is_dismissed = false");
+            .HasFilter("\"IsResolved\" = false AND \"IsDismissed\" = false");
 
         ab.HasIndex(a => a.CreatedAt)
             .HasDatabaseName("idx_alert_purge")
-            .HasFilter("is_resolved = true OR is_dismissed = true");
+            .HasFilter("\"IsResolved\" = true OR \"IsDismissed\" = true");
     }
 }

@@ -94,17 +94,17 @@ namespace FinanceSentry.Modules.Alerts.Migrations
 
                     b.HasIndex("CreatedAt")
                         .HasDatabaseName("idx_alert_purge")
-                        .HasFilter("is_resolved = true OR is_dismissed = true");
+                        .HasFilter("\"IsResolved\" = true OR \"IsDismissed\" = true");
 
                     b.HasIndex("UserId", "CreatedAt")
                         .IsDescending(false, true)
                         .HasDatabaseName("idx_alert_user_created")
-                        .HasFilter("is_dismissed = false");
+                        .HasFilter("\"IsDismissed\" = false");
 
                     b.HasIndex("UserId", "Type", "ReferenceId")
                         .IsUnique()
                         .HasDatabaseName("idx_alert_dedup")
-                        .HasFilter("is_resolved = false AND is_dismissed = false");
+                        .HasFilter("\"IsResolved\" = false AND \"IsDismissed\" = false");
 
                     b.ToTable("alerts", (string)null);
                 });

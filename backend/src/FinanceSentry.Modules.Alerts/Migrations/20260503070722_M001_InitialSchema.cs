@@ -1,5 +1,4 @@
-﻿using System;
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -40,20 +39,20 @@ namespace FinanceSentry.Modules.Alerts.Migrations
                 table: "alerts",
                 columns: new[] { "UserId", "Type", "ReferenceId" },
                 unique: true,
-                filter: "is_resolved = false AND is_dismissed = false");
+                filter: "\"IsResolved\" = false AND \"IsDismissed\" = false");
 
             migrationBuilder.CreateIndex(
                 name: "idx_alert_purge",
                 table: "alerts",
                 column: "CreatedAt",
-                filter: "is_resolved = true OR is_dismissed = true");
+                filter: "\"IsResolved\" = true OR \"IsDismissed\" = true");
 
             migrationBuilder.CreateIndex(
                 name: "idx_alert_user_created",
                 table: "alerts",
                 columns: new[] { "UserId", "CreatedAt" },
                 descending: new[] { false, true },
-                filter: "is_dismissed = false");
+                filter: "\"IsDismissed\" = false");
         }
 
         /// <inheritdoc />
