@@ -94,7 +94,8 @@ builder.Services.AddCqrs(
     typeof(JwtTokenService).Assembly,
     typeof(CryptoSyncModule).Assembly,
     typeof(BrokerageSyncModule).Assembly,
-    typeof(BankSyncModule).Assembly);
+    typeof(BankSyncModule).Assembly,
+    typeof(FinanceSentry.Modules.Alerts.AlertsModule).Assembly);
 
 // ── Database (EF Core + PostgreSQL) ─────────────────────────────────────────
 var connectionString = builder.Configuration.GetConnectionString("Default")
@@ -110,6 +111,9 @@ builder.Services.AddDbContext<CryptoSyncDbContext>(
     options => options.UseNpgsql(connectionString));
 
 builder.Services.AddDbContext<BrokerageSyncDbContext>(
+    options => options.UseNpgsql(connectionString));
+
+builder.Services.AddDbContext<FinanceSentry.Modules.Alerts.Infrastructure.Persistence.AlertsDbContext>(
     options => options.UseNpgsql(connectionString));
 
 // ── ASP.NET Core Identity ────────────────────────────────────────────────────
@@ -222,6 +226,14 @@ builder.Services.AddScoped<IBrokerageHoldingRepository, BrokerageHoldingReposito
 builder.Services.AddScoped<IBrokerageHoldingsReader, BrokerageHoldingsReader>();
 builder.Services.AddScoped<IBKRSyncJob>();
 
+// ── Alerts module (012-alerts-system) ────────────────────────────────────────
+builder.Services.AddScoped<FinanceSentry.Modules.Alerts.Domain.Repositories.IAlertRepository,
+    FinanceSentry.Modules.Alerts.Infrastructure.Persistence.Repositories.AlertRepository>();
+builder.Services.AddScoped<FinanceSentry.Core.Interfaces.IAlertGeneratorService,
+    FinanceSentry.Modules.Alerts.Application.Services.AlertGeneratorService>();
+builder.Services.AddScoped<FinanceSentry.Core.Interfaces.IUserAlertPreferencesReader,
+    FinanceSentry.Modules.Auth.Infrastructure.UserAlertPreferencesReader>();
+
 // ── Dashboard / aggregation services (T401–T410) ─────────────────────────────
 builder.Services.AddScoped<IAggregationService, AggregationService>();
 builder.Services.AddScoped<IMoneyFlowStatisticsService, MoneyFlowStatisticsService>();
@@ -236,6 +248,8 @@ builder.Services.AddScoped<ScheduledSyncJob>();
 builder.Services.AddScoped<SyncScheduler>();
 builder.Services.AddScoped<DataRetentionJob>();
 builder.Services.AddScoped<CredentialBackupJob>();
+builder.Services.AddScoped<FinanceSentry.Modules.BankSync.Infrastructure.Jobs.UnusualSpendDetectionJob>();
+builder.Services.AddScoped<FinanceSentry.Modules.Alerts.Infrastructure.Jobs.AlertPurgeJob>();
 
 // ── Feature flags (T521) ─────────────────────────────────────────────────────
 builder.Services.AddSingleton<IFeatureFlagService, FeatureFlagService>();
@@ -322,6 +336,18 @@ using (var scope = app.Services.CreateScope())
     {
         app.Logger.LogError(ex, "BrokerageSync migration failed. Startup will continue.");
     }
+
+    try
+    {
+        var alertsDbContext = scope.ServiceProvider.GetRequiredService<FinanceSentry.Modules.Alerts.Infrastructure.Persistence.AlertsDbContext>();
+        app.Logger.LogInformation("Applying Alerts database migrations...");
+        alertsDbContext.Database.Migrate();
+        app.Logger.LogInformation("Alerts migrations applied successfully");
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, "Alerts migration failed. Startup will continue.");
+    }
 }
 
 // ── Middleware pipeline ───────────────────────────────────────────────────────
@@ -360,6 +386,14 @@ recurringJobManager.AddOrUpdate<IBKRSyncJob>(
     "ibkr-sync",
     job => job.ExecuteAsync(),
     "*/15 * * * *");
+recurringJobManager.AddOrUpdate<FinanceSentry.Modules.BankSync.Infrastructure.Jobs.UnusualSpendDetectionJob>(
+    "unusual-spend-detection",
+    job => job.ExecuteAsync(CancellationToken.None),
+    Cron.Daily());
+recurringJobManager.AddOrUpdate<FinanceSentry.Modules.Alerts.Infrastructure.Jobs.AlertPurgeJob>(
+    "alert-purge",
+    job => job.ExecuteAsync(CancellationToken.None),
+    Cron.Monthly());
 
 app.Run();
 

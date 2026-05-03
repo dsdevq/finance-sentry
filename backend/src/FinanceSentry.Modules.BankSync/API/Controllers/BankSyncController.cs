@@ -25,7 +25,8 @@ public class BankSyncController(
     ITransactionRepository transactions,
     IBackgroundJobClient backgroundJobs,
     ISyncJobRepository syncJobs,
-    ITransactionSyncCoordinator coordinator) : ControllerBase
+    ITransactionSyncCoordinator coordinator,
+    FinanceSentry.Core.Interfaces.IAlertGeneratorService alerts) : ControllerBase
 {
     private readonly PlaidAdapter _plaid = plaid;
     private readonly IBankAccountRepository _accounts = accounts;
@@ -193,6 +194,7 @@ public class BankSyncController(
 
         await _transactions.SoftDeleteByAccountIdAsync(accountId, ct);
         await _accounts.DeleteAsync(accountId, ct);
+        await alerts.DeleteAlertsForAccountAsync(accountId, ct);
 
         return NoContent();
     }

@@ -15,8 +15,11 @@ public class BinanceSyncJobTests
     private readonly Mock<IBinanceCredentialRepository> _credentialRepo = new(MockBehavior.Loose);
     private readonly Mock<ICommandHandler<SyncBinanceHoldingsCommand, SyncBinanceHoldingsResult>> _syncHandler = new(MockBehavior.Loose);
 
+    private readonly Mock<FinanceSentry.Core.Interfaces.IAlertGeneratorService> _alerts = new(MockBehavior.Loose);
+    private readonly Mock<FinanceSentry.Core.Interfaces.IUserAlertPreferencesReader> _userPrefs = new(MockBehavior.Loose);
+
     private BinanceSyncJob CreateJob() =>
-        new(_credentialRepo.Object, _syncHandler.Object, NullLogger<BinanceSyncJob>.Instance);
+        new(_credentialRepo.Object, _syncHandler.Object, _alerts.Object, _userPrefs.Object, NullLogger<BinanceSyncJob>.Instance);
 
     private static BinanceCredential MakeCredential(Guid userId) =>
         BinanceCredential.Create(userId, [1], [2], [3], [4], [5], [6], 1);

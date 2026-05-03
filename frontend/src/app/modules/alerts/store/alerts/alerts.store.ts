@@ -6,6 +6,7 @@ import {alertsMethods} from './alerts.methods';
 import {initialAlertsState} from './alerts.state';
 
 export const AlertsStore = signalStore(
+  {providedIn: 'root'},
   withState(initialAlertsState),
   withMethods(alertsMethods),
   withComputed(alertsComputed),

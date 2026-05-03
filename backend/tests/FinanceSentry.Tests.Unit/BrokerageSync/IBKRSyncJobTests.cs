@@ -15,8 +15,11 @@ public class IBKRSyncJobTests
     private readonly Mock<IIBKRCredentialRepository> _credentialRepo = new(MockBehavior.Loose);
     private readonly Mock<ICommandHandler<SyncIBKRHoldingsCommand, SyncIBKRHoldingsResult>> _syncHandler = new(MockBehavior.Loose);
 
+    private readonly Mock<FinanceSentry.Core.Interfaces.IAlertGeneratorService> _alerts = new(MockBehavior.Loose);
+    private readonly Mock<FinanceSentry.Core.Interfaces.IUserAlertPreferencesReader> _userPrefs = new(MockBehavior.Loose);
+
     private IBKRSyncJob CreateJob() =>
-        new(_credentialRepo.Object, _syncHandler.Object, NullLogger<IBKRSyncJob>.Instance);
+        new(_credentialRepo.Object, _syncHandler.Object, _alerts.Object, _userPrefs.Object, NullLogger<IBKRSyncJob>.Instance);
 
     private static IBKRCredential MakeCredential(Guid userId) =>
         new(userId, "U1234567");

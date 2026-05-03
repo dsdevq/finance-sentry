@@ -2,11 +2,11 @@ import {DecimalPipe} from '@angular/common';
 import {ChangeDetectionStrategy, Component, inject, signal, ViewContainerRef} from '@angular/core';
 import {
   AlertComponent,
-  BadgeComponent,
   ButtonComponent,
   CardComponent,
   CmnDialogService,
   StatCardComponent,
+  TagComponent,
 } from '@dsdevq-common/ui';
 import {take} from 'rxjs';
 
@@ -27,7 +27,7 @@ export type HoldingsTab = 'holdings' | 'positions';
   selector: 'fns-holdings',
   imports: [
     AlertComponent,
-    BadgeComponent,
+    TagComponent,
     ButtonComponent,
     CardComponent,
     CategoryLabelPipe,

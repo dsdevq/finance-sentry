@@ -1,11 +1,13 @@
 // Components
 export * from './components/alert/alert.component';
+export * from './components/alert-item/alert-item.component';
 export * from './components/async-state/async-state.component';
 export * from './components/password-strength/password-strength.component';
 export * from './components/command-palette/command-palette.component';
 export * from './components/command-palette/command-palette-item.model';
 export * from './components/app-layout/app-layout.component';
 export * from './components/badge/badge.component';
+export * from './components/tag/tag.component';
 export * from './components/button/button.component';
 export * from './components/card/card.component';
 export * from './components/data-table/data-table-cell.directive';

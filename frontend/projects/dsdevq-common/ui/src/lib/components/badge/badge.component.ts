@@ -1,26 +1,68 @@
 import {ChangeDetectionStrategy, Component, computed, input} from '@angular/core';
 
-export type BadgeVariant = 'success' | 'error' | 'warning' | 'info' | 'neutral';
+export type BadgeStatus = 'default' | 'success' | 'processing' | 'error' | 'warning';
 
-const VARIANT_CLASSES: Record<BadgeVariant, string> = {
-  success: 'bg-status-success/15 text-status-success',
-  error:   'bg-status-error/15 text-status-error',
-  warning: 'bg-status-warning/15 text-status-warning',
-  info:    'bg-status-info/15 text-status-info',
-  neutral: 'bg-surface-raised text-text-secondary',
+const STATUS_CLASSES: Record<BadgeStatus, string> = {
+  default:    'bg-neutral-500',
+  success:    'bg-status-success',
+  processing: 'bg-status-info animate-pulse',
+  error:      'bg-status-error',
+  warning:    'bg-status-warning',
 };
 
-const BASE_CLASSES =
-  'inline-flex items-center rounded-cmn-full px-cmn-2 py-0.5 ' +
-  'text-cmn-xs font-label font-semibold uppercase tracking-wide';
+const COUNT_SIZE_CLASSES = 'min-w-[18px] h-[18px] px-1 text-[10px] font-semibold leading-none';
+const DOT_SIZE_CLASSES = 'w-2 h-2';
+const BASE_INDICATOR_CLASSES = 'cmn-badge-indicator inline-flex items-center justify-center rounded-full text-white';
+const ABSOLUTE_POSITION_CLASSES = 'absolute -right-1.5 -top-1.5';
 
 @Component({
   selector: 'cmn-badge',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<span [class]="classes()"><ng-content /></span>`,
+  template: `
+    <span class="relative inline-flex">
+      <ng-content />
+      @if (visible()) {
+        <span [class]="indicatorClasses()">
+          @if (!dot()) {
+            {{ displayValue() }}
+          }
+        </span>
+      }
+    </span>
+  `,
 })
 export class BadgeComponent {
-  public readonly variant = input<BadgeVariant>('neutral');
+  public readonly count = input<number | null>(null);
+  public readonly overflowCount = input<number>(99);
+  public readonly showZero = input<boolean>(false);
+  public readonly dot = input<boolean>(false);
+  public readonly status = input<BadgeStatus>('error');
+  public readonly standalone = input<boolean>(false);
 
-  public readonly classes = computed(() => `${BASE_CLASSES} ${VARIANT_CLASSES[this.variant()]}`);
+  public readonly visible = computed<boolean>(() => {
+    if (this.dot()) {
+      return true;
+    }
+    const value = this.count();
+    if (value === null || value === undefined) {
+      return false;
+    }
+    if (value === 0 && !this.showZero()) {
+      return false;
+    }
+    return true;
+  });
+
+  public readonly displayValue = computed<string>(() => {
+    const value = this.count() ?? 0;
+    const cap = this.overflowCount();
+    return value > cap ? `${cap}+` : `${value}`;
+  });
+
+  public readonly indicatorClasses = computed<string>(() => {
+    const sizing = this.dot() ? DOT_SIZE_CLASSES : COUNT_SIZE_CLASSES;
+    const position = this.standalone() ? '' : ABSOLUTE_POSITION_CLASSES;
+    const status = STATUS_CLASSES[this.status()];
+    return [BASE_INDICATOR_CLASSES, sizing, status, position].filter(Boolean).join(' ');
+  });
 }
