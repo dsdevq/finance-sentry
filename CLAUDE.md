@@ -332,6 +332,8 @@ After **all tasks in a feature are complete**, act as a QA engineer: spin up the
 - N/A on frontend; credentials are transient form state, never persisted (011-connect-providers)
 - C# 13/.NET 9 (backend) · TypeScript 5.x strict / Angular 21.2 (frontend) + ASP.NET Core 9, EF Core 9, MediatR, Hangfire · NgRx SignalStore 21.1, @dsdevq-common/ui (014-subscriptions)
 - PostgreSQL 14 — new `detected_subscriptions` table in `SubscriptionsDbContext` (014-subscriptions)
+- C# 13/.NET 9 (backend) · TypeScript 5.x strict / Angular 21.2 (frontend) + ASP.NET Core 9, EF Core 9, MediatR · NgRx SignalStore 21.1, @dsdevq-common/ui (013-budgets)
+- PostgreSQL 14 — new `budgets` table in `BudgetsDbContext`; BankSync M003 adds composite index on `(user_id, merchant_category, posted_date)` (013-budgets)
 - C# 13/.NET 9 (backend) · TypeScript 5.x strict / Angular 21.2 (frontend) + ASP.NET Core 9, EF Core 9, MediatR, Hangfire · NgRx SignalStore 21.1, @dsdevq-common/ui (012-alerts-system)
 - PostgreSQL 14 — new `alerts` table in `AlertsDbContext` with its own migrations (012-alerts-system)
 

@@ -17,6 +17,7 @@ namespace FinanceSentry.Modules.Alerts.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
+                .HasDefaultSchema("alerts")
                 .HasAnnotation("ProductVersion", "9.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
@@ -103,7 +104,7 @@ namespace FinanceSentry.Modules.Alerts.Migrations
                         .HasDatabaseName("idx_alert_dedup")
                         .HasFilter("\"IsResolved\" = false AND \"IsDismissed\" = false");
 
-                    b.ToTable("alerts", (string)null);
+                    b.ToTable("alerts", "alerts");
                 });
 #pragma warning restore 612, 618
         }

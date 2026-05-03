@@ -17,6 +17,7 @@ namespace FinanceSentry.Modules.BankSync.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
+                .HasDefaultSchema("bank_sync")
                 .HasAnnotation("ProductVersion", "9.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
@@ -66,7 +67,7 @@ namespace FinanceSentry.Modules.BankSync.Migrations
                     b.HasIndex("UserId", "PerformedAt")
                         .HasDatabaseName("idx_audit_log_user_performed_at");
 
-                    b.ToTable("audit_logs", (string)null);
+                    b.ToTable("audit_logs", "bank_sync");
                 });
 
             modelBuilder.Entity("FinanceSentry.Modules.BankSync.Domain.BankAccount", b =>
@@ -167,7 +168,7 @@ namespace FinanceSentry.Modules.BankSync.Migrations
                     b.HasIndex("UserId")
                         .HasDatabaseName("idx_bank_account_user_id");
 
-                    b.ToTable("BankAccounts");
+                    b.ToTable("BankAccounts", "bank_sync");
                 });
 
             modelBuilder.Entity("FinanceSentry.Modules.BankSync.Domain.EncryptedCredential", b =>
@@ -216,7 +217,7 @@ namespace FinanceSentry.Modules.BankSync.Migrations
                         .IsUnique()
                         .HasDatabaseName("idx_encrypted_credential_account_id_unique");
 
-                    b.ToTable("EncryptedCredentials");
+                    b.ToTable("EncryptedCredentials", "bank_sync");
                 });
 
             modelBuilder.Entity("FinanceSentry.Modules.BankSync.Domain.MonobankCredential", b =>
@@ -262,7 +263,7 @@ namespace FinanceSentry.Modules.BankSync.Migrations
                         .IsUnique()
                         .HasDatabaseName("idx_monobank_credential_user_unique");
 
-                    b.ToTable("MonobankCredentials");
+                    b.ToTable("MonobankCredentials", "bank_sync");
                 });
 
             modelBuilder.Entity("FinanceSentry.Modules.BankSync.Domain.SyncJob", b =>
@@ -350,7 +351,7 @@ namespace FinanceSentry.Modules.BankSync.Migrations
                     b.HasIndex("AccountId", "Status")
                         .HasDatabaseName("idx_sync_job_account_status");
 
-                    b.ToTable("SyncJobs");
+                    b.ToTable("SyncJobs", "bank_sync");
                 });
 
             modelBuilder.Entity("FinanceSentry.Modules.BankSync.Domain.Transaction", b =>
@@ -437,7 +438,7 @@ namespace FinanceSentry.Modules.BankSync.Migrations
                         .IsUnique()
                         .HasDatabaseName("idx_transaction_account_unique_hash_unique");
 
-                    b.ToTable("Transactions");
+                    b.ToTable("Transactions", "bank_sync");
                 });
 
             modelBuilder.Entity("FinanceSentry.Modules.BankSync.Domain.BankAccount", b =>

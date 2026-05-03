@@ -14,6 +14,7 @@ public class BankSyncDbContext(DbContextOptions<BankSyncDbContext> options) : Db
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.HasDefaultSchema("bank_sync");
         base.OnModelCreating(modelBuilder);
 
         var bab = modelBuilder.Entity<BankAccount>();

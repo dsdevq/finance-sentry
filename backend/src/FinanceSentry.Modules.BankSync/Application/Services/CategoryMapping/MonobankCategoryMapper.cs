@@ -1,0 +1,120 @@
+namespace FinanceSentry.Modules.BankSync.Application.Services.CategoryMapping;
+
+public class MonobankCategoryMapper : IProviderCategoryMapper
+{
+    private static readonly IReadOnlyDictionary<string, string> MccToKey =
+        new Dictionary<string, string>
+        {
+            // Food & Drink
+            ["5411"] = "food_and_drink",
+            ["5412"] = "food_and_drink",
+            ["5422"] = "food_and_drink",
+            ["5441"] = "food_and_drink",
+            ["5451"] = "food_and_drink",
+            ["5462"] = "food_and_drink",
+            ["5499"] = "food_and_drink",
+            ["5811"] = "food_and_drink",
+            ["5812"] = "food_and_drink",
+            ["5813"] = "food_and_drink",
+            ["5814"] = "food_and_drink",
+            // Transport
+            ["4111"] = "transport",
+            ["4112"] = "transport",
+            ["4119"] = "transport",
+            ["4121"] = "transport",
+            ["4131"] = "transport",
+            ["4784"] = "transport",
+            ["4789"] = "transport",
+            ["5511"] = "transport",
+            ["5521"] = "transport",
+            ["5531"] = "transport",
+            ["5541"] = "transport",
+            ["5542"] = "transport",
+            ["5571"] = "transport",
+            ["5599"] = "transport",
+            ["7523"] = "transport",
+            // Shopping
+            ["5045"] = "shopping",
+            ["5065"] = "shopping",
+            ["5311"] = "shopping",
+            ["5331"] = "shopping",
+            ["5600"] = "shopping",
+            ["5621"] = "shopping",
+            ["5631"] = "shopping",
+            ["5641"] = "shopping",
+            ["5651"] = "shopping",
+            ["5661"] = "shopping",
+            ["5691"] = "shopping",
+            ["5699"] = "shopping",
+            ["5732"] = "shopping",
+            ["5734"] = "shopping",
+            ["5900"] = "shopping",
+            ["5940"] = "shopping",
+            ["5941"] = "shopping",
+            ["5944"] = "shopping",
+            ["5945"] = "shopping",
+            ["5999"] = "shopping",
+            // Entertainment
+            ["7832"] = "entertainment",
+            ["7841"] = "entertainment",
+            ["7911"] = "entertainment",
+            ["7922"] = "entertainment",
+            ["7929"] = "entertainment",
+            ["7932"] = "entertainment",
+            ["7933"] = "entertainment",
+            ["7941"] = "entertainment",
+            ["7991"] = "entertainment",
+            ["7993"] = "entertainment",
+            ["7994"] = "entertainment",
+            ["7996"] = "entertainment",
+            ["7997"] = "entertainment",
+            ["7999"] = "entertainment",
+            // Health
+            ["5047"] = "health",
+            ["5122"] = "health",
+            ["5912"] = "health",
+            ["7298"] = "health",
+            ["8011"] = "health",
+            ["8021"] = "health",
+            ["8031"] = "health",
+            ["8041"] = "health",
+            ["8042"] = "health",
+            ["8049"] = "health",
+            ["8050"] = "health",
+            ["8062"] = "health",
+            ["8099"] = "health",
+            // Utilities
+            ["4811"] = "utilities",
+            ["4812"] = "utilities",
+            ["4813"] = "utilities",
+            ["4814"] = "utilities",
+            ["4816"] = "utilities",
+            ["4899"] = "utilities",
+            ["4900"] = "utilities",
+            // Travel
+            ["4411"] = "travel",
+            ["4511"] = "travel",
+            ["4722"] = "travel",
+            ["4723"] = "travel",
+            ["4731"] = "travel",
+            ["7011"] = "travel",
+            ["7012"] = "travel",
+            ["7032"] = "travel",
+            ["7033"] = "travel",
+            ["7512"] = "travel",
+            ["7513"] = "travel",
+            // Housing
+            ["5200"] = "housing",
+            ["5211"] = "housing",
+            ["5231"] = "housing",
+            ["5251"] = "housing",
+            ["5261"] = "housing",
+            ["7623"] = "housing",
+        };
+
+    public string Map(string? rawCategory)
+    {
+        if (rawCategory is null) return "other";
+        return MccToKey.TryGetValue(rawCategory, out var key) ? key : "other";
+    }
+}
