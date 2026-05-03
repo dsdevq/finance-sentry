@@ -19,7 +19,15 @@ import {
   Tooltip,
 } from 'chart.js';
 
-Chart.register(CategoryScale, LinearScale, LineController, PointElement, LineElement, Tooltip, Filler);
+Chart.register(
+  CategoryScale,
+  LinearScale,
+  LineController,
+  PointElement,
+  LineElement,
+  Tooltip,
+  Filler
+);
 
 export interface ChartPoint {
   label: string;
@@ -32,56 +40,77 @@ export interface ChartSeries {
   color: string;
 }
 
+export interface LineChartConfig {
+  series?: ChartSeries[];
+  data?: ChartPoint[];
+  label?: string;
+  currency?: string;
+  stacked?: boolean;
+  bare?: boolean;
+}
+
 @Component({
   selector: 'cmn-line-chart',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div
-      class="flex w-full flex-col gap-cmn-3 rounded-cmn-lg border border-border-default bg-surface-card p-cmn-4"
-    >
-      <span
-        class="font-label text-cmn-xs font-semibold uppercase tracking-wide text-text-secondary"
-      >
-        {{ label() }}
-      </span>
-      <div class="relative h-56">
+    @if (config().bare) {
+      <div class="relative h-48 w-full">
         <canvas #chartCanvas></canvas>
       </div>
-    </div>
+    } @else {
+      <div
+        class="flex w-full flex-col gap-cmn-3 rounded-cmn-lg border border-border-default bg-surface-card p-cmn-4"
+      >
+        <span
+          class="font-label text-cmn-xs font-semibold uppercase tracking-wide text-text-secondary"
+        >
+          {{ config().label }}
+        </span>
+        <div class="relative h-56">
+          <canvas #chartCanvas></canvas>
+        </div>
+      </div>
+    }
   `,
 })
 export class LineChartComponent implements AfterViewInit, OnDestroy {
   private readonly canvasRef = viewChild.required<ElementRef<HTMLCanvasElement>>('chartCanvas');
   private chart: Chart | null = null;
 
-  public readonly data = input<ChartPoint[]>([]);
-  public readonly series = input<ChartSeries[]>([]);
-  public readonly label = input<string>('');
-  public readonly currency = input<string>('USD');
+  public readonly config = input<LineChartConfig>({});
 
   constructor() {
     effect(() => {
-      const seriesList = this.series();
-      if (seriesList.length > 0) {
-        if (this.chart) {
-          const labels = seriesList[0]?.data.map(p => p.label) ?? [];
-          this.chart.data.labels = labels;
-          this.chart.data.datasets = seriesList.map((s, i) =>
-            this.buildDataset(s.label, s.data.map(p => p.value), s.color, i === 0)
-          );
-          if (this.chart.options.plugins?.legend) {
-            this.chart.options.plugins.legend.display = true;
-          }
-          this.chart.update('none');
-        }
+      const cfg = this.config();
+      if (!this.chart) {
         return;
       }
-      const points = this.data();
-      if (this.chart) {
+
+      const seriesList = cfg.series ?? [];
+      const points = cfg.data ?? [];
+
+      if (seriesList.length > 0) {
+        this.chart.data.labels = seriesList[0]?.data.map(p => p.label) ?? [];
+        this.chart.data.datasets = seriesList.map((s, i) =>
+          this.buildDataset(
+            s.label,
+            s.data.map(p => p.value),
+            s.color,
+            !!cfg.stacked || i === 0,
+            cfg.stacked ? '4d' : '1a'
+          )
+        );
+        if (this.chart.options.plugins?.legend) {
+          this.chart.options.plugins.legend.display = !cfg.stacked;
+        }
+      } else if (points.length > 0) {
         this.chart.data.labels = points.map(p => p.label);
-        this.chart.data.datasets[0].data = points.map(p => p.value);
-        this.chart.update('none');
+        if (this.chart.data.datasets[0]) {
+          this.chart.data.datasets[0].data = points.map(p => p.value);
+        }
       }
+
+      this.chart.update('none');
     });
   }
 
@@ -94,12 +123,18 @@ export class LineChartComponent implements AfterViewInit, OnDestroy {
     this.chart = null;
   }
 
-  private buildDataset(seriesLabel: string, values: number[], color: string, fill: boolean) {
+  private buildDataset(
+    seriesLabel: string,
+    values: number[],
+    color: string,
+    fill: boolean,
+    fillOpacity = '1a'
+  ) {
     return {
       label: seriesLabel,
       data: values,
       borderColor: color,
-      backgroundColor: fill ? `${color}1a` : 'transparent',
+      backgroundColor: fill ? `${color}${fillOpacity}` : 'transparent',
       borderWidth: 2,
       pointRadius: 0,
       pointHoverRadius: 4,
@@ -114,6 +149,7 @@ export class LineChartComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
+    const cfg = this.config();
     const accent = getComputedStyle(document.documentElement)
       .getPropertyValue('--color-accent-default')
       .trim();
@@ -124,20 +160,33 @@ export class LineChartComponent implements AfterViewInit, OnDestroy {
       .getPropertyValue('--color-border-default')
       .trim();
 
-    const currency = this.currency();
-    const seriesList = this.series();
+    const currency = cfg.currency ?? 'USD';
+    const isStacked = !!cfg.stacked;
+    const seriesList = cfg.series ?? [];
     const isMulti = seriesList.length > 0;
-    const points = this.data();
+    const points = cfg.data ?? [];
 
     const labels = isMulti
       ? (seriesList[0]?.data.map(p => p.label) ?? [])
       : points.map(p => p.label);
-
     const datasets = isMulti
       ? seriesList.map((s, i) =>
-          this.buildDataset(s.label, s.data.map(p => p.value), s.color, i === 0)
+          this.buildDataset(
+            s.label,
+            s.data.map(p => p.value),
+            s.color,
+            isStacked || i === 0,
+            isStacked ? '4d' : '1a'
+          )
         )
-      : [this.buildDataset('', points.map(p => p.value), accent || '#4f46e5', true)];
+      : [
+          this.buildDataset(
+            '',
+            points.map(p => p.value),
+            accent || '#4f46e5',
+            true
+          ),
+        ];
 
     this.chart = new Chart(ctx, {
       type: 'line',
@@ -147,7 +196,7 @@ export class LineChartComponent implements AfterViewInit, OnDestroy {
         maintainAspectRatio: false,
         plugins: {
           legend: {
-            display: isMulti,
+            display: isMulti && !isStacked,
             position: 'bottom',
             labels: {
               color: textSecondary || '#464555',
@@ -160,10 +209,12 @@ export class LineChartComponent implements AfterViewInit, OnDestroy {
             },
           },
           tooltip: {
+            mode: isStacked ? 'index' : 'nearest',
+            intersect: !isStacked,
             callbacks: {
-              label: ctx => {
-                const val = ctx.parsed.y as number;
-                return `${ctx.dataset.label}: ${new Intl.NumberFormat('en-US', {
+              label: tooltipCtx => {
+                const val = tooltipCtx.parsed.y as number;
+                return `${tooltipCtx.dataset.label}: ${new Intl.NumberFormat('en-US', {
                   style: 'currency',
                   currency,
                   minimumFractionDigits: 0,
@@ -179,6 +230,7 @@ export class LineChartComponent implements AfterViewInit, OnDestroy {
             ticks: {color: textSecondary || '#464555', font: {family: 'Inter', size: 11}},
           },
           y: {
+            stacked: isStacked,
             grid: {color: borderDefault || '#c7c4d8'},
             ticks: {
               color: textSecondary || '#464555',

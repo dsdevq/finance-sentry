@@ -75,12 +75,12 @@ export function dashboardComputed(store: StateSignals) {
       return [
         {
           label: 'Banking',
-          color: '#3b82f6',
+          color: '#4f46e5',
           data: snapshots.map((s, i) => ({label: labels[i], value: s.bankingTotal})),
         },
         {
           label: 'Brokerage',
-          color: '#8b5cf6',
+          color: '#10b981',
           data: snapshots.map((s, i) => ({label: labels[i], value: s.brokerageTotal})),
         },
         {

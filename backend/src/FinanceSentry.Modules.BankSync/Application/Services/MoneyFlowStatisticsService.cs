@@ -64,7 +64,7 @@ public class MoneyFlowStatisticsService(
                 var outflow = g.Where(x => x.Transaction.TransactionType == "debit").Sum(x => x.Transaction.Amount);
                 return new MonthlyFlow(g.Key.Month, g.Key.Currency, inflow, outflow, inflow - outflow);
             })
-            .OrderByDescending(mf => mf.Month)
+            .OrderBy(mf => mf.Month)
             .ToList();
 
         return result;

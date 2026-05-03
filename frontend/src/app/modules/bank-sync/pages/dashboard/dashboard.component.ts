@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, inject} from '@angular/core';
 import {
   AlertComponent,
   ButtonComponent,
@@ -7,12 +7,14 @@ import {
   DataTableComponent,
   DonutChartComponent,
   LineChartComponent,
+  type LineChartConfig,
   StatCardComponent,
 } from '@dsdevq-common/ui';
 
 import {AppCurrencyPipe} from '../../../../core/pipes/app-currency.pipe';
 import {AppDecimalPipe} from '../../../../core/pipes/app-decimal.pipe';
 import {MerchantCategoryPipe} from '../../../../shared/pipes/merchant-category.pipe';
+import {NetWorthChartComponent} from '../../components/net-worth-chart/net-worth-chart.component';
 import {type HistoryRange} from '../../models/dashboard/dashboard.model';
 import {DashboardStore} from '../../store/dashboard/dashboard.store';
 
@@ -36,6 +38,7 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
     DonutChartComponent,
     LineChartComponent,
     MerchantCategoryPipe,
+    NetWorthChartComponent,
     StatCardComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -101,21 +104,13 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
               >No history yet. Run the net worth snapshot job to populate the chart.</cmn-alert
             >
           } @else {
-            <cmn-line-chart
-              [series]="store.netWorthSeriesData()"
-              label="Net Worth by Provider"
-              currency="USD"
-            />
+            <fns-net-worth-chart [series]="store.netWorthSeriesData()" currency="USD" />
           }
         </div>
 
         <div class="grid grid-cols-1 gap-cmn-4 lg:grid-cols-3">
           <div class="lg:col-span-2">
-            <cmn-line-chart
-              [data]="store.netFlowChartData()"
-              label="Monthly Net Cash Flow"
-              currency="USD"
-            />
+            <cmn-line-chart [config]="netFlowConfig()" />
           </div>
           <div>
             <cmn-donut-chart
@@ -138,9 +133,19 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
             <ng-template let-row cmnCell>{{ row.totalSpend | appCurrency }}</ng-template>
           </cmn-column>
           <cmn-column key="pct" header="% of Total" align="right">
-            <ng-template let-row cmnCell
-              >{{ row.percentOfTotal | appDecimal: '1.1-1' }}%</ng-template
-            >
+            <ng-template let-row cmnCell>
+              <div class="flex items-center justify-end gap-cmn-2">
+                <div class="h-1.5 w-20 overflow-hidden rounded-full bg-surface-raised">
+                  <div
+                    [style.width.%]="row.percentOfTotal"
+                    class="h-full rounded-full bg-accent-default"
+                  ></div>
+                </div>
+                <span class="font-mono text-cmn-xs"
+                  >{{ row.percentOfTotal | appDecimal: '1.1-1' }}%</span
+                >
+              </div>
+            </ng-template>
           </cmn-column>
         </cmn-data-table>
       </div>
@@ -150,4 +155,12 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
 export class DashboardComponent {
   public readonly store = inject(DashboardStore);
   public readonly ranges = HISTORY_RANGES;
+
+  public readonly netFlowConfig = computed(
+    (): LineChartConfig => ({
+      data: this.store.netFlowChartData(),
+      label: 'Monthly Net Cash Flow',
+      currency: 'USD',
+    })
+  );
 }
