@@ -29,6 +29,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FinanceSentry.Modules.Alert
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FinanceSentry.Modules.Budgets", "src\FinanceSentry.Modules.Budgets\FinanceSentry.Modules.Budgets.csproj", "{42F2E89C-DF10-409A-AB24-B427738189C1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FinanceSentry.Modules.Subscriptions", "src\FinanceSentry.Modules.Subscriptions\FinanceSentry.Modules.Subscriptions.csproj", "{B682FF21-1F52-4F7B-A2D5-38BC4393FB92}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -171,6 +173,18 @@ Global
 		{42F2E89C-DF10-409A-AB24-B427738189C1}.Release|x64.Build.0 = Release|Any CPU
 		{42F2E89C-DF10-409A-AB24-B427738189C1}.Release|x86.ActiveCfg = Release|Any CPU
 		{42F2E89C-DF10-409A-AB24-B427738189C1}.Release|x86.Build.0 = Release|Any CPU
+		{B682FF21-1F52-4F7B-A2D5-38BC4393FB92}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B682FF21-1F52-4F7B-A2D5-38BC4393FB92}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B682FF21-1F52-4F7B-A2D5-38BC4393FB92}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{B682FF21-1F52-4F7B-A2D5-38BC4393FB92}.Debug|x64.Build.0 = Debug|Any CPU
+		{B682FF21-1F52-4F7B-A2D5-38BC4393FB92}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{B682FF21-1F52-4F7B-A2D5-38BC4393FB92}.Debug|x86.Build.0 = Debug|Any CPU
+		{B682FF21-1F52-4F7B-A2D5-38BC4393FB92}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B682FF21-1F52-4F7B-A2D5-38BC4393FB92}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B682FF21-1F52-4F7B-A2D5-38BC4393FB92}.Release|x64.ActiveCfg = Release|Any CPU
+		{B682FF21-1F52-4F7B-A2D5-38BC4393FB92}.Release|x64.Build.0 = Release|Any CPU
+		{B682FF21-1F52-4F7B-A2D5-38BC4393FB92}.Release|x86.ActiveCfg = Release|Any CPU
+		{B682FF21-1F52-4F7B-A2D5-38BC4393FB92}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -187,5 +201,6 @@ Global
 		{E6316A8E-C46A-4A17-A8C1-CD8FE24FF4A7} = {D9A5477F-5833-4DEE-8108-6F1E5B821F51}
 		{245FF64C-B7DB-47B8-8C41-F5143F295ECB} = {D9A5477F-5833-4DEE-8108-6F1E5B821F51}
 		{42F2E89C-DF10-409A-AB24-B427738189C1} = {D9A5477F-5833-4DEE-8108-6F1E5B821F51}
+		{B682FF21-1F52-4F7B-A2D5-38BC4393FB92} = {D9A5477F-5833-4DEE-8108-6F1E5B821F51}
 	EndGlobalSection
 EndGlobal

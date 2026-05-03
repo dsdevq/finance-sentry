@@ -3,60 +3,58 @@ import {computed, type Signal} from '@angular/core';
 import {
   type Subscription,
   type SubscriptionSort,
+  type SubscriptionSummary,
 } from '../../models/subscription/subscription.model';
-
-const MONTHS_PER_YEAR = 12;
 
 interface StateSignals {
   subscriptions: Signal<Subscription[]>;
   sort: Signal<SubscriptionSort>;
-  cancelTargetId: Signal<Nullable<string>>;
+  dismissTargetId: Signal<Nullable<string>>;
+  summary: Signal<Nullable<SubscriptionSummary>>;
 }
 
 export function subscriptionsComputed(store: StateSignals) {
   return {
     activeSubscriptions: computed(() => store.subscriptions().filter(s => s.status === 'active')),
-    pausedSubscriptions: computed(() => store.subscriptions().filter(s => s.status === 'paused')),
+    dismissedSubscriptions: computed(() =>
+      store.subscriptions().filter(s => s.status === 'dismissed')
+    ),
+    potentiallyCancelledSubscriptions: computed(() =>
+      store.subscriptions().filter(s => s.status === 'potentially_cancelled')
+    ),
     monthlyTotal: computed(() =>
       store
         .subscriptions()
         .filter(s => s.status === 'active')
-        .reduce((sum, s) => sum + s.amount, 0)
+        .reduce((sum, s) => sum + s.monthlyEquivalent, 0)
     ),
-    yearlyTotal: computed(
-      () =>
-        store
-          .subscriptions()
-          .filter(s => s.status === 'active')
-          .reduce((sum, s) => sum + s.amount, 0) * MONTHS_PER_YEAR
-    ),
-    cancelTarget: computed(
-      () => store.subscriptions().find(s => s.id === store.cancelTargetId()) ?? null
+    dismissTarget: computed(
+      () => store.subscriptions().find(s => s.id === store.dismissTargetId()) ?? null
     ),
     sortedActive: computed((): Subscription[] => {
       const active = store.subscriptions().filter(s => s.status === 'active');
       const sort = store.sort();
       return [...active].sort((a, b) => {
         if (sort === 'amount') {
-          return b.amount - a.amount;
+          return b.monthlyEquivalent - a.monthlyEquivalent;
         }
         if (sort === 'name') {
-          return a.name.localeCompare(b.name);
+          return a.merchantName.localeCompare(b.merchantName);
         }
-        return a.nextDate.localeCompare(b.nextDate);
+        return a.nextExpectedDate.localeCompare(b.nextExpectedDate);
       });
     }),
-    sortedPaused: computed((): Subscription[] => {
-      const paused = store.subscriptions().filter(s => s.status === 'paused');
+    sortedDismissed: computed((): Subscription[] => {
+      const dismissed = store.subscriptions().filter(s => s.status === 'dismissed');
       const sort = store.sort();
-      return [...paused].sort((a, b) => {
+      return [...dismissed].sort((a, b) => {
         if (sort === 'amount') {
-          return b.amount - a.amount;
+          return b.monthlyEquivalent - a.monthlyEquivalent;
         }
         if (sort === 'name') {
-          return a.name.localeCompare(b.name);
+          return a.merchantName.localeCompare(b.merchantName);
         }
-        return a.nextDate.localeCompare(b.nextDate);
+        return a.nextExpectedDate.localeCompare(b.nextExpectedDate);
       });
     }),
   };

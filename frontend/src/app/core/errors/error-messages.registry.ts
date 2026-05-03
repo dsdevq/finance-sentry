@@ -23,4 +23,5 @@ export const ERROR_MESSAGES_REGISTRY: ErrorMessagesMap = {
   BUDGET_INVALID_CATEGORY: 'Invalid budget category.',
   BUDGET_INVALID_LIMIT: 'Budget limit must be greater than zero.',
   BUDGET_INVALID_PERIOD: 'Invalid budget period.',
+  SUBSCRIPTION_NOT_FOUND: 'Subscription not found.',
 };

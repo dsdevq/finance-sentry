@@ -10,20 +10,37 @@
       </div>
     </div>
 
+    <!-- Insufficient history banner -->
+    @if (store.hasInsufficientHistory()) {
+      <div
+        class="rounded-cmn-md border border-status-warning/30 bg-status-warning/10 px-cmn-4 py-cmn-3 text-cmn-sm text-status-warning"
+      >
+        Not enough transaction history to detect subscriptions yet. Check back after a few months of
+        transactions.
+      </div>
+    }
+
     <!-- Summary cards -->
     <div class="grid grid-cols-1 gap-cmn-4 sm:grid-cols-3">
       <cmn-stat-card
-        [value]="(store.monthlyTotal() | appCurrency) ?? ''"
+        [value]="
+          (store.summary()?.totalMonthlyEstimate ?? store.monthlyTotal() | appCurrency) ?? ''
+        "
         label="Monthly Cost"
         icon="Zap"
       />
       <cmn-stat-card
-        [value]="(store.yearlyTotal() | appCurrency) ?? ''"
+        [value]="
+          (store.summary()?.totalAnnualEstimate ?? store.monthlyTotal() * 12 | appCurrency) ?? ''
+        "
         label="Annual Cost"
         icon="TrendingUp"
       />
       <cmn-stat-card
-        [value]="store.activeSubscriptions().length.toString() + ' subscriptions'"
+        [value]="
+          (store.summary()?.activeCount ?? store.activeSubscriptions().length).toString() +
+          ' subscriptions'
+        "
         label="Active"
         icon="CheckCheck"
       />
@@ -56,25 +73,24 @@
 
       <cmn-card padding="none">
         @for (sub of store.sortedActive(); track sub.id) {
-          @let days = daysUntil(sub.nextDate);
+          @let days = daysUntil(sub.nextExpectedDate);
           @let soon = days <= 5;
           <div
             class="flex items-center gap-cmn-3 border-b border-border-default px-cmn-4 py-cmn-3 last:border-b-0 hover:bg-surface-bg transition-colors"
           >
             <!-- Logo -->
             <div
-              [style.background]="sub.color"
+              [style.background]="sub.merchantName | merchantColor"
               class="flex h-10 w-10 shrink-0 items-center justify-center rounded-cmn-md font-bold text-white"
             >
-              {{ sub.logo }}
+              {{ (sub.merchantName || '?') | slice: 0 : 1 | uppercase }}
             </div>
 
-            <!-- Name + category -->
+            <!-- Name -->
             <div class="flex-1 min-w-0">
               <div class="font-label text-cmn-sm font-medium text-text-primary truncate">
-                {{ sub.name }}
+                {{ sub.merchantName || 'Unknown' }}
               </div>
-              <div class="text-cmn-xs text-text-secondary">{{ sub.category }}</div>
             </div>
 
             <!-- Next charge -->
@@ -85,7 +101,7 @@
                 [class.text-text-secondary]="!soon"
                 class="text-cmn-xs"
               >
-                {{ sub.nextDate | date: 'mediumDate' }}
+                {{ sub.nextExpectedDate | date: 'mediumDate' }}
               </div>
               <div
                 [class.text-status-warning]="soon"
@@ -99,18 +115,15 @@
             <!-- Amount -->
             <div class="min-w-[72px] text-right">
               <div class="font-mono text-cmn-sm font-semibold text-text-primary">
-                {{ sub.amount | appCurrency }}
+                {{ sub.monthlyEquivalent | appCurrency }}
               </div>
               <div class="text-[10px] text-text-disabled">/ mo</div>
             </div>
 
             <!-- Actions -->
             <div class="flex shrink-0 gap-cmn-1">
-              <cmn-button (clicked)="store.toggleStatus(sub.id)" variant="secondary" size="sm">
-                Pause
-              </cmn-button>
               <cmn-button
-                (clicked)="store.setCancelTarget(sub.id)"
+                (clicked)="store.setDismissTarget(sub.id)"
                 variant="secondary"
                 size="sm"
                 icon="X"
@@ -118,57 +131,50 @@
             </div>
           </div>
         }
-        @if (store.activeSubscriptions().length === 0) {
+        @if (store.activeSubscriptions().length === 0 && !store.hasInsufficientHistory()) {
           <div class="px-cmn-4 py-cmn-8 text-center text-cmn-sm text-text-secondary">
-            No active subscriptions.
+            No active subscriptions detected yet.
           </div>
         }
       </cmn-card>
     </div>
 
-    <!-- Paused list -->
-    @if (store.pausedSubscriptions().length > 0) {
+    <!-- Dismissed list -->
+    @if (store.dismissedSubscriptions().length > 0) {
       <div>
         <div class="mb-cmn-3">
           <span
             class="font-label text-cmn-xs font-semibold uppercase tracking-widest text-text-secondary"
           >
-            Paused · {{ store.pausedSubscriptions().length }}
+            Dismissed · {{ store.dismissedSubscriptions().length }}
           </span>
         </div>
         <cmn-card padding="none">
-          @for (sub of store.sortedPaused(); track sub.id) {
+          @for (sub of store.sortedDismissed(); track sub.id) {
             <div
               class="flex items-center gap-cmn-3 border-b border-border-default px-cmn-4 py-cmn-3 last:border-b-0 opacity-55 hover:bg-surface-bg transition-colors"
             >
               <div
-                [style.background]="sub.color"
+                [style.background]="sub.merchantName | merchantColor"
                 class="flex h-10 w-10 shrink-0 items-center justify-center rounded-cmn-md font-bold text-white"
               >
-                {{ sub.logo }}
+                {{ (sub.merchantName || '?') | slice: 0 : 1 | uppercase }}
               </div>
               <div class="flex-1 min-w-0">
                 <div class="font-label text-cmn-sm font-medium text-text-primary truncate">
-                  {{ sub.name }}
+                  {{ sub.merchantName || 'Unknown' }}
                 </div>
-                <div class="text-cmn-xs text-text-secondary">{{ sub.category }}</div>
               </div>
               <div class="min-w-[72px] text-right">
                 <div class="font-mono text-cmn-sm font-semibold text-text-primary">
-                  {{ sub.amount | appCurrency }}
+                  {{ sub.monthlyEquivalent | appCurrency }}
                 </div>
                 <div class="text-[10px] text-text-disabled">/ mo</div>
               </div>
               <div class="flex shrink-0 gap-cmn-1">
-                <cmn-button (clicked)="store.toggleStatus(sub.id)" variant="secondary" size="sm"
-                  >Resume</cmn-button
+                <cmn-button (clicked)="restore(sub.id)" variant="secondary" size="sm"
+                  >Restore</cmn-button
                 >
-                <cmn-button
-                  (clicked)="store.setCancelTarget(sub.id)"
-                  variant="secondary"
-                  size="sm"
-                  icon="X"
-                />
               </div>
             </div>
           }
@@ -176,27 +182,26 @@
       </div>
     }
 
-    <!-- Cancel confirm dialog (inline) -->
-    @if (store.cancelTarget()) {
+    <!-- Dismiss confirm dialog (inline) -->
+    @if (store.dismissTarget()) {
       <div
-        (click)="store.setCancelTarget(null)"
+        (click)="store.setDismissTarget(null)"
         class="fixed inset-0 z-50 flex items-center justify-center p-cmn-4"
       >
         <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
         <cmn-card (click)="$event.stopPropagation()" class="relative z-10 w-full max-w-sm">
           <h2 class="font-headline text-base font-semibold text-text-primary mb-cmn-2">
-            Cancel {{ store.cancelTarget()!.name }}?
+            Dismiss {{ store.dismissTarget()!.merchantName }}?
           </h2>
           <p class="text-cmn-sm text-text-secondary mb-cmn-4">
-            This will remove {{ store.cancelTarget()!.name }} from your tracked subscriptions.
+            This will hide {{ store.dismissTarget()!.merchantName }} from your subscriptions. It
+            will survive future detection runs.
           </p>
           <div class="flex justify-end gap-cmn-2">
-            <cmn-button (clicked)="store.setCancelTarget(null)" variant="secondary"
+            <cmn-button (clicked)="store.setDismissTarget(null)" variant="secondary"
               >Keep</cmn-button
             >
-            <cmn-button (clicked)="store.confirmCancel()" variant="destructive"
-              >Cancel subscription</cmn-button
-            >
+            <cmn-button (clicked)="confirmDismiss()" variant="destructive">Dismiss</cmn-button>
           </div>
         </cmn-card>
       </div>

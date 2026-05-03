@@ -6,6 +6,7 @@ using FinanceSentry.Modules.CryptoSync.Infrastructure.Persistence;
 using FinanceSentry.Modules.BrokerageSync.Infrastructure.Persistence;
 using FinanceSentry.Modules.Alerts.Infrastructure.Persistence;
 using FinanceSentry.Modules.Budgets.Infrastructure.Persistence;
+using FinanceSentry.Modules.Subscriptions.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 public static class MigrationExtensions
@@ -21,6 +22,7 @@ public static class MigrationExtensions
         MigrateContext<BrokerageSyncDbContext>(sp, app.Logger);
         MigrateContext<AlertsDbContext>(sp, app.Logger);
         MigrateContext<BudgetsDbContext>(sp, app.Logger);
+        MigrateContext<SubscriptionsDbContext>(sp, app.Logger);
 
         return app;
     }

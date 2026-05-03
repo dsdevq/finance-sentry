@@ -41,6 +41,10 @@ public static class BankSyncModule
                 "unusual-spend-detection",
                 job => job.ExecuteAsync(CancellationToken.None),
                 Cron.Daily());
+            mgr.AddOrUpdate<SubscriptionDetectionJob>(
+                "subscription-detection",
+                job => job.ExecuteAsync(CancellationToken.None),
+                Cron.Daily());
         }
     }
 
@@ -102,6 +106,7 @@ public static class BankSyncModule
         services.AddScoped<DataRetentionJob>();
         services.AddScoped<CredentialBackupJob>();
         services.AddScoped<UnusualSpendDetectionJob>();
+        services.AddScoped<SubscriptionDetectionJob>();
 
         services.AddSingleton<IFeatureFlagService, FeatureFlagService>();
         services.AddSingleton<IAuditLogService, AuditLogService>();
