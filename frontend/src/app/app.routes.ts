@@ -74,7 +74,7 @@ export const APP_ROUTES: Routes = [
             m => m.SettingsComponent
           ),
       },
-      {path: '', redirectTo: AppRoute.Accounts, pathMatch: 'full'},
+      {path: '', redirectTo: AppRoute.Dashboard, pathMatch: 'full'},
     ],
   },
 ];

@@ -24,6 +24,7 @@ const PALETTE_ITEMS: CommandPaletteItem[] = [
   {id: AppRoute.Holdings, label: 'Asset Allocation', icon: 'PieChart', group: 'Pages'},
   {id: AppRoute.Budgets, label: 'Budgets', icon: 'Zap', group: 'Pages'},
   {id: AppRoute.Subscriptions, label: 'Subscriptions', icon: 'RefreshCw', group: 'Pages'},
+  {id: AppRoute.Alerts, label: 'Alerts', icon: 'Bell', group: 'Pages'},
   {id: AppRoute.Settings, label: 'Settings', icon: 'Settings2', group: 'Pages'},
   {id: '_connect', label: 'Connect Account', icon: 'Link', group: 'Actions'},
   {id: '_theme', label: 'Toggle Dark Mode', icon: 'Moon', group: 'Actions'},
