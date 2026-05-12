@@ -1,16 +1,21 @@
 import {DatePipe, DecimalPipe} from '@angular/common';
-import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, inject} from '@angular/core';
+import {toSignal} from '@angular/core/rxjs-interop';
+import {ActivatedRoute, Router} from '@angular/router';
 import {
   AlertComponent,
   ButtonComponent,
   CardComponent,
   CmnDrawerService,
+  IconComponent,
   SkeletonComponent,
   StatCardComponent,
   TagComponent,
 } from '@dsdevq-common/ui';
+import {map} from 'rxjs';
 
 import {MerchantCategoryPipe} from '../../../../shared/pipes/merchant-category.pipe';
+import {MerchantCategoryUtils} from '../../../../shared/utils/merchant-category.utils';
 import {TransactionDrawerComponent} from '../../components/transaction-drawer/transaction-drawer.component';
 import {type GlobalTransactionDto} from '../../models/transaction/transaction.model';
 import {TransactionAmountPipe} from '../../pipes/transaction-amount.pipe';
@@ -28,6 +33,7 @@ const SKELETON_ROWS = 8;
     CardComponent,
     DatePipe,
     DecimalPipe,
+    IconComponent,
     MerchantCategoryPipe,
     SkeletonComponent,
     StatCardComponent,
@@ -40,9 +46,31 @@ const SKELETON_ROWS = 8;
 })
 export class TransactionLedgerComponent {
   private readonly drawer = inject(CmnDrawerService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   public readonly store = inject(TransactionLedgerStore);
   public readonly skeletonRows = Array.from({length: SKELETON_ROWS});
+
+  public readonly activeCategory = toSignal(
+    this.route.queryParamMap.pipe(map(p => p.get('category'))),
+    {initialValue: null}
+  );
+
+  public readonly activeCategoryLabel = computed(() => {
+    const cat = this.activeCategory();
+    return cat ? MerchantCategoryUtils.format(cat) : null;
+  });
+
+  public readonly displayedTransactions = computed(() => {
+    const cat = this.activeCategory();
+    const all = this.store.transactions();
+    if (!cat) {
+      return all;
+    }
+    const target = cat.toLowerCase();
+    return all.filter(t => t.merchantCategory?.toLowerCase() === target);
+  });
 
   public openDrawer(tx: GlobalTransactionDto): void {
     this.drawer.open(TransactionDrawerComponent, {
@@ -50,5 +78,9 @@ export class TransactionLedgerComponent {
       data: tx,
       width: '480px',
     });
+  }
+
+  public clearCategory(): void {
+    void this.router.navigate([], {queryParams: {category: null}, queryParamsHandling: 'merge'});
   }
 }

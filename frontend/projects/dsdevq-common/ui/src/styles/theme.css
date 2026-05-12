@@ -58,6 +58,10 @@
   --color-border-default: #c7c4d8;
   --color-border-strong: #777587;
   --color-border-focus: #4f46e5;
+
+  /* Shadow — dual-layer per Finance Sentry design tokens */
+  --shadow-sm: 0 1px 4px rgba(25, 28, 29, 0.05), 0 2px 8px rgba(25, 28, 29, 0.04);
+  --shadow-md: 0 8px 32px rgba(25, 28, 29, 0.08), 0 2px 8px rgba(25, 28, 29, 0.04);
 }
 
 /* ─── Dark theme ─────────────────────────────────────────────────────────── */
@@ -95,6 +99,53 @@
   --color-border-default: #2e3452;
   --color-border-strong: #757682;
   --color-border-focus: #818cf8;
+
+  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(0, 0, 0, 0.18);
+  --shadow-md: 0 8px 32px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* ─── Animations (Finance Sentry design tokens) ──────────────────────────── */
+@keyframes cmn-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes cmn-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+@keyframes cmn-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes cmn-slide-in {
+  from {
+    transform: translateY(10px) scale(0.98);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+@keyframes cmn-slide-in-right {
+  from {
+    transform: translateX(16px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 /* ─── Dialog (cmn-dialog) ───────────────────────────────────────────────── */

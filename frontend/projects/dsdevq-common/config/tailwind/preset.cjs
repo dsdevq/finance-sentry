@@ -64,9 +64,37 @@ module.exports = {
       },
 
       boxShadow: {
-        'cmn-sm': '0 2px 8px rgba(25, 28, 29, 0.04)',
-        'cmn-md': '0 12px 40px rgba(25, 28, 29, 0.06)',
+        'cmn-sm': 'var(--shadow-sm)',
+        'cmn-md': 'var(--shadow-md)',
         'cmn-lg': '0 24px 64px rgba(25, 28, 29, 0.10)',
+      },
+
+      keyframes: {
+        'cmn-spin': {to: {transform: 'rotate(360deg)'}},
+        'cmn-pulse': {
+          '0%, 100%': {opacity: '1'},
+          '50%': {opacity: '0.45'},
+        },
+        'cmn-fade-in': {
+          from: {opacity: '0'},
+          to: {opacity: '1'},
+        },
+        'cmn-slide-in': {
+          from: {transform: 'translateY(10px) scale(0.98)', opacity: '0'},
+          to: {transform: 'translateY(0) scale(1)', opacity: '1'},
+        },
+        'cmn-slide-in-right': {
+          from: {transform: 'translateX(16px)', opacity: '0'},
+          to: {transform: 'translateX(0)', opacity: '1'},
+        },
+      },
+
+      animation: {
+        'cmn-spin': 'cmn-spin 1s linear infinite',
+        'cmn-pulse': 'cmn-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'cmn-fade-in': 'cmn-fade-in 200ms ease-out',
+        'cmn-slide-in': 'cmn-slide-in 240ms cubic-bezier(0.16, 1, 0.3, 1)',
+        'cmn-slide-in-right': 'cmn-slide-in-right 220ms cubic-bezier(0.16, 1, 0.3, 1)',
       },
 
       spacing: {
