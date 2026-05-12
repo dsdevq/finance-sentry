@@ -6,6 +6,22 @@
     </p>
   </div>
 
+  @if (activeCategoryLabel(); as label) {
+    <div class="mb-cmn-6 flex items-center gap-cmn-2">
+      <span class="text-cmn-xs font-semibold uppercase tracking-widest text-text-secondary"
+        >Filter</span
+      >
+      <button
+        (click)="clearCategory()"
+        type="button"
+        class="inline-flex items-center gap-cmn-1 rounded-full border border-accent-default bg-accent-subtle px-cmn-3 py-1 text-cmn-xs font-medium text-accent-default hover:bg-accent-200 transition-colors"
+      >
+        Category: {{ label }}
+        <cmn-icon name="X" size="sm" />
+      </button>
+    </div>
+  }
+
   <div class="grid grid-cols-3 gap-cmn-4 mb-cmn-8">
     <cmn-stat-card
       [value]="'$' + ((store.monthlyOutflow() | number: '1.2-2') ?? '0.00')"
@@ -76,7 +92,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (t of store.transactions(); track t.transactionId) {
+          @for (t of displayedTransactions(); track t.transactionId) {
             <tr
               (click)="openDrawer(t)"
               class="cursor-pointer border-b border-border-default last:border-0 hover:bg-surface-bg transition-colors"

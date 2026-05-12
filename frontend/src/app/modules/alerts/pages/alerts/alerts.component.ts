@@ -1,4 +1,5 @@
 import {ChangeDetectionStrategy, Component, computed, inject} from '@angular/core';
+import {Router} from '@angular/router';
 import {
   AlertItemComponent,
   type AlertItemSeverity,
@@ -9,7 +10,13 @@ import {
   ToastService,
 } from '@dsdevq-common/ui';
 
-import {type AlertFilter, type AlertSeverity, type AlertType} from '../../models/alert/alert.model';
+import {AppRoute} from '../../../../shared/enums/app-route/app-route.enum';
+import {
+  type Alert,
+  type AlertFilter,
+  type AlertSeverity,
+  type AlertType,
+} from '../../models/alert/alert.model';
 import {AlertsStore} from '../../store/alerts/alerts.store';
 
 function iconForType(type: AlertType): LucideIconName {
@@ -53,6 +60,7 @@ function severityFor(severity: AlertSeverity): AlertItemSeverity {
 })
 export class AlertsComponent {
   private readonly toast = inject(ToastService);
+  private readonly router = inject(Router);
 
   public readonly store = inject(AlertsStore);
 
@@ -102,5 +110,13 @@ export class AlertsComponent {
   public dismiss(id: string): void {
     this.store.dismiss(id);
     this.toast.show('Alert dismissed', 'info');
+  }
+
+  public openAlert(alert: Alert): void {
+    if (!alert.isRead) {
+      this.store.markRead(alert.id);
+    }
+    const target = alert.type === 'UnusualSpend' ? AppRoute.Transactions : AppRoute.AccountsList;
+    void this.router.navigateByUrl(target);
   }
 }

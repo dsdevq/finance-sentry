@@ -239,6 +239,15 @@
               {{ b.remaining | appCurrency }} remaining · {{ pct | appDecimal: '1.0-0' }}% used
             }
           </div>
+
+          <!-- Drill-down -->
+          <button
+            (click)="viewTransactions(b.category)"
+            type="button"
+            class="mt-cmn-3 inline-flex items-center gap-1 text-cmn-xs font-medium text-accent-default hover:text-accent-hover transition-colors"
+          >
+            View transactions →
+          </button>
         </cmn-card>
       }
     </div>

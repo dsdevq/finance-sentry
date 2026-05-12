@@ -1,9 +1,11 @@
 import {ChangeDetectionStrategy, Component, inject, signal} from '@angular/core';
 import {FormsModule} from '@angular/forms';
+import {Router} from '@angular/router';
 import {AlertComponent, CardComponent, TagComponent} from '@dsdevq-common/ui';
 
 import {AppCurrencyPipe} from '../../../../core/pipes/app-currency.pipe';
 import {AppDecimalPipe} from '../../../../core/pipes/app-decimal.pipe';
+import {AppRoute} from '../../../../shared/enums/app-route/app-route.enum';
 import {
   BUDGETS_MONTHS_IN_YEAR,
   CATEGORY_COLOR_FALLBACK,
@@ -30,6 +32,8 @@ const PCT_WARNING_THRESHOLD = 80;
   templateUrl: './budgets.component.html',
 })
 export class BudgetsComponent {
+  private readonly router = inject(Router);
+
   public readonly store = inject(BudgetsStore);
 
   public readonly editValue = signal('');
@@ -87,6 +91,10 @@ export class BudgetsComponent {
 
   public deleteBudget(id: string): void {
     this.store.remove(id);
+  }
+
+  public viewTransactions(category: string): void {
+    void this.router.navigate([AppRoute.Transactions], {queryParams: {category}});
   }
 
   public previousMonth(): void {

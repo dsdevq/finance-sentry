@@ -55,18 +55,23 @@
     } @else {
       <div class="space-y-cmn-2">
         @for (alert of filtered(); track alert.id) {
-          <cmn-alert-item
-            [title]="alert.title"
-            [message]="alert.message"
-            [severity]="severityFor(alert.severity)"
-            [icon]="iconFor(alert.type)"
-            [badgeLabel]="typeLabel(alert.type)"
-            [referenceLabel]="alert.referenceLabel"
-            [timestamp]="alert.createdAt"
-            [isRead]="alert.isRead"
-            (read)="store.markRead(alert.id)"
-            (dismissed)="dismiss(alert.id)"
-          />
+          <button
+            (click)="openAlert(alert)"
+            class="block w-full text-left rounded-cmn-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+            type="button"
+          >
+            <cmn-alert-item
+              [title]="alert.title"
+              [message]="alert.message"
+              [severity]="severityFor(alert.severity)"
+              [icon]="iconFor(alert.type)"
+              [badgeLabel]="typeLabel(alert.type)"
+              [referenceLabel]="alert.referenceLabel"
+              [timestamp]="alert.createdAt"
+              [isRead]="alert.isRead"
+              (dismissed)="dismiss(alert.id)"
+            />
+          </button>
         }
       </div>
     }
