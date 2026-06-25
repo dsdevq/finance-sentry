@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <!-- Microsoft.Extensions.Hosting is implicit in Microsoft.NET.Sdk.Web; explicit NuGet ref pulls .NET 10 abstractions and conflicts with central pins -->
+    <PackageReference Include="ModelContextProtocol.AspNetCore" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FinanceSentry.Core\FinanceSentry.Core.csproj" />
+    <ProjectReference Include="..\FinanceSentry.Infrastructure\FinanceSentry.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

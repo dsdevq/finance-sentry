@@ -6,7 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- ASP.NET Core / Microsoft.Extensions / EF Core (9.0.0) -->
+    <!-- ASP.NET Core / Microsoft.Extensions / EF Core -->
+    <!-- Configuration.Abstractions and DependencyInjection.Abstractions are pinned at 10.0.3 -->
+    <!-- because FluentResults 4.0.0 and ModelContextProtocol 0.9.x both pull in -->
+    <!-- Microsoft.Extensions.Hosting.Abstractions 10.0.3 which requires >= 10.0.3. -->
+    <!-- These packages are backward-compatible with net9.0 projects. -->
     <PackageVersion Include="AspNetCore.HealthChecks.NpgSql" Version="9.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.0" />
@@ -18,10 +22,12 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.0" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Configuration" Version="9.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.3" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="9.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.3" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.0" />
     <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="9.0.0" />
 
@@ -57,6 +63,10 @@
     <!-- Swagger -->
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.6.2" />
     <PackageVersion Include="Swashbuckle.AspNetCore.SwaggerGen" Version="6.6.2" />
+
+    <!-- MCP (Model Context Protocol) — 0.9.x is the last preview series targeting .NET 9 -->
+    <PackageVersion Include="ModelContextProtocol" Version="0.9.0-preview.2" />
+    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="0.9.0-preview.2" />
 
     <!-- Test stack -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />

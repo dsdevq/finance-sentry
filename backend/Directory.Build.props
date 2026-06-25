@@ -8,6 +8,8 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1591;CS1573;CS1574;CS1570;CS1572</NoWarn>
+    <!-- Allow net9.0 binaries to run on the .NET 10 runtime when .NET 9 is absent -->
+    <RollForward>Major</RollForward>
   </PropertyGroup>
 
 </Project>
