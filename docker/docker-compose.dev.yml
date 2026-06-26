@@ -52,6 +52,25 @@ services:
     volumes:
       - ./logs:/app/logs
 
+  mcp:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.mcp
+    container_name: finance-sentry-mcp
+    restart: unless-stopped
+    stdin_open: true
+    environment:
+      MCP_TRANSPORT: ${MCP_TRANSPORT:-stdio}
+      MCP_HTTP_PORT: ${MCP_HTTP_PORT:-5100}
+      MCP_CONNECTION_STRING: ${MCP_CONNECTION_STRING:-Host=postgres;Port=5432;Database=finance_sentry;Username=finance_user;Password=finance_password}
+      ConnectionStrings__Default: ${MCP_CONNECTION_STRING:-Host=postgres;Port=5432;Database=finance_sentry;Username=finance_user;Password=finance_password}
+      Deduplication__MasterKeyBase64: dGVzdC1kZWR1cGxpY2F0aW9uLWtleS1jaGFuZ2UtaW4tcHJvZHVjdGlvbg==
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - finance-sentry-network
+
   ibkr-gateway:
     image: voyz/ibeam:latest
     container_name: finance-sentry-ibkr-gateway
