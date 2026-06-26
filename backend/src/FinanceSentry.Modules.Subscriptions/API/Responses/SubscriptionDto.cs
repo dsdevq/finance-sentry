@@ -12,4 +12,5 @@ public record SubscriptionDto(
     DateOnly NextExpectedDate,
     string Status,
     int OccurrenceCount,
-    string? Category);
+    string? Category,
+    DateTimeOffset DetectedAt);
