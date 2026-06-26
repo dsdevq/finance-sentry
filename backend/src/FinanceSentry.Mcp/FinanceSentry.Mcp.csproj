@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FinanceSentry.Core\FinanceSentry.Core.csproj" />
+    <ProjectReference Include="..\FinanceSentry.Modules.BankSync\FinanceSentry.Modules.BankSync.csproj" />
+    <ProjectReference Include="..\FinanceSentry.Modules.CryptoSync\FinanceSentry.Modules.CryptoSync.csproj" />
+    <ProjectReference Include="..\FinanceSentry.Modules.BrokerageSync\FinanceSentry.Modules.BrokerageSync.csproj" />
+  </ItemGroup>
+
+</Project>
