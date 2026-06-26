@@ -20,6 +20,12 @@ public sealed class ToolRegistryTests
     }
 
     [Fact]
+    public void ListActiveAlertsTool_Implements_IReadOnlyMcpTool()
+    {
+        typeof(ListActiveAlertsTool).Should().Implement<IReadOnlyMcpTool>();
+    }
+
+    [Fact]
     public void IReadOnlyMcpTool_IsReadOnly_DefaultsToTrue()
     {
         IReadOnlyMcpTool tool = new TestTool();
