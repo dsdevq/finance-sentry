@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FinanceSentry.Core\FinanceSentry.Core.csproj" />
+    <ProjectReference Include="..\FinanceSentry.Modules.BankSync\FinanceSentry.Modules.BankSync.csproj" />
+  </ItemGroup>
+
+</Project>
