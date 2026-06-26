@@ -49,6 +49,10 @@
     <PackageVersion Include="Serilog.Enrichers.Context" Version="4.6.0" />
     <PackageVersion Include="Serilog.Enrichers.Environment" Version="2.3.0" />
 
+    <!-- MCP -->
+    <PackageVersion Include="ModelContextProtocol" Version="1.4.0" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.0" />
+
     <!-- Polly / HTTP / JSON -->
     <PackageVersion Include="Polly" Version="8.2.0" />
     <PackageVersion Include="Polly.Core" Version="8.4.1" />

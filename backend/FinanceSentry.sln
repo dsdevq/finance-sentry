@@ -33,6 +33,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FinanceSentry.Modules.Subsc
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FinanceSentry.Modules.Wealth", "src\FinanceSentry.Modules.Wealth\FinanceSentry.Modules.Wealth.csproj", "{C371F09B-C555-488A-9CE3-32B57C398337}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FinanceSentry.Mcp", "src\FinanceSentry.Mcp\FinanceSentry.Mcp.csproj", "{A3679B97-D164-4ADE-A85C-EBAA4EA8337D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -199,6 +201,18 @@ Global
 		{C371F09B-C555-488A-9CE3-32B57C398337}.Release|x64.Build.0 = Release|Any CPU
 		{C371F09B-C555-488A-9CE3-32B57C398337}.Release|x86.ActiveCfg = Release|Any CPU
 		{C371F09B-C555-488A-9CE3-32B57C398337}.Release|x86.Build.0 = Release|Any CPU
+		{A3679B97-D164-4ADE-A85C-EBAA4EA8337D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A3679B97-D164-4ADE-A85C-EBAA4EA8337D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A3679B97-D164-4ADE-A85C-EBAA4EA8337D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A3679B97-D164-4ADE-A85C-EBAA4EA8337D}.Debug|x64.Build.0 = Debug|Any CPU
+		{A3679B97-D164-4ADE-A85C-EBAA4EA8337D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A3679B97-D164-4ADE-A85C-EBAA4EA8337D}.Debug|x86.Build.0 = Debug|Any CPU
+		{A3679B97-D164-4ADE-A85C-EBAA4EA8337D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A3679B97-D164-4ADE-A85C-EBAA4EA8337D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A3679B97-D164-4ADE-A85C-EBAA4EA8337D}.Release|x64.ActiveCfg = Release|Any CPU
+		{A3679B97-D164-4ADE-A85C-EBAA4EA8337D}.Release|x64.Build.0 = Release|Any CPU
+		{A3679B97-D164-4ADE-A85C-EBAA4EA8337D}.Release|x86.ActiveCfg = Release|Any CPU
+		{A3679B97-D164-4ADE-A85C-EBAA4EA8337D}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -217,5 +231,6 @@ Global
 		{42F2E89C-DF10-409A-AB24-B427738189C1} = {D9A5477F-5833-4DEE-8108-6F1E5B821F51}
 		{B682FF21-1F52-4F7B-A2D5-38BC4393FB92} = {D9A5477F-5833-4DEE-8108-6F1E5B821F51}
 		{C371F09B-C555-488A-9CE3-32B57C398337} = {D9A5477F-5833-4DEE-8108-6F1E5B821F51}
+		{A3679B97-D164-4ADE-A85C-EBAA4EA8337D} = {D9A5477F-5833-4DEE-8108-6F1E5B821F51}
 	EndGlobalSection
 EndGlobal
