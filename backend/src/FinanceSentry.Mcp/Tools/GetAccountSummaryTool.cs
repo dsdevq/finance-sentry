@@ -11,27 +11,34 @@ public sealed class GetAccountSummaryTool(
     IBankingAccountsReader bankingReader,
     ICryptoHoldingsReader cryptoReader,
     IBrokerageHoldingsReader brokerageReader,
+    IIdentityResolver identity,
     ILogger<GetAccountSummaryTool> logger) : IReadOnlyMcpTool
 {
     private readonly IBankingAccountsReader _bankingReader = bankingReader;
     private readonly ICryptoHoldingsReader _cryptoReader = cryptoReader;
     private readonly IBrokerageHoldingsReader _brokerageReader = brokerageReader;
+    private readonly IIdentityResolver _identity = identity;
     private readonly ILogger<GetAccountSummaryTool> _logger = logger;
 
     public string ToolName => "get_account_summary";
 
     [McpServerTool(Name = "get_account_summary")]
-    [Description("Returns a consolidated account summary across banking, crypto, and brokerage providers for a given user.")]
+    [Description("Returns a consolidated account summary across banking, crypto, and brokerage providers. Defaults to the MCP_TOKEN identity when userId is omitted.")]
     public async Task<IReadOnlyList<AccountSummaryEntry>> ExecuteAsync(
-        [Description("The user's unique identifier.")] Guid userId,
+        [Description("Optional user GUID. Defaults to the identity baked into MCP_TOKEN.")] Guid? userId = null,
         CancellationToken cancellationToken = default)
     {
+        var effective = userId ?? _identity.GetUserId();
+        if (effective is null) return [];
+        userId = effective;
+        var userIdVal = effective.Value;
+
         var results = new List<AccountSummaryEntry>();
 
         // Banking accounts — each account is one entry.
         try
         {
-            var accounts = await _bankingReader.GetAccountSummariesAsync(userId, cancellationToken);
+            var accounts = await _bankingReader.GetAccountSummariesAsync(userIdVal, cancellationToken);
             results.AddRange(accounts.Select(a => new AccountSummaryEntry(
                 a.AccountId.ToString(),
                 a.BankName,
@@ -47,7 +54,7 @@ public sealed class GetAccountSummaryTool(
         // Crypto holdings — each asset is one entry denominated in USD.
         try
         {
-            var holdings = await _cryptoReader.GetHoldingsAsync(userId, cancellationToken);
+            var holdings = await _cryptoReader.GetHoldingsAsync(userIdVal, cancellationToken);
             results.AddRange(holdings.Select(h => new AccountSummaryEntry(
                 h.Asset,
                 h.Asset,
@@ -63,7 +70,7 @@ public sealed class GetAccountSummaryTool(
         // Brokerage positions — each position is one entry denominated in USD.
         try
         {
-            var positions = await _brokerageReader.GetHoldingsAsync(userId, cancellationToken);
+            var positions = await _brokerageReader.GetHoldingsAsync(userIdVal, cancellationToken);
             results.AddRange(positions.Select(h => new AccountSummaryEntry(
                 h.Symbol,
                 h.Symbol,

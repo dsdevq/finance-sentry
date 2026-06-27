@@ -45,6 +45,11 @@ public sealed class CryptoSyncDbContext : DbContext
             entity.Property(e => e.LockedQuantity).HasPrecision(30, 10);
             entity.Property(e => e.UsdValue).HasPrecision(20, 4);
             entity.Property(e => e.Provider).IsRequired().HasMaxLength(50).HasDefaultValue("binance");
+            entity.Property(e => e.CostBasisUsd).HasPrecision(20, 4);
+            entity.Property(e => e.AverageBuyPriceUsd).HasPrecision(20, 8);
+            entity.Property(e => e.RealizedPnlUsd).HasPrecision(20, 4);
+            entity.Property(e => e.LastTradeId).IsRequired();
+            entity.Property(e => e.TradeCount).IsRequired();
         });
     }
 }

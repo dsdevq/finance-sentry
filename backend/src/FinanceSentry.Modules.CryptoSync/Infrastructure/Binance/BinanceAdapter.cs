@@ -77,6 +77,71 @@ public sealed class BinanceAdapter : ICryptoExchangeAdapter
             _dustThresholdUsd);
     }
 
+    public async Task<IReadOnlyList<CryptoTrade>> GetTradesAsync(
+        string apiKey,
+        string apiSecret,
+        string asset,
+        long sinceTradeId,
+        CancellationToken ct = default)
+    {
+        const int pageLimit = 1000;
+        const int maxPages = 20;
+
+        if (string.Equals(asset, "USDT", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(asset, "USDC", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(asset, "BUSD", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(asset, "FDUSD", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(asset, "DAI", StringComparison.OrdinalIgnoreCase))
+        {
+            return [];
+        }
+
+        var quoteCandidates = new[] { "USDT", "USDC", "FDUSD", "BUSD" };
+        var allTrades = new List<CryptoTrade>();
+
+        foreach (var quote in quoteCandidates)
+        {
+            var symbol = $"{asset.ToUpperInvariant()}{quote}";
+            var fromId = sinceTradeId;
+            for (var page = 0; page < maxPages; page++)
+            {
+                IReadOnlyList<BinanceTradeRow> rows;
+                try
+                {
+                    rows = await _httpClient.GetMyTradesAsync(apiKey, apiSecret, symbol, fromId, pageLimit, ct);
+                }
+                catch (BinanceException ex)
+                {
+                    _logger.LogDebug(ex, "Binance trade history for {Symbol} unavailable (likely no such pair).", symbol);
+                    break;
+                }
+
+                if (rows.Count == 0) break;
+
+                foreach (var r in rows)
+                {
+                    allTrades.Add(new CryptoTrade(
+                        TradeId: r.Id,
+                        Asset: asset.ToUpperInvariant(),
+                        QuoteAsset: quote,
+                        Quantity: decimal.Parse(r.Quantity, System.Globalization.CultureInfo.InvariantCulture),
+                        PriceUsd: decimal.Parse(r.Price, System.Globalization.CultureInfo.InvariantCulture),
+                        QuoteQuantityUsd: decimal.Parse(r.QuoteQuantity, System.Globalization.CultureInfo.InvariantCulture),
+                        IsBuyer: r.IsBuyer,
+                        Timestamp: DateTimeOffset.FromUnixTimeMilliseconds(r.TimeMs).UtcDateTime));
+                }
+
+                if (rows.Count < pageLimit) break;
+                fromId = rows[^1].Id + 1;
+            }
+        }
+
+        return allTrades
+            .OrderBy(t => t.Timestamp)
+            .ThenBy(t => t.TradeId)
+            .ToList();
+    }
+
     public Task DisconnectAsync(CancellationToken ct = default)
     {
         return Task.CompletedTask;

@@ -40,7 +40,8 @@ public sealed class IBKRAdapter : IBrokerAdapter
                 Symbol: p.ContractDesc,
                 InstrumentType: p.AssetClass,
                 Quantity: p.Position,
-                UsdValue: p.MktValue))
+                UsdValue: p.MktValue,
+                AverageCostUsd: p.AvgPrice ?? p.AvgCost))
             .ToList();
     }
 }

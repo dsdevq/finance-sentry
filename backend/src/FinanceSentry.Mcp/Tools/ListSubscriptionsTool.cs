@@ -11,29 +11,35 @@ namespace FinanceSentry.Mcp.Tools;
 [McpServerToolType]
 public sealed class ListSubscriptionsTool(
     IQueryHandler<GetSubscriptionsQuery, SubscriptionsListResponse> subscriptionsHandler,
+    IIdentityResolver identity,
     ILogger<ListSubscriptionsTool> logger) : IReadOnlyMcpTool
 {
     private readonly IQueryHandler<GetSubscriptionsQuery, SubscriptionsListResponse> _subscriptionsHandler = subscriptionsHandler;
+    private readonly IIdentityResolver _identity = identity;
     private readonly ILogger<ListSubscriptionsTool> _logger = logger;
 
     public string ToolName => "list_subscriptions";
 
     [McpServerTool(Name = "list_subscriptions")]
-    [Description("Returns detected recurring charges (subscriptions) for a user, excluding dismissed ones.")]
+    [Description("Returns detected recurring charges (subscriptions), excluding dismissed ones. Defaults to the MCP_TOKEN identity when userId is omitted.")]
     public async Task<IReadOnlyList<SubscriptionEntry>> ExecuteAsync(
-        [Description("The user's unique identifier.")] Guid userId,
+        [Description("Optional user GUID. Defaults to the identity baked into MCP_TOKEN.")] Guid? userId = null,
         CancellationToken cancellationToken = default)
     {
+        var effective = userId ?? _identity.GetUserId();
+        if (effective is null) return [];
+        var userIdVal = effective.Value;
+
         SubscriptionsListResponse response;
         try
         {
             response = await _subscriptionsHandler.Handle(
-                new GetSubscriptionsQuery(userId.ToString(), IncludeDismissed: false),
+                new GetSubscriptionsQuery(userIdVal.ToString(), IncludeDismissed: false),
                 cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Subscriptions query unavailable for user {UserId}; returning empty list.", userId);
+            _logger.LogWarning(ex, "Subscriptions query unavailable for user {UserId}; returning empty list.", userIdVal);
             return [];
         }
 

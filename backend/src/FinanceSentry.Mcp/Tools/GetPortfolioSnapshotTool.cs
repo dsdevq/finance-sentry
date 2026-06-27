@@ -12,27 +12,33 @@ namespace FinanceSentry.Mcp.Tools;
 public sealed class GetPortfolioSnapshotTool(
     IQueryHandler<GetBrokerageHoldingsQuery, BrokerageHoldingsResponse> brokerageHandler,
     IQueryHandler<GetCryptoHoldingsQuery, CryptoHoldingsResponse> cryptoHandler,
+    IIdentityResolver identity,
     ILogger<GetPortfolioSnapshotTool> logger) : IReadOnlyMcpTool
 {
     private readonly IQueryHandler<GetBrokerageHoldingsQuery, BrokerageHoldingsResponse> _brokerageHandler = brokerageHandler;
     private readonly IQueryHandler<GetCryptoHoldingsQuery, CryptoHoldingsResponse> _cryptoHandler = cryptoHandler;
+    private readonly IIdentityResolver _identity = identity;
     private readonly ILogger<GetPortfolioSnapshotTool> _logger = logger;
 
     public string ToolName => "get_portfolio_snapshot";
 
     [McpServerTool(Name = "get_portfolio_snapshot")]
-    [Description("Returns a unified portfolio snapshot combining IBKR brokerage positions and Binance crypto holdings for a given user. costBasis is null when not available.")]
+    [Description("Returns a unified portfolio snapshot combining IBKR brokerage positions and Binance crypto holdings. costBasis is null when not available. Defaults to the MCP_TOKEN identity when userId is omitted.")]
     public async Task<IReadOnlyList<PortfolioSnapshotEntry>> ExecuteAsync(
-        [Description("The user's unique identifier.")] Guid userId,
+        [Description("Optional user GUID. Defaults to the identity baked into MCP_TOKEN.")] Guid? userId = null,
         CancellationToken cancellationToken = default)
     {
+        var effective = userId ?? _identity.GetUserId();
+        if (effective is null) return [];
+        var userIdVal = effective.Value;
+
         var results = new List<PortfolioSnapshotEntry>();
 
         // IBKR brokerage positions
         try
         {
             var response = await _brokerageHandler.Handle(
-                new GetBrokerageHoldingsQuery(userId),
+                new GetBrokerageHoldingsQuery(userIdVal),
                 cancellationToken);
 
             results.AddRange(response.Positions.Select(p => new PortfolioSnapshotEntry(
@@ -52,7 +58,7 @@ public sealed class GetPortfolioSnapshotTool(
         try
         {
             var response = await _cryptoHandler.Handle(
-                new GetCryptoHoldingsQuery(userId),
+                new GetCryptoHoldingsQuery(userIdVal),
                 cancellationToken);
 
             results.AddRange(response.Holdings.Select(h => new PortfolioSnapshotEntry(

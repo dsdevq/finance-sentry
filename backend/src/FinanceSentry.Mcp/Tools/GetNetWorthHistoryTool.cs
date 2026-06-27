@@ -1,0 +1,65 @@
+using System.ComponentModel;
+using FinanceSentry.Core.Cqrs;
+using FinanceSentry.Mcp.Abstractions;
+using FinanceSentry.Modules.Wealth.Application.Queries;
+using Microsoft.Extensions.Logging;
+using ModelContextProtocol.Server;
+
+namespace FinanceSentry.Mcp.Tools;
+
+[McpServerToolType]
+public sealed class GetNetWorthHistoryTool(
+    IQueryHandler<GetNetWorthHistoryQuery, NetWorthHistoryResponse> historyHandler,
+    IIdentityResolver identity,
+    ILogger<GetNetWorthHistoryTool> logger) : IReadOnlyMcpTool
+{
+    private readonly IQueryHandler<GetNetWorthHistoryQuery, NetWorthHistoryResponse> _historyHandler = historyHandler;
+    private readonly IIdentityResolver _identity = identity;
+    private readonly ILogger<GetNetWorthHistoryTool> _logger = logger;
+
+    public string ToolName => "get_net_worth_history";
+
+    [McpServerTool(Name = "get_net_worth_history")]
+    [Description("Returns historical net worth snapshots (banking + brokerage + crypto totals per day), optionally bounded by from/to dates. Defaults to the MCP_TOKEN identity when userId is omitted.")]
+    public async Task<IReadOnlyList<NetWorthHistoryEntry>> ExecuteAsync(
+        [Description("Optional user GUID. Defaults to the identity baked into MCP_TOKEN.")] Guid? userId = null,
+        [Description("Optional inclusive start date (e.g. 2024-01-01).")] DateOnly? fromDate = null,
+        [Description("Optional inclusive end date (e.g. 2024-12-31).")] DateOnly? toDate = null,
+        CancellationToken cancellationToken = default)
+    {
+        var effective = userId ?? _identity.GetUserId();
+        if (effective is null) return [];
+        var userIdVal = effective.Value;
+
+        NetWorthHistoryResponse response;
+        try
+        {
+            response = await _historyHandler.Handle(
+                new GetNetWorthHistoryQuery(userIdVal, fromDate, toDate),
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Net worth history query unavailable for user {UserId}; returning empty list.", userIdVal);
+            return [];
+        }
+
+        return response.Snapshots
+            .Select(s => new NetWorthHistoryEntry(
+                s.SnapshotDate,
+                s.BankingTotal,
+                s.BrokerageTotal,
+                s.CryptoTotal,
+                s.TotalNetWorth,
+                s.Currency))
+            .ToList();
+    }
+}
+
+public sealed record NetWorthHistoryEntry(
+    DateOnly SnapshotDate,
+    decimal BankingTotal,
+    decimal BrokerageTotal,
+    decimal CryptoTotal,
+    decimal TotalNetWorth,
+    string Currency);

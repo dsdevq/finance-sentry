@@ -39,6 +39,8 @@ public sealed class SyncIBKRHoldingsCommandHandler : ICommandHandler<SyncIBKRHol
 
             var positions = await _adapter.GetPositionsAsync(accountId, ct);
 
+            var syncedAt = DateTime.UtcNow;
+
             var holdings = positions
                 .Select(p => new BrokerageHolding(
                     request.UserId,
@@ -46,10 +48,26 @@ public sealed class SyncIBKRHoldingsCommandHandler : ICommandHandler<SyncIBKRHol
                     p.InstrumentType,
                     p.Quantity,
                     p.UsdValue,
-                    "ibkr"))
+                    "ibkr",
+                    averageCostUsd: p.AverageCostUsd,
+                    acquiredAt: p.AverageCostUsd.HasValue ? syncedAt : null))
                 .ToList();
 
             await _holdingRepository.UpsertRangeAsync(holdings, ct);
+            await _holdingRepository.SaveChangesAsync(ct);
+
+            // Re-apply avg cost on entities that already existed (UpsertRangeAsync only updates qty + value).
+            var positionByKey = positions.ToDictionary(p => p.Symbol, StringComparer.Ordinal);
+            var persisted = await _holdingRepository.GetByUserIdAsync(request.UserId, ct);
+            foreach (var h in persisted)
+            {
+                if (positionByKey.TryGetValue(h.Symbol, out var pos))
+                {
+                    h.SetCostBasis(
+                        pos.AverageCostUsd,
+                        pos.AverageCostUsd.HasValue ? (h.AcquiredAt ?? syncedAt) : h.AcquiredAt);
+                }
+            }
             await _holdingRepository.SaveChangesAsync(ct);
 
             credential.RecordSyncSuccess();

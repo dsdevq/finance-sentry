@@ -17,7 +17,7 @@ public sealed class ListTransactionsToolTests
     private readonly Mock<IBankingAccountsReader> _accountsReader = new();
 
     private ListTransactionsTool CreateSut() =>
-        new(_queryHandler.Object, _accountsReader.Object, NullLogger<ListTransactionsTool>.Instance);
+        new(_queryHandler.Object, _accountsReader.Object, new FakeIdentityResolver(), NullLogger<ListTransactionsTool>.Instance);
 
     private static GlobalTransactionDto MakeTransaction(
         Guid? accountId = null,

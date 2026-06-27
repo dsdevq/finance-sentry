@@ -10,6 +10,9 @@ namespace FinanceSentry.Modules.Auth.Infrastructure.Services;
 
 public class JwtTokenService(IConfiguration configuration) : ITokenService
 {
+    public const string McpAudience = "mcp";
+    private const int McpTokenLifetimeDays = 365;
+
     private readonly string _secret = configuration["Jwt:Secret"] ?? throw new InvalidOperationException("Jwt:Secret is not configured.");
     private readonly int _expiryMinutes = int.TryParse(configuration["Jwt:ExpiryMinutes"], out var minutes) ? minutes : 60;
 
@@ -30,6 +33,30 @@ public class JwtTokenService(IConfiguration configuration) : ITokenService
             claims: claims,
             notBefore: now,
             expires: now.AddMinutes(_expiryMinutes),
+            signingCredentials: credentials
+        );
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    public string GenerateMcpToken(ApplicationUser user)
+    {
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secret));
+        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        var now = DateTime.UtcNow;
+
+        var claims = new[]
+        {
+            new Claim(JwtRegisteredClaimNames.Sub, user.Id),
+            new Claim(JwtRegisteredClaimNames.Email, user.Email!),
+            new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
+            new Claim(JwtRegisteredClaimNames.Aud, McpAudience),
+        };
+
+        var token = new JwtSecurityToken(
+            claims: claims,
+            notBefore: now,
+            expires: now.AddDays(McpTokenLifetimeDays),
             signingCredentials: credentials
         );
 

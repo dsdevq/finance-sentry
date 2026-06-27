@@ -11,6 +11,10 @@ public sealed class BrokerageHolding
     public DateTime SyncedAt { get; private set; }
     public string Provider { get; private set; } = string.Empty;
 
+    public decimal? AverageCostUsd { get; private set; }
+    public decimal? CostBasisUsd { get; private set; }
+    public DateTime? AcquiredAt { get; private set; }
+
     private BrokerageHolding() { }
 
     public BrokerageHolding(
@@ -19,7 +23,9 @@ public sealed class BrokerageHolding
         string instrumentType,
         decimal quantity,
         decimal usdValue,
-        string provider)
+        string provider,
+        decimal? averageCostUsd = null,
+        DateTime? acquiredAt = null)
     {
         Id = Guid.NewGuid();
         UserId = userId;
@@ -29,6 +35,9 @@ public sealed class BrokerageHolding
         UsdValue = usdValue;
         SyncedAt = DateTime.UtcNow;
         Provider = provider;
+        AverageCostUsd = averageCostUsd;
+        CostBasisUsd = averageCostUsd.HasValue ? Math.Round(averageCostUsd.Value * quantity, 4) : null;
+        AcquiredAt = acquiredAt;
     }
 
     public void Update(decimal quantity, decimal usdValue)
@@ -36,5 +45,14 @@ public sealed class BrokerageHolding
         Quantity = quantity;
         UsdValue = usdValue;
         SyncedAt = DateTime.UtcNow;
+        if (AverageCostUsd is decimal avg)
+            CostBasisUsd = Math.Round(avg * quantity, 4);
+    }
+
+    public void SetCostBasis(decimal? averageCostUsd, DateTime? acquiredAt)
+    {
+        AverageCostUsd = averageCostUsd;
+        CostBasisUsd = averageCostUsd.HasValue ? Math.Round(averageCostUsd.Value * Quantity, 4) : null;
+        AcquiredAt = acquiredAt;
     }
 }

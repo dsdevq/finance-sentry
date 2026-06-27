@@ -16,6 +16,7 @@ public class AuthController(
     ICommandHandler<RefreshCommand, AuthResult> refreshHandler,
     ICommandHandler<VerifyGoogleCredentialCommand, AuthResult> googleVerifyHandler,
     ICommandHandler<LogoutCommand, Unit> logoutHandler,
+    ICommandHandler<IssueMcpTokenCommand, IssueMcpTokenResult> mcpTokenHandler,
     IQueryHandler<GetMeQuery, GetMeResult> getMeHandler,
     IWebHostEnvironment env) : ControllerBase
 {
@@ -88,6 +89,24 @@ public class AuthController(
         SetRefreshTokenCookie(result.RawRefreshToken);
         SetAccessTokenCookie(result.RawAccessToken, result.Response.ExpiresAt);
         return Ok(result.Response);
+    }
+
+    [HttpPost("mcp-token")]
+    public async Task<IActionResult> IssueMcpToken()
+    {
+        var rawToken = Request.Cookies[RefreshTokenCookie];
+        if (string.IsNullOrWhiteSpace(rawToken))
+            throw new InvalidRefreshTokenException("No session found.");
+
+        var result = await mcpTokenHandler.Handle(new IssueMcpTokenCommand(rawToken), HttpContext.RequestAborted);
+        return Ok(new
+        {
+            mcpToken = result.McpToken,
+            email = result.Email,
+            userId = result.UserId,
+            expiresAt = result.ExpiresAt,
+            instructions = "Paste this token into docker/.env as MCP_TOKEN=<token>, then run ./docker/secrets-encrypt.sh and restart the mcp container."
+        });
     }
 
     [HttpPost("logout")]

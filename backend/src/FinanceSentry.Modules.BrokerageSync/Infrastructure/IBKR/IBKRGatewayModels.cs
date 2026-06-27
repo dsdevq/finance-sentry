@@ -15,4 +15,6 @@ public sealed record IBKRPositionResponse(
     [property: JsonPropertyName("assetClass")] string AssetClass,
     [property: JsonPropertyName("position")] decimal Position,
     [property: JsonPropertyName("mktPrice")] decimal MktPrice,
-    [property: JsonPropertyName("mktValue")] decimal MktValue);
+    [property: JsonPropertyName("mktValue")] decimal MktValue,
+    [property: JsonPropertyName("avgCost")] decimal? AvgCost = null,
+    [property: JsonPropertyName("avgPrice")] decimal? AvgPrice = null);

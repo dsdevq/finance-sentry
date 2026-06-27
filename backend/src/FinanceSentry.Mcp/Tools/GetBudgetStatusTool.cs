@@ -11,31 +11,37 @@ namespace FinanceSentry.Mcp.Tools;
 [McpServerToolType]
 public sealed class GetBudgetStatusTool(
     IQueryHandler<GetBudgetSummaryQuery, BudgetSummaryResponse> budgetSummaryHandler,
+    IIdentityResolver identity,
     ILogger<GetBudgetStatusTool> logger) : IReadOnlyMcpTool
 {
     private readonly IQueryHandler<GetBudgetSummaryQuery, BudgetSummaryResponse> _budgetSummaryHandler = budgetSummaryHandler;
+    private readonly IIdentityResolver _identity = identity;
     private readonly ILogger<GetBudgetStatusTool> _logger = logger;
 
     public string ToolName => "get_budget_status";
 
     [McpServerTool(Name = "get_budget_status")]
-    [Description("Returns all active budgets for a user, including spending and utilization for the requested period.")]
+    [Description("Returns all active budgets, including spending and utilization for the requested period. Defaults to the MCP_TOKEN identity when userId is omitted.")]
     public async Task<IReadOnlyList<BudgetStatusEntry>> ExecuteAsync(
-        [Description("The user's unique identifier.")] Guid userId,
+        [Description("Optional user GUID. Defaults to the identity baked into MCP_TOKEN.")] Guid? userId = null,
         [Description("Year of the budget period (e.g. 2024). Defaults to the current year.")] int? year = null,
         [Description("Month of the budget period (1–12). Defaults to the current month.")] int? month = null,
         CancellationToken cancellationToken = default)
     {
+        var effective = userId ?? _identity.GetUserId();
+        if (effective is null) return [];
+        var userIdVal = effective.Value;
+
         BudgetSummaryResponse summary;
         try
         {
             summary = await _budgetSummaryHandler.Handle(
-                new GetBudgetSummaryQuery(userId, year, month),
+                new GetBudgetSummaryQuery(userIdVal, year, month),
                 cancellationToken);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Budget summary query unavailable for user {UserId}; returning empty list.", userId);
+            _logger.LogWarning(ex, "Budget summary query unavailable for user {UserId}; returning empty list.", userIdVal);
             return [];
         }
 

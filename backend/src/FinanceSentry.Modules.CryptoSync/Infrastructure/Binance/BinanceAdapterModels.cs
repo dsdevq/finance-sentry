@@ -40,3 +40,15 @@ public sealed record BinanceFlexibleEarnPosition(
 public sealed record BinanceLockedEarnPosition(
     [property: JsonPropertyName("asset")] string Asset,
     [property: JsonPropertyName("amount")] string Amount);
+
+// /api/v3/myTrades — per-symbol trade history (one row per fill).
+public sealed record BinanceTradeRow(
+    [property: JsonPropertyName("id")] long Id,
+    [property: JsonPropertyName("symbol")] string Symbol,
+    [property: JsonPropertyName("price")] string Price,
+    [property: JsonPropertyName("qty")] string Quantity,
+    [property: JsonPropertyName("quoteQty")] string QuoteQuantity,
+    [property: JsonPropertyName("commission")] string Commission,
+    [property: JsonPropertyName("commissionAsset")] string CommissionAsset,
+    [property: JsonPropertyName("time")] long TimeMs,
+    [property: JsonPropertyName("isBuyer")] bool IsBuyer);
