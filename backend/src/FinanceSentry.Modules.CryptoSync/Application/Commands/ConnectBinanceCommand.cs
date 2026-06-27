@@ -15,6 +15,7 @@ public sealed record ConnectBinanceCommand(
     string ApiSecret) : ICommand<ConnectBinanceResult>;
 
 public sealed record ConnectBinanceResult(
+    string Message,
     int HoldingsCount,
     DateTime SyncedAt);
 
@@ -55,6 +56,6 @@ public sealed class ConnectBinanceCommandHandler(
             new SyncBinanceHoldingsCommand(command.UserId),
             cancellationToken);
 
-        return new ConnectBinanceResult(syncResult.HoldingsCount, syncResult.SyncedAt);
+        return new ConnectBinanceResult("Binance account connected successfully.", syncResult.HoldingsCount, syncResult.SyncedAt);
     }
 }

@@ -149,3 +149,36 @@ constitution → spec → plan → tasks → implement
 | `/speckit.analyze` | Cross-artifact consistency check |
 
 Specs live in `.specify/specs/<feature>/`. Architecture principles and quality gates are in [`.specify/memory/constitution.md`](.specify/memory/constitution.md).
+
+## MCP Server
+
+Finance Sentry ships a read-only **Model Context Protocol (MCP) server** (`FinanceSentry.Mcp`) that lets MCP-capable clients — Claude Desktop, Claude Code, or any MCP host — query live financial data without going through the REST API. It exposes 11 tools covering account balances, transactions, budgets, alerts, portfolio positions, detected subscriptions, and sync health. Four additional tools are stubs that return `{ status: "not_yet_available" }` while their backing modules are still under development.
+
+### Connect via Claude Desktop (stdio transport)
+
+Add the following block to your `claude_desktop_config.json` (usually `~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
+
+```json
+{
+  "mcpServers": {
+    "finance-sentry": {
+      "command": "dotnet",
+      "args": [
+        "run",
+        "--project",
+        "/absolute/path/to/finance-sentry/backend/src/FinanceSentry.Mcp"
+      ],
+      "env": {
+        "MCP_TRANSPORT": "stdio",
+        "MCP_CONNECTION_STRING": "Host=localhost;Port=5432;Database=finance_sentry;Username=finance_user;Password=finance_password"
+      }
+    }
+  }
+}
+```
+
+Replace `/absolute/path/to/finance-sentry` with the real path on your machine. Make sure the local Docker stack is running (`docker compose -f docker/docker-compose.dev.yml up -d postgres`) so the MCP server can reach PostgreSQL.
+
+For HTTP/SSE transport (networked or multi-client deployments), set `MCP_TRANSPORT=http` and optionally `MCP_HTTP_PORT=5100`. Copy `.env.example` to `.env` and adjust the values before starting the server.
+
+See [docs/mcp.md](docs/mcp.md) for the full tool catalogue — input parameters, return schemas, and real-vs-stub status for each tool.

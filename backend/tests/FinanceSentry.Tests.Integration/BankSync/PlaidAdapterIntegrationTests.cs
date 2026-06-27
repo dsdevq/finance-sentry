@@ -104,7 +104,7 @@ public class PlaidAdapterIntegrationTests
             IsoCurrencyCode: "USD",
             Name: $"Merchant_{i}",
             MerchantName: $"Merchant_{i}",
-            PersonalFinanceCategory: i % 3 == 0 ? "Groceries" : i % 3 == 1 ? "Transport" : "Entertainment",
+            PersonalFinanceCategory: i % 3 == 0 ? "FOOD_AND_DRINK" : i % 3 == 1 ? "TRANSPORTATION" : "ENTERTAINMENT",
             Date: start.AddDays(i),
             AuthorizedDate: start.AddDays(i).AddDays(-1),
             Pending: i >= 90 // last 10 are pending
@@ -132,7 +132,7 @@ public class PlaidAdapterIntegrationTests
         var withCategories = candidates.Where(c => c.MerchantCategory != null).ToList();
         withCategories.Should().HaveCount(100, "all transactions have a category");
         withCategories.Select(c => c.MerchantCategory).Should()
-            .Contain("Groceries").And.Contain("Transport").And.Contain("Entertainment");
+            .Contain("food_and_drink").And.Contain("transport").And.Contain("entertainment");
 
         // Verify pending/posted distinction
         candidates.Count(c => c.IsPending).Should().Be(10, "last 10 transactions are pending");

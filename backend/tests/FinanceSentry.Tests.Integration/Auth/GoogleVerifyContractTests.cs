@@ -37,10 +37,13 @@ public class GoogleVerifyContractTests : IClassFixture<AuthApiFactory>
 
         var body = await response.Content.ReadFromJsonAsync<AuthResponseShape>();
         body.Should().NotBeNull();
-        body!.Token.Should().NotBeNullOrWhiteSpace();
+        body!.User.Should().NotBeNull();
+        body.User.Id.Should().NotBeNullOrWhiteSpace();
+        Guid.TryParse(body.User.Id, out _).Should().BeTrue("UserId must be a valid GUID");
         body.ExpiresAt.Should().BeAfter(DateTime.UtcNow);
-        body.UserId.Should().NotBeNullOrWhiteSpace();
-        Guid.TryParse(body.UserId, out _).Should().BeTrue("UserId must be a valid GUID");
+
+        response.Headers.TryGetValues("Set-Cookie", out var cookies);
+        cookies.Should().Contain(c => c.StartsWith("fs_access_token="), "google verify must set the access token cookie");
     }
 
     [Fact]
@@ -79,7 +82,7 @@ public class GoogleVerifyContractTests : IClassFixture<AuthApiFactory>
 
         var body = await response.Content.ReadFromJsonAsync<AuthResponseShape>();
         body.Should().NotBeNull();
-        body!.Token.Should().NotBeNullOrWhiteSpace();
+        body!.User.Id.Should().NotBeNullOrWhiteSpace();
 
         using var scope = _factory.Services.CreateScope();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
@@ -103,7 +106,7 @@ public class GoogleVerifyContractTests : IClassFixture<AuthApiFactory>
         second.StatusCode.Should().Be(HttpStatusCode.OK);
         var secondBody = await second.Content.ReadFromJsonAsync<AuthResponseShape>();
 
-        secondBody!.UserId.Should().Be(firstBody!.UserId, "same Google account must always resolve to same user");
+        secondBody!.User.Id.Should().Be(firstBody!.User.Id, "same Google account must always resolve to same user");
     }
 
     [Fact]
@@ -123,6 +126,7 @@ public class GoogleVerifyContractTests : IClassFixture<AuthApiFactory>
         user!.GoogleId.Should().Be("google-sub-link", "GoogleId must be linked to existing account");
     }
 
-    private record AuthResponseShape(string Token, DateTime ExpiresAt, string UserId);
+    private record UserShape(string Id, string Email);
+    private record AuthResponseShape(UserShape User, DateTime ExpiresAt);
     private record ErrorResponseShape(string Error, string ErrorCode);
 }

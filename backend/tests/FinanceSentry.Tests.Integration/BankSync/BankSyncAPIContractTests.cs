@@ -132,7 +132,7 @@ public class BankSyncAPIContractTests(BankSyncApiFactory factory) : IClassFixtur
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<TransactionsListResponse>();
         body.Should().NotBeNull();
-        body!.Transactions.Should().NotBeNull();
+        body!.Items.Should().NotBeNull();
         body.TotalCount.Should().Be(0);
         body.HasMore.Should().BeFalse();
     }
@@ -141,7 +141,8 @@ public class BankSyncAPIContractTests(BankSyncApiFactory factory) : IClassFixtur
 
     private record ConnectResponse(string LinkToken, int ExpiresIn, string RequestId);
     private record AccountsListResponse(object[] Accounts, int TotalCount, object CurrencyTotals);
-    private record TransactionsListResponse(object[] Transactions, int TotalCount, bool HasMore);
+    private record TransactionsListResponse(string AccountId, string BankName, string Currency,
+        object[] Items, int TotalCount, int Offset, int Limit, bool HasMore);
 }
 
 /// <summary>
