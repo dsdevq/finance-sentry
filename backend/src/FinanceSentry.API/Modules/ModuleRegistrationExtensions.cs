@@ -1,5 +1,6 @@
 namespace FinanceSentry.API.Modules;
 
+using System.Reflection;
 using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Core.Interfaces;
 using Microsoft.Extensions.Configuration;
@@ -13,7 +14,11 @@ public static class ModuleRegistrationExtensions
         var registrarType = typeof(IModuleRegistrar);
 
         var registrars = AppDomain.CurrentDomain.GetAssemblies()
-            .SelectMany(a => a.GetTypes())
+            .SelectMany(a =>
+            {
+                try { return a.GetTypes(); }
+                catch (ReflectionTypeLoadException ex) { return ex.Types.OfType<Type>(); }
+            })
             .Where(t => registrarType.IsAssignableFrom(t) && t is { IsInterface: false, IsAbstract: false })
             .Select(t => (IModuleRegistrar)Activator.CreateInstance(t)!)
             .ToList();

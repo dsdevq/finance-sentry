@@ -72,3 +72,32 @@ Deduplication:MasterKeyBase64 = "<base64-key>"
 - In-memory DB per test class: each `WebApplicationFactory` subclass uses a unique GUID database name to avoid cross-test state bleed.
 - `MockBehavior.Loose` is used in factory mocks; setup only what the specific test path needs.
 - `[Trait("Category","Integration")]` is the convention for skipping DB-live tests — don't change it.
+
+## MCP Verification
+
+Verified 2026-06-27 via `dotnet test FinanceSentry.sln --filter 'Category!=Integration' -c Release`.
+
+| Project | Passed | Failed |
+|---|---|---|
+| FinanceSentry.Tests.Unit | 223 | 0 |
+| FinanceSentry.Mcp.Tests | 43 | 0 |
+| FinanceSentry.Tests.Integration (Category!=Integration, 4 skipped) | 128 | 0 |
+
+### Registered MCP tools (11 total)
+
+**Real tools (7)** — all implement `IReadOnlyMcpTool`, non-destructive:
+1. `get_account_summary`
+2. `list_transactions`
+3. `get_budget_status`
+4. `list_active_alerts`
+5. `get_portfolio_snapshot`
+6. `list_subscriptions`
+7. `get_sync_health`
+
+**Stubs (4)** — return `{ status: "not_yet_available", reason: string }`:
+8. `get_crypto_pnl_detail`
+9. `get_tax_lots`
+10. `get_cashflow_report`
+11. `get_net_worth_history`
+
+Full tool catalogue (input parameters, return schemas, real/stub): [`docs/mcp.md`](docs/mcp.md).

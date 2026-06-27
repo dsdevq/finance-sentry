@@ -23,6 +23,24 @@ services:
       timeout: 5s
       retries: 5
 
+  mcp:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.mcp
+    container_name: finance-sentry-mcp
+    restart: unless-stopped
+    stdin_open: true
+    environment:
+      MCP_TRANSPORT: ${MCP_TRANSPORT:-stdio}
+      MCP_HTTP_PORT: ${MCP_HTTP_PORT:-5100}
+      MCP_CONNECTION_STRING: ${MCP_CONNECTION_STRING:-Host=postgres;Port=5432;Database=finance_sentry;Username=finance_user;Password=finance_password}
+      ConnectionStrings__Default: ${MCP_CONNECTION_STRING:-Host=postgres;Port=5432;Database=finance_sentry;Username=finance_user;Password=finance_password}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - finance-sentry-network
+
 volumes:
   postgres_data:
     driver: local
