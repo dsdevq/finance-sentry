@@ -60,6 +60,7 @@
 
     <!-- MCP -->
     <PackageVersion Include="ModelContextProtocol" Version="0.2.0-preview.3" />
+    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="0.2.0-preview.3" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.5" />
 
     <!-- Test stack -->
