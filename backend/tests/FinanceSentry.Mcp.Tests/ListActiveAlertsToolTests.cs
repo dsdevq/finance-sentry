@@ -16,7 +16,7 @@ public sealed class ListActiveAlertsToolTests
     private readonly Mock<IQueryHandler<GetAlertsQuery, AlertsPageResponse>> _handler = new();
 
     private ListActiveAlertsTool CreateSut() =>
-        new(_handler.Object, NullLogger<ListActiveAlertsTool>.Instance);
+        new(_handler.Object, new FakeIdentityResolver(), NullLogger<ListActiveAlertsTool>.Instance);
 
     private static AlertDto MakeDto(
         bool isRead = false,

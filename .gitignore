@@ -59,10 +59,13 @@ appsettings.*.json
 *.ldf
 .vs/
 
-# Environment variables
+# Environment variables — plaintext .env stays out of git; .env.sops is the
+# encrypted source of truth and IS committed (decrypt with docker/secrets-decrypt.sh).
 .env
 .env.local
 .env.*.local
+!.env.sops
+!.env.example
 
 # Logs
 logs/

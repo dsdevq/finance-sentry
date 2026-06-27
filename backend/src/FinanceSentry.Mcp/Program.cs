@@ -4,9 +4,16 @@ using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Mcp.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using ModelContextProtocol;
 
 var builder = Host.CreateApplicationBuilder(args);
+
+// stdio MCP framing requires stdout to carry only JSON-RPC. Route all logger
+// output to stderr so warnings (e.g. ASP.NET DataProtection) don't corrupt
+// the protocol stream.
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole(o => o.LogToStandardErrorThreshold = LogLevel.Trace);
 
 // Enumerate module assemblies explicitly so they are guaranteed to be loaded.
 Assembly[] moduleAssemblies =
@@ -35,6 +42,10 @@ foreach (var assembly in moduleAssemblies)
         registrar.Register(builder.Services, builder.Configuration);
     }
 }
+
+// Identity resolver: validates the MCP_TOKEN JWT once at startup against Jwt:Secret
+// and caches the userId so tools can default to it without per-call DB lookup.
+builder.Services.AddSingleton<IIdentityResolver, JwtIdentityResolver>();
 
 // Scan for IReadOnlyMcpTool implementations and register each under its concrete type
 // and IReadOnlyMcpTool so callers can resolve IEnumerable<IReadOnlyMcpTool>.

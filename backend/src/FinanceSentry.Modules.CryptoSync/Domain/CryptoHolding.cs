@@ -11,6 +11,13 @@ public sealed class CryptoHolding
     public DateTime SyncedAt { get; private set; }
     public string Provider { get; private set; } = "binance";
 
+    public decimal? CostBasisUsd { get; private set; }
+    public decimal? AverageBuyPriceUsd { get; private set; }
+    public decimal? RealizedPnlUsd { get; private set; }
+    public DateTime? LastTradeAt { get; private set; }
+    public long LastTradeId { get; private set; }
+    public int TradeCount { get; private set; }
+
     private CryptoHolding() { }
 
     public static CryptoHolding Create(
@@ -40,5 +47,21 @@ public sealed class CryptoHolding
         LockedQuantity = lockedQuantity;
         UsdValue = usdValue;
         SyncedAt = DateTime.UtcNow;
+    }
+
+    public void SetCostBasis(
+        decimal? costBasisUsd,
+        decimal? averageBuyPriceUsd,
+        decimal? realizedPnlUsd,
+        DateTime? lastTradeAt,
+        long lastTradeId,
+        int tradeCount)
+    {
+        CostBasisUsd = costBasisUsd;
+        AverageBuyPriceUsd = averageBuyPriceUsd;
+        RealizedPnlUsd = realizedPnlUsd;
+        LastTradeAt = lastTradeAt;
+        LastTradeId = lastTradeId;
+        TradeCount = tradeCount;
     }
 }

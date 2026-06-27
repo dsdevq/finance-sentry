@@ -9,7 +9,9 @@ public sealed record BrokeragePositionDto(
     string Symbol,
     string InstrumentType,
     decimal Quantity,
-    decimal UsdValue);
+    decimal UsdValue,
+    decimal? CostBasisUsd = null,
+    decimal? AverageCostUsd = null);
 
 public sealed record BrokerageHoldingsResponse(
     string Provider,
@@ -50,7 +52,13 @@ public sealed class GetBrokerageHoldingsQueryHandler
         var totalUsd = holdings.Sum(h => h.UsdValue);
 
         var positions = holdings
-            .Select(h => new BrokeragePositionDto(h.Symbol, h.InstrumentType, h.Quantity, h.UsdValue))
+            .Select(h => new BrokeragePositionDto(
+                h.Symbol,
+                h.InstrumentType,
+                h.Quantity,
+                h.UsdValue,
+                h.CostBasisUsd,
+                h.AverageCostUsd))
             .ToList();
 
         return new BrokerageHoldingsResponse(

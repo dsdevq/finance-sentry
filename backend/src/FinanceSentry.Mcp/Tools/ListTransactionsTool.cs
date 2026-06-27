@@ -13,18 +13,20 @@ namespace FinanceSentry.Mcp.Tools;
 public sealed class ListTransactionsTool(
     IQueryHandler<GetAllTransactionsQuery, AllTransactionsResult> transactionQueryHandler,
     IBankingAccountsReader accountsReader,
+    IIdentityResolver identity,
     ILogger<ListTransactionsTool> logger) : IReadOnlyMcpTool
 {
     private readonly IQueryHandler<GetAllTransactionsQuery, AllTransactionsResult> _transactionQueryHandler = transactionQueryHandler;
     private readonly IBankingAccountsReader _accountsReader = accountsReader;
+    private readonly IIdentityResolver _identity = identity;
     private readonly ILogger<ListTransactionsTool> _logger = logger;
 
     public string ToolName => "list_transactions";
 
     [McpServerTool(Name = "list_transactions")]
-    [Description("Returns a paginated list of bank transactions for a user, optionally filtered by account, date range, or merchant category.")]
+    [Description("Returns a paginated list of bank transactions, optionally filtered by account, date range, or merchant category. Defaults to the MCP_TOKEN identity when userId is omitted.")]
     public async Task<IReadOnlyList<TransactionEntry>> ExecuteAsync(
-        [Description("The user's unique identifier.")] Guid userId,
+        [Description("Optional user GUID. Defaults to the identity baked into MCP_TOKEN.")] Guid? userId = null,
         [Description("Optional account ID (GUID string) to scope results to a single account.")] string? accountId = null,
         [Description("Optional inclusive start date (e.g. 2024-01-01) for filtering transactions.")] DateOnly? fromDate = null,
         [Description("Optional inclusive end date (e.g. 2024-12-31) for filtering transactions.")] DateOnly? toDate = null,
@@ -33,6 +35,10 @@ public sealed class ListTransactionsTool(
         [Description("Number of transactions per page. Defaults to 50.")] int pageSize = 50,
         CancellationToken cancellationToken = default)
     {
+        var effective = userId ?? _identity.GetUserId();
+        if (effective is null) return [];
+        var userIdVal = effective.Value;
+
         if (page < 1) page = 1;
         if (pageSize < 1) pageSize = 50;
 
@@ -50,7 +56,7 @@ public sealed class ListTransactionsTool(
         {
             queryResult = await _transactionQueryHandler.Handle(
                 new GetAllTransactionsQuery(
-                    userId,
+                    userIdVal,
                     new PagedRequest(0, int.MaxValue),
                     fromDate?.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
                     toDate?.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc)),
@@ -65,7 +71,7 @@ public sealed class ListTransactionsTool(
         Dictionary<Guid, BankingAccountSummary> accountMeta;
         try
         {
-            var accounts = await _accountsReader.GetAccountSummariesAsync(userId, cancellationToken);
+            var accounts = await _accountsReader.GetAccountSummariesAsync(userIdVal, cancellationToken);
             accountMeta = accounts.ToDictionary(a => a.AccountId);
         }
         catch (Exception ex)

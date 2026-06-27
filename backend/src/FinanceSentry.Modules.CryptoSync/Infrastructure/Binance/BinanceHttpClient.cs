@@ -57,6 +57,24 @@ public sealed class BinanceHttpClient
         return await DeserializeAsync<IReadOnlyList<BinancePriceTicker>>(response, ct);
     }
 
+    // /api/v3/myTrades — returns up to 1000 fills for a given symbol. Pass fromId to walk
+    // forward through trade history incrementally. Binance docs:
+    // https://developers.binance.com/docs/binance-spot-api-docs/rest-api/account-endpoints#account-trade-list-user_data
+    public Task<IReadOnlyList<BinanceTradeRow>> GetMyTradesAsync(
+        string apiKey,
+        string apiSecret,
+        string symbol,
+        long fromId,
+        int limit,
+        CancellationToken ct = default)
+    {
+        var query = fromId > 0
+            ? $"symbol={symbol}&fromId={fromId}&limit={limit}"
+            : $"symbol={symbol}&limit={limit}";
+        return SendSignedAsync<IReadOnlyList<BinanceTradeRow>>(
+            HttpMethod.Get, "/api/v3/myTrades", apiKey, apiSecret, query, ct);
+    }
+
     private async Task<T> SendSignedAsync<T>(
         HttpMethod method,
         string path,

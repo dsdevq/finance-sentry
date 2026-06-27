@@ -19,4 +19,5 @@ public sealed record BrokerPosition(
     string Symbol,
     string InstrumentType,
     decimal Quantity,
-    decimal UsdValue);
+    decimal UsdValue,
+    decimal? AverageCostUsd = null);

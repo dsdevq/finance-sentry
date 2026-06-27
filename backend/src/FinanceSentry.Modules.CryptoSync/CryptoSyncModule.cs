@@ -38,6 +38,7 @@ public static class CryptoSyncModule
 
         services.AddHttpClient<BinanceHttpClient>();
         services.AddSingleton<BinanceHoldingsAggregator>();
+        services.AddSingleton<CostBasisCalculator>();
         services.AddScoped<ICryptoExchangeAdapter, BinanceAdapter>();
         services.AddScoped<IBinanceCredentialRepository, BinanceCredentialRepository>();
         services.AddScoped<ICryptoHoldingRepository, CryptoHoldingRepository>();

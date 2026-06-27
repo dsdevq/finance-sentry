@@ -17,6 +17,7 @@ public sealed class GetAccountSummaryToolTests
 
     private GetAccountSummaryTool CreateSut() =>
         new(_bankingReader.Object, _cryptoReader.Object, _brokerageReader.Object,
+            new FakeIdentityResolver(),
             NullLogger<GetAccountSummaryTool>.Instance);
 
     [Fact]

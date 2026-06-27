@@ -14,27 +14,33 @@ public sealed class GetSyncHealthTool(
     BankSyncDbContext bankSyncDbContext,
     CryptoSyncDbContext cryptoSyncDbContext,
     BrokerageSyncDbContext brokerageSyncDbContext,
+    IIdentityResolver identity,
     ILogger<GetSyncHealthTool> logger) : IReadOnlyMcpTool
 {
     private readonly BankSyncDbContext _bankSync = bankSyncDbContext;
     private readonly CryptoSyncDbContext _cryptoSync = cryptoSyncDbContext;
     private readonly BrokerageSyncDbContext _brokerageSync = brokerageSyncDbContext;
+    private readonly IIdentityResolver _identity = identity;
     private readonly ILogger<GetSyncHealthTool> _logger = logger;
 
     public string ToolName => "get_sync_health";
 
     [McpServerTool(Name = "get_sync_health")]
-    [Description("Returns the last sync timestamp, status, and error for each provider (Plaid, Monobank, Binance, IBKR) for a given user.")]
+    [Description("Returns the last sync timestamp, status, and error for each provider (Plaid, Monobank, Binance, IBKR). Defaults to the MCP_TOKEN identity when userId is omitted.")]
     public async Task<IReadOnlyList<SyncHealthEntry>> ExecuteAsync(
-        [Description("The user's unique identifier.")] Guid userId,
+        [Description("Optional user GUID. Defaults to the identity baked into MCP_TOKEN.")] Guid? userId = null,
         CancellationToken cancellationToken = default)
     {
+        var effective = userId ?? _identity.GetUserId();
+        if (effective is null) return [];
+        var userIdVal = effective.Value;
+
         return
         [
-            await GetPlaidHealthAsync(userId, cancellationToken),
-            await GetMonobankHealthAsync(userId, cancellationToken),
-            await GetBinanceHealthAsync(userId, cancellationToken),
-            await GetIbkrHealthAsync(userId, cancellationToken),
+            await GetPlaidHealthAsync(userIdVal, cancellationToken),
+            await GetMonobankHealthAsync(userIdVal, cancellationToken),
+            await GetBinanceHealthAsync(userIdVal, cancellationToken),
+            await GetIbkrHealthAsync(userIdVal, cancellationToken),
         ];
     }
 

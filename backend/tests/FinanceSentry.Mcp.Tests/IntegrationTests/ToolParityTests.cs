@@ -29,6 +29,10 @@ using FinanceSentry.Modules.Subscriptions.Domain;
 using FinanceSentry.Modules.Subscriptions.Domain.Repositories;
 using FinanceSentry.Modules.Subscriptions.Infrastructure.Persistence;
 using FinanceSentry.Modules.Subscriptions.Infrastructure.Persistence.Repositories;
+using FinanceSentry.Modules.Wealth.Domain;
+using FinanceSentry.Modules.Wealth.Domain.Repositories;
+using FinanceSentry.Modules.Wealth.Infrastructure.Persistence;
+using FinanceSentry.Modules.Wealth.Infrastructure.Persistence.Repositories;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -67,6 +71,8 @@ public sealed class ToolParityTests
             o.UseInMemoryDatabase($"budgets-{dbKey}"));
         services.AddDbContext<SubscriptionsDbContext>(o =>
             o.UseInMemoryDatabase($"subscriptions-{dbKey}"));
+        services.AddDbContext<WealthDbContext>(o =>
+            o.UseInMemoryDatabase($"wealth-{dbKey}"));
 
         // Repositories — real implementations backed by the in-memory contexts above.
         services.AddScoped<IBankAccountRepository, BankAccountRepository>();
@@ -76,6 +82,7 @@ public sealed class ToolParityTests
         services.AddScoped<IAlertRepository, AlertRepository>();
         services.AddScoped<IBudgetRepository, BudgetRepository>();
         services.AddScoped<IDetectedSubscriptionRepository, DetectedSubscriptionRepository>();
+        services.AddScoped<INetWorthSnapshotRepository, NetWorthSnapshotRepository>();
 
         // Cross-provider readers used by several tools.
         services.AddScoped<IBankingAccountsReader, BankingAccountsReader>();
@@ -95,9 +102,10 @@ public sealed class ToolParityTests
             typeof(FinanceSentry.Modules.Alerts.AlertsModule).Assembly,
             typeof(FinanceSentry.Modules.BrokerageSync.BrokerageSyncModule).Assembly,
             typeof(FinanceSentry.Modules.CryptoSync.CryptoSyncModule).Assembly,
-            typeof(FinanceSentry.Modules.Subscriptions.SubscriptionsModule).Assembly);
+            typeof(FinanceSentry.Modules.Subscriptions.SubscriptionsModule).Assembly,
+            typeof(FinanceSentry.Modules.Wealth.WealthModule).Assembly);
 
-        // Register the 7 real MCP tools as scoped services.
+        services.AddSingleton<FinanceSentry.Mcp.Abstractions.IIdentityResolver>(new FakeIdentityResolver());
         services.AddScoped<GetAccountSummaryTool>();
         services.AddScoped<ListTransactionsTool>();
         services.AddScoped<GetBudgetStatusTool>();
@@ -105,6 +113,10 @@ public sealed class ToolParityTests
         services.AddScoped<GetPortfolioSnapshotTool>();
         services.AddScoped<ListSubscriptionsTool>();
         services.AddScoped<GetSyncHealthTool>();
+        services.AddScoped<GetNetWorthHistoryTool>();
+        services.AddScoped<GetCashflowReportTool>();
+        services.AddScoped<GetCryptoPnlDetailTool>();
+        services.AddScoped<GetTaxLotsTool>();
 
         return services.BuildServiceProvider();
     }
@@ -379,5 +391,186 @@ public sealed class ToolParityTests
         // Providers with no credentials are honest about it.
         result.Single(e => e.Provider == "monobank").Status.Should().Be("never_synced");
         result.Single(e => e.Provider == "ibkr").Status.Should().Be("never_synced");
+    }
+
+    [Fact]
+    public async Task GetTaxLots_ReturnsCostBasisAndPnl_WhenBrokerageHoldingSeededWithAvgCost()
+    {
+        var userId = Guid.NewGuid();
+        await using var sp = BuildProvider(Guid.NewGuid().ToString("N"));
+        await using var scope = sp.CreateAsyncScope();
+        var svc = scope.ServiceProvider;
+
+        var brokerageDb = svc.GetRequiredService<BrokerageSyncDbContext>();
+        brokerageDb.BrokerageHoldings.Add(new BrokerageHolding(
+            userId,
+            "AAPL",
+            "STK",
+            10m,
+            1_900m,
+            "ibkr",
+            averageCostUsd: 150m,
+            acquiredAt: DateTime.UtcNow.AddYears(-2)));
+        brokerageDb.BrokerageHoldings.Add(new BrokerageHolding(
+            userId,
+            "SPY",
+            "STK",
+            5m,
+            2_500m,
+            "ibkr"));
+        await brokerageDb.SaveChangesAsync();
+
+        var tool = svc.GetRequiredService<GetTaxLotsTool>();
+        var result = await tool.ExecuteAsync(userId);
+
+        result.Should().HaveCount(2);
+
+        var aapl = result.Single(e => e.Symbol == "AAPL");
+        aapl.AverageCostUsd.Should().Be(150m);
+        aapl.CostBasisUsd.Should().Be(1_500m);
+        aapl.UnrealizedPnlUsd.Should().Be(400m);
+        aapl.IsLongTerm.Should().BeTrue();
+        aapl.Provider.Should().Be("ibkr");
+
+        var spy = result.Single(e => e.Symbol == "SPY");
+        spy.AverageCostUsd.Should().BeNull();
+        spy.CostBasisUsd.Should().BeNull();
+        spy.UnrealizedPnlUsd.Should().BeNull();
+        spy.IsLongTerm.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task GetCryptoPnlDetail_ReturnsCostBasisAndUnrealizedPnl_WhenHoldingSeededWithCostBasis()
+    {
+        var userId = Guid.NewGuid();
+        await using var sp = BuildProvider(Guid.NewGuid().ToString("N"));
+        await using var scope = sp.CreateAsyncScope();
+        var svc = scope.ServiceProvider;
+
+        var cryptoDb = svc.GetRequiredService<CryptoSyncDbContext>();
+        var holding = CryptoHolding.Create(userId, "BTC", freeQuantity: 0.5m, lockedQuantity: 0m, usdValue: 25_000m);
+        holding.SetCostBasis(
+            costBasisUsd: 18_000m,
+            averageBuyPriceUsd: 36_000m,
+            realizedPnlUsd: 500m,
+            lastTradeAt: new DateTime(2024, 6, 15, 12, 0, 0, DateTimeKind.Utc),
+            lastTradeId: 42,
+            tradeCount: 3);
+        cryptoDb.CryptoHoldings.Add(holding);
+
+        var nullCostHolding = CryptoHolding.Create(userId, "DOGE", freeQuantity: 1_000m, lockedQuantity: 0m, usdValue: 50m);
+        cryptoDb.CryptoHoldings.Add(nullCostHolding);
+
+        await cryptoDb.SaveChangesAsync();
+
+        var tool = svc.GetRequiredService<GetCryptoPnlDetailTool>();
+        var result = await tool.ExecuteAsync(userId);
+
+        result.Should().HaveCount(2);
+
+        var btc = result.Single(e => e.Asset == "BTC");
+        btc.CostBasisUsd.Should().Be(18_000m);
+        btc.UnrealizedPnlUsd.Should().Be(7_000m);
+        btc.RealizedPnlUsd.Should().Be(500m);
+        btc.TradeCount.Should().Be(3);
+        btc.Provider.Should().Be("binance");
+
+        var doge = result.Single(e => e.Asset == "DOGE");
+        doge.CostBasisUsd.Should().BeNull();
+        doge.UnrealizedPnlUsd.Should().BeNull();
+        doge.TradeCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task GetNetWorthHistory_ReturnsSeededSnapshots()
+    {
+        var userId = Guid.NewGuid();
+        await using var sp = BuildProvider(Guid.NewGuid().ToString("N"));
+        await using var scope = sp.CreateAsyncScope();
+        var svc = scope.ServiceProvider;
+
+        var wealthDb = svc.GetRequiredService<WealthDbContext>();
+        wealthDb.NetWorthSnapshots.AddRange(
+            new NetWorthSnapshot
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                SnapshotDate = new DateOnly(2024, 1, 31),
+                BankingTotal = 1_000m,
+                BrokerageTotal = 500m,
+                CryptoTotal = 200m,
+                TotalNetWorth = 1_700m,
+                Currency = "USD",
+                TakenAt = DateTimeOffset.UtcNow,
+            },
+            new NetWorthSnapshot
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                SnapshotDate = new DateOnly(2024, 2, 29),
+                BankingTotal = 1_100m,
+                BrokerageTotal = 600m,
+                CryptoTotal = 250m,
+                TotalNetWorth = 1_950m,
+                Currency = "USD",
+                TakenAt = DateTimeOffset.UtcNow,
+            });
+        await wealthDb.SaveChangesAsync();
+
+        var tool = svc.GetRequiredService<GetNetWorthHistoryTool>();
+        var result = await tool.ExecuteAsync(userId);
+
+        result.Should().HaveCount(2);
+        result.Should().AllSatisfy(e =>
+        {
+            e.Currency.Should().Be("USD");
+            e.TotalNetWorth.Should().BeGreaterThan(0);
+        });
+        result.Select(e => e.SnapshotDate).Should()
+            .ContainInOrder(new DateOnly(2024, 1, 31), new DateOnly(2024, 2, 29));
+    }
+
+    [Fact]
+    public async Task GetCashflowReport_AggregatesTransactionsByMonth()
+    {
+        var userId = Guid.NewGuid();
+        await using var sp = BuildProvider(Guid.NewGuid().ToString("N"));
+        await using var scope = sp.CreateAsyncScope();
+        var svc = scope.ServiceProvider;
+
+        var bankDb = svc.GetRequiredService<BankSyncDbContext>();
+        var account = new BankAccount(userId, "ext-cf-001", "Chase", "checking", "1111", "Test User", "USD", userId);
+        account.BeginSync();
+        account.MarkActive(0m);
+        bankDb.BankAccounts.Add(account);
+
+        var jan = new DateTime(2024, 1, 15, 12, 0, 0, DateTimeKind.Utc);
+        var feb = new DateTime(2024, 2, 10, 12, 0, 0, DateTimeKind.Utc);
+        // Plaid/Monobank store Amount as a positive magnitude; direction lives in
+        // TransactionType ("credit" = inflow, "debit" = outflow).
+        var salary1 = new Transaction(account.Id, userId, 2_000m, jan, "Salary", "hash-cf-001") { TransactionType = "credit" };
+        var groceries = new Transaction(account.Id, userId, 300m, jan, "Groceries", "hash-cf-002") { TransactionType = "debit" };
+        var salary2 = new Transaction(account.Id, userId, 2_500m, feb, "Salary", "hash-cf-003") { TransactionType = "credit" };
+        var rent = new Transaction(account.Id, userId, 800m, feb, "Rent", "hash-cf-004") { TransactionType = "debit" };
+        bankDb.Transactions.AddRange(salary1, groceries, salary2, rent);
+        await bankDb.SaveChangesAsync();
+
+        var tool = svc.GetRequiredService<GetCashflowReportTool>();
+        var result = await tool.ExecuteAsync(
+            userId,
+            fromDate: new DateOnly(2024, 1, 1),
+            toDate: new DateOnly(2024, 2, 29));
+
+        result.Should().HaveCount(2);
+
+        var janEntry = result.Single(e => e.Period == "2024-01");
+        janEntry.Inflow.Should().Be(2_000m);
+        janEntry.Outflow.Should().Be(300m);
+        janEntry.Net.Should().Be(1_700m);
+
+        var febEntry = result.Single(e => e.Period == "2024-02");
+        febEntry.Inflow.Should().Be(2_500m);
+        febEntry.Outflow.Should().Be(800m);
+        febEntry.Net.Should().Be(1_700m);
     }
 }

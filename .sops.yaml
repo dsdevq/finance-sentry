@@ -1,0 +1,3 @@
+creation_rules:
+  - path_regex: docker/\.env(\.sops)?$
+    age: age146hmku2m4667lmx63ysge7szjlyc48a6x7r5zg8ur56wxlq4t3pqsyv390
