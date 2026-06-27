@@ -8,7 +8,7 @@
     <link rel="icon" href="data:," />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' https://cdn.plaid.com https://accounts.google.com/gsi/; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/; img-src 'self' data: https://lh3.googleusercontent.com; connect-src 'self' https://cdn.plaid.com https://accounts.google.com/; frame-src https://cdn.plaid.com https://accounts.google.com/;"
+      content="default-src 'self'; script-src 'self' https://cdn.plaid.com https://accounts.google.com/gsi/; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/; img-src 'self' data: https://lh3.googleusercontent.com; connect-src 'self' http://localhost:5001 ws://localhost:5001 https://cdn.plaid.com https://accounts.google.com/; frame-src https://cdn.plaid.com https://accounts.google.com/;"
     />
     <script src="https://accounts.google.com/gsi/client" async></script>
   </head>
