@@ -77,26 +77,14 @@ services:
       driver: json-file
       options: { max-size: "10m", max-file: "3" }
 
-  frontend:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile.frontend
-      platforms: [linux/arm64]
-    image: finance-sentry/frontend:local
-    container_name: finance-sentry-frontend
-    restart: unless-stopped
-    environment:
-      API_BASE_URL: ${API_BASE_URL:-https://api.finance-sentry.tail1cb676.ts.net}
-    ports:
-      - "127.0.0.1:${FRONTEND_PORT:-4200}:4200"
-    depends_on:
-      api:
-        condition: service_healthy
-    networks:
-      - finance-sentry
-    logging:
-      driver: json-file
-      options: { max-size: "10m", max-file: "3" }
+  # TODO: frontend production Dockerfile.
+  # Current Dockerfile.frontend is dev-only — runs `ng serve` without first building
+  # the @dsdevq-common/{config,ui} workspace packages. For prod we need a multi-stage
+  # build: npm install → npm run build:lib → ng build → nginx-alpine serving dist/.
+  # Until then, the API + MCP are sufficient for the OpenClaw ledger agent to work;
+  # the Angular UI is only used by humans logging in via browser.
+  # frontend:
+  #   ...
 
   postgres:
     image: postgres:14-alpine
