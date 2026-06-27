@@ -45,7 +45,7 @@ public sealed class GetPortfolioSnapshotTool(
                 Symbol: p.Symbol,
                 AssetClass: p.InstrumentType,
                 Quantity: p.Quantity,
-                CostBasis: null,
+                CostBasis: p.CostBasisUsd,
                 CurrentValue: p.UsdValue,
                 Provider: response.Provider)));
         }
@@ -65,7 +65,7 @@ public sealed class GetPortfolioSnapshotTool(
                 Symbol: h.Asset,
                 AssetClass: "Crypto",
                 Quantity: h.FreeQuantity + h.LockedQuantity,
-                CostBasis: null,
+                CostBasis: h.CostBasisUsd,
                 CurrentValue: h.UsdValue,
                 Provider: response.Provider)));
         }

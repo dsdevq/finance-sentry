@@ -62,13 +62,20 @@ public sealed class GetCashflowReportTool(
             return [];
         }
 
+        // Plaid + Monobank both store Amount as a positive magnitude. The direction
+        // lives in TransactionType ("credit" = inflow, "debit" = outflow). Sign of
+        // Amount is NOT used.
         return result.Transactions
             .GroupBy(t => new { (t.PostedDate ?? t.Date).Year, (t.PostedDate ?? t.Date).Month })
             .OrderBy(g => g.Key.Year).ThenBy(g => g.Key.Month)
             .Select(g =>
             {
-                var inflow = g.Where(t => t.Amount > 0).Sum(t => t.Amount);
-                var outflow = g.Where(t => t.Amount < 0).Sum(t => Math.Abs(t.Amount));
+                var inflow = g
+                    .Where(t => IsCredit(t.TransactionType))
+                    .Sum(t => Math.Abs(t.Amount));
+                var outflow = g
+                    .Where(t => IsDebit(t.TransactionType))
+                    .Sum(t => Math.Abs(t.Amount));
                 return new CashflowReportEntry(
                     $"{g.Key.Year:D4}-{g.Key.Month:D2}",
                     inflow,
@@ -78,6 +85,12 @@ public sealed class GetCashflowReportTool(
             })
             .ToList();
     }
+
+    private static bool IsCredit(string? transactionType) =>
+        string.Equals(transactionType, "credit", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsDebit(string? transactionType) =>
+        string.Equals(transactionType, "debit", StringComparison.OrdinalIgnoreCase);
 }
 
 public sealed record CashflowReportEntry(

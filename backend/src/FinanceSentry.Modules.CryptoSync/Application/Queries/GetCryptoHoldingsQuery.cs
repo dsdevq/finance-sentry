@@ -16,7 +16,9 @@ public sealed record CryptoHoldingDto(
     string Asset,
     decimal FreeQuantity,
     decimal LockedQuantity,
-    decimal UsdValue);
+    decimal UsdValue,
+    decimal? CostBasisUsd = null,
+    decimal? AverageBuyPriceUsd = null);
 
 public sealed class GetCryptoHoldingsQueryHandler : IQueryHandler<GetCryptoHoldingsQuery, CryptoHoldingsResponse>
 {
@@ -47,7 +49,13 @@ public sealed class GetCryptoHoldingsQueryHandler : IQueryHandler<GetCryptoHoldi
         var isStale = DateTime.UtcNow - lastSyncedAt > StaleThreshold;
 
         var dtos = holdings
-            .Select(h => new CryptoHoldingDto(h.Asset, h.FreeQuantity, h.LockedQuantity, h.UsdValue))
+            .Select(h => new CryptoHoldingDto(
+                h.Asset,
+                h.FreeQuantity,
+                h.LockedQuantity,
+                h.UsdValue,
+                h.CostBasisUsd,
+                h.AverageBuyPriceUsd))
             .ToList();
 
         return new CryptoHoldingsResponse(

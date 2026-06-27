@@ -17,8 +17,11 @@ public sealed class GetCashflowReportToolTests
     private GetCashflowReportTool CreateSut() =>
         new(_handler.Object, new FakeIdentityResolver(), NullLogger<GetCashflowReportTool>.Instance);
 
-    private static GlobalTransactionDto Txn(decimal amount, DateTime date) =>
-        new(Guid.NewGuid(), Guid.NewGuid(), "TestBank", amount, date, date, "Test", "debit", null, false, DateTime.UtcNow);
+    private static GlobalTransactionDto Txn(decimal amount, DateTime date, string transactionType = "debit") =>
+        new(Guid.NewGuid(), Guid.NewGuid(), "TestBank", amount, date, date, "Test", transactionType, null, false, DateTime.UtcNow);
+
+    private static GlobalTransactionDto Credit(decimal amount, DateTime date) => Txn(amount, date, "credit");
+    private static GlobalTransactionDto Debit(decimal amount, DateTime date) => Txn(amount, date, "debit");
 
     private static AllTransactionsResult ResultOf(params GlobalTransactionDto[] txns) =>
         new([.. txns], txns.Length, false, 0, txns.Length);
@@ -73,11 +76,11 @@ public sealed class GetCashflowReportToolTests
         _handler
             .Setup(h => h.Handle(It.IsAny<GetAllTransactionsQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(ResultOf(
-                Txn(2000m, new DateTime(2024, 1, 10, 0, 0, 0, DateTimeKind.Utc)),
-                Txn(-500m, new DateTime(2024, 1, 15, 0, 0, 0, DateTimeKind.Utc)),
-                Txn(-200m, new DateTime(2024, 1, 20, 0, 0, 0, DateTimeKind.Utc)),
-                Txn(3000m, new DateTime(2024, 2, 5, 0, 0, 0, DateTimeKind.Utc)),
-                Txn(-1000m, new DateTime(2024, 2, 10, 0, 0, 0, DateTimeKind.Utc))));
+                Credit(2000m, new DateTime(2024, 1, 10, 0, 0, 0, DateTimeKind.Utc)),
+                Debit(500m, new DateTime(2024, 1, 15, 0, 0, 0, DateTimeKind.Utc)),
+                Debit(200m, new DateTime(2024, 1, 20, 0, 0, 0, DateTimeKind.Utc)),
+                Credit(3000m, new DateTime(2024, 2, 5, 0, 0, 0, DateTimeKind.Utc)),
+                Debit(1000m, new DateTime(2024, 2, 10, 0, 0, 0, DateTimeKind.Utc))));
 
         var result = await CreateSut().ExecuteAsync(
             UserId,

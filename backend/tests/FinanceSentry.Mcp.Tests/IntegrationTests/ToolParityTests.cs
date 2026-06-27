@@ -546,11 +546,13 @@ public sealed class ToolParityTests
 
         var jan = new DateTime(2024, 1, 15, 12, 0, 0, DateTimeKind.Utc);
         var feb = new DateTime(2024, 2, 10, 12, 0, 0, DateTimeKind.Utc);
-        bankDb.Transactions.AddRange(
-            new Transaction(account.Id, userId, 2_000m, jan, "Salary", "hash-cf-001"),
-            new Transaction(account.Id, userId, -300m, jan, "Groceries", "hash-cf-002"),
-            new Transaction(account.Id, userId, 2_500m, feb, "Salary", "hash-cf-003"),
-            new Transaction(account.Id, userId, -800m, feb, "Rent", "hash-cf-004"));
+        // Plaid/Monobank store Amount as a positive magnitude; direction lives in
+        // TransactionType ("credit" = inflow, "debit" = outflow).
+        var salary1 = new Transaction(account.Id, userId, 2_000m, jan, "Salary", "hash-cf-001") { TransactionType = "credit" };
+        var groceries = new Transaction(account.Id, userId, 300m, jan, "Groceries", "hash-cf-002") { TransactionType = "debit" };
+        var salary2 = new Transaction(account.Id, userId, 2_500m, feb, "Salary", "hash-cf-003") { TransactionType = "credit" };
+        var rent = new Transaction(account.Id, userId, 800m, feb, "Rent", "hash-cf-004") { TransactionType = "debit" };
+        bankDb.Transactions.AddRange(salary1, groceries, salary2, rent);
         await bankDb.SaveChangesAsync();
 
         var tool = svc.GetRequiredService<GetCashflowReportTool>();
