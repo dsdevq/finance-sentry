@@ -80,6 +80,9 @@ public class BinanceAdapterContractTests
         {
             ["/api/v3/account"] = accountJson,
             ["/api/v3/ticker/price"] = pricesJson,
+            ["/sapi/v1/asset/get-funding-asset"] = "[]",
+            ["/sapi/v1/simple-earn/flexible/position"] = @"{""rows"":[],""total"":0}",
+            ["/sapi/v1/simple-earn/locked/position"] = @"{""rows"":[],""total"":0}",
         });
 
         var client = CreateHttpClient(handler);
@@ -102,6 +105,9 @@ public class BinanceAdapterContractTests
         {
             ["/api/v3/account"] = accountJson,
             ["/api/v3/ticker/price"] = pricesJson,
+            ["/sapi/v1/asset/get-funding-asset"] = "[]",
+            ["/sapi/v1/simple-earn/flexible/position"] = @"{""rows"":[],""total"":0}",
+            ["/sapi/v1/simple-earn/locked/position"] = @"{""rows"":[],""total"":0}",
         });
 
         var client = CreateHttpClient(handler);

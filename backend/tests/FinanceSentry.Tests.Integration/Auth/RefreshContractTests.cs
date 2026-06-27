@@ -71,14 +71,16 @@ public class RefreshContractTests(AuthApiFactory factory) : IClassFixture<AuthAp
 
         var body = await response.Content.ReadFromJsonAsync<AuthResponseShape>();
         body.Should().NotBeNull();
-        body!.Token.Should().NotBeNullOrWhiteSpace();
+        body!.User.Should().NotBeNull();
+        body.User.Id.Should().NotBeNullOrWhiteSpace();
         body.ExpiresAt.Should().BeAfter(DateTime.UtcNow);
-        body.UserId.Should().NotBeNullOrWhiteSpace();
 
         response.Headers.TryGetValues("Set-Cookie", out var newCookies);
-        newCookies?.Any(c => c.StartsWith("fs_refresh_token=")).Should().BeTrue("refresh must rotate the cookie");
+        newCookies.Should().Contain(c => c.StartsWith("fs_refresh_token="), "refresh must rotate the cookie");
+        newCookies.Should().Contain(c => c.StartsWith("fs_access_token="), "refresh must set new access token cookie");
     }
 
-    private record AuthResponseShape(string Token, DateTime ExpiresAt, string UserId);
+    private record UserShape(string Id, string Email);
+    private record AuthResponseShape(UserShape User, DateTime ExpiresAt);
     private record ErrorResponseShape(string Error, string ErrorCode);
 }

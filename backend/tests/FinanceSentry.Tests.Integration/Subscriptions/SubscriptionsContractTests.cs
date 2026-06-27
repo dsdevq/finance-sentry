@@ -1,7 +1,6 @@
 namespace FinanceSentry.Tests.Integration.Subscriptions;
 
 using System.Net;
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using FinanceSentry.Modules.Subscriptions.Domain;
@@ -170,8 +169,7 @@ public class SubscriptionsApiFactory : WebApplicationFactory<Program>
     public HttpClient CreateAuthenticatedClient()
     {
         var client = CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
-        client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", GenerateTestJwt(TestUserId));
+        client.DefaultRequestHeaders.Add("Cookie", $"fs_access_token={GenerateTestJwt(TestUserId)}");
         return client;
     }
 

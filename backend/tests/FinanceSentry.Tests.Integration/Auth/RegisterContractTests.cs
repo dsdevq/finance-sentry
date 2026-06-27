@@ -36,10 +36,13 @@ public class RegisterContractTests : IClassFixture<AuthApiFactory>
 
         var body = await response.Content.ReadFromJsonAsync<AuthResponseShape>();
         body.Should().NotBeNull();
-        body!.Token.Should().NotBeNullOrWhiteSpace();
+        body!.User.Should().NotBeNull();
+        body.User.Id.Should().NotBeNullOrWhiteSpace();
+        Guid.TryParse(body.User.Id, out _).Should().BeTrue("UserId must be a valid GUID");
         body.ExpiresAt.Should().BeAfter(DateTime.UtcNow);
-        body.UserId.Should().NotBeNullOrWhiteSpace();
-        Guid.TryParse(body.UserId, out _).Should().BeTrue("UserId must be a valid GUID");
+
+        response.Headers.TryGetValues("Set-Cookie", out var cookies);
+        cookies.Should().Contain(c => c.StartsWith("fs_access_token="), "register must set the access token cookie");
     }
 
     [Fact]
@@ -84,6 +87,7 @@ public class RegisterContractTests : IClassFixture<AuthApiFactory>
         body!.ErrorCode.Should().Be("VALIDATION_ERROR");
     }
 
-    private record AuthResponseShape(string Token, DateTime ExpiresAt, string UserId);
+    private record UserShape(string Id, string Email);
+    private record AuthResponseShape(UserShape User, DateTime ExpiresAt);
     private record ErrorResponseShape(string Error, string ErrorCode, string[]? Details);
 }

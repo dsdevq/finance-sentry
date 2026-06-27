@@ -212,6 +212,18 @@ public class WealthApiFactory : WebApplicationFactory<Program>
                 services, $"WealthTestBankSync_{Guid.NewGuid()}");
             ReplaceDbContextWithInMemory<FinanceSentry.Modules.Auth.Infrastructure.Persistence.AuthDbContext>(
                 services, $"WealthTestAuth_{Guid.NewGuid()}");
+            ReplaceDbContextWithInMemory<FinanceSentry.Modules.CryptoSync.Infrastructure.Persistence.CryptoSyncDbContext>(
+                services, $"WealthTestCrypto_{Guid.NewGuid()}");
+            ReplaceDbContextWithInMemory<FinanceSentry.Modules.BrokerageSync.Infrastructure.Persistence.BrokerageSyncDbContext>(
+                services, $"WealthTestBrokerage_{Guid.NewGuid()}");
+            ReplaceDbContextWithInMemory<FinanceSentry.Modules.Subscriptions.Infrastructure.Persistence.SubscriptionsDbContext>(
+                services, $"WealthTestSubs_{Guid.NewGuid()}");
+            ReplaceDbContextWithInMemory<FinanceSentry.Modules.Alerts.Infrastructure.Persistence.AlertsDbContext>(
+                services, $"WealthTestAlerts_{Guid.NewGuid()}");
+            ReplaceDbContextWithInMemory<FinanceSentry.Modules.Budgets.Infrastructure.Persistence.BudgetsDbContext>(
+                services, $"WealthTestBudgets_{Guid.NewGuid()}");
+            ReplaceDbContextWithInMemory<FinanceSentry.Modules.Wealth.Infrastructure.Persistence.WealthDbContext>(
+                services, $"WealthTestWealth_{Guid.NewGuid()}");
 
             services.Configure<FinanceSentry.Infrastructure.Encryption.EncryptionOptions>(opts =>
             {

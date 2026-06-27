@@ -261,12 +261,16 @@ public class CryptoApiFactory : WebApplicationFactory<Program>
 
     public void SetupSuccessfulConnect()
     {
-        CredentialRepoMock
-            .Setup(r => r.GetByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((BinanceCredential?)null);
+        // Capture the credential saved by ConnectBinanceCommandHandler so that
+        // SyncBinanceHoldingsCommandHandler can retrieve it on the second call.
+        BinanceCredential? capturedCredential = null;
         CredentialRepoMock
             .Setup(r => r.AddAsync(It.IsAny<BinanceCredential>(), It.IsAny<CancellationToken>()))
+            .Callback<BinanceCredential, CancellationToken>((cred, _) => capturedCredential = cred)
             .Returns(Task.CompletedTask);
+        CredentialRepoMock
+            .Setup(r => r.GetByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => capturedCredential);
         CredentialRepoMock
             .Setup(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
