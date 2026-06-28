@@ -1,5 +1,5 @@
 import {ChangeDetectionStrategy, Component, computed, inject} from '@angular/core';
-import {FormControl, ReactiveFormsModule, Validators} from '@angular/forms';
+import {FormControl, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
 import {
   AlertComponent,
   ButtonComponent,
@@ -36,15 +36,19 @@ export class MonobankFormComponent {
 
   public readonly store = inject(ConnectStore);
 
-  public readonly tokenControl = new FormControl<string>('', {
-    nonNullable: true,
-    validators: [
-      Validators.required,
-      Validators.minLength(MONOBANK_TOKEN_MIN_LENGTH),
-      Validators.maxLength(MONOBANK_TOKEN_MAX_LENGTH),
-      Validators.pattern(MONOBANK_TOKEN_PATTERN),
-    ],
+  public readonly form = new FormGroup({
+    token: new FormControl<string>('', {
+      nonNullable: true,
+      validators: [
+        Validators.required,
+        Validators.minLength(MONOBANK_TOKEN_MIN_LENGTH),
+        Validators.maxLength(MONOBANK_TOKEN_MAX_LENGTH),
+        Validators.pattern(MONOBANK_TOKEN_PATTERN),
+      ],
+    }),
   });
+
+  public readonly tokenControl = this.form.controls.token;
 
   public readonly tokenError = computed(() =>
     this.tokenControl.touched && this.tokenControl.invalid

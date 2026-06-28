@@ -1,4 +1,4 @@
-<form (ngSubmit)="submit()" class="flex flex-col gap-cmn-6">
+<form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-cmn-6">
   <cmn-form-field
     [control]="tokenControl"
     [errorMessage]="tokenError()"
