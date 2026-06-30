@@ -6,6 +6,7 @@ using FinanceSentry.Infrastructure.Logging;
 using FinanceSentry.Modules.BankSync.Domain;
 using FinanceSentry.Modules.BankSync.Domain.Interfaces;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
+using FinanceSentry.Modules.BankSync.Infrastructure.Monobank;
 using FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
 using FinanceSentry.Modules.BankSync.Infrastructure.TrueLayer;
 
@@ -46,6 +47,7 @@ public class ScheduledSyncService(
     IMonobankCredentialRepository monobankCredentials,
     ITrueLayerConnectionRepository truelayerConnections,
     ITrueLayerClient truelayerClient,
+    MonobankBalanceCache monobankBalanceCache,
     IAlertGeneratorService alerts,
     IUserAlertPreferencesReader userPreferences) : IScheduledSyncService
 {
@@ -61,6 +63,7 @@ public class ScheduledSyncService(
     private readonly IMonobankCredentialRepository _monobankCredentials = monobankCredentials;
     private readonly ITrueLayerConnectionRepository _truelayerConnections = truelayerConnections;
     private readonly ITrueLayerClient _truelayerClient = truelayerClient;
+    private readonly MonobankBalanceCache _monobankBalanceCache = monobankBalanceCache;
     private readonly IAlertGeneratorService _alerts = alerts;
     private readonly IUserAlertPreferencesReader _userPreferences = userPreferences;
 
@@ -264,20 +267,27 @@ public class ScheduledSyncService(
         await _monobankCredentials.UpdateAsync(cred, ct);
 
         // Refresh live balance from Monobank /personal/client-info. The endpoint
-        // is rate-limited to one call per 60s per token, so on a 429 (or any
-        // other failure) we preserve the existing CurrentBalance rather than
-        // zeroing it on every successful sync.
-        decimal? latestBalance = null;
-        try
+        // is rate-limited to one call per 60s per token, so we check the shared
+        // MonobankBalanceCache first (primed by BulkSyncMonobank) and only call the
+        // API when the cache is cold. On rate-limit / transient failure we keep
+        // the prior balance rather than zeroing it.
+        decimal? latestBalance = _monobankBalanceCache.TryGet(plainToken, account.ExternalAccountId);
+        if (latestBalance is null)
         {
-            var freshAccounts = await provider.GetAccountsAsync(plainToken, ct);
-            var match = freshAccounts.FirstOrDefault(a => a.ExternalAccountId == account.ExternalAccountId);
-            if (match is not null)
-                latestBalance = match.CurrentBalance;
-        }
-        catch (Infrastructure.Monobank.MonobankException)
-        {
-            // Rate limit or transient — leave the prior balance in place.
+            try
+            {
+                var freshAccounts = await provider.GetAccountsAsync(plainToken, ct);
+                foreach (var fa in freshAccounts)
+                {
+                    if (fa.CurrentBalance.HasValue)
+                        _monobankBalanceCache.Set(plainToken, fa.ExternalAccountId, fa.CurrentBalance.Value);
+                }
+                latestBalance = freshAccounts.FirstOrDefault(a => a.ExternalAccountId == account.ExternalAccountId)?.CurrentBalance;
+            }
+            catch (Infrastructure.Monobank.MonobankException)
+            {
+                // Rate limit or transient — leave the prior balance in place.
+            }
         }
 
         account.MarkActive(latestBalance ?? account.CurrentBalance ?? 0m);

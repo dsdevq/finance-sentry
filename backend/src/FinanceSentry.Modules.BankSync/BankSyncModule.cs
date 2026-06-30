@@ -81,6 +81,7 @@ public static class BankSyncModule
         services.AddHttpClient<MonobankHttpClient>(client =>
             client.BaseAddress = new Uri(config["Monobank:BaseUrl"] ?? "https://api.monobank.ua"));
         services.AddSingleton<MonobankCategoryMapper>();
+        services.AddSingleton<MonobankBalanceCache>();
         services.AddScoped<IMonobankAdapter, MonobankAdapter>();
         services.AddScoped<MonobankAdapter>();
         services.AddScoped<IBankProvider>(sp => sp.GetRequiredService<MonobankAdapter>());
