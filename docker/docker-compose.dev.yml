@@ -30,6 +30,13 @@ services:
       Plaid__ClientId: ${PLAID_CLIENT_ID}
       Plaid__Secret: ${PLAID_SECRET}
       Plaid__Environment: sandbox
+      TrueLayer__AuthBaseUrl: https://auth.truelayer.com
+      TrueLayer__ApiBaseUrl: https://api.truelayer.com
+      TrueLayer__ClientId: ${TRUELAYER_CLIENT_ID:-}
+      TrueLayer__ClientSecret: ${TRUELAYER_CLIENT_SECRET:-}
+      TrueLayer__FrontendRedirectBase: http://localhost:4200
+      TrueLayer__CallbackPath: /api/v1/accounts/truelayer/callback
+      TrueLayer__Scopes: "info accounts balance transactions cards offline_access"
       Jwt__Secret: ${JWT_SECRET:-your-secret-key-change-in-production}
       Jwt__Issuer: "https://finance-sentry.local"
       Deduplication__MasterKeyBase64: dGVzdC1kZWR1cGxpY2F0aW9uLWtleS1jaGFuZ2UtaW4tcHJvZHVjdGlvbg==

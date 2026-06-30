@@ -13,6 +13,7 @@ using FinanceSentry.Modules.BankSync.Infrastructure.Performance;
 using FinanceSentry.Modules.BankSync.Infrastructure.Persistence;
 using FinanceSentry.Modules.BankSync.Infrastructure.Persistence.Repositories;
 using FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
+using FinanceSentry.Modules.BankSync.Infrastructure.TrueLayer;
 using FinanceSentry.Modules.BankSync.Infrastructure.Security;
 using FinanceSentry.Modules.BankSync.Infrastructure.Services;
 using FinanceSentry.Core.Interfaces;
@@ -63,6 +64,7 @@ public static class BankSyncModule
         services.AddScoped<ISyncJobRepository, SyncJobRepository>();
         services.AddScoped<IEncryptedCredentialRepository, EncryptedCredentialRepository>();
         services.AddScoped<IMonobankCredentialRepository, MonobankCredentialRepository>();
+        services.AddScoped<ITrueLayerConnectionRepository, TrueLayerConnectionRepository>();
 
         var deduplicationKey = config["Deduplication:MasterKeyBase64"]
             ?? throw new InvalidOperationException("Deduplication:MasterKeyBase64 is required.");
@@ -79,9 +81,18 @@ public static class BankSyncModule
         services.AddHttpClient<MonobankHttpClient>(client =>
             client.BaseAddress = new Uri(config["Monobank:BaseUrl"] ?? "https://api.monobank.ua"));
         services.AddSingleton<MonobankCategoryMapper>();
+        services.AddSingleton<MonobankBalanceCache>();
         services.AddScoped<IMonobankAdapter, MonobankAdapter>();
         services.AddScoped<MonobankAdapter>();
         services.AddScoped<IBankProvider>(sp => sp.GetRequiredService<MonobankAdapter>());
+
+        var trueLayerAuthBase = new Uri(config["TrueLayer:AuthBaseUrl"] ?? "https://auth.truelayer-sandbox.com");
+        var trueLayerApiBase = new Uri(config["TrueLayer:ApiBaseUrl"] ?? "https://api.truelayer-sandbox.com");
+        services.AddHttpClient(TrueLayerHttpClient.AuthClientName, c => c.BaseAddress = trueLayerAuthBase);
+        services.AddHttpClient(TrueLayerHttpClient.ApiClientName, c => c.BaseAddress = trueLayerApiBase);
+        services.AddSingleton<ITrueLayerClient, TrueLayerHttpClient>();
+        services.AddScoped<TrueLayerAdapter>();
+        services.AddScoped<IBankProvider>(sp => sp.GetRequiredService<TrueLayerAdapter>());
 
         services.AddScoped<IBankProviderFactory, BankProviderFactory>();
 

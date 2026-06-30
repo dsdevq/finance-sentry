@@ -110,9 +110,19 @@
                     {{ account | accountBalance }}
                   </td>
                   <td class="py-cmn-4 px-cmn-4 text-right">
-                    <cmn-button (clicked)="disconnect(account)" variant="secondary" size="sm">
-                      Disconnect
-                    </cmn-button>
+                    <div class="flex justify-end gap-cmn-2">
+                      @if (
+                        account.provider === 'truelayer' &&
+                        account.syncStatus === 'reauth_required'
+                      ) {
+                        <cmn-button (clicked)="reconnect()" variant="primary" size="sm">
+                          Reconnect
+                        </cmn-button>
+                      }
+                      <cmn-button (clicked)="disconnect(account)" variant="secondary" size="sm">
+                        Disconnect
+                      </cmn-button>
+                    </div>
                   </td>
                 </tr>
               }

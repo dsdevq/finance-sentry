@@ -60,6 +60,9 @@ public class ScheduledSyncServiceTests
 
         var providerFactory = new Mock<IBankProviderFactory>();
         var monobankCreds = new Mock<IMonobankCredentialRepository>();
+        var truelayerConnections = new Mock<ITrueLayerConnectionRepository>();
+        var truelayerClient = new Mock<FinanceSentry.Modules.BankSync.Infrastructure.TrueLayer.ITrueLayerClient>();
+        var monobankBalanceCache = new FinanceSentry.Modules.BankSync.Infrastructure.Monobank.MonobankBalanceCache();
         var alertGen = new Mock<FinanceSentry.Core.Interfaces.IAlertGeneratorService>();
         var userPrefs = new Mock<FinanceSentry.Core.Interfaces.IUserAlertPreferencesReader>();
 
@@ -67,6 +70,8 @@ public class ScheduledSyncServiceTests
             accountRepo.Object, txRepo.Object, jobRepo.Object, credRepo.Object,
             encryption.Object, plaid.Object, dedup.Object, logger.Object,
             providerFactory.Object, monobankCreds.Object,
+            truelayerConnections.Object, truelayerClient.Object,
+            monobankBalanceCache,
             alertGen.Object, userPrefs.Object);
 
         return (sut, accountRepo, txRepo, jobRepo, credRepo, encryption, plaid, dedup, logger);

@@ -367,3 +367,47 @@ public class MonobankCredentialRepository(BankSyncDbContext context) : IMonobank
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         => await _context.SaveChangesAsync(cancellationToken);
 }
+
+public class TrueLayerConnectionRepository(BankSyncDbContext context) : ITrueLayerConnectionRepository
+{
+    private readonly BankSyncDbContext _context = context;
+
+    public async Task<TrueLayerConnection> AddAsync(TrueLayerConnection connection, CancellationToken cancellationToken = default)
+    {
+        await _context.TrueLayerConnections.AddAsync(connection, cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
+        return connection;
+    }
+
+    public async Task<TrueLayerConnection?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        => await _context.TrueLayerConnections.FirstOrDefaultAsync(tc => tc.Id == id, cancellationToken);
+
+    public async Task<TrueLayerConnection?> GetByReferenceAsync(string reference, CancellationToken cancellationToken = default)
+        => await _context.TrueLayerConnections.FirstOrDefaultAsync(tc => tc.Reference == reference, cancellationToken);
+
+    public async Task<TrueLayerConnection?> GetByUserAndProviderAsync(Guid userId, string providerId, CancellationToken cancellationToken = default)
+        => await _context.TrueLayerConnections.FirstOrDefaultAsync(
+            tc => tc.UserId == userId && tc.ProviderId == providerId, cancellationToken);
+
+    public async Task<IReadOnlyList<TrueLayerConnection>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+        => await _context.TrueLayerConnections
+            .Where(tc => tc.UserId == userId)
+            .OrderByDescending(tc => tc.CreatedAt)
+            .ToListAsync(cancellationToken);
+
+    public async Task<TrueLayerConnection> UpdateAsync(TrueLayerConnection connection, CancellationToken cancellationToken = default)
+    {
+        _context.TrueLayerConnections.Update(connection);
+        await _context.SaveChangesAsync(cancellationToken);
+        return connection;
+    }
+
+    public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var tc = await _context.TrueLayerConnections.FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
+        if (tc == null) return false;
+        _context.TrueLayerConnections.Remove(tc);
+        await _context.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+}

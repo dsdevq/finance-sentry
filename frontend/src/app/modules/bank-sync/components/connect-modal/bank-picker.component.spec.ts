@@ -23,11 +23,11 @@ describe('BankPickerComponent', () => {
     TestBed.resetTestingModule();
   });
 
-  it('exposes only bank-typed providers', () => {
+  it('exposes only visible bank-typed providers (Plaid hidden)', () => {
     configure(buildStore());
     const fixture = TestBed.createComponent(BankPickerComponent);
     const slugs = fixture.componentInstance.providers.map(p => p.slug).sort();
-    expect(slugs).toEqual(['monobank', 'plaid']);
+    expect(slugs).toEqual(['monobank', 'truelayer']);
     for (const p of fixture.componentInstance.providers) {
       expect(p.institutionType).toBe('bank');
     }
@@ -37,8 +37,8 @@ describe('BankPickerComponent', () => {
     const store = buildStore();
     configure(store);
     const fixture = TestBed.createComponent(BankPickerComponent);
-    fixture.componentInstance.select('plaid');
-    expect(store.selectBankProvider).toHaveBeenCalledWith('plaid');
+    fixture.componentInstance.select('truelayer');
+    expect(store.selectBankProvider).toHaveBeenCalledWith('truelayer');
   });
 
   it('back() returns to the type-picker step', () => {

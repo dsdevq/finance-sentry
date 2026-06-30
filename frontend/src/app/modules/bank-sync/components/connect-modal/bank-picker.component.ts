@@ -7,7 +7,10 @@ import {
   TagComponent,
 } from '@dsdevq-common/ui';
 
-import {PROVIDER_CATALOG} from '../../../../shared/constants/providers/providers.constants';
+import {
+  HIDDEN_PROVIDERS,
+  PROVIDER_CATALOG,
+} from '../../../../shared/constants/providers/providers.constants';
 import {
   type BankProvider,
   type ProviderDescriptor,
@@ -15,7 +18,7 @@ import {
 import {ConnectStore} from '../../store/connect/connect.store';
 
 const BANK_PROVIDERS: readonly ProviderDescriptor[] = PROVIDER_CATALOG.filter(
-  p => p.institutionType === 'bank'
+  p => p.institutionType === 'bank' && !HIDDEN_PROVIDERS.has(p.slug)
 );
 
 @Component({

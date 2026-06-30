@@ -1,4 +1,11 @@
-import {type ProviderDescriptor} from '../../models/provider/provider.model';
+import {type Provider, type ProviderDescriptor} from '../../models/provider/provider.model';
+
+/**
+ * Providers kept in the codebase but hidden from the connect picker.
+ * Plaid stays scaffolded for the day a US bank account gets added — remove
+ * the slug from this set to surface it again.
+ */
+export const HIDDEN_PROVIDERS: ReadonlySet<Provider> = new Set<Provider>(['plaid']);
 
 export const PROVIDER_CATALOG: readonly ProviderDescriptor[] = Object.freeze([
   Object.freeze({
@@ -18,6 +25,15 @@ export const PROVIDER_CATALOG: readonly ProviderDescriptor[] = Object.freeze([
     iconAsset: '/assets/providers/monobank.svg',
     formShape: 'token',
     helpUrl: 'https://api.monobank.ua',
+  }),
+  Object.freeze({
+    slug: 'truelayer',
+    displayName: 'Open Banking (EU / UK)',
+    institutionType: 'bank',
+    description: 'Connect Revolut, AIB, and most EU / UK banks via TrueLayer PSD2.',
+    iconAsset: '/assets/providers/truelayer.svg',
+    formShape: 'open-banking-picker',
+    helpUrl: 'https://console.truelayer.com/',
   }),
   Object.freeze({
     slug: 'binance',
