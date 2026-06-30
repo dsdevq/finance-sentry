@@ -12,6 +12,7 @@ using FinanceSentry.Modules.BankSync.Domain.Repositories;
 using FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
 using Hangfire;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 [ApiController]
 [Route("accounts")]
@@ -24,6 +25,7 @@ public class BankSyncController(
     ICommandHandler<BeginTrueLayerConnectCommand, BeginTrueLayerConnectResult> beginTrueLayerConnectHandler,
     ICommandHandler<FinalizeTrueLayerConnectCommand, FinalizeTrueLayerConnectResult> finalizeTrueLayerConnectHandler,
     Microsoft.Extensions.Configuration.IConfiguration configuration,
+    ILogger<BankSyncController> logger,
     PlaidAdapter plaid,
     IBankAccountRepository accounts,
     ITransactionRepository transactions,
@@ -268,6 +270,8 @@ public class BankSyncController(
         }
         catch (FinanceSentry.Modules.BankSync.Infrastructure.TrueLayer.TrueLayerException ex)
         {
+            logger.LogError(ex, "TrueLayer callback finalization failed: code={ErrorCode}, message={Message}",
+                ex.ErrorCode, ex.Message);
             return Redirect($"{frontendBase}/accounts/list?connectError={Uri.EscapeDataString(ex.ErrorCode)}");
         }
     }
