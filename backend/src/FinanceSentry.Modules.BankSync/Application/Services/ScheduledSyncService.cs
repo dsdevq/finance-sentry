@@ -263,7 +263,24 @@ public class ScheduledSyncService(
         cred.LastSyncAt = DateTime.UtcNow;
         await _monobankCredentials.UpdateAsync(cred, ct);
 
-        account.MarkActive(0m);
+        // Refresh live balance from Monobank /personal/client-info. The endpoint
+        // is rate-limited to one call per 60s per token, so on a 429 (or any
+        // other failure) we preserve the existing CurrentBalance rather than
+        // zeroing it on every successful sync.
+        decimal? latestBalance = null;
+        try
+        {
+            var freshAccounts = await provider.GetAccountsAsync(plainToken, ct);
+            var match = freshAccounts.FirstOrDefault(a => a.ExternalAccountId == account.ExternalAccountId);
+            if (match is not null)
+                latestBalance = match.CurrentBalance;
+        }
+        catch (Infrastructure.Monobank.MonobankException)
+        {
+            // Rate limit or transient — leave the prior balance in place.
+        }
+
+        account.MarkActive(latestBalance ?? account.CurrentBalance ?? 0m);
         await _accounts.UpdateAsync(account, ct);
 
         var lastTxDate = entities.Count > 0
