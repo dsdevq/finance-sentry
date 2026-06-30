@@ -321,7 +321,22 @@ public class ScheduledSyncService(
         connection.LastSyncAt = DateTime.UtcNow;
         await _truelayerConnections.UpdateAsync(connection, ct);
 
-        account.MarkActive(0m);
+        // Refresh the live balance — TrueLayer balances can move independently of
+        // dedup'd transactions (e.g. an overdraft on AIB), so re-query rather than
+        // hardcoding zero.
+        decimal latestBalance = 0m;
+        try
+        {
+            var bal = await _truelayerClient.GetBalanceAsync(tokenSet.AccessToken, account.ExternalAccountId, ct);
+            if (bal is not null)
+                latestBalance = bal.Current;
+        }
+        catch (Infrastructure.TrueLayer.TrueLayerException)
+        {
+            // Best-effort — fall back to 0 if the balance endpoint trips.
+        }
+
+        account.MarkActive(latestBalance);
         await _accounts.UpdateAsync(account, ct);
 
         var lastTxDate = entities.Count > 0
