@@ -54,12 +54,16 @@ export class ConnectModalComponent {
     });
   }
 
-  private providerSlugForCurrentStep(): Nullable<'plaid' | 'monobank' | 'binance' | 'ibkr'> {
+  private providerSlugForCurrentStep(): Nullable<
+    'plaid' | 'monobank' | 'truelayer' | 'binance' | 'ibkr'
+  > {
     switch (this.store.modalStep()) {
       case 'plaid-launcher':
         return 'plaid';
       case 'monobank-form':
         return 'monobank';
+      case 'truelayer-picker':
+        return 'truelayer';
       case 'binance-form':
         return 'binance';
       case 'ibkr-form':

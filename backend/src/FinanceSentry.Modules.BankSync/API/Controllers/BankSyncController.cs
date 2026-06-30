@@ -20,6 +20,10 @@ public class BankSyncController(
     ICommandHandler<ConnectMonobankAccountCommand, ConnectMonobankResult> connectMonobankHandler,
     IQueryHandler<GetAccountsQuery, GetAccountsResult> getAccountsHandler,
     IQueryHandler<GetAllTransactionsQuery, AllTransactionsResult> allTransactionsHandler,
+    IQueryHandler<ListTrueLayerProvidersQuery, IReadOnlyList<TrueLayerProviderDto>> listTrueLayerProvidersHandler,
+    ICommandHandler<BeginTrueLayerConnectCommand, BeginTrueLayerConnectResult> beginTrueLayerConnectHandler,
+    ICommandHandler<FinalizeTrueLayerConnectCommand, FinalizeTrueLayerConnectResult> finalizeTrueLayerConnectHandler,
+    Microsoft.Extensions.Configuration.IConfiguration configuration,
     PlaidAdapter plaid,
     IBankAccountRepository accounts,
     ITransactionRepository transactions,
@@ -209,5 +213,62 @@ public class BankSyncController(
             new ConnectMonobankAccountCommand(User.RequireUserId(), request.Token), ct);
 
         return StatusCode(201, result);
+    }
+
+    // ── GET /api/v1/accounts/truelayer/providers?country=ie ──────────────────
+
+    [HttpGet("truelayer/providers")]
+    public async Task<IActionResult> ListTrueLayerProviders(
+        [FromQuery] string? country = "ie", CancellationToken ct = default)
+    {
+        _ = User.RequireUserId();
+        var result = await listTrueLayerProvidersHandler.Handle(
+            new ListTrueLayerProvidersQuery(country), ct);
+        return Ok(result);
+    }
+
+    // ── POST /api/v1/accounts/truelayer/connect ──────────────────────────────
+
+    [HttpPost("truelayer/connect")]
+    public async Task<IActionResult> BeginTrueLayerConnect(
+        [FromBody] BeginTrueLayerConnectRequest request, CancellationToken ct)
+    {
+        var result = await beginTrueLayerConnectHandler.Handle(
+            new BeginTrueLayerConnectCommand(
+                User.RequireUserId(), request.ProviderId, request.ProviderName), ct);
+        return Ok(result);
+    }
+
+    // ── GET /api/v1/accounts/truelayer/callback?code=&state=&error= ──────────
+    //
+    // Public endpoint hit by TrueLayer after the user consents at their bank.
+    // Exempt from JWT auth; identifies the connection by the 'state' parameter.
+
+    [HttpGet("truelayer/callback")]
+    public async Task<IActionResult> TrueLayerCallback(
+        [FromQuery] string? code,
+        [FromQuery] string? state,
+        [FromQuery] string? error,
+        CancellationToken ct = default)
+    {
+        var frontendBase = (configuration["TrueLayer:FrontendRedirectBase"]
+            ?? "http://localhost:4200").TrimEnd('/');
+
+        if (!string.IsNullOrEmpty(error))
+            return Redirect($"{frontendBase}/accounts/list?connectError={Uri.EscapeDataString(error)}");
+
+        if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(state))
+            return Redirect($"{frontendBase}/accounts/list?connectError=MISSING_CODE_OR_STATE");
+
+        try
+        {
+            await finalizeTrueLayerConnectHandler.Handle(
+                new FinalizeTrueLayerConnectCommand(state, code), ct);
+            return Redirect($"{frontendBase}/accounts/list?connected=truelayer");
+        }
+        catch (FinanceSentry.Modules.BankSync.Infrastructure.TrueLayer.TrueLayerException ex)
+        {
+            return Redirect($"{frontendBase}/accounts/list?connectError={Uri.EscapeDataString(ex.ErrorCode)}");
+        }
     }
 }

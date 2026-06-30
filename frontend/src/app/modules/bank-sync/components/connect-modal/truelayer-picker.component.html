@@ -1,0 +1,66 @@
+<div class="flex flex-col gap-cmn-6">
+  <p class="text-cmn-sm text-text-secondary">
+    Pick your country, then choose your bank. You'll be redirected to authorize Finance Sentry
+    in your bank app for read-only access (90-day consent window).
+  </p>
+
+  <div class="flex flex-col gap-cmn-2">
+    <span class="text-cmn-xs font-medium text-text-secondary uppercase tracking-wide">
+      Country
+    </span>
+    <div class="flex gap-cmn-2 flex-wrap">
+      @for (country of countries; track country.code) {
+        <cmn-selectable-card
+          [selected]="selectedCountry() === country.code"
+          (clicked)="onCountryChange(country.code)"
+          orientation="horizontal"
+        >
+          <span class="font-medium text-text-primary">{{ country.flag }} {{ country.name }}</span>
+        </cmn-selectable-card>
+      }
+    </div>
+  </div>
+
+  <cmn-form-field [control]="searchControl" label="Search">
+    <cmn-input [formControl]="searchControl" type="search" placeholder="Filter banks by name" />
+  </cmn-form-field>
+
+  @if (loadError()) {
+    <cmn-alert variant="error">{{ loadError() }}</cmn-alert>
+  } @else if (store.errorMessage()) {
+    <cmn-alert variant="error">{{ store.errorMessage() }}</cmn-alert>
+  }
+
+  <div class="flex flex-col gap-cmn-2 max-h-[420px] overflow-y-auto">
+    @if (isLoading()) {
+      @for (placeholder of [1, 2, 3, 4]; track placeholder) {
+        <cmn-skeleton height="56px" />
+      }
+    } @else {
+      @for (provider of filteredProviders(); track provider.providerId) {
+        <cmn-selectable-card (clicked)="select(provider)" orientation="horizontal">
+          @if (provider.logoUrl) {
+            <img
+              [ngSrc]="provider.logoUrl"
+              [alt]="provider.displayName + ' logo'"
+              leading
+              width="32"
+              height="32"
+              class="w-8 h-8 rounded-cmn-sm object-contain"
+            />
+          }
+          <span class="font-medium text-text-primary">{{ provider.displayName }}</span>
+          <span class="text-cmn-xs text-text-secondary">{{ provider.country }}</span>
+        </cmn-selectable-card>
+      } @empty {
+        <p class="text-cmn-sm text-text-secondary text-center py-cmn-6">
+          No banks match your search.
+        </p>
+      }
+    }
+  </div>
+
+  <cmn-dialog-actions align="start">
+    <cmn-button (clicked)="back()" variant="secondary" icon="ArrowLeft">Back</cmn-button>
+  </cmn-dialog-actions>
+</div>

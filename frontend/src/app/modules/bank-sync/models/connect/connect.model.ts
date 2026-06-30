@@ -3,6 +3,7 @@ export type ModalStep =
   | 'bank-picker'
   | 'plaid-launcher'
   | 'monobank-form'
+  | 'truelayer-picker'
   | 'binance-form'
   | 'ibkr-form'
   | 'closed';

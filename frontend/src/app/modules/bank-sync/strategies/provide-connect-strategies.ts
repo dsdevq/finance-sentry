@@ -5,12 +5,14 @@ import {CONNECT_STRATEGIES, ConnectStrategyRegistry} from './connect-strategy.to
 import {IbkrConnectStrategy} from './ibkr.strategy';
 import {MonobankConnectStrategy} from './monobank.strategy';
 import {PlaidConnectStrategy} from './plaid.strategy';
+import {TrueLayerConnectStrategy} from './truelayer.strategy';
 
 export function provideConnectStrategies(): EnvironmentProviders {
   return makeEnvironmentProviders([
     ConnectStrategyRegistry,
     {provide: CONNECT_STRATEGIES, multi: true, useExisting: PlaidConnectStrategy},
     {provide: CONNECT_STRATEGIES, multi: true, useExisting: MonobankConnectStrategy},
+    {provide: CONNECT_STRATEGIES, multi: true, useExisting: TrueLayerConnectStrategy},
     {provide: CONNECT_STRATEGIES, multi: true, useExisting: BinanceConnectStrategy},
     {provide: CONNECT_STRATEGIES, multi: true, useExisting: IbkrConnectStrategy},
   ]);

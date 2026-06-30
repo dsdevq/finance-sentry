@@ -23,6 +23,11 @@ import {
   type TransactionListResponse,
   type TransactionQueryParams,
 } from '../models/transaction/transaction.model';
+import {
+  type BeginTrueLayerConnectRequest,
+  type BeginTrueLayerConnectResponse,
+  type TrueLayerProvider,
+} from '../models/truelayer/truelayer.model';
 
 export type {DashboardData, SyncStatusResponse, TriggerSyncResponse};
 
@@ -36,6 +41,16 @@ export class BankSyncService extends ApiService {
 
   public connectMonobank(token: string): Observable<ConnectMonobankResponse> {
     return this.post<ConnectMonobankResponse>('monobank/connect', {token});
+  }
+
+  public listTrueLayerProviders(country: string): Observable<TrueLayerProvider[]> {
+    return this.get<TrueLayerProvider[]>('truelayer/providers', {country});
+  }
+
+  public beginTrueLayerConnect(
+    request: BeginTrueLayerConnectRequest
+  ): Observable<BeginTrueLayerConnectResponse> {
+    return this.post<BeginTrueLayerConnectResponse>('truelayer/connect', request);
   }
 
   public getLinkToken(): Observable<ConnectResponse> {

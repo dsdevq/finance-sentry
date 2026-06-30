@@ -7,6 +7,7 @@ using FinanceSentry.Modules.BankSync.Domain;
 using FinanceSentry.Modules.BankSync.Domain.Interfaces;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
 using FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
+using FinanceSentry.Modules.BankSync.Infrastructure.TrueLayer;
 
 /// <summary>
 /// Result returned by a sync operation.
@@ -43,6 +44,8 @@ public class ScheduledSyncService(
     IBankSyncLogger logger,
     IBankProviderFactory providerFactory,
     IMonobankCredentialRepository monobankCredentials,
+    ITrueLayerConnectionRepository truelayerConnections,
+    ITrueLayerClient truelayerClient,
     IAlertGeneratorService alerts,
     IUserAlertPreferencesReader userPreferences) : IScheduledSyncService
 {
@@ -56,6 +59,8 @@ public class ScheduledSyncService(
     private readonly IBankSyncLogger _logger = logger;
     private readonly IBankProviderFactory _providerFactory = providerFactory;
     private readonly IMonobankCredentialRepository _monobankCredentials = monobankCredentials;
+    private readonly ITrueLayerConnectionRepository _truelayerConnections = truelayerConnections;
+    private readonly ITrueLayerClient _truelayerClient = truelayerClient;
     private readonly IAlertGeneratorService _alerts = alerts;
     private readonly IUserAlertPreferencesReader _userPreferences = userPreferences;
 
@@ -90,6 +95,8 @@ public class ScheduledSyncService(
 
             if (account.Provider == "monobank")
                 result = await SyncMonobankAsync(account, job, startedAt, ct);
+            else if (account.Provider == "truelayer")
+                result = await SyncTrueLayerAsync(account, job, startedAt, ct);
             else
                 result = await SyncPlaidAsync(account, job, webhookTriggered, startedAt, ct);
 
@@ -255,6 +262,64 @@ public class ScheduledSyncService(
         // T031: update last sync timestamp on credential
         cred.LastSyncAt = DateTime.UtcNow;
         await _monobankCredentials.UpdateAsync(cred, ct);
+
+        account.MarkActive(0m);
+        await _accounts.UpdateAsync(account, ct);
+
+        var lastTxDate = entities.Count > 0
+            ? entities.Max(t => t.PostedDate ?? t.TransactionDate)
+            : (DateTime?)null;
+
+        job.MarkSuccess(candidates.Count, entities.Count, lastTxDate);
+        await _syncJobs.UpdateAsync(job, ct);
+
+        var durationMs = (long)(DateTime.UtcNow - startedAt).TotalMilliseconds;
+        _logger.SyncCompleted(job.CorrelationId ?? job.Id.ToString(), account.Id,
+            candidates.Count, entities.Count, durationMs);
+
+        return new SyncResult(true, candidates.Count, entities.Count, null, null);
+    }
+
+    private async Task<SyncResult> SyncTrueLayerAsync(
+        Domain.BankAccount account, SyncJob job, DateTime startedAt, CancellationToken ct)
+    {
+        if (account.TrueLayerConnectionId is null)
+            throw new InvalidOperationException($"TrueLayer account {account.Id} has no connection id.");
+
+        var connection = await _truelayerConnections.GetByIdAsync(account.TrueLayerConnectionId.Value, ct)
+            ?? throw new InvalidOperationException($"TrueLayer connection {account.TrueLayerConnectionId} not found.");
+
+        var refreshToken = _encryption.Decrypt(
+            connection.EncryptedRefreshToken, connection.Iv, connection.AuthTag, connection.KeyVersion);
+        _logger.CredentialAccessed(job.CorrelationId ?? job.Id.ToString(), account.Id);
+
+        var tokenSet = await _truelayerClient.RefreshAccessTokenAsync(refreshToken, ct);
+
+        // TrueLayer rotates refresh tokens — persist the new one.
+        if (!string.IsNullOrEmpty(tokenSet.RefreshToken) && tokenSet.RefreshToken != refreshToken)
+        {
+            var encrypted = _encryption.Encrypt(tokenSet.RefreshToken);
+            connection.SetRefreshToken(encrypted.Ciphertext, encrypted.Iv, encrypted.AuthTag);
+        }
+
+        var provider = _providerFactory.Resolve("truelayer");
+        var since = connection.LastSyncAt;
+
+        var (candidates, _) = await provider.SyncTransactionsAsync(
+            tokenSet.AccessToken, account.ExternalAccountId, account.Id, account.UserId, since, ct);
+
+        var existing = (await _transactions.GetByAccountIdAsync(account.Id, ct))
+            .Select(t => t.UniqueHash)
+            .ToHashSet();
+
+        var newCandidates = _dedup.FilterDuplicates(candidates, existing);
+        var entities = newCandidates.Select(_dedup.ToEntity).ToList();
+
+        if (entities.Count > 0)
+            await _transactions.AddRangeAsync(entities, ct);
+
+        connection.LastSyncAt = DateTime.UtcNow;
+        await _truelayerConnections.UpdateAsync(connection, ct);
 
         account.MarkActive(0m);
         await _accounts.UpdateAsync(account, ct);

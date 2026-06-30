@@ -12,6 +12,8 @@ public class BankAccount : Entity
 
     public Guid? MonobankCredentialId { get; set; }
 
+    public Guid? TrueLayerConnectionId { get; set; }
+
     public string BankName { get; set; } = string.Empty;
 
     public string AccountType { get; set; } = string.Empty;
@@ -38,6 +40,7 @@ public class BankAccount : Entity
     public ICollection<SyncJob> SyncJobs { get; set; } = [];
     public EncryptedCredential? EncryptedCredential { get; set; }
     public MonobankCredential? MonobankCredential { get; set; }
+    public TrueLayerConnection? TrueLayerConnection { get; set; }
 
     public BankAccount() { }
 

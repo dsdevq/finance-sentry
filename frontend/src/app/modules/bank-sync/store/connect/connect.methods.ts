@@ -14,6 +14,7 @@ const STEP_FOR_TYPE: Record<InstitutionType, ModalStep> = {
 const STEP_FOR_BANK_PROVIDER: Record<BankProvider, ModalStep> = {
   plaid: 'plaid-launcher',
   monobank: 'monobank-form',
+  truelayer: 'truelayer-picker',
 };
 
 export function connectMethods(store: WritableStateSource<ConnectState>) {
