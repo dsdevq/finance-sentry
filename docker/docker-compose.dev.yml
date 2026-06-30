@@ -30,8 +30,8 @@ services:
       Plaid__ClientId: ${PLAID_CLIENT_ID}
       Plaid__Secret: ${PLAID_SECRET}
       Plaid__Environment: sandbox
-      TrueLayer__AuthBaseUrl: https://auth.truelayer-sandbox.com
-      TrueLayer__ApiBaseUrl: https://api.truelayer-sandbox.com
+      TrueLayer__AuthBaseUrl: https://auth.truelayer.com
+      TrueLayer__ApiBaseUrl: https://api.truelayer.com
       TrueLayer__ClientId: ${TRUELAYER_CLIENT_ID:-}
       TrueLayer__ClientSecret: ${TRUELAYER_CLIENT_SECRET:-}
       TrueLayer__FrontendRedirectBase: http://localhost:4200
