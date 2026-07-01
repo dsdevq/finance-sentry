@@ -27,6 +27,7 @@ public sealed class ListTransactionsToolTests
             Guid.NewGuid(),
             accountId ?? Guid.NewGuid(),
             "TestBank",
+            "USD",
             100m,
             date ?? DateTime.UtcNow,
             null,
