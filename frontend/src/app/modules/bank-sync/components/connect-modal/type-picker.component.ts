@@ -13,13 +13,13 @@ interface TypeTile {
 }
 
 const TILES: readonly TypeTile[] = [
-  {id: 'bank', label: 'Bank', description: 'Plaid · Monobank', badge: 'bank'},
-  {id: 'crypto', label: 'Crypto', description: 'Binance', badge: 'binance'},
-  {id: 'broker', label: 'Brokerage', description: 'Interactive Brokers', badge: 'ibkr'},
+  {id: 'bank', label: 'Banking', description: 'Direct bank connections', badge: 'bank'},
+  {id: 'crypto', label: 'Crypto', description: 'Exchange accounts', badge: 'binance'},
+  {id: 'broker', label: 'Brokerage', description: 'Investment accounts', badge: 'ibkr'},
 ];
 
 const PROVIDERS_FOR_TYPE: Record<InstitutionType, readonly Provider[]> = {
-  bank: ['plaid', 'monobank'],
+  bank: ['monobank', 'truelayer'],
   crypto: ['binance'],
   broker: ['ibkr'],
 };

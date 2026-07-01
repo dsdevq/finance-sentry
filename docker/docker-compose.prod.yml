@@ -30,6 +30,14 @@ services:
       Jwt__ExpirationMinutes: ${JWT_EXPIRATION_MINUTES:-60}
       Deduplication__MasterKeyBase64: ${DEDUPLICATION_MASTER_KEY_BASE64}
       GOOGLEOAUTH__CLIENTID: ${GOOGLE_CLIENT_ID:-}
+      # TrueLayer (Open Banking EU/UK). Sandbox creds by default.
+      TrueLayer__AuthBaseUrl: ${TRUELAYER_AUTH_BASE_URL:-https://auth.truelayer-sandbox.com}
+      TrueLayer__ApiBaseUrl: ${TRUELAYER_API_BASE_URL:-https://api.truelayer-sandbox.com}
+      TrueLayer__ClientId: ${TRUELAYER_CLIENT_ID:-}
+      TrueLayer__ClientSecret: ${TRUELAYER_CLIENT_SECRET:-}
+      TrueLayer__FrontendRedirectBase: ${TRUELAYER_FRONTEND_REDIRECT_BASE:-https://lifekit-vps.tail1cb676.ts.net:4200}
+      TrueLayer__CallbackPath: /api/v1/accounts/truelayer/callback
+      TrueLayer__Scopes: "info accounts balance transactions cards offline_access"
       # Per-user IBeam orchestration. On this VPS the compose network is named
       # "finance-sentry" (no compose prefix — see networks: block at the bottom).
       IBeam__Image: "voyz/ibeam:latest"
