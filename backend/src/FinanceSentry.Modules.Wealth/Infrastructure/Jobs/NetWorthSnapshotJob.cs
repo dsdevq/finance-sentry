@@ -36,8 +36,7 @@ public class NetWorthSnapshotJob(
         var brokerageHoldings = await _brokerageReader.GetHoldingsAsync(userId, ct);
         var brokerageTotal = brokerageHoldings.Sum(h => h.UsdValue);
 
-        var now = DateTime.UtcNow;
-        var snapshotDate = new DateOnly(now.Year, now.Month, DateTime.DaysInMonth(now.Year, now.Month));
+        var snapshotDate = DateOnly.FromDateTime(DateTime.UtcNow);
 
         await _snapshotService.PersistSnapshotAsync(userId, new NetWorthSnapshotData(
             snapshotDate, bankingTotal, brokerageTotal, cryptoTotal), ct);
