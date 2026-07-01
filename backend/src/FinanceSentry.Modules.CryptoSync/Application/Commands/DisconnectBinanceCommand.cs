@@ -14,16 +14,26 @@ public sealed class DisconnectBinanceCommandHandler(
     public async Task<Unit> Handle(DisconnectBinanceCommand command, CancellationToken cancellationToken)
     {
         var credential = await credentialRepository.GetByUserIdAsync(command.UserId, cancellationToken);
-        if (credential is null || !credential.IsActive)
+        var holdings = await holdingRepository.GetByUserIdAsync(command.UserId, cancellationToken);
+
+        var hasActiveCredential = credential is not null && credential.IsActive;
+        if (!hasActiveCredential && holdings.Count == 0)
         {
             throw new BinanceAccountNotFoundException();
         }
 
-        credential.Deactivate();
-        credentialRepository.Update(credential);
+        if (hasActiveCredential)
+        {
+            credential!.Deactivate();
+            credentialRepository.Update(credential);
+        }
 
         await holdingRepository.DeleteByUserIdAsync(command.UserId, cancellationToken);
-        await credentialRepository.SaveChangesAsync(cancellationToken);
+
+        if (hasActiveCredential)
+        {
+            await credentialRepository.SaveChangesAsync(cancellationToken);
+        }
 
         return Unit.Value;
     }
