@@ -18,6 +18,6 @@ export class BinanceService extends ApiService {
   }
 
   public disconnect(): Observable<void> {
-    return this.delete<void>();
+    return this.delete<void>('disconnect');
   }
 }
