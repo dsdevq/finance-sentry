@@ -13,6 +13,7 @@ import {
 } from '@dsdevq-common/ui';
 import {take} from 'rxjs';
 
+import {type Institution} from '../../../../shared/models/wealth/wealth.model';
 import {RelativeTimePipe} from '../../../../shared/pipes/relative-time.pipe';
 import {SyncStatusLabelPipe} from '../../../../shared/pipes/sync-status-label.pipe';
 import {SyncStatusVariantPipe} from '../../../../shared/pipes/sync-status-variant.pipe';
@@ -118,6 +119,27 @@ export class AccountsListComponent implements OnInit {
           return;
         }
         this.store.disconnectAccount(account.accountId);
+      });
+  }
+
+  public disconnectInstitution(institution: Institution): void {
+    const ref = this.dialog.open<boolean>(DisconnectDialogComponent, {
+      title: `Disconnect ${institution.name}`,
+      size: 'sm',
+      viewContainerRef: this.viewContainerRef,
+      data: {providerName: institution.name},
+    });
+    ref
+      .afterClosed()
+      .pipe(take(1))
+      .subscribe(confirmed => {
+        if (confirmed !== true) {
+          return;
+        }
+        this.store.disconnectInstitution({
+          provider: institution.provider,
+          institutionId: institution.institutionId,
+        });
       });
   }
 }

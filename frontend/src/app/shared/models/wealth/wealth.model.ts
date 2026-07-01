@@ -13,28 +13,27 @@ export interface AccountBalanceItem extends AccountIdentity {
   lastSyncTimestamp: Nullable<string>;
 }
 
+/**
+ * An institution the user has connected: one Monobank customer, one TrueLayer
+ * connection (Revolut, AIB), one Binance account, one IBKR account.
+ * Composed by the backend so the frontend never has to guess grouping.
+ * Disconnect operates at this level and cascades to every account inside.
+ */
+export interface Institution {
+  institutionId: string;
+  provider: string;
+  name: string;
+  totalInBaseCurrency: number;
+  syncStatus: SyncStatus;
+  lastSyncTimestamp: Nullable<string>;
+  accounts: AccountBalanceItem[];
+}
+
 export interface CategorySummary {
   category: AccountCategory;
   totalInBaseCurrency: number;
   institutionCount: number;
-  accounts: AccountBalanceItem[];
-}
-
-/**
- * Client-side grouping of accounts under one institution
- * (Monobank cards, Binance assets, IBKR positions, …).
- * Produced by `InstitutionUtils.groupByInstitution` from a flat
- * {@link AccountBalanceItem} list — the backend still returns per-row data.
- */
-export interface InstitutionGroup {
-  key: string;
-  name: string;
-  provider: string;
-  category: AccountCategory;
-  accounts: AccountBalanceItem[];
-  totalInBaseCurrency: number;
-  worstSyncStatus: SyncStatus;
-  latestSyncTimestamp: Nullable<string>;
+  institutions: Institution[];
 }
 
 export interface AppliedFilters {

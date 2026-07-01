@@ -64,8 +64,8 @@ public class WealthAggregationServiceTests
         var result = await svc.GetWealthSummaryAsync(UserId, null, null);
 
         result.TotalNetWorth.Should().Be(500m);
-        result.Categories.Single().Accounts.Should().HaveCount(2);
-        result.Categories.Single().Accounts.First(a => a.CurrentBalance is null).BalanceInBaseCurrency.Should().BeNull();
+        result.Categories.Single().Institutions.SelectMany(i => i.Accounts).Should().HaveCount(2);
+        result.Categories.Single().Institutions.SelectMany(i => i.Accounts).First(a => a.CurrentBalance is null).BalanceInBaseCurrency.Should().BeNull();
     }
 
     [Fact]
@@ -108,7 +108,7 @@ public class WealthAggregationServiceTests
         var result = await svc.GetWealthSummaryAsync(UserId, "banking", "monobank");
 
         result.TotalNetWorth.Should().Be(500m);
-        result.Categories.Single().Accounts.Single().Provider.Should().Be("monobank");
+        result.Categories.Single().Institutions.SelectMany(i => i.Accounts).Single().Provider.Should().Be("monobank");
     }
 
     [Fact]

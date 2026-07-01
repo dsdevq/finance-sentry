@@ -5,6 +5,10 @@ using FinanceSentry.Modules.Wealth.Domain.Services;
 
 public record AppliedFiltersDto(string? Category, string? Provider);
 
+/// <summary>
+/// A single sub-account under an institution: a Monobank card, a Revolut
+/// currency pocket, a Binance asset, an IBKR position.
+/// </summary>
 public record AccountBalanceDto(
     Guid AccountId,
     string BankName,
@@ -18,11 +22,25 @@ public record AccountBalanceDto(
     string SyncStatus,
     DateTime? LastSyncTimestamp);
 
+/// <summary>
+/// An institution the user has connected: one Monobank customer, one
+/// TrueLayer connection (Revolut, AIB), one Binance account, one IBKR account.
+/// Every disconnect flow operates at this level.
+/// </summary>
+public record InstitutionDto(
+    Guid InstitutionId,
+    string Provider,
+    string Name,
+    decimal TotalInBaseCurrency,
+    string SyncStatus,
+    DateTime? LastSyncTimestamp,
+    IReadOnlyList<AccountBalanceDto> Accounts);
+
 public record CategorySummaryDto(
     string Category,
     decimal TotalInBaseCurrency,
     int InstitutionCount,
-    IReadOnlyList<AccountBalanceDto> Accounts);
+    IReadOnlyList<InstitutionDto> Institutions);
 
 public record WealthSummaryResponse(
     decimal TotalNetWorth,

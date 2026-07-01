@@ -64,7 +64,21 @@ export function accountsEffects(store: EffectsStore) {
     )
   );
 
-  return {load, disconnectMonobank, disconnectAccount};
+  const disconnectInstitution = rxMethod<{provider: string; institutionId: string}>(
+    pipe(
+      switchMap(({provider, institutionId}) =>
+        bankSyncService.disconnectInstitution(provider, institutionId).pipe(
+          tap(() => load()),
+          catchError((err: unknown) => {
+            store.setError(extractErrorCode(err));
+            return EMPTY;
+          })
+        )
+      )
+    )
+  );
+
+  return {load, disconnectMonobank, disconnectAccount, disconnectInstitution};
 }
 
 interface HookStore {
