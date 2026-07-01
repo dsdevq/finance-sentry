@@ -26,8 +26,12 @@ public static class BrokerageSyncModule
     {
         public void RegisterJobs(IServiceProvider sp)
         {
-            sp.GetRequiredService<IRecurringJobManager>()
-                .AddOrUpdate<IBKRSyncJob>("ibkr-sync", job => job.ExecuteAsync(), "*/15 * * * *");
+            var mgr = sp.GetRequiredService<IRecurringJobManager>();
+            mgr.AddOrUpdate<IBKRSyncJob>("ibkr-sync", job => job.ExecuteAsync(), "*/15 * * * *");
+            mgr.AddOrUpdate<IBeamHealthCheckJob>(
+                "ibeam-health-check",
+                job => job.ExecuteAsync(CancellationToken.None),
+                "*/5 * * * *");
         }
     }
 
@@ -62,7 +66,11 @@ public static class BrokerageSyncModule
         services.AddScoped<IIBKRCredentialRepository, IBKRCredentialRepository>();
         services.AddScoped<IBrokerageHoldingRepository, BrokerageHoldingRepository>();
         services.AddScoped<IBrokerageHoldingsReader, BrokerageHoldingsReader>();
+        services.AddScoped<IIBeamReconciler, IBeamReconciler>();
         services.AddScoped<IBKRSyncJob>();
+        services.AddScoped<IBeamHealthCheckJob>();
+
+        services.AddHostedService<IBeamStartupReconcilerHostedService>();
 
         services.AddSingleton<IJobRegistrar, JobRegistrar>();
 

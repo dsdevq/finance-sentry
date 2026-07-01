@@ -89,6 +89,21 @@ public sealed class IBeamContainerManager : IIBeamContainerManager
         await RemoveIfExistsAsync(containerName, ct);
     }
 
+    public async Task<bool> IsRunningAsync(Guid credentialId, CancellationToken ct = default)
+    {
+        var containerName = _resolver.ContainerName(credentialId);
+        var containers = await _docker.Containers.ListContainersAsync(new ContainersListParameters
+        {
+            All = true,
+            Filters = new Dictionary<string, IDictionary<string, bool>>
+            {
+                ["name"] = new Dictionary<string, bool> { [containerName] = true },
+            },
+        }, ct);
+
+        return containers.Any(c => string.Equals(c.State, "running", StringComparison.OrdinalIgnoreCase));
+    }
+
     public async Task<bool> WaitForAuthAsync(Guid credentialId, CancellationToken ct = default)
     {
         var baseUrl = _resolver.BaseUrl(credentialId);
