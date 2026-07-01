@@ -1,6 +1,11 @@
+// Prod environment — served from the nginx container in docker-compose.prod.yml.
+// nginx reverse-proxies /api/* to the api container on the finance-sentry bridge
+// network, so the browser hits same-origin /api/v1/... and SameSite=Strict
+// cookies survive.
 export const environment = {
   production: true,
-  apiBaseUrl: 'https://api.finance-sentry.com/api',
+  apiBaseUrl: '/api/v1',
   apiVersion: 'v1',
-  wsUrl: 'wss://api.finance-sentry.com',
+  wsUrl: '/ws',
+  googleClientId: '687161855116-17f9guiugj8cdlat8h8c1vn5ji1irt8p.apps.googleusercontent.com',
 };

@@ -1,0 +1,28 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: build + deploy on lifekit-vps
+    runs-on: [self-hosted, lifekit-vps, finance-sentry]
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy
+        run: ./docker/deploy.sh
+
+      - name: Logs on failure
+        if: failure()
+        run: |
+          docker compose -f docker/docker-compose.prod.yml ps
+          docker compose -f docker/docker-compose.prod.yml logs --tail 100
