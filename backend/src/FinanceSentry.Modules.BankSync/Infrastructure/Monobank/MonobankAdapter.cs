@@ -50,7 +50,7 @@ public class MonobankAdapter(MonobankHttpClient client, MonobankCategoryMapper c
             OwnerName: info.Name)).ToList();
     }
 
-    async Task<(IReadOnlyList<TransactionCandidate> Candidates, DateTime? NextSyncFrom)> IBankProvider.SyncTransactionsAsync(
+    public async Task<(IReadOnlyList<TransactionCandidate> Candidates, DateTime? NextSyncFrom)> SyncTransactionsAsync(
         string credential, string externalAccountId, Guid accountId, Guid userId,
         DateTime? since, CancellationToken ct)
     {
@@ -60,8 +60,11 @@ public class MonobankAdapter(MonobankHttpClient client, MonobankCategoryMapper c
         if (since.HasValue)
         {
             var from = new DateTimeOffset(since.Value.AddSeconds(1), TimeSpan.Zero);
-            var txns = await _client.GetStatementsAsync(credential, externalAccountId, from, now, ct);
-            candidates.AddRange(MapTransactions(txns, accountId, userId));
+            if (from < now)
+            {
+                var txns = await _client.GetStatementsAsync(credential, externalAccountId, from, now, ct);
+                candidates.AddRange(MapTransactions(txns, accountId, userId));
+            }
         }
         else
         {

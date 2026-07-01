@@ -30,8 +30,14 @@ services:
       Jwt__ExpirationMinutes: ${JWT_EXPIRATION_MINUTES:-60}
       Deduplication__MasterKeyBase64: ${DEDUPLICATION_MASTER_KEY_BASE64}
       GOOGLEOAUTH__CLIENTID: ${GOOGLE_CLIENT_ID:-}
-      IBKR__GatewayBaseUrl: "https://ibkr-gateway:5000"
-      IBKR__AllowSelfSignedCert: "true"
+      # Per-user IBeam orchestration. On this VPS the compose network is named
+      # "finance-sentry" (no compose prefix — see networks: block at the bottom).
+      IBeam__Image: "voyz/ibeam:latest"
+      IBeam__Network: "${IBEAM_NETWORK:-finance-sentry}"
+      IBeam__ConfHostPath: "${IBEAM_CONF_HOST_PATH:-/srv/finance-sentry/docker/ibkr/conf.yaml}"
+      IBeam__ContainerNamePrefix: "finance-sentry-ibkr"
+      IBeam__SpawnTimeoutSeconds: "120"
+      IBeam__DockerEndpoint: "unix:///var/run/docker.sock"
     ports:
       - "127.0.0.1:${API_PORT:-5001}:5000"
     depends_on:
@@ -48,6 +54,8 @@ services:
       start_period: 40s
     volumes:
       - api_logs:/app/logs
+      # Docker socket for per-user IBeam container orchestration
+      - /var/run/docker.sock:/var/run/docker.sock
     logging:
       driver: json-file
       options: { max-size: "10m", max-file: "3" }
@@ -124,29 +132,10 @@ services:
       driver: json-file
       options: { max-size: "10m", max-file: "3" }
 
-  # IBKR gateway optional — only required if you connect IBKR. Comment out otherwise.
-  ibkr-gateway:
-    image: voyz/ibeam:latest
-    container_name: finance-sentry-ibkr-gateway
-    restart: unless-stopped
-    environment:
-      IBEAM_ACCOUNT: ${IBKR_ACCOUNT:-}
-      IBEAM_PASSWORD: ${IBKR_PASSWORD:-}
-      IBEAM_GATEWAY_BASE_URL: "https://localhost:5000"
-      IBEAM_LOG_LEVEL: INFO
-    volumes:
-      - ./ibkr/conf.yaml:/srv/inputs/conf.yaml
-    networks:
-      - finance-sentry
-    healthcheck:
-      test: ["CMD", "curl", "-skf", "https://localhost:5000/v1/api/iserver/auth/status"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-    logging:
-      driver: json-file
-      options: { max-size: "10m", max-file: "3" }
+  # Per-user IBeam gateway containers are spawned dynamically by the API via
+  # the Docker socket (mounted above). No shared single-tenant ibkr-gateway
+  # service — connect via POST /api/v1/brokerage/ibkr/connect to spin one up
+  # under the name finance-sentry-ibkr-{shortId}.
 
 volumes:
   postgres_data:

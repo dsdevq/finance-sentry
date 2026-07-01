@@ -1,5 +1,6 @@
 import {DecimalPipe} from '@angular/common';
-import {ChangeDetectionStrategy, Component, inject, ViewContainerRef} from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject, OnInit, ViewContainerRef} from '@angular/core';
+import {ActivatedRoute, Router} from '@angular/router';
 import {
   AlertComponent,
   ButtonComponent,
@@ -8,6 +9,7 @@ import {
   InstitutionAvatarComponent,
   SkeletonComponent,
   StatusIndicatorComponent,
+  ToastService,
 } from '@dsdevq-common/ui';
 import {take} from 'rxjs';
 
@@ -42,13 +44,31 @@ const SKELETON_ROWS = 5;
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [AccountsStore, ConnectStore],
 })
-export class AccountsListComponent {
+export class AccountsListComponent implements OnInit {
   private readonly dialog = inject(CmnDialogService);
   private readonly viewContainerRef = inject(ViewContainerRef);
   private readonly connectStore = inject(ConnectStore);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly toast = inject(ToastService);
 
   public readonly store = inject(AccountsStore);
   public readonly skeletonRows = Array.from({length: SKELETON_ROWS});
+
+  public ngOnInit(): void {
+    const params = this.route.snapshot.queryParamMap;
+    const connected = params.get('connected');
+    const connectError = params.get('connectError');
+
+    if (connected === 'truelayer') {
+      this.toast.show('Bank connected. Syncing your accounts now.', 'success');
+      this.clearConnectQueryParams();
+      this.store.load();
+    } else if (connectError) {
+      this.toast.show(`Connection failed: ${connectError}`, 'error');
+      this.clearConnectQueryParams();
+    }
+  }
 
   public connectAccount(): void {
     this.connectStore.openModal();
@@ -56,6 +76,26 @@ export class AccountsListComponent {
       title: 'Connect account',
       size: 'md',
       viewContainerRef: this.viewContainerRef,
+    });
+  }
+
+  public reconnect(): void {
+    this.connectStore.openModal();
+    this.connectStore.selectInstitutionType('bank');
+    this.connectStore.selectBankProvider('truelayer');
+    this.dialog.open(ConnectModalComponent, {
+      title: 'Reconnect bank',
+      size: 'md',
+      viewContainerRef: this.viewContainerRef,
+    });
+  }
+
+  private clearConnectQueryParams(): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {connected: null, connectError: null},
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
     });
   }
 

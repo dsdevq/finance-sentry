@@ -27,6 +27,13 @@ public sealed class BrokerageSyncDbContext : DbContext
             entity.Property(e => e.IsActive).IsRequired();
             entity.Property(e => e.CreatedAt).IsRequired();
             entity.Property(e => e.LastSyncError).HasMaxLength(1000);
+            entity.Property(e => e.EncryptedUsername).IsRequired().HasColumnType("bytea");
+            entity.Property(e => e.UsernameIv).IsRequired().HasColumnType("bytea");
+            entity.Property(e => e.UsernameAuthTag).IsRequired().HasColumnType("bytea");
+            entity.Property(e => e.EncryptedPassword).IsRequired().HasColumnType("bytea");
+            entity.Property(e => e.PasswordIv).IsRequired().HasColumnType("bytea");
+            entity.Property(e => e.PasswordAuthTag).IsRequired().HasColumnType("bytea");
+            entity.Property(e => e.KeyVersion).IsRequired().HasDefaultValue(1);
         });
 
         modelBuilder.Entity<BrokerageHolding>(entity =>

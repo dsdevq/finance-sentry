@@ -7,7 +7,7 @@ public interface INetWorthSnapshotService
         NetWorthSnapshotData data,
         CancellationToken ct = default);
 
-    Task<bool> HasSnapshotForCurrentMonthAsync(
+    Task<bool> HasSnapshotForTodayAsync(
         Guid userId,
         CancellationToken ct = default);
 }

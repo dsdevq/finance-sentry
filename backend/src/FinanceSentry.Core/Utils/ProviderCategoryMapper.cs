@@ -6,6 +6,7 @@ public static class ProviderCategoryMapper
     {
         ["plaid"] = "banking",
         ["monobank"] = "banking",
+        ["truelayer"] = "banking",
         ["binance"] = "crypto",
         ["ibkr"] = "brokerage",
     };

@@ -1,24 +1,26 @@
 using FinanceSentry.Core.Cqrs;
+using FinanceSentry.Infrastructure.Encryption;
 using FinanceSentry.Modules.BrokerageSync.Domain;
 using FinanceSentry.Modules.BrokerageSync.Domain.Exceptions;
-using FinanceSentry.Modules.BrokerageSync.Domain.Interfaces;
 using FinanceSentry.Modules.BrokerageSync.Domain.Repositories;
+using FinanceSentry.Modules.BrokerageSync.Infrastructure.IBKR;
 
 namespace FinanceSentry.Modules.BrokerageSync.Application.Commands;
 
 /// <summary>
-/// Empty body — under the single-tenant gateway model the user does not supply
-/// IBKR credentials. The IBeam sidecar already owns the broker session.
+/// Per-user IBKR connect request. Username and password are encrypted at rest,
+/// then used to spawn the user's dedicated IBeam gateway container.
 /// </summary>
-public sealed record ConnectIBKRRequest;
+public sealed record ConnectIBKRRequest(string Username, string Password);
 
-public sealed record ConnectIBKRCommand(Guid UserId) : ICommand<ConnectIBKRResult>;
+public sealed record ConnectIBKRCommand(Guid UserId, string Username, string Password) : ICommand<ConnectIBKRResult>;
 
 public sealed record ConnectIBKRResult(int HoldingsCount, DateTime ConnectedAt, string AccountId);
 
 public sealed class ConnectIBKRCommandHandler(
     IIBKRCredentialRepository credentialRepository,
-    IBrokerAdapter adapter,
+    ICredentialEncryptionService encryption,
+    IIBeamContainerManager containerManager,
     ICommandHandler<SyncIBKRHoldingsCommand, SyncIBKRHoldingsResult> syncHandler)
     : ICommandHandler<ConnectIBKRCommand, ConnectIBKRResult>
 {
@@ -29,17 +31,37 @@ public sealed class ConnectIBKRCommandHandler(
             throw new BrokerAlreadyConnectedException(
                 "An IBKR account is already connected for this user.");
 
-        await adapter.EnsureSessionAsync(cancellationToken);
+        var encryptedUsername = encryption.Encrypt(command.Username);
+        var encryptedPassword = encryption.Encrypt(command.Password);
 
-        var accountId = await adapter.GetAccountIdAsync(cancellationToken);
-
-        var credential = new IBKRCredential(command.UserId, accountId);
+        var credential = new IBKRCredential(
+            command.UserId,
+            encryptedUsername.Ciphertext,
+            encryptedUsername.Iv,
+            encryptedUsername.AuthTag,
+            encryptedPassword.Ciphertext,
+            encryptedPassword.Iv,
+            encryptedPassword.AuthTag,
+            encryptedUsername.KeyVersion);
 
         await credentialRepository.AddAsync(credential, cancellationToken);
         await credentialRepository.SaveChangesAsync(cancellationToken);
 
-        var syncResult = await syncHandler.Handle(new SyncIBKRHoldingsCommand(command.UserId), cancellationToken);
+        await containerManager.SpawnAsync(
+            credential.Id, command.Username, command.Password, cancellationToken);
 
-        return new ConnectIBKRResult(syncResult.HoldingsCount, syncResult.SyncedAt, accountId);
+        var authenticated = await containerManager.WaitForAuthAsync(credential.Id, cancellationToken);
+        if (!authenticated)
+            throw new BrokerAuthException(
+                "IBKR gateway did not authenticate within the configured timeout. Check the credentials and gateway logs.",
+                "IBKR");
+
+        var syncResult = await syncHandler.Handle(
+            new SyncIBKRHoldingsCommand(command.UserId), cancellationToken);
+
+        return new ConnectIBKRResult(
+            syncResult.HoldingsCount,
+            syncResult.SyncedAt,
+            credential.AccountId ?? string.Empty);
     }
 }

@@ -50,15 +50,32 @@ describe('IbkrFormComponent', () => {
     TestBed.resetTestingModule();
   });
 
-  it('connect() dispatches store.connect with the injected strategy and undefined payload', () => {
+  it('submit() dispatches store.connect with the trimmed credentials', () => {
     const store = buildConnectStore();
     const strategy = buildStrategy();
     configure(store, buildHoldingsStore(), strategy);
 
     const fixture = TestBed.createComponent(IbkrFormComponent);
-    fixture.componentInstance.connect();
+    const cmp = fixture.componentInstance;
+    cmp.form.setValue({username: '  ibkr-user  ', password: 'ibkr-pass'});
 
-    expect(store.connect).toHaveBeenCalledWith({strategy, payload: undefined});
+    cmp.submit();
+
+    expect(store.connect).toHaveBeenCalledWith({
+      strategy,
+      payload: {username: 'ibkr-user', password: 'ibkr-pass'},
+    });
+  });
+
+  it('submit() blocks and marks touched when the form is invalid', () => {
+    const store = buildConnectStore();
+    configure(store, buildHoldingsStore(), buildStrategy());
+
+    const fixture = TestBed.createComponent(IbkrFormComponent);
+    fixture.componentInstance.submit();
+
+    expect(store.connect).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.form.controls.username.touched).toBe(true);
   });
 
   it('isDuplicateError flips when error code is IBKR_DUPLICATE', () => {
@@ -69,23 +86,20 @@ describe('IbkrFormComponent', () => {
     expect(fixture.componentInstance.isDuplicateError()).toBe(true);
   });
 
-  it('disconnectExisting calls holdingsStore.disconnectIBKR and resets error', () => {
+  it('disconnectExisting calls holdingsStore.disconnectIBKR, resets error, and clears the form', () => {
     const store = buildConnectStore('IBKR_DUPLICATE');
     const holdings = buildHoldingsStore();
     configure(store, holdings, buildStrategy());
 
     const fixture = TestBed.createComponent(IbkrFormComponent);
-    fixture.componentInstance.disconnectExisting();
+    const cmp = fixture.componentInstance;
+    cmp.form.setValue({username: 'x', password: 'y'});
+
+    cmp.disconnectExisting();
 
     expect(holdings.disconnectIBKR).toHaveBeenCalledOnce();
     expect(store.resetError).toHaveBeenCalledOnce();
-  });
-
-  it('renders the single-tenant gateway notice', () => {
-    configure(buildConnectStore(), buildHoldingsStore(), buildStrategy());
-
-    const fixture = TestBed.createComponent(IbkrFormComponent);
-    fixture.detectChanges();
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('gateway');
+    expect(cmp.form.controls.username.value).toBe('');
+    expect(cmp.form.controls.password.value).toBe('');
   });
 });

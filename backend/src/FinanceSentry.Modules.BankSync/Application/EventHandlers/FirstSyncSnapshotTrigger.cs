@@ -16,7 +16,7 @@ public class FirstSyncSnapshotTrigger(
         if (@event.Status != "success")
             return;
 
-        if (await _snapshotService.HasSnapshotForCurrentMonthAsync(@event.UserId, cancellationToken))
+        if (await _snapshotService.HasSnapshotForTodayAsync(@event.UserId, cancellationToken))
             return;
 
         _jobScheduler.ScheduleForUser(@event.UserId);

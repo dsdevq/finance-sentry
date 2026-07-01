@@ -2,9 +2,9 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using FinanceSentry.Modules.BrokerageSync.Domain;
-using FinanceSentry.Modules.BrokerageSync.Domain.Exceptions;
 using FinanceSentry.Modules.BrokerageSync.Domain.Interfaces;
 using FinanceSentry.Modules.BrokerageSync.Domain.Repositories;
+using FinanceSentry.Modules.BrokerageSync.Infrastructure.IBKR;
 using FinanceSentry.Modules.BrokerageSync.Infrastructure.Persistence;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
@@ -34,53 +34,52 @@ public class BrokerageControllerConnectContractTests(BrokerageApiFactory factory
     public async Task Connect_NoAuth_Returns401()
     {
         var anonClient = _factory.CreateClient();
-        var response = await anonClient.PostAsync("/api/v1/brokerage/ibkr/connect", content: null);
+        var response = await anonClient.PostAsJsonAsync(
+            "/api/v1/brokerage/ibkr/connect",
+            new { Username = "u", Password = "p" });
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
-    public async Task Connect_GatewaySessionNotAuthenticated_Returns422()
-    {
-        _factory.CredentialRepoMock
-            .Setup(r => r.GetByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((IBKRCredential?)null);
-
-        _factory.AdapterMock
-            .Setup(a => a.EnsureSessionAsync(It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new BrokerAuthException("not authenticated", "IBKR"));
-
-        var response = await _client.PostAsync("/api/v1/brokerage/ibkr/connect", content: null);
-
-        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
-        var body = await response.Content.ReadFromJsonAsync<BrokerageErrorShape>();
-        body!.ErrorCode.Should().Be("INVALID_CREDENTIALS");
-    }
-
-    [Fact]
-    public async Task Connect_GatewayAuthenticated_Returns201WithShape()
+    public async Task Connect_StoresEncryptedCredential_SpawnsGateway_Returns201()
     {
         _factory.SetupSuccessfulConnect();
 
-        var response = await _client.PostAsync("/api/v1/brokerage/ibkr/connect", content: null);
+        var response = await _client.PostAsJsonAsync(
+            "/api/v1/brokerage/ibkr/connect",
+            new { Username = "u", Password = "p" });
 
+        if (response.StatusCode != HttpStatusCode.Created)
+        {
+            var bodyText = await response.Content.ReadAsStringAsync();
+            throw new Xunit.Sdk.XunitException($"Expected 201, got {(int)response.StatusCode}. Body: {bodyText}");
+        }
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         var body = await response.Content.ReadFromJsonAsync<BrokerageConnectResponseShape>();
         body.Should().NotBeNull();
-        body!.AccountId.Should().Be("U1234567");
-        body.HoldingsCount.Should().BeGreaterThanOrEqualTo(0);
-        body.ConnectedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(1));
+        body!.ConnectedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(1));
+
+        // Container was actually spawned and awaited.
+        _factory.ContainerManagerMock.Verify(
+            m => m.SpawnAsync(It.IsAny<Guid>(), "u", "p", It.IsAny<CancellationToken>()),
+            Times.Once);
+        _factory.ContainerManagerMock.Verify(
+            m => m.WaitForAuthAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
     public async Task Connect_AlreadyConnected_Returns409()
     {
-        var existingCredential = new IBKRCredential(_factory.TestUserId, "U1234567");
+        var existingCredential = new IBKRCredential(_factory.TestUserId, [1], [2], [3], [4], [5], [6], keyVersion: 1);
 
         _factory.CredentialRepoMock
             .Setup(r => r.GetByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingCredential);
 
-        var response = await _client.PostAsync("/api/v1/brokerage/ibkr/connect", content: null);
+        var response = await _client.PostAsJsonAsync(
+            "/api/v1/brokerage/ibkr/connect",
+            new { Username = "u", Password = "p" });
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
         var body = await response.Content.ReadFromJsonAsync<BrokerageErrorShape>();
@@ -107,6 +106,7 @@ public class BrokerageApiFactory : WebApplicationFactory<Program>
     public Mock<IIBKRCredentialRepository> CredentialRepoMock { get; } = new(MockBehavior.Loose);
     public Mock<IBrokerageHoldingRepository> HoldingRepoMock { get; } = new(MockBehavior.Loose);
     public Mock<IBrokerAdapter> AdapterMock { get; } = new(MockBehavior.Loose);
+    public Mock<IIBeamContainerManager> ContainerManagerMock { get; } = new(MockBehavior.Loose);
 
     public Guid TestUserId { get; } = Guid.NewGuid();
 
@@ -117,6 +117,7 @@ public class BrokerageApiFactory : WebApplicationFactory<Program>
             ReplaceService(services, CredentialRepoMock.Object);
             ReplaceService(services, HoldingRepoMock.Object);
             ReplaceService<IBrokerAdapter>(services, AdapterMock.Object);
+            ReplaceService(services, ContainerManagerMock.Object);
 
             ReplaceDbContextWithInMemory<FinanceSentry.Modules.BankSync.Infrastructure.Persistence.BankSyncDbContext>(
                 services, $"BrokerageTestBankSync_{Guid.NewGuid()}");
@@ -147,7 +148,17 @@ public class BrokerageApiFactory : WebApplicationFactory<Program>
 
     public void SetupSuccessfulConnect()
     {
-        var mockCredential = new IBKRCredential(TestUserId, "U1234567");
+        ContainerManagerMock
+            .Setup(m => m.SpawnAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        ContainerManagerMock
+            .Setup(m => m.WaitForAuthAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        ContainerManagerMock
+            .Setup(m => m.StopAndRemoveAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var mockCredential = new IBKRCredential(TestUserId, [1], [2], [3], [4], [5], [6], keyVersion: 1);
 
         CredentialRepoMock
             .SetupSequence(r => r.GetByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
@@ -164,13 +175,13 @@ public class BrokerageApiFactory : WebApplicationFactory<Program>
             .Setup(r => r.Update(It.IsAny<IBKRCredential>()));
 
         AdapterMock
-            .Setup(a => a.EnsureSessionAsync(It.IsAny<CancellationToken>()))
+            .Setup(a => a.EnsureSessionAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
         AdapterMock
-            .Setup(a => a.GetAccountIdAsync(It.IsAny<CancellationToken>()))
+            .Setup(a => a.GetAccountIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync("U1234567");
         AdapterMock
-            .Setup(a => a.GetPositionsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(a => a.GetPositionsAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((IReadOnlyList<BrokerPosition>)[]);
         AdapterMock
             .Setup(a => a.BrokerName)
@@ -183,6 +194,9 @@ public class BrokerageApiFactory : WebApplicationFactory<Program>
         HoldingRepoMock
             .Setup(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
+        HoldingRepoMock
+            .Setup(r => r.GetByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
     }
 
     public HttpClient CreateAuthenticatedClient()

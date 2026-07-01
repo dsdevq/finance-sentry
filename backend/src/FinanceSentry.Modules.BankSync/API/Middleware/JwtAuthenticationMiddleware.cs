@@ -27,7 +27,8 @@ public class JwtAuthenticationMiddleware
         "/swagger",
         "/api/v1/webhook",
         "/hangfire",
-        "/api/v1/auth"
+        "/api/v1/auth",
+        "/api/v1/accounts/truelayer/callback"
     ];
 
     public JwtAuthenticationMiddleware(

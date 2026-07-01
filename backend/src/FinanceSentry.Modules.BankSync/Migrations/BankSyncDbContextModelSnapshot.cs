@@ -145,6 +145,9 @@ namespace FinanceSentry.Modules.BankSync.Migrations
                         .HasColumnType("character varying(50)")
                         .HasDefaultValue("pending");
 
+                    b.Property<Guid?>("TrueLayerConnectionId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -164,6 +167,8 @@ namespace FinanceSentry.Modules.BankSync.Migrations
 
                     b.HasIndex("SyncStatus")
                         .HasDatabaseName("idx_bank_account_sync_status");
+
+                    b.HasIndex("TrueLayerConnectionId");
 
                     b.HasIndex("UserId")
                         .HasDatabaseName("idx_bank_account_user_id");
@@ -441,6 +446,84 @@ namespace FinanceSentry.Modules.BankSync.Migrations
                     b.ToTable("Transactions", "bank_sync");
                 });
 
+            modelBuilder.Entity("FinanceSentry.Modules.BankSync.Domain.TrueLayerConnection", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<byte[]>("AuthTag")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<DateTime?>("ConnectionExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<byte[]>("EncryptedRefreshToken")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<byte[]>("Iv")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<int>("KeyVersion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
+
+                    b.Property<DateTime?>("LastSyncAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ProviderDisplayName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("ProviderId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Reference")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("CREATED");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Reference")
+                        .IsUnique()
+                        .HasDatabaseName("idx_truelayer_connection_reference_unique");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("idx_truelayer_connection_user_id");
+
+                    b.HasIndex("UserId", "ProviderId")
+                        .IsUnique()
+                        .HasDatabaseName("idx_truelayer_connection_user_provider_unique");
+
+                    b.ToTable("TrueLayerConnections", "bank_sync");
+                });
+
             modelBuilder.Entity("FinanceSentry.Modules.BankSync.Domain.BankAccount", b =>
                 {
                     b.HasOne("FinanceSentry.Modules.BankSync.Domain.MonobankCredential", "MonobankCredential")
@@ -448,7 +531,14 @@ namespace FinanceSentry.Modules.BankSync.Migrations
                         .HasForeignKey("MonobankCredentialId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("FinanceSentry.Modules.BankSync.Domain.TrueLayerConnection", "TrueLayerConnection")
+                        .WithMany("BankAccounts")
+                        .HasForeignKey("TrueLayerConnectionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("MonobankCredential");
+
+                    b.Navigation("TrueLayerConnection");
                 });
 
             modelBuilder.Entity("FinanceSentry.Modules.BankSync.Domain.EncryptedCredential", b =>
@@ -494,6 +584,11 @@ namespace FinanceSentry.Modules.BankSync.Migrations
                 });
 
             modelBuilder.Entity("FinanceSentry.Modules.BankSync.Domain.MonobankCredential", b =>
+                {
+                    b.Navigation("BankAccounts");
+                });
+
+            modelBuilder.Entity("FinanceSentry.Modules.BankSync.Domain.TrueLayerConnection", b =>
                 {
                     b.Navigation("BankAccounts");
                 });

@@ -21,8 +21,12 @@ public class IBKRSyncJobTests
     private IBKRSyncJob CreateJob() =>
         new(_credentialRepo.Object, _syncHandler.Object, _alerts.Object, _userPrefs.Object, NullLogger<IBKRSyncJob>.Instance);
 
-    private static IBKRCredential MakeCredential(Guid userId) =>
-        new(userId, "U1234567");
+    private static IBKRCredential MakeCredential(Guid userId)
+    {
+        var c = new IBKRCredential(userId, [1], [2], [3], [4], [5], [6], keyVersion: 1);
+        c.UpdateAccountId("U1234567");
+        return c;
+    }
 
     [Fact]
     public async Task ExecuteAsync_IteratesAllActiveCredentials()

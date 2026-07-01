@@ -54,13 +54,33 @@ public class DashboardQueryService(
         var topCats = await _categories.GetTopCategoriesAsync(userId, 10, ct);
         var lastSync = await _syncJobs.GetLatestSuccessfulByUserIdAsync(userId, ct);
 
-        var cryptoTotalUsd = _cryptoHoldingsReader is not null
-            ? (await _cryptoHoldingsReader.GetHoldingsAsync(userId, ct)).Sum(h => h.UsdValue)
-            : 0m;
+        var cryptoHoldings = _cryptoHoldingsReader is not null
+            ? await _cryptoHoldingsReader.GetHoldingsAsync(userId, ct)
+            : [];
+        var brokerageHoldings = _brokerageHoldingsReader is not null
+            ? await _brokerageHoldingsReader.GetHoldingsAsync(userId, ct)
+            : [];
 
-        var brokerageTotalUsd = _brokerageHoldingsReader is not null
-            ? (await _brokerageHoldingsReader.GetHoldingsAsync(userId, ct)).Sum(h => h.UsdValue)
-            : 0m;
+        var cryptoTotalUsd = cryptoHoldings.Sum(h => h.UsdValue);
+        var brokerageTotalUsd = brokerageHoldings.Sum(h => h.UsdValue);
+
+        var cryptoConnections = cryptoHoldings.Select(h => h.Provider).Distinct(StringComparer.OrdinalIgnoreCase).Count();
+        var brokerageConnections = brokerageHoldings.Select(h => h.Provider).Distinct(StringComparer.OrdinalIgnoreCase).Count();
+
+        if (cryptoConnections > 0)
+        {
+            byType["crypto"] = cryptoConnections;
+        }
+        if (brokerageConnections > 0)
+        {
+            byType["brokerage"] = brokerageConnections;
+        }
+
+        var nonBankUsd = cryptoTotalUsd + brokerageTotalUsd;
+        if (nonBankUsd > 0)
+        {
+            balance["USD"] = balance.TryGetValue("USD", out var existingUsd) ? existingUsd + nonBankUsd : nonBankUsd;
+        }
 
         var accountCount = byType.Values.Sum();
 

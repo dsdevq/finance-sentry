@@ -3,26 +3,19 @@ using System.Text;
 using FinanceSentry.Modules.BrokerageSync.Domain.Exceptions;
 using FinanceSentry.Modules.BrokerageSync.Infrastructure.IBKR;
 using FluentAssertions;
-using Microsoft.Extensions.Configuration;
 using Xunit;
 
 namespace FinanceSentry.Tests.Integration.BrokerageSync;
 
 public class IBKRAdapterContractTests
 {
-    private static IBKRGatewayClient CreateClient(HttpMessageHandler handler)
-    {
-        var http = new HttpClient(handler);
-        var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["IBKR:GatewayBaseUrl"] = "http://ibkr-gateway:5000",
-            })
-            .Build();
-        return new IBKRGatewayClient(http, config, Microsoft.Extensions.Logging.Abstractions.NullLogger<IBKRGatewayClient>.Instance);
-    }
+    private static readonly Guid TestCredentialId = Guid.Parse("11111111-2222-3333-4444-555555555555");
 
-    private static IBKRAdapter CreateAdapter(IBKRGatewayClient client) => new(client);
+    private static IBKRGatewayClient CreateClient(HttpMessageHandler handler)
+        => new(new HttpClient(handler), Microsoft.Extensions.Logging.Abstractions.NullLogger<IBKRGatewayClient>.Instance);
+
+    private static IBKRAdapter CreateAdapter(IBKRGatewayClient client)
+        => new(client, new StaticResolver(new Uri("http://ibkr-gateway:5000")));
 
     [Fact]
     public async Task EnsureSessionAsync_Succeeds_WhenGatewayReturnsAuthenticated()
@@ -33,7 +26,7 @@ public class IBKRAdapterContractTests
         });
 
         var adapter = CreateAdapter(CreateClient(handler));
-        var act = async () => await adapter.EnsureSessionAsync();
+        var act = async () => await adapter.EnsureSessionAsync(TestCredentialId);
         await act.Should().NotThrowAsync();
     }
 
@@ -46,7 +39,7 @@ public class IBKRAdapterContractTests
         });
 
         var adapter = CreateAdapter(CreateClient(handler));
-        var act = async () => await adapter.EnsureSessionAsync();
+        var act = async () => await adapter.EnsureSessionAsync(TestCredentialId);
 
         await act.Should().ThrowAsync<BrokerAuthException>()
             .WithMessage("*not authenticated*");
@@ -61,7 +54,7 @@ public class IBKRAdapterContractTests
         });
 
         var adapter = CreateAdapter(CreateClient(handler));
-        var accountId = await adapter.GetAccountIdAsync();
+        var accountId = await adapter.GetAccountIdAsync(TestCredentialId);
 
         accountId.Should().Be("U1234567");
     }
@@ -80,7 +73,7 @@ public class IBKRAdapterContractTests
         });
 
         var adapter = CreateAdapter(CreateClient(handler));
-        var positions = await adapter.GetPositionsAsync("U1234567");
+        var positions = await adapter.GetPositionsAsync(TestCredentialId, "U1234567");
 
         positions.Should().HaveCount(2);
         positions[0].Symbol.Should().Be("AAPL");
@@ -105,7 +98,7 @@ public class IBKRAdapterContractTests
         });
 
         var adapter = CreateAdapter(CreateClient(handler));
-        var positions = await adapter.GetPositionsAsync("U1234567");
+        var positions = await adapter.GetPositionsAsync(TestCredentialId, "U1234567");
 
         positions.Should().HaveCount(2);
         positions[1].Symbol.Should().Be("EXPOPT");
@@ -114,6 +107,12 @@ public class IBKRAdapterContractTests
 }
 
 // ── Test doubles ──────────────────────────────────────────────────────────────
+
+internal sealed class StaticResolver(Uri baseUrl) : IIBeamGatewayResolver
+{
+    public string ContainerName(Guid credentialId) => $"test-ibeam-{credentialId:N}"[..20];
+    public Uri BaseUrl(Guid credentialId) => baseUrl;
+}
 
 public sealed class FakeIBKRMultiHandler(Dictionary<string, (string body, HttpStatusCode code)> responses)
     : HttpMessageHandler

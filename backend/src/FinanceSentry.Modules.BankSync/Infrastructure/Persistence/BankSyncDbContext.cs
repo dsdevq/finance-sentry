@@ -11,6 +11,7 @@ public class BankSyncDbContext(DbContextOptions<BankSyncDbContext> options) : Db
     public DbSet<EncryptedCredential> EncryptedCredentials { get; set; } = null!;
     public DbSet<AuditLog> AuditLogs { get; set; } = null!;
     public DbSet<MonobankCredential> MonobankCredentials { get; set; } = null!;
+    public DbSet<TrueLayerConnection> TrueLayerConnections { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -37,6 +38,7 @@ public class BankSyncDbContext(DbContextOptions<BankSyncDbContext> options) : Db
         bab.HasMany(ba => ba.SyncJobs).WithOne(sj => sj.Account).HasForeignKey(sj => sj.AccountId).OnDelete(DeleteBehavior.Cascade);
         bab.HasOne(ba => ba.EncryptedCredential).WithOne(ec => ec.Account).HasForeignKey<EncryptedCredential>(ec => ec.AccountId).OnDelete(DeleteBehavior.Cascade);
         bab.HasOne(ba => ba.MonobankCredential).WithMany(mc => mc.BankAccounts).HasForeignKey(ba => ba.MonobankCredentialId).OnDelete(DeleteBehavior.SetNull).IsRequired(false);
+        bab.HasOne(ba => ba.TrueLayerConnection).WithMany(tc => tc.BankAccounts).HasForeignKey(ba => ba.TrueLayerConnectionId).OnDelete(DeleteBehavior.SetNull).IsRequired(false);
 
         var mcb = modelBuilder.Entity<MonobankCredential>();
         mcb.HasKey(mc => mc.Id);
@@ -47,6 +49,21 @@ public class BankSyncDbContext(DbContextOptions<BankSyncDbContext> options) : Db
         mcb.Property(mc => mc.AuthTag).IsRequired();
         mcb.Property(mc => mc.KeyVersion).HasDefaultValue(1);
         mcb.Property(mc => mc.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+        var tlb = modelBuilder.Entity<TrueLayerConnection>();
+        tlb.HasKey(tc => tc.Id);
+        tlb.HasIndex(tc => tc.UserId).HasDatabaseName("idx_truelayer_connection_user_id");
+        tlb.HasIndex(tc => new { tc.UserId, tc.ProviderId }).IsUnique().HasDatabaseName("idx_truelayer_connection_user_provider_unique");
+        tlb.HasIndex(tc => tc.Reference).IsUnique().HasDatabaseName("idx_truelayer_connection_reference_unique");
+        tlb.Property(tc => tc.ProviderId).IsRequired().HasMaxLength(64);
+        tlb.Property(tc => tc.ProviderDisplayName).IsRequired().HasMaxLength(255);
+        tlb.Property(tc => tc.Reference).IsRequired().HasMaxLength(64);
+        tlb.Property(tc => tc.Status).IsRequired().HasMaxLength(20).HasDefaultValue("CREATED");
+        tlb.Property(tc => tc.EncryptedRefreshToken).IsRequired();
+        tlb.Property(tc => tc.Iv).IsRequired();
+        tlb.Property(tc => tc.AuthTag).IsRequired();
+        tlb.Property(tc => tc.KeyVersion).HasDefaultValue(1);
+        tlb.Property(tc => tc.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
 
         var tb = modelBuilder.Entity<Transaction>();
         tb.HasKey(t => t.Id);

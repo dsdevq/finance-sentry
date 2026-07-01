@@ -1,8 +1,10 @@
+import {DialogRef} from '@angular/cdk/dialog';
 import {NgComponentOutlet} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   inject,
   Injector,
   type Type,
@@ -23,6 +25,7 @@ import {TypePickerComponent} from './type-picker.component';
 export class ConnectModalComponent {
   private readonly parentInjector = inject(Injector);
   private readonly registry = inject(ConnectStrategyRegistry);
+  private readonly dialogRef = inject<DialogRef<unknown>>(DialogRef, {optional: true});
 
   public readonly store = inject(ConnectStore);
 
@@ -43,12 +46,24 @@ export class ConnectModalComponent {
     });
   });
 
-  private providerSlugForCurrentStep(): Nullable<'plaid' | 'monobank' | 'binance' | 'ibkr'> {
+  constructor() {
+    effect(() => {
+      if (this.store.modalStep() === 'closed') {
+        this.dialogRef?.close();
+      }
+    });
+  }
+
+  private providerSlugForCurrentStep(): Nullable<
+    'plaid' | 'monobank' | 'truelayer' | 'binance' | 'ibkr'
+  > {
     switch (this.store.modalStep()) {
       case 'plaid-launcher':
         return 'plaid';
       case 'monobank-form':
         return 'monobank';
+      case 'truelayer-picker':
+        return 'truelayer';
       case 'binance-form':
         return 'binance';
       case 'ibkr-form':

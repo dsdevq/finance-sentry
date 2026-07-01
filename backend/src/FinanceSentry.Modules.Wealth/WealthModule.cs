@@ -28,7 +28,7 @@ public static class WealthModule
             mgr.AddOrUpdate<NetWorthSnapshotJob>(
                 "net-worth-snapshot",
                 job => job.ExecuteAsync(CancellationToken.None),
-                "0 1 L * *");
+                Cron.Daily(1));
         }
     }
 

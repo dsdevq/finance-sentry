@@ -30,12 +30,24 @@ services:
       Plaid__ClientId: ${PLAID_CLIENT_ID}
       Plaid__Secret: ${PLAID_SECRET}
       Plaid__Environment: sandbox
+      TrueLayer__AuthBaseUrl: https://auth.truelayer.com
+      TrueLayer__ApiBaseUrl: https://api.truelayer.com
+      TrueLayer__ClientId: ${TRUELAYER_CLIENT_ID:-}
+      TrueLayer__ClientSecret: ${TRUELAYER_CLIENT_SECRET:-}
+      TrueLayer__FrontendRedirectBase: http://localhost:4200
+      TrueLayer__CallbackPath: /api/v1/accounts/truelayer/callback
+      TrueLayer__Scopes: "info accounts balance transactions cards offline_access"
       Jwt__Secret: ${JWT_SECRET:-your-secret-key-change-in-production}
       Jwt__Issuer: "https://finance-sentry.local"
       Deduplication__MasterKeyBase64: dGVzdC1kZWR1cGxpY2F0aW9uLWtleS1jaGFuZ2UtaW4tcHJvZHVjdGlvbg==
       GOOGLEOAUTH__CLIENTID: "${GOOGLE_CLIENT_ID:-}"
-      IBKR__GatewayBaseUrl: "https://ibkr-gateway:5000"
-      IBKR__AllowSelfSignedCert: "true"
+      # Per-user IBeam orchestration
+      IBeam__Image: "voyz/ibeam:latest"
+      IBeam__Network: "docker_finance-sentry-network"
+      IBeam__ConfHostPath: "${PWD}/ibkr/conf.yaml"
+      IBeam__ContainerNamePrefix: "finance-sentry-ibkr"
+      IBeam__SpawnTimeoutSeconds: "120"
+      IBeam__DockerEndpoint: "unix:///var/run/docker.sock"
     ports:
       - "5001:5000"
     depends_on:
@@ -50,6 +62,8 @@ services:
       retries: 5
     volumes:
       - ./logs:/app/logs
+      # Docker socket for per-user IBeam container orchestration
+      - /var/run/docker.sock:/var/run/docker.sock
 
   mcp:
     build:
@@ -75,28 +89,9 @@ services:
     networks:
       - finance-sentry-network
 
-  ibkr-gateway:
-    image: voyz/ibeam:latest
-    container_name: finance-sentry-ibkr-gateway
-    restart: unless-stopped
-    environment:
-      IBEAM_ACCOUNT: ${IBKR_ACCOUNT:-}
-      IBEAM_PASSWORD: ${IBKR_PASSWORD:-}
-      IBEAM_GATEWAY_BASE_URL: "https://localhost:5000"
-      IBEAM_LOG_LEVEL: INFO
-      IBEAM_ERROR_SCREENSHOTS: "True"
-    volumes:
-      - ./ibkr/conf.yaml:/srv/inputs/conf.yaml
-    ports:
-      - "5055:5000"
-    networks:
-      - finance-sentry-network
-    healthcheck:
-      test: ["CMD", "curl", "-skf", "https://localhost:5000/v1/api/iserver/auth/status"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
+  # Per-user IBeam gateway containers are spawned dynamically by the API via
+  # Docker socket (mounted above). No shared single-tenant ibkr-gateway
+  # service — connect via POST /api/v1/brokerage/ibkr/connect to spin one up.
 
   postgres:
     image: postgres:14-alpine

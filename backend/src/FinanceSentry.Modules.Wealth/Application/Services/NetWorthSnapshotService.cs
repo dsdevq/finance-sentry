@@ -29,10 +29,9 @@ public class NetWorthSnapshotService(INetWorthSnapshotRepository repository) : I
         await _repository.PersistAsync(snapshot, ct);
     }
 
-    public async Task<bool> HasSnapshotForCurrentMonthAsync(Guid userId, CancellationToken ct = default)
+    public async Task<bool> HasSnapshotForTodayAsync(Guid userId, CancellationToken ct = default)
     {
-        var now = DateTime.UtcNow;
-        var monthEnd = new DateOnly(now.Year, now.Month, DateTime.DaysInMonth(now.Year, now.Month));
-        return await _repository.ExistsAsync(userId, monthEnd, ct);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        return await _repository.ExistsAsync(userId, today, ct);
     }
 }

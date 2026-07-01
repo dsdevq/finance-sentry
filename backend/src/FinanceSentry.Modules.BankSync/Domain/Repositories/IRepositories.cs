@@ -223,3 +223,14 @@ public interface IMonobankCredentialRepository
     Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
+
+public interface ITrueLayerConnectionRepository
+{
+    Task<TrueLayerConnection> AddAsync(TrueLayerConnection connection, CancellationToken cancellationToken = default);
+    Task<TrueLayerConnection?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<TrueLayerConnection?> GetByReferenceAsync(string reference, CancellationToken cancellationToken = default);
+    Task<TrueLayerConnection?> GetByUserAndProviderAsync(Guid userId, string providerId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TrueLayerConnection>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<TrueLayerConnection> UpdateAsync(TrueLayerConnection connection, CancellationToken cancellationToken = default);
+    Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
+}
