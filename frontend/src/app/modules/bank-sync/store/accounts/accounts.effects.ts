@@ -5,6 +5,8 @@ import {catchError, EMPTY, pipe, switchMap, tap} from 'rxjs';
 
 import {type WealthSummaryResponse} from '../../../../shared/models/wealth/wealth.model';
 import {BankSyncService} from '../../services/bank-sync.service';
+import {BinanceService} from '../../services/binance.service';
+import {IBKRService} from '../../services/ibkr.service';
 import {WealthService} from '../../services/wealth.service';
 
 interface EffectsStore {
@@ -17,6 +19,8 @@ interface EffectsStore {
 export function accountsEffects(store: EffectsStore) {
   const wealthService = inject(WealthService);
   const bankSyncService = inject(BankSyncService);
+  const ibkrService = inject(IBKRService);
+  const binanceService = inject(BinanceService);
 
   const load = rxMethod<void>(
     pipe(
@@ -78,7 +82,42 @@ export function accountsEffects(store: EffectsStore) {
     )
   );
 
-  return {load, disconnectMonobank, disconnectAccount, disconnectInstitution};
+  const disconnectIBKR = rxMethod<void>(
+    pipe(
+      switchMap(() =>
+        ibkrService.disconnect().pipe(
+          tap(() => load()),
+          catchError((err: unknown) => {
+            store.setError(extractErrorCode(err));
+            return EMPTY;
+          })
+        )
+      )
+    )
+  );
+
+  const disconnectBinance = rxMethod<void>(
+    pipe(
+      switchMap(() =>
+        binanceService.disconnect().pipe(
+          tap(() => load()),
+          catchError((err: unknown) => {
+            store.setError(extractErrorCode(err));
+            return EMPTY;
+          })
+        )
+      )
+    )
+  );
+
+  return {
+    load,
+    disconnectMonobank,
+    disconnectAccount,
+    disconnectInstitution,
+    disconnectIBKR,
+    disconnectBinance,
+  };
 }
 
 interface HookStore {
