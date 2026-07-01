@@ -1,12 +1,7 @@
 import {computed, inject, type Signal} from '@angular/core';
 import {ErrorMessageService} from '@dsdevq-common/core';
 
-import {
-  type AccountBalanceItem,
-  type CategorySummary,
-  type InstitutionGroup,
-} from '../../../shared/models/wealth/wealth.model';
-import {InstitutionUtils} from '../../../shared/utils/institution.utils';
+import {type CategorySummary, type Institution} from '../../../shared/models/wealth/wealth.model';
 import {type Position} from '../models/position/position.model';
 import {type HoldingsState} from './holdings.state';
 
@@ -47,13 +42,8 @@ export function holdingsComputed(store: StateSignals) {
       (): Nullable<CategorySummary> =>
         store.summary()?.categories.find(c => c.category === 'crypto') ?? null
     ),
-    allAccounts: computed(
-      (): AccountBalanceItem[] => store.summary()?.categories.flatMap(c => c.accounts) ?? []
-    ),
-    allInstitutions: computed((): InstitutionGroup[] =>
-      InstitutionUtils.groupByInstitution(
-        store.summary()?.categories.flatMap(c => c.accounts) ?? []
-      )
+    allInstitutions: computed(
+      (): Institution[] => store.summary()?.categories.flatMap(c => c.institutions) ?? []
     ),
     positions: computed((): Position[] => store.positions()),
     isPositionsLoading: computed(() => store.positionsStatus() === 'loading'),

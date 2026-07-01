@@ -24,6 +24,7 @@ public class BankSyncController(
     IQueryHandler<ListTrueLayerProvidersQuery, IReadOnlyList<TrueLayerProviderDto>> listTrueLayerProvidersHandler,
     ICommandHandler<BeginTrueLayerConnectCommand, BeginTrueLayerConnectResult> beginTrueLayerConnectHandler,
     ICommandHandler<FinalizeTrueLayerConnectCommand, FinalizeTrueLayerConnectResult> finalizeTrueLayerConnectHandler,
+    ICommandHandler<DisconnectInstitutionCommand, DisconnectInstitutionResult> disconnectInstitutionHandler,
     Microsoft.Extensions.Configuration.IConfiguration configuration,
     ILogger<BankSyncController> logger,
     PlaidAdapter plaid,
@@ -185,6 +186,27 @@ public class BankSyncController(
             latestJob.CompletedAt,
             latestJob.StartedAt,
             latestJob.CompletedAt));
+    }
+
+    // ── DELETE /api/v1/accounts/institutions/{provider}/{institutionId} ──
+    // Institution-level disconnect: removes a Monobank credential, TrueLayer
+    // connection, or Plaid account and cascades to every child sub-account,
+    // transaction, and alert.
+
+    [HttpDelete("institutions/{provider}/{institutionId:guid}")]
+    public async Task<IActionResult> DisconnectInstitution(string provider, Guid institutionId, CancellationToken ct)
+    {
+        var userId = User.RequireUserId();
+        try
+        {
+            var result = await disconnectInstitutionHandler.Handle(
+                new DisconnectInstitutionCommand(userId, provider, institutionId), ct);
+            return Ok(new { removedAccounts = result.RemovedAccounts });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new ApiErrorBody(ex.Message, "INSTITUTION_NOT_FOUND"));
+        }
     }
 
     // ── DELETE /api/accounts/{accountId} ── T309-A ───────────────────────────

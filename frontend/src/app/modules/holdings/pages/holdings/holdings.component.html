@@ -69,13 +69,13 @@
           Detailed Holdings
         </h2>
 
-        @if (store.allAccounts().length === 0) {
+        @if (store.allInstitutions().length === 0) {
           <div class="py-12 text-center text-neutral-400 text-sm">
             No accounts connected. Connect an account to see your holdings.
           </div>
         } @else {
           <div class="divide-y divide-neutral-100 dark:divide-neutral-800 -mx-4">
-            @for (inst of store.allInstitutions(); track inst.key) {
+            @for (inst of store.allInstitutions(); track inst.institutionId + inst.provider) {
               <details class="group" open>
                 <summary
                   class="flex items-center justify-between gap-4 px-4 py-3 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
@@ -90,8 +90,8 @@
                       }}
                     </p>
                   </div>
-                  <cmn-tag [variant]="inst.worstSyncStatus | syncStatusVariant">{{
-                    inst.worstSyncStatus | syncStatusLabel
+                  <cmn-tag [variant]="inst.syncStatus | syncStatusVariant">{{
+                    inst.syncStatus | syncStatusLabel
                   }}</cmn-tag>
                   <div
                     class="text-right font-mono tabular-nums font-semibold text-neutral-900 dark:text-neutral-100 min-w-[7rem]"
@@ -114,13 +114,21 @@
                     viewBox="0 0 24 24"
                     stroke="currentColor"
                   >
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 9l-7 7-7-7"
+                    />
                   </svg>
                 </summary>
 
                 <table class="w-full text-sm bg-neutral-50/50 dark:bg-neutral-900/40">
                   <tbody>
-                    @for (account of inst.accounts; track account.accountId + account.accountNumberLast4) {
+                    @for (
+                      account of inst.accounts;
+                      track account.accountId + account.accountNumberLast4
+                    ) {
                       <tr class="border-t border-neutral-100 dark:border-neutral-800">
                         <td class="py-2 pl-16 pr-4 w-full">
                           <span class="text-neutral-800 dark:text-neutral-200">{{

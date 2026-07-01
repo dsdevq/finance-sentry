@@ -16,6 +16,18 @@ public class WealthAggregationService(
 
     private static readonly TimeSpan StaleThreshold = TimeSpan.FromHours(1);
 
+    private static readonly IReadOnlyDictionary<string, int> SyncStatusPriority =
+        new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["reauth_required"] = 0,
+            ["failed"] = 1,
+            ["stale"] = 2,
+            ["pending"] = 3,
+            ["syncing"] = 4,
+            ["synced"] = 5,
+            ["active"] = 5,
+        };
+
     private readonly IBankingAccountsReader _bankingAccounts = bankingAccounts ?? throw new ArgumentNullException(nameof(bankingAccounts));
     private readonly IBankingTransactionReader _bankingTransactions = bankingTransactions ?? throw new ArgumentNullException(nameof(bankingTransactions));
     private readonly ICryptoHoldingsReader? _cryptoReader = cryptoReader;
@@ -41,15 +53,12 @@ public class WealthAggregationService(
             .Select(g =>
             {
                 var summaries = g.ToList();
-                var accountDtos = summaries.Select(a => new AccountBalanceDto(
-                    a.AccountId, a.BankName, a.AccountType, a.AccountNumberLast4,
-                    a.Provider, ProviderCategoryMapper.GetCategory(a.Provider),
-                    a.Currency, a.CurrentBalance, a.BalanceUsd,
-                    a.SyncStatus, a.LastSyncTimestamp)).ToList();
-
-                var institutionCount = CountBankingInstitutions(summaries);
-
-                return new CategorySummaryDto(g.Key, accountDtos.Sum(d => d.BalanceInBaseCurrency ?? 0m), institutionCount, accountDtos);
+                var institutions = BuildBankingInstitutions(summaries);
+                return new CategorySummaryDto(
+                    g.Key,
+                    institutions.Sum(i => i.TotalInBaseCurrency),
+                    institutions.Count,
+                    institutions);
             })
             .ToList();
 
@@ -58,13 +67,24 @@ public class WealthAggregationService(
             var holdings = await _cryptoReader.GetHoldingsAsync(userId, ct);
             if (holdings.Count > 0)
             {
-                var dtos = holdings.Select(h => new AccountBalanceDto(
+                var accounts = holdings.Select(h => new AccountBalanceDto(
                     Guid.Empty, "Binance", "crypto", h.Asset, "binance", "crypto",
                     "USD", h.FreeQuantity + h.LockedQuantity, h.UsdValue, "synced", h.SyncedAt))
                     .ToList<AccountBalanceDto>();
 
-                var institutionCount = holdings.Select(h => h.Provider).Distinct(StringComparer.OrdinalIgnoreCase).Count();
-                grouped.Add(new CategorySummaryDto("crypto", holdings.Sum(h => h.UsdValue), institutionCount, dtos));
+                var institutionsByProvider = holdings
+                    .GroupBy(h => h.Provider, StringComparer.OrdinalIgnoreCase)
+                    .Select(pg => new InstitutionDto(
+                        InstitutionId: userId,
+                        Provider: pg.Key.ToLowerInvariant(),
+                        Name: DisplayNameFor(pg.Key),
+                        TotalInBaseCurrency: pg.Sum(h => h.UsdValue),
+                        SyncStatus: "synced",
+                        LastSyncTimestamp: pg.Max(h => (DateTime?)h.SyncedAt),
+                        Accounts: accounts.Where(a => string.Equals(a.Provider, pg.Key, StringComparison.OrdinalIgnoreCase)).ToList()))
+                    .ToList();
+
+                grouped.Add(new CategorySummaryDto("crypto", institutionsByProvider.Sum(i => i.TotalInBaseCurrency), institutionsByProvider.Count, institutionsByProvider));
             }
         }
 
@@ -73,15 +93,26 @@ public class WealthAggregationService(
             var holdings = await _brokerageReader.GetHoldingsAsync(userId, ct);
             if (holdings.Count > 0)
             {
-                var dtos = holdings.Select(h => new AccountBalanceDto(
+                var accounts = holdings.Select(h => new AccountBalanceDto(
                     Guid.Empty, "IBKR", "brokerage",
                     h.Symbol.Length >= 4 ? h.Symbol[..4] : h.Symbol,
                     "ibkr", "brokerage", "USD", h.Quantity, h.UsdValue,
                     DateTime.UtcNow - h.SyncedAt > StaleThreshold ? "stale" : "synced", h.SyncedAt))
                     .ToList<AccountBalanceDto>();
 
-                var institutionCount = holdings.Select(h => h.Provider).Distinct(StringComparer.OrdinalIgnoreCase).Count();
-                grouped.Add(new CategorySummaryDto("brokerage", holdings.Sum(h => h.UsdValue), institutionCount, dtos));
+                var institutionsByProvider = holdings
+                    .GroupBy(h => h.Provider, StringComparer.OrdinalIgnoreCase)
+                    .Select(pg => new InstitutionDto(
+                        InstitutionId: userId,
+                        Provider: pg.Key.ToLowerInvariant(),
+                        Name: DisplayNameFor(pg.Key),
+                        TotalInBaseCurrency: pg.Sum(h => h.UsdValue),
+                        SyncStatus: DateTime.UtcNow - pg.Max(h => h.SyncedAt) > StaleThreshold ? "stale" : "synced",
+                        LastSyncTimestamp: pg.Max(h => (DateTime?)h.SyncedAt),
+                        Accounts: accounts.Where(a => string.Equals(a.Provider, pg.Key, StringComparison.OrdinalIgnoreCase)).ToList()))
+                    .ToList();
+
+                grouped.Add(new CategorySummaryDto("brokerage", institutionsByProvider.Sum(i => i.TotalInBaseCurrency), institutionsByProvider.Count, institutionsByProvider));
             }
         }
 
@@ -90,15 +121,64 @@ public class WealthAggregationService(
             new AppliedFiltersDto(category, provider));
     }
 
-    private static int CountBankingInstitutions(IReadOnlyList<BankingAccountSummary> accounts)
+    private static IReadOnlyList<InstitutionDto> BuildBankingInstitutions(IReadOnlyList<BankingAccountSummary> summaries)
     {
-        return accounts
-            .Select(a => (
-                Provider: a.Provider.ToLowerInvariant(),
-                InstitutionKey: (a.MonobankCredentialId ?? a.TrueLayerConnectionId ?? a.AccountId).ToString()))
-            .Distinct()
-            .Count();
+        var buckets = new Dictionary<string, List<BankingAccountSummary>>();
+        foreach (var s in summaries)
+        {
+            var key = InstitutionKeyFor(s);
+            if (!buckets.TryGetValue(key, out var list))
+            {
+                list = [];
+                buckets[key] = list;
+            }
+            list.Add(s);
+        }
+
+        return [.. buckets.Values.Select(list =>
+        {
+            var first = list[0];
+            var accountDtos = list.Select(a => new AccountBalanceDto(
+                a.AccountId, a.BankName, a.AccountType, a.AccountNumberLast4,
+                a.Provider, ProviderCategoryMapper.GetCategory(a.Provider),
+                a.Currency, a.CurrentBalance, a.BalanceUsd,
+                a.SyncStatus, a.LastSyncTimestamp)).ToList();
+
+            return new InstitutionDto(
+                InstitutionId: InstitutionIdFor(first),
+                Provider: first.Provider.ToLowerInvariant(),
+                Name: first.BankName,
+                TotalInBaseCurrency: accountDtos.Sum(a => a.BalanceInBaseCurrency ?? 0m),
+                SyncStatus: WorstSyncStatus(list.Select(a => a.SyncStatus)),
+                LastSyncTimestamp: list.Max(a => a.LastSyncTimestamp),
+                Accounts: accountDtos);
+        }).OrderByDescending(i => i.TotalInBaseCurrency)];
     }
+
+    private static string InstitutionKeyFor(BankingAccountSummary s)
+    {
+        var scoped = s.MonobankCredentialId ?? s.TrueLayerConnectionId ?? s.AccountId;
+        return $"{s.Provider.ToLowerInvariant()}::{scoped:N}";
+    }
+
+    private static Guid InstitutionIdFor(BankingAccountSummary s)
+        => s.MonobankCredentialId ?? s.TrueLayerConnectionId ?? s.AccountId;
+
+    private static string WorstSyncStatus(IEnumerable<string> statuses)
+    {
+        var min = statuses
+            .Select(s => (Status: s, Priority: SyncStatusPriority.TryGetValue(s, out var p) ? p : int.MaxValue))
+            .OrderBy(t => t.Priority)
+            .First();
+        return min.Status;
+    }
+
+    private static string DisplayNameFor(string provider) => provider.ToLowerInvariant() switch
+    {
+        "binance" => "Binance",
+        "ibkr" => "Interactive Brokers",
+        _ => char.ToUpperInvariant(provider[0]) + provider[1..],
+    };
 
     public async Task<TransactionSummaryResponse> GetTransactionSummaryAsync(
         Guid userId, DateOnly from, DateOnly to,

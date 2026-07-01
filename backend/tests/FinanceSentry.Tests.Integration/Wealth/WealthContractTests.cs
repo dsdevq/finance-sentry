@@ -67,7 +67,8 @@ public class WealthSummaryContractTests(WealthApiFactory factory) : IClassFixtur
         body!.TotalNetWorth.Should().Be(1000m);
         body.Categories.Should().HaveCount(1);
         body.Categories[0].Category.Should().Be("banking");
-        body.Categories[0].Accounts.Should().HaveCount(1);
+        body.Categories[0].Institutions.Should().HaveCount(1);
+        body.Categories[0].Institutions[0].Accounts.Should().HaveCount(1);
         body.AppliedFilters.Category.Should().BeNull();
         body.AppliedFilters.Provider.Should().BeNull();
     }
@@ -180,7 +181,9 @@ public class TransactionSummaryContractTests(WealthApiFactory factory) : IClassF
 public record AppliedFiltersShape(string? Category, string? Provider);
 public record AccountShape(Guid Id, string BankName, string Provider, string Category,
     decimal? CurrentBalance, decimal? BalanceInBaseCurrency, string SyncStatus);
-public record CategoryShape(string Category, decimal TotalInBaseCurrency, List<AccountShape> Accounts);
+public record InstitutionShape(Guid InstitutionId, string Provider, string Name,
+    decimal TotalInBaseCurrency, string SyncStatus, List<AccountShape> Accounts);
+public record CategoryShape(string Category, decimal TotalInBaseCurrency, List<InstitutionShape> Institutions);
 public record WealthSummaryShape(decimal TotalNetWorth, string BaseCurrency,
     List<CategoryShape> Categories, AppliedFiltersShape AppliedFilters);
 
