@@ -19,6 +19,13 @@ services:
       Jwt__ExpirationMinutes: ${JWT_EXPIRATION_MINUTES:-60}
       Encryption__MasterKey: ${ENCRYPTION_MASTER_KEY}
       Encryption__KeyVersion: ${ENCRYPTION_KEY_VERSION:-1}
+      # Per-user IBeam orchestration
+      IBeam__Image: "voyz/ibeam:latest"
+      IBeam__Network: "${IBEAM_NETWORK:-docker_finance-sentry-network}"
+      IBeam__ConfHostPath: "${PWD}/ibkr/conf.yaml"
+      IBeam__ContainerNamePrefix: "finance-sentry-ibkr"
+      IBeam__SpawnTimeoutSeconds: "120"
+      IBeam__DockerEndpoint: "unix:///var/run/docker.sock"
     ports:
       - "${API_PORT:-5000}:5000"
     depends_on:
@@ -34,6 +41,8 @@ services:
       start_period: 40s
     volumes:
       - api_logs:/app/logs
+      # Docker socket for per-user IBeam container orchestration
+      - /var/run/docker.sock:/var/run/docker.sock
     logging:
       driver: "json-file"
       options:

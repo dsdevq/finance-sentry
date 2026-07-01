@@ -3,16 +3,17 @@ namespace FinanceSentry.Modules.BrokerageSync.Domain.Interfaces;
 /// <summary>
 /// Abstraction over a brokerage adapter.
 ///
-/// Authentication is intentionally absent: under the current single-tenant
-/// IBKR-via-IBeam model the gateway sidecar owns the broker session lifecycle,
-/// so the application code only needs to verify status and read data.
+/// Each method takes the id of the calling user's <c>IBKRCredential</c> so the
+/// adapter can resolve the per-user IBeam gateway URL. Under the per-user
+/// container model (stage 2) each user gets their own IBeam and the API talks
+/// to it by DNS name on the shared Docker network.
 /// </summary>
 public interface IBrokerAdapter
 {
     string BrokerName { get; }
-    Task EnsureSessionAsync(CancellationToken ct = default);
-    Task<string> GetAccountIdAsync(CancellationToken ct = default);
-    Task<IReadOnlyList<BrokerPosition>> GetPositionsAsync(string accountId, CancellationToken ct = default);
+    Task EnsureSessionAsync(Guid credentialId, CancellationToken ct = default);
+    Task<string> GetAccountIdAsync(Guid credentialId, CancellationToken ct = default);
+    Task<IReadOnlyList<BrokerPosition>> GetPositionsAsync(Guid credentialId, string accountId, CancellationToken ct = default);
 }
 
 public sealed record BrokerPosition(

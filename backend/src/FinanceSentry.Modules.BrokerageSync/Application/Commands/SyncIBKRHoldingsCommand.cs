@@ -32,12 +32,18 @@ public sealed class SyncIBKRHoldingsCommandHandler : ICommandHandler<SyncIBKRHol
 
         try
         {
-            await _adapter.EnsureSessionAsync(ct);
+            await _adapter.EnsureSessionAsync(credential.Id, ct);
 
             var accountId = credential.AccountId
-                ?? await _adapter.GetAccountIdAsync(ct);
+                ?? await _adapter.GetAccountIdAsync(credential.Id, ct);
 
-            var positions = await _adapter.GetPositionsAsync(accountId, ct);
+            if (credential.AccountId is null)
+            {
+                credential.UpdateAccountId(accountId);
+                _credentialRepository.Update(credential);
+            }
+
+            var positions = await _adapter.GetPositionsAsync(credential.Id, accountId, ct);
 
             var syncedAt = DateTime.UtcNow;
 
@@ -56,7 +62,6 @@ public sealed class SyncIBKRHoldingsCommandHandler : ICommandHandler<SyncIBKRHol
             await _holdingRepository.UpsertRangeAsync(holdings, ct);
             await _holdingRepository.SaveChangesAsync(ct);
 
-            // Re-apply avg cost on entities that already existed (UpsertRangeAsync only updates qty + value).
             var positionByKey = positions.ToDictionary(p => p.Symbol, StringComparer.Ordinal);
             var persisted = await _holdingRepository.GetByUserIdAsync(request.UserId, ct);
             foreach (var h in persisted)

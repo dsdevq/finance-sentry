@@ -1,5 +1,6 @@
 namespace FinanceSentry.Modules.BrokerageSync;
 
+using Docker.DotNet;
 using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Modules.BrokerageSync.Application.Services;
 using FinanceSentry.Modules.BrokerageSync.Domain.Interfaces;
@@ -12,7 +13,6 @@ using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 
 public static class BrokerageSyncModule
 {
@@ -37,20 +37,26 @@ public static class BrokerageSyncModule
         services.AddDbContext<BrokerageSyncDbContext>(
             o => o.UseNpgsql(config.GetConnectionString("Default")!, b => b.MigrationsHistoryTable("__EFMigrationsHistory", "public")));
 
+        services.Configure<IBeamOptions>(config.GetSection(IBeamOptions.SectionName));
+
         services.AddHttpClient<IBKRGatewayClient>(client =>
                 client.DefaultRequestHeaders.UserAgent.ParseAdd("FinanceSentry/1.0"))
-            .ConfigurePrimaryHttpMessageHandler(sp =>
+            .ConfigurePrimaryHttpMessageHandler(_ => new HttpClientHandler
             {
-                var env = sp.GetRequiredService<IHostEnvironment>();
-                var allowSelfSigned = config.GetValue<bool>("IBKR:AllowSelfSignedCert") || env.IsDevelopment();
-                return new HttpClientHandler
-                {
-                    UseCookies = false,
-                    ServerCertificateCustomValidationCallback = allowSelfSigned
-                        ? HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-                        : null,
-                };
+                UseCookies = false,
+                // IBeam serves a self-signed cert; trust is anchored on the
+                // private Docker network the API and gateway share.
+                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
             });
+
+        services.AddSingleton<IDockerClient>(sp =>
+        {
+            var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<IBeamOptions>>().Value;
+            return new DockerClientConfiguration(new Uri(options.DockerEndpoint)).CreateClient();
+        });
+
+        services.AddSingleton<IIBeamGatewayResolver, IBeamGatewayResolver>();
+        services.AddSingleton<IIBeamContainerManager, IBeamContainerManager>();
 
         services.AddScoped<IBrokerAdapter, IBKRAdapter>();
         services.AddScoped<IIBKRCredentialRepository, IBKRCredentialRepository>();
