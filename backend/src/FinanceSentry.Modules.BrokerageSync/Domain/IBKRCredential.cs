@@ -3,15 +3,11 @@ namespace FinanceSentry.Modules.BrokerageSync.Domain;
 /// <summary>
 /// Represents a single user's link to an IBKR account.
 ///
-/// Single-tenant model: the IBKR Client Portal Gateway (run as the `ibkr-gateway`
-/// sidecar via IBeam) owns the IBKR session for the entire deployment using
-/// credentials supplied via environment variables. This entity therefore stores
-/// only the discovered IBKR <see cref="AccountId"/> and the link metadata — no
-/// per-user IBKR credentials.
-///
-/// When this app is opened to multiple end users we will move to IBKR's OAuth
-/// Web API (each user authorises Finance Sentry against their own IBKR account)
-/// and add encrypted access/refresh-token columns at that point.
+/// Per-user IBeam model: each connected user has their IBKR username + password
+/// stored encrypted at rest (AES-256-GCM). On connect, the backend spawns a
+/// dedicated IBeam container for the user using the decrypted credentials; the
+/// container name is derived from <see cref="Id"/> so the API can address the
+/// per-user gateway by DNS on the compose network.
 /// </summary>
 public sealed class IBKRCredential
 {
@@ -23,15 +19,37 @@ public sealed class IBKRCredential
     public string? LastSyncError { get; private set; }
     public DateTime CreatedAt { get; private set; }
 
+    public byte[] EncryptedUsername { get; private set; } = [];
+    public byte[] UsernameIv { get; private set; } = [];
+    public byte[] UsernameAuthTag { get; private set; } = [];
+    public byte[] EncryptedPassword { get; private set; } = [];
+    public byte[] PasswordIv { get; private set; } = [];
+    public byte[] PasswordAuthTag { get; private set; } = [];
+    public int KeyVersion { get; private set; } = 1;
+
     private IBKRCredential() { }
 
-    public IBKRCredential(Guid userId, string accountId)
+    public IBKRCredential(
+        Guid userId,
+        byte[] encryptedUsername,
+        byte[] usernameIv,
+        byte[] usernameAuthTag,
+        byte[] encryptedPassword,
+        byte[] passwordIv,
+        byte[] passwordAuthTag,
+        int keyVersion)
     {
         Id = Guid.NewGuid();
         UserId = userId;
-        AccountId = accountId;
         IsActive = true;
         CreatedAt = DateTime.UtcNow;
+        EncryptedUsername = encryptedUsername;
+        UsernameIv = usernameIv;
+        UsernameAuthTag = usernameAuthTag;
+        EncryptedPassword = encryptedPassword;
+        PasswordIv = passwordIv;
+        PasswordAuthTag = passwordAuthTag;
+        KeyVersion = keyVersion;
     }
 
     public void UpdateAccountId(string accountId) => AccountId = accountId;

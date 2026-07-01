@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using FinanceSentry.Modules.BrokerageSync.Domain;
-using FinanceSentry.Modules.BrokerageSync.Domain.Exceptions;
 using FinanceSentry.Modules.BrokerageSync.Domain.Interfaces;
 using FinanceSentry.Modules.BrokerageSync.Domain.Repositories;
 using FinanceSentry.Modules.BrokerageSync.Infrastructure.Persistence;
@@ -34,53 +33,42 @@ public class BrokerageControllerConnectContractTests(BrokerageApiFactory factory
     public async Task Connect_NoAuth_Returns401()
     {
         var anonClient = _factory.CreateClient();
-        var response = await anonClient.PostAsync("/api/v1/brokerage/ibkr/connect", content: null);
+        var response = await anonClient.PostAsJsonAsync(
+            "/api/v1/brokerage/ibkr/connect",
+            new { Username = "u", Password = "p" });
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
-    public async Task Connect_GatewaySessionNotAuthenticated_Returns422()
-    {
-        _factory.CredentialRepoMock
-            .Setup(r => r.GetByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((IBKRCredential?)null);
-
-        _factory.AdapterMock
-            .Setup(a => a.EnsureSessionAsync(It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new BrokerAuthException("not authenticated", "IBKR"));
-
-        var response = await _client.PostAsync("/api/v1/brokerage/ibkr/connect", content: null);
-
-        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
-        var body = await response.Content.ReadFromJsonAsync<BrokerageErrorShape>();
-        body!.ErrorCode.Should().Be("INVALID_CREDENTIALS");
-    }
-
-    [Fact]
-    public async Task Connect_GatewayAuthenticated_Returns201WithShape()
+    public async Task Connect_StoresEncryptedCredential_Returns201()
     {
         _factory.SetupSuccessfulConnect();
 
-        var response = await _client.PostAsync("/api/v1/brokerage/ibkr/connect", content: null);
+        var response = await _client.PostAsJsonAsync(
+            "/api/v1/brokerage/ibkr/connect",
+            new { Username = "u", Password = "p" });
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         var body = await response.Content.ReadFromJsonAsync<BrokerageConnectResponseShape>();
         body.Should().NotBeNull();
-        body!.AccountId.Should().Be("U1234567");
-        body.HoldingsCount.Should().BeGreaterThanOrEqualTo(0);
+        // AccountId + HoldingsCount discovery move to stage 2 (Docker orchestration).
+        body!.AccountId.Should().BeEmpty();
+        body.HoldingsCount.Should().Be(0);
         body.ConnectedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(1));
     }
 
     [Fact]
     public async Task Connect_AlreadyConnected_Returns409()
     {
-        var existingCredential = new IBKRCredential(_factory.TestUserId, "U1234567");
+        var existingCredential = new IBKRCredential(_factory.TestUserId, [1], [2], [3], [4], [5], [6], keyVersion: 1);
 
         _factory.CredentialRepoMock
             .Setup(r => r.GetByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingCredential);
 
-        var response = await _client.PostAsync("/api/v1/brokerage/ibkr/connect", content: null);
+        var response = await _client.PostAsJsonAsync(
+            "/api/v1/brokerage/ibkr/connect",
+            new { Username = "u", Password = "p" });
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
         var body = await response.Content.ReadFromJsonAsync<BrokerageErrorShape>();
@@ -147,7 +135,7 @@ public class BrokerageApiFactory : WebApplicationFactory<Program>
 
     public void SetupSuccessfulConnect()
     {
-        var mockCredential = new IBKRCredential(TestUserId, "U1234567");
+        var mockCredential = new IBKRCredential(TestUserId, [1], [2], [3], [4], [5], [6], keyVersion: 1);
 
         CredentialRepoMock
             .SetupSequence(r => r.GetByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
