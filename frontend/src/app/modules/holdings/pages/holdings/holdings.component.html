@@ -147,7 +147,11 @@
                         <td
                           class="py-2 pr-4 text-right font-mono tabular-nums text-neutral-900 dark:text-neutral-100"
                         >
-                          {{ account | holdingBalance }}
+                          @let bal = account | holdingBalance;
+                          <div>{{ bal.native }}</div>
+                          @if (bal.usd) {
+                            <div class="text-xs text-neutral-400">{{ bal.usd }}</div>
+                          }
                         </td>
                       </tr>
                     }
