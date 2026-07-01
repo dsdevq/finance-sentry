@@ -20,6 +20,23 @@ export interface CategorySummary {
   accounts: AccountBalanceItem[];
 }
 
+/**
+ * Client-side grouping of accounts under one institution
+ * (Monobank cards, Binance assets, IBKR positions, …).
+ * Produced by `InstitutionUtils.groupByInstitution` from a flat
+ * {@link AccountBalanceItem} list — the backend still returns per-row data.
+ */
+export interface InstitutionGroup {
+  key: string;
+  name: string;
+  provider: string;
+  category: AccountCategory;
+  accounts: AccountBalanceItem[];
+  totalInBaseCurrency: number;
+  worstSyncStatus: SyncStatus;
+  latestSyncTimestamp: Nullable<string>;
+}
+
 export interface AppliedFilters {
   category: Nullable<AccountCategory>;
   provider: Nullable<string>;
