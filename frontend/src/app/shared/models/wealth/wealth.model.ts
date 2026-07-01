@@ -16,6 +16,7 @@ export interface AccountBalanceItem extends AccountIdentity {
 export interface CategorySummary {
   category: AccountCategory;
   totalInBaseCurrency: number;
+  institutionCount: number;
   accounts: AccountBalanceItem[];
 }
 

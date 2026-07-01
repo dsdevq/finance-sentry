@@ -21,6 +21,7 @@ public record AccountBalanceDto(
 public record CategorySummaryDto(
     string Category,
     decimal TotalInBaseCurrency,
+    int InstitutionCount,
     IReadOnlyList<AccountBalanceDto> Accounts);
 
 public record WealthSummaryResponse(

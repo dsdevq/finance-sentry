@@ -48,7 +48,11 @@
               <span class="text-xs font-medium uppercase tracking-wider text-neutral-500">
                 {{ cat.category | categoryLabel }}
               </span>
-              <span class="text-xs text-neutral-400">{{ cat.accounts.length }} accounts</span>
+              <span class="text-xs text-neutral-400"
+                >{{ cat.institutionCount }} institution{{
+                  cat.institutionCount !== 1 ? 's' : ''
+                }}</span
+              >
             </div>
             <p
               class="text-xl font-mono font-semibold text-neutral-900 dark:text-neutral-100 tabular-nums"

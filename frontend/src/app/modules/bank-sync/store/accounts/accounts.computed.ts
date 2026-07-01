@@ -27,7 +27,7 @@ export function accountsComputed(store: StateSignals) {
       () => store.summary()?.categories.find(c => c.category === 'brokerage') ?? null
     ),
     totalConnections: computed(
-      () => store.summary()?.categories.reduce((sum, cat) => sum + cat.accounts.length, 0) ?? 0
+      () => store.summary()?.categories.reduce((sum, cat) => sum + cat.institutionCount, 0) ?? 0
     ),
   };
 }
