@@ -143,7 +143,11 @@
                       <td
                         class="py-cmn-3 px-cmn-4 text-right font-mono tabular-nums text-text-primary min-w-[7rem]"
                       >
-                        {{ account | accountBalance }}
+                        @let bal = account | accountBalance;
+                        <div>{{ bal.native }}</div>
+                        @if (bal.usd) {
+                          <div class="text-cmn-xs text-text-secondary">{{ bal.usd }}</div>
+                        }
                       </td>
                     </tr>
                   }
@@ -219,7 +223,11 @@
                       <td
                         class="py-cmn-3 px-cmn-4 text-right font-mono tabular-nums text-text-primary min-w-[7rem]"
                       >
-                        {{ account | accountBalance }}
+                        @let bal = account | accountBalance;
+                        <div>{{ bal.native }}</div>
+                        @if (bal.usd) {
+                          <div class="text-cmn-xs text-text-secondary">{{ bal.usd }}</div>
+                        }
                       </td>
                     </tr>
                   }
@@ -295,7 +303,11 @@
                       <td
                         class="py-cmn-3 px-cmn-4 text-right font-mono tabular-nums text-text-primary min-w-[7rem]"
                       >
-                        {{ account | accountBalance }}
+                        @let bal = account | accountBalance;
+                        <div>{{ bal.native }}</div>
+                        @if (bal.usd) {
+                          <div class="text-cmn-xs text-text-secondary">{{ bal.usd }}</div>
+                        }
                       </td>
                     </tr>
                   }

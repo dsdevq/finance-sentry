@@ -69,7 +69,7 @@ public class WealthAggregationService(
             {
                 var accounts = holdings.Select(h => new AccountBalanceDto(
                     Guid.Empty, "Binance", "crypto", h.Asset, "binance", "crypto",
-                    "USD", h.FreeQuantity + h.LockedQuantity, h.UsdValue, "synced", h.SyncedAt))
+                    h.Asset, h.FreeQuantity + h.LockedQuantity, h.UsdValue, "synced", h.SyncedAt))
                     .ToList<AccountBalanceDto>();
 
                 var institutionsByProvider = holdings
@@ -97,7 +97,7 @@ public class WealthAggregationService(
                 var accounts = holdings.Select(h => new AccountBalanceDto(
                     Guid.Empty, "IBKR", "brokerage",
                     h.Symbol.Length >= 4 ? h.Symbol[..4] : h.Symbol,
-                    "ibkr", "brokerage", "USD", h.Quantity, h.UsdValue,
+                    "ibkr", "brokerage", h.Symbol, h.Quantity, h.UsdValue,
                     DateTime.UtcNow - h.SyncedAt > StaleThreshold ? "stale" : "synced", h.SyncedAt))
                     .ToList<AccountBalanceDto>();
 
