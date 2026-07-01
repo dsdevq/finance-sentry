@@ -1,8 +1,10 @@
+using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Infrastructure.Encryption;
 using FinanceSentry.Modules.BrokerageSync.Application.Commands;
 using FinanceSentry.Modules.BrokerageSync.Domain;
 using FinanceSentry.Modules.BrokerageSync.Domain.Exceptions;
 using FinanceSentry.Modules.BrokerageSync.Domain.Repositories;
+using FinanceSentry.Modules.BrokerageSync.Infrastructure.IBKR;
 using FluentAssertions;
 using Moq;
 using Xunit;
@@ -13,14 +15,16 @@ public class ConnectIBKRCommandTests
 {
     private readonly Mock<IIBKRCredentialRepository> _credentialRepo = new(MockBehavior.Strict);
     private readonly Mock<ICredentialEncryptionService> _encryption = new(MockBehavior.Strict);
+    private readonly Mock<IIBeamContainerManager> _containerManager = new(MockBehavior.Strict);
+    private readonly Mock<ICommandHandler<SyncIBKRHoldingsCommand, SyncIBKRHoldingsResult>> _syncHandler = new(MockBehavior.Strict);
 
     private ConnectIBKRCommandHandler CreateHandler() =>
-        new(_credentialRepo.Object, _encryption.Object);
+        new(_credentialRepo.Object, _encryption.Object, _containerManager.Object, _syncHandler.Object);
 
     private static IBKRCredential ExistingCredential(Guid userId) =>
         new(userId, [1], [2], [3], [4], [5], [6], keyVersion: 1);
 
-    private void SetupHappyPath(Guid userId, IBKRCredential? savedInto = null)
+    private void SetupHappyPath(Guid userId, bool authResult = true)
     {
         _credentialRepo
             .Setup(r => r.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()))
@@ -34,6 +38,15 @@ public class ConnectIBKRCommandTests
         _credentialRepo
             .Setup(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
+        _containerManager
+            .Setup(m => m.SpawnAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        _containerManager
+            .Setup(m => m.WaitForAuthAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(authResult);
+        _syncHandler
+            .Setup(h => h.Handle(It.IsAny<SyncIBKRHoldingsCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new SyncIBKRHoldingsResult(0, DateTime.UtcNow));
     }
 
     [Fact]
@@ -63,6 +76,43 @@ public class ConnectIBKRCommandTests
     }
 
     [Fact]
+    public async Task Handle_SpawnsContainerWithPlaintextCredentials()
+    {
+        var userId = Guid.NewGuid();
+        SetupHappyPath(userId);
+
+        await CreateHandler().Handle(new ConnectIBKRCommand(userId, "ibkr-user", "ibkr-pass"), default);
+
+        _containerManager.Verify(
+            m => m.SpawnAsync(It.IsAny<Guid>(), "ibkr-user", "ibkr-pass", It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_DispatchesSyncAfterGatewayAuthenticates()
+    {
+        var userId = Guid.NewGuid();
+        SetupHappyPath(userId);
+
+        await CreateHandler().Handle(new ConnectIBKRCommand(userId, "user", "pass"), default);
+
+        _syncHandler.Verify(
+            h => h.Handle(It.Is<SyncIBKRHoldingsCommand>(c => c.UserId == userId), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_AuthTimeout_ThrowsBrokerAuthException()
+    {
+        var userId = Guid.NewGuid();
+        SetupHappyPath(userId, authResult: false);
+
+        var act = () => CreateHandler().Handle(new ConnectIBKRCommand(userId, "user", "pass"), default);
+
+        await act.Should().ThrowAsync<BrokerAuthException>();
+    }
+
+    [Fact]
     public async Task Handle_PersistsEncryptedCredentialBoundToUser()
     {
         var userId = Guid.NewGuid();
@@ -81,6 +131,15 @@ public class ConnectIBKRCommandTests
         _credentialRepo
             .Setup(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
+        _containerManager
+            .Setup(m => m.SpawnAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        _containerManager
+            .Setup(m => m.WaitForAuthAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        _syncHandler
+            .Setup(h => h.Handle(It.IsAny<SyncIBKRHoldingsCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new SyncIBKRHoldingsResult(0, DateTime.UtcNow));
 
         await CreateHandler().Handle(new ConnectIBKRCommand(userId, "user", "pass"), default);
 
@@ -90,17 +149,5 @@ public class ConnectIBKRCommandTests
         saved.EncryptedUsername.Should().NotBeEmpty();
         saved.EncryptedPassword.Should().NotBeEmpty();
         saved.KeyVersion.Should().Be(1);
-    }
-
-    [Fact]
-    public async Task Handle_AccountIdDiscoveryDeferredToStage2()
-    {
-        var userId = Guid.NewGuid();
-        SetupHappyPath(userId);
-
-        var result = await CreateHandler().Handle(new ConnectIBKRCommand(userId, "user", "pass"), default);
-
-        result.AccountId.Should().BeEmpty();
-        result.HoldingsCount.Should().Be(0);
     }
 }

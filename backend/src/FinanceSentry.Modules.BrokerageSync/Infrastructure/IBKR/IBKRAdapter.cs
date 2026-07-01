@@ -6,35 +6,40 @@ namespace FinanceSentry.Modules.BrokerageSync.Infrastructure.IBKR;
 public sealed class IBKRAdapter : IBrokerAdapter
 {
     private readonly IBKRGatewayClient _client;
+    private readonly IIBeamGatewayResolver _resolver;
 
-    public IBKRAdapter(IBKRGatewayClient client)
+    public IBKRAdapter(IBKRGatewayClient client, IIBeamGatewayResolver resolver)
     {
         _client = client;
+        _resolver = resolver;
     }
 
     public string BrokerName => "IBKR";
 
-    public async Task EnsureSessionAsync(CancellationToken ct = default)
+    public async Task EnsureSessionAsync(Guid credentialId, CancellationToken ct = default)
     {
-        var status = await _client.GetAuthStatusAsync(ct);
+        var baseUrl = _resolver.BaseUrl(credentialId);
+        var status = await _client.GetAuthStatusAsync(baseUrl, ct);
         if (!status.Authenticated)
             throw new BrokerAuthException(
-                "IBKR gateway is not authenticated. Configure IBKR_ACCOUNT/IBKR_PASSWORD in docker/.env and ensure the ibkr-gateway container is running.",
+                "IBKR gateway is not authenticated for this user. The IBeam container may still be starting or the stored credentials may be invalid.",
                 "IBKR");
     }
 
-    public async Task<string> GetAccountIdAsync(CancellationToken ct = default)
+    public async Task<string> GetAccountIdAsync(Guid credentialId, CancellationToken ct = default)
     {
-        var accountsResponse = await _client.GetAccountsAsync(ct);
+        var baseUrl = _resolver.BaseUrl(credentialId);
+        var accountsResponse = await _client.GetAccountsAsync(baseUrl, ct);
         if (accountsResponse.Accounts.Count == 0)
             throw new InvalidOperationException("No IBKR accounts found for the authenticated session.");
 
         return accountsResponse.Accounts[0];
     }
 
-    public async Task<IReadOnlyList<BrokerPosition>> GetPositionsAsync(string accountId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<BrokerPosition>> GetPositionsAsync(Guid credentialId, string accountId, CancellationToken ct = default)
     {
-        var positions = await _client.GetPositionsAsync(accountId, ct);
+        var baseUrl = _resolver.BaseUrl(credentialId);
+        var positions = await _client.GetPositionsAsync(baseUrl, accountId, ct);
         return positions
             .Select(p => new BrokerPosition(
                 Symbol: p.ContractDesc,
