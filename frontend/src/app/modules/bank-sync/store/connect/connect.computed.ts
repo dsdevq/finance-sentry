@@ -72,9 +72,9 @@ export function connectComputed(store: StateSignals) {
       const known = new Set(PROVIDER_SLUGS as readonly string[]);
       const set = new Set<Provider>();
       for (const category of summary.categories) {
-        for (const account of category.accounts) {
-          if (known.has(account.provider)) {
-            set.add(account.provider as Provider);
+        for (const inst of category.institutions) {
+          if (known.has(inst.provider)) {
+            set.add(inst.provider as Provider);
           }
         }
       }
