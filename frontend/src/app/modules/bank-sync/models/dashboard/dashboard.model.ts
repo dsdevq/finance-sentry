@@ -20,6 +20,9 @@ export interface MonthlyFlow {
   inflow: number;
   outflow: number;
   net: number;
+  inflowUsd: number;
+  outflowUsd: number;
+  netUsd: number;
 }
 
 export interface CategoryStat {

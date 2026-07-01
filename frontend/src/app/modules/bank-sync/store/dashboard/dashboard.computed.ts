@@ -22,6 +22,27 @@ const COMPACT_FORMATTER = new Intl.NumberFormat('en-US', {
 
 const MONTH_FORMATTER = new Intl.DateTimeFormat('en-US', {month: 'short', year: '2-digit'});
 
+const MONTH_KEY_PAD = 2;
+
+function currentMonthKey(): string {
+  const now = new Date();
+  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(MONTH_KEY_PAD, '0')}`;
+}
+
+function sumCurrentMonthUsd(
+  rows: {month: string; inflowUsd: number; outflowUsd: number}[]
+): Nullable<{inflow: number; outflow: number}> {
+  const key = currentMonthKey();
+  const forMonth = rows.filter(r => r.month === key);
+  if (forMonth.length === 0) {
+    return null;
+  }
+  return {
+    inflow: forMonth.reduce((s, r) => s + r.inflowUsd, 0),
+    outflow: forMonth.reduce((s, r) => s + r.outflowUsd, 0),
+  };
+}
+
 export function dashboardComputed(store: StateSignals) {
   const currency = inject(CurrencyPipe);
 
@@ -34,23 +55,25 @@ export function dashboardComputed(store: StateSignals) {
     ),
 
     latestInflowFormatted: computed(() => {
-      const flows = store.data()?.monthlyFlow ?? [];
-      const latest = flows[flows.length - 1];
-      return latest ? COMPACT_FORMATTER.format(latest.inflow) : '—';
+      const current = sumCurrentMonthUsd(store.data()?.monthlyFlow ?? []);
+      return current ? COMPACT_FORMATTER.format(current.inflow) : '—';
     }),
 
     latestOutflowFormatted: computed(() => {
-      const flows = store.data()?.monthlyFlow ?? [];
-      const latest = flows[flows.length - 1];
-      return latest ? COMPACT_FORMATTER.format(latest.outflow) : '—';
+      const current = sumCurrentMonthUsd(store.data()?.monthlyFlow ?? []);
+      return current ? COMPACT_FORMATTER.format(current.outflow) : '—';
     }),
 
-    netFlowChartData: computed((): ChartPoint[] =>
-      (store.data()?.monthlyFlow ?? []).map(m => ({
-        label: m.month,
-        value: m.net,
-      }))
-    ),
+    netFlowChartData: computed((): ChartPoint[] => {
+      const rows = store.data()?.monthlyFlow ?? [];
+      const byMonth = new Map<string, number>();
+      for (const m of rows) {
+        byMonth.set(m.month, (byMonth.get(m.month) ?? 0) + m.netUsd);
+      }
+      return [...byMonth.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([month, value]) => ({label: month, value}));
+    }),
 
     categoryChartData: computed((): DonutSegment[] =>
       (store.data()?.topCategories ?? []).map(c => ({
