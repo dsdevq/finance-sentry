@@ -74,92 +74,80 @@
             No accounts connected. Connect an account to see your holdings.
           </div>
         } @else {
-          <table class="w-full text-sm">
-            <thead>
-              <tr class="border-b border-neutral-200 dark:border-neutral-700">
-                <th
-                  class="text-left pb-3 font-medium text-neutral-500 text-xs uppercase tracking-wider"
+          <div class="divide-y divide-neutral-100 dark:divide-neutral-800 -mx-4">
+            @for (inst of store.allInstitutions(); track inst.key) {
+              <details class="group" open>
+                <summary
+                  class="flex items-center justify-between gap-4 px-4 py-3 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
                 >
-                  Asset Class
-                </th>
-                <th
-                  class="text-left pb-3 font-medium text-neutral-500 text-xs uppercase tracking-wider"
-                >
-                  Institution
-                </th>
-                <th
-                  class="text-left pb-3 font-medium text-neutral-500 text-xs uppercase tracking-wider"
-                >
-                  Category
-                </th>
-                <th
-                  class="text-right pb-3 font-medium text-neutral-500 text-xs uppercase tracking-wider"
-                >
-                  Balance
-                </th>
-                <th
-                  class="text-center pb-3 font-medium text-neutral-500 text-xs uppercase tracking-wider"
-                >
-                  Status
-                </th>
-                <th
-                  class="text-right pb-3 font-medium text-neutral-500 text-xs uppercase tracking-wider"
-                >
-                  USD Value
-                </th>
-                <th class="pb-3"><span class="sr-only">Actions</span></th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-neutral-100 dark:divide-neutral-800">
-              @for (account of store.allAccounts(); track account.accountId) {
-                <tr class="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
-                  <td class="py-3 pr-4">
-                    <span class="font-medium text-neutral-800 dark:text-neutral-200">{{
-                      account.accountType
-                    }}</span>
-                    <span class="block text-xs text-neutral-400"
-                      >&#8226;&#8226;{{ account.accountNumberLast4 }}</span
+                  <div class="flex-1 min-w-0">
+                    <p class="font-medium text-neutral-900 dark:text-neutral-100">
+                      {{ inst.name }}
+                    </p>
+                    <p class="text-xs text-neutral-500">
+                      {{ inst.category | categoryLabel }} · {{ inst.accounts.length }} row{{
+                        inst.accounts.length !== 1 ? 's' : ''
+                      }}
+                    </p>
+                  </div>
+                  <cmn-tag [variant]="inst.worstSyncStatus | syncStatusVariant">{{
+                    inst.worstSyncStatus | syncStatusLabel
+                  }}</cmn-tag>
+                  <div
+                    class="text-right font-mono tabular-nums font-semibold text-neutral-900 dark:text-neutral-100 min-w-[7rem]"
+                  >
+                    {{ inst.totalInBaseCurrency | number: '1.2-2' }}
+                    <span class="block text-xs text-neutral-400">{{ store.baseCurrency() }}</span>
+                  </div>
+                  @if (canDisconnect(inst.provider)) {
+                    <cmn-button
+                      (clicked)="disconnect(inst.provider, inst.name); $event.stopPropagation()"
+                      variant="secondary"
+                      size="sm"
                     >
-                  </td>
-                  <td class="py-3 pr-4 text-neutral-700 dark:text-neutral-300">
-                    {{ account.bankName }}
-                  </td>
-                  <td class="py-3 pr-4">
-                    <span class="text-xs text-neutral-500">{{
-                      account.category | categoryLabel
-                    }}</span>
-                  </td>
-                  <td
-                    class="py-3 pr-4 text-right font-mono tabular-nums text-neutral-800 dark:text-neutral-200"
+                      Disconnect
+                    </cmn-button>
+                  }
+                  <svg
+                    class="w-4 h-4 text-neutral-400 transition-transform group-open:rotate-180 shrink-0"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
                   >
-                    {{ account.currentBalance | number: '1.2-2' }}
-                    <span class="block text-xs text-neutral-400">{{ account.currency }}</span>
-                  </td>
-                  <td class="py-3 px-4 text-center">
-                    <cmn-tag [variant]="account.syncStatus | syncStatusVariant">{{
-                      account.syncStatus | syncStatusLabel
-                    }}</cmn-tag>
-                  </td>
-                  <td
-                    class="py-3 text-right font-mono tabular-nums font-medium text-neutral-900 dark:text-neutral-100"
-                  >
-                    {{ account | holdingBalance }}
-                  </td>
-                  <td class="py-3 pl-4 text-right">
-                    @if (canDisconnect(account.provider)) {
-                      <cmn-button
-                        (clicked)="disconnect(account.provider, account.bankName)"
-                        variant="secondary"
-                        size="sm"
-                      >
-                        Disconnect
-                      </cmn-button>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </summary>
+
+                <table class="w-full text-sm bg-neutral-50/50 dark:bg-neutral-900/40">
+                  <tbody>
+                    @for (account of inst.accounts; track account.accountId + account.accountNumberLast4) {
+                      <tr class="border-t border-neutral-100 dark:border-neutral-800">
+                        <td class="py-2 pl-16 pr-4 w-full">
+                          <span class="text-neutral-800 dark:text-neutral-200">{{
+                            account.accountType
+                          }}</span>
+                          <span class="block text-xs text-neutral-400"
+                            >&#8226;&#8226;{{ account.accountNumberLast4 }}</span
+                          >
+                        </td>
+                        <td
+                          class="py-2 pr-4 text-right font-mono tabular-nums text-neutral-700 dark:text-neutral-300"
+                        >
+                          {{ account.currentBalance | number: '1.2-2' }}
+                          <span class="block text-xs text-neutral-400">{{ account.currency }}</span>
+                        </td>
+                        <td
+                          class="py-2 pr-4 text-right font-mono tabular-nums text-neutral-900 dark:text-neutral-100"
+                        >
+                          {{ account | holdingBalance }}
+                        </td>
+                      </tr>
                     }
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
+                  </tbody>
+                </table>
+              </details>
+            }
+          </div>
         }
       </cmn-card>
     }

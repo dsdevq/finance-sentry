@@ -61,73 +61,93 @@
           <span class="text-cmn-xs text-text-secondary"
             >{{ banking.institutionCount }} institution{{
               banking.institutionCount !== 1 ? 's' : ''
+            }}
+            · {{ banking.accounts.length }} account{{
+              banking.accounts.length !== 1 ? 's' : ''
             }}</span
           >
         </div>
-        <cmn-card>
-          <table class="w-full text-cmn-sm" aria-label="Banking accounts">
-            <thead>
-              <tr
-                class="border-b border-border-default text-cmn-xs text-text-secondary uppercase tracking-wide"
+        <cmn-card class="!p-0">
+          @for (inst of store.bankingInstitutions(); track inst.key) {
+            <details class="group border-b border-border-default last:border-0" open>
+              <summary
+                class="flex items-center justify-between gap-cmn-4 px-cmn-4 py-cmn-4 cursor-pointer hover:bg-surface-bg transition-colors"
               >
-                <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Institution</th>
-                <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Account Type</th>
-                <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Connectivity</th>
-                <th class="text-right py-cmn-3 px-cmn-4 font-medium" scope="col">Balance</th>
-                <th class="text-right py-cmn-3 px-cmn-4 font-medium" scope="col">
-                  <span class="sr-only">Actions</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (account of banking.accounts; track account.accountId) {
-                <tr
-                  class="border-b border-border-default last:border-0 hover:bg-surface-bg transition-colors"
+                <div class="flex items-center gap-cmn-3 flex-1 min-w-0">
+                  <cmn-institution-avatar [name]="inst.name" />
+                  <div class="min-w-0">
+                    <p class="font-medium text-text-primary">{{ inst.name }}</p>
+                    <p class="text-cmn-xs text-text-secondary">
+                      {{ inst.accounts.length }} account{{ inst.accounts.length !== 1 ? 's' : '' }}
+                    </p>
+                  </div>
+                </div>
+                <cmn-status-indicator
+                  [variant]="inst.worstSyncStatus | syncStatusVariant"
+                  [timestampLabel]="inst.latestSyncTimestamp | relativeTime"
                 >
-                  <td class="py-cmn-4 px-cmn-4">
-                    <div class="flex items-center gap-cmn-3">
-                      <cmn-institution-avatar [name]="account.bankName" />
-                      <div>
-                        <p class="font-medium text-text-primary">{{ account.bankName }}</p>
+                  {{ inst.worstSyncStatus | syncStatusLabel }}
+                </cmn-status-indicator>
+                <div
+                  class="font-mono tabular-nums font-medium text-text-primary text-right min-w-[7rem]"
+                >
+                  {{ store.baseCurrency() }}
+                  {{ inst.totalInBaseCurrency | number: '1.2-2' }}
+                </div>
+                <svg
+                  class="w-4 h-4 text-text-secondary transition-transform group-open:rotate-180 shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </summary>
+
+              <table class="w-full text-cmn-sm bg-surface-bg" aria-label="Accounts">
+                <tbody>
+                  @for (account of inst.accounts; track account.accountId) {
+                    <tr class="border-t border-border-default">
+                      <td class="py-cmn-3 pl-cmn-16 pr-cmn-4 w-full">
+                        <p class="text-text-primary">{{ account.accountType }}</p>
                         <p class="text-cmn-xs text-text-secondary">
                           •••• {{ account.accountNumberLast4 }}
                         </p>
-                      </div>
-                    </div>
-                  </td>
-                  <td class="py-cmn-4 px-cmn-4 text-text-secondary">{{ account.accountType }}</td>
-                  <td class="py-cmn-4 px-cmn-4">
-                    <cmn-status-indicator
-                      [variant]="account.syncStatus | syncStatusVariant"
-                      [timestampLabel]="account.lastSyncTimestamp | relativeTime"
-                    >
-                      {{ account.syncStatus | syncStatusLabel }}
-                    </cmn-status-indicator>
-                  </td>
-                  <td
-                    class="py-cmn-4 px-cmn-4 text-right font-mono tabular-nums font-medium text-text-primary"
-                  >
-                    {{ account | accountBalance }}
-                  </td>
-                  <td class="py-cmn-4 px-cmn-4 text-right">
-                    <div class="flex justify-end gap-cmn-2">
-                      @if (
-                        account.provider === 'truelayer' &&
-                        account.syncStatus === 'reauth_required'
-                      ) {
-                        <cmn-button (clicked)="reconnect()" variant="primary" size="sm">
-                          Reconnect
-                        </cmn-button>
-                      }
-                      <cmn-button (clicked)="disconnect(account)" variant="secondary" size="sm">
-                        Disconnect
-                      </cmn-button>
-                    </div>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
+                      </td>
+                      <td class="py-cmn-3 px-cmn-4">
+                        <cmn-status-indicator
+                          [variant]="account.syncStatus | syncStatusVariant"
+                          [timestampLabel]="account.lastSyncTimestamp | relativeTime"
+                        >
+                          {{ account.syncStatus | syncStatusLabel }}
+                        </cmn-status-indicator>
+                      </td>
+                      <td
+                        class="py-cmn-3 px-cmn-4 text-right font-mono tabular-nums text-text-primary min-w-[7rem]"
+                      >
+                        {{ account | accountBalance }}
+                      </td>
+                      <td class="py-cmn-3 px-cmn-4 text-right">
+                        <div class="flex justify-end gap-cmn-2">
+                          @if (
+                            account.provider === 'truelayer' &&
+                            account.syncStatus === 'reauth_required'
+                          ) {
+                            <cmn-button (clicked)="reconnect()" variant="primary" size="sm">
+                              Reconnect
+                            </cmn-button>
+                          }
+                          <cmn-button (clicked)="disconnect(account)" variant="secondary" size="sm">
+                            Disconnect
+                          </cmn-button>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </details>
+          }
         </cmn-card>
       </div>
     }
@@ -146,52 +166,58 @@
             }}</span
           >
         </div>
-        <cmn-card>
-          <table class="w-full text-cmn-sm" aria-label="Brokerage accounts">
-            <thead>
-              <tr
-                class="border-b border-border-default text-cmn-xs text-text-secondary uppercase tracking-wide"
+        <cmn-card class="!p-0">
+          @for (inst of store.brokerageInstitutions(); track inst.key) {
+            <details class="group border-b border-border-default last:border-0" open>
+              <summary
+                class="flex items-center justify-between gap-cmn-4 px-cmn-4 py-cmn-4 cursor-pointer hover:bg-surface-bg transition-colors"
               >
-                <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Institution</th>
-                <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Account Type</th>
-                <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Connectivity</th>
-                <th class="text-right py-cmn-3 px-cmn-4 font-medium" scope="col">Balance</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (account of brokerage.accounts; track account.accountId) {
-                <tr
-                  class="border-b border-border-default last:border-0 hover:bg-surface-bg transition-colors"
+                <div class="flex items-center gap-cmn-3 flex-1 min-w-0">
+                  <cmn-institution-avatar [name]="inst.name" />
+                  <div class="min-w-0">
+                    <p class="font-medium text-text-primary">{{ inst.name }}</p>
+                    <p class="text-cmn-xs text-text-secondary">
+                      {{ inst.accounts.length }} position{{ inst.accounts.length !== 1 ? 's' : '' }}
+                    </p>
+                  </div>
+                </div>
+                <div
+                  class="font-mono tabular-nums font-medium text-text-primary text-right min-w-[7rem]"
                 >
-                  <td class="py-cmn-4 px-cmn-4">
-                    <div class="flex items-center gap-cmn-3">
-                      <cmn-institution-avatar [name]="account.bankName" />
-                      <div>
-                        <p class="font-medium text-text-primary">{{ account.bankName }}</p>
-                        <p class="text-cmn-xs text-text-secondary">
-                          •••• {{ account.accountNumberLast4 }}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-                  <td class="py-cmn-4 px-cmn-4 text-text-secondary">{{ account.accountType }}</td>
-                  <td class="py-cmn-4 px-cmn-4">
-                    <cmn-status-indicator
-                      [variant]="account.syncStatus | syncStatusVariant"
-                      [timestampLabel]="account.lastSyncTimestamp | relativeTime"
-                    >
-                      {{ account.syncStatus | syncStatusLabel }}
-                    </cmn-status-indicator>
-                  </td>
-                  <td
-                    class="py-cmn-4 px-cmn-4 text-right font-mono tabular-nums font-medium text-text-primary"
-                  >
-                    {{ account | accountBalance }}
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
+                  {{ store.baseCurrency() }}
+                  {{ inst.totalInBaseCurrency | number: '1.2-2' }}
+                </div>
+                <svg
+                  class="w-4 h-4 text-text-secondary transition-transform group-open:rotate-180 shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </summary>
+
+              <table class="w-full text-cmn-sm bg-surface-bg" aria-label="Positions">
+                <tbody>
+                  @for (account of inst.accounts; track account.accountId + account.accountNumberLast4) {
+                    <tr class="border-t border-border-default">
+                      <td class="py-cmn-3 pl-cmn-16 pr-cmn-4 w-full text-text-primary">
+                        {{ account.accountNumberLast4 }}
+                      </td>
+                      <td class="py-cmn-3 px-cmn-4 text-text-secondary">
+                        {{ account.accountType }}
+                      </td>
+                      <td
+                        class="py-cmn-3 px-cmn-4 text-right font-mono tabular-nums text-text-primary min-w-[7rem]"
+                      >
+                        {{ account | accountBalance }}
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </details>
+          }
         </cmn-card>
       </div>
     }
@@ -210,50 +236,58 @@
             }}</span
           >
         </div>
-        <cmn-card>
-          <table class="w-full text-cmn-sm" aria-label="Crypto holdings">
-            <thead>
-              <tr
-                class="border-b border-border-default text-cmn-xs text-text-secondary uppercase tracking-wide"
+        <cmn-card class="!p-0">
+          @for (inst of store.cryptoInstitutions(); track inst.key) {
+            <details class="group border-b border-border-default last:border-0" open>
+              <summary
+                class="flex items-center justify-between gap-cmn-4 px-cmn-4 py-cmn-4 cursor-pointer hover:bg-surface-bg transition-colors"
               >
-                <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Exchange</th>
-                <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Account Type</th>
-                <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Connectivity</th>
-                <th class="text-right py-cmn-3 px-cmn-4 font-medium" scope="col">Value</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (account of crypto.accounts; track account.accountId) {
-                <tr
-                  class="border-b border-border-default last:border-0 hover:bg-surface-bg transition-colors"
+                <div class="flex items-center gap-cmn-3 flex-1 min-w-0">
+                  <cmn-institution-avatar [name]="inst.name" />
+                  <div class="min-w-0">
+                    <p class="font-medium text-text-primary">{{ inst.name }}</p>
+                    <p class="text-cmn-xs text-text-secondary">
+                      {{ inst.accounts.length }} asset{{ inst.accounts.length !== 1 ? 's' : '' }}
+                    </p>
+                  </div>
+                </div>
+                <div
+                  class="font-mono tabular-nums font-medium text-text-primary text-right min-w-[7rem]"
                 >
-                  <td class="py-cmn-4 px-cmn-4">
-                    <div class="flex items-center gap-cmn-3">
-                      <cmn-institution-avatar [name]="account.bankName" />
-                      <div>
-                        <p class="font-medium text-text-primary">{{ account.bankName }}</p>
-                        <p class="text-cmn-xs text-text-secondary">{{ account.provider }}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td class="py-cmn-4 px-cmn-4 text-text-secondary">{{ account.accountType }}</td>
-                  <td class="py-cmn-4 px-cmn-4">
-                    <cmn-status-indicator
-                      [variant]="account.syncStatus | syncStatusVariant"
-                      [timestampLabel]="account.lastSyncTimestamp | relativeTime"
-                    >
-                      {{ account.syncStatus | syncStatusLabel }}
-                    </cmn-status-indicator>
-                  </td>
-                  <td
-                    class="py-cmn-4 px-cmn-4 text-right font-mono tabular-nums font-medium text-text-primary"
-                  >
-                    {{ account | accountBalance }}
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
+                  {{ store.baseCurrency() }}
+                  {{ inst.totalInBaseCurrency | number: '1.2-2' }}
+                </div>
+                <svg
+                  class="w-4 h-4 text-text-secondary transition-transform group-open:rotate-180 shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </summary>
+
+              <table class="w-full text-cmn-sm bg-surface-bg" aria-label="Assets">
+                <tbody>
+                  @for (account of inst.accounts; track account.accountId + account.accountNumberLast4) {
+                    <tr class="border-t border-border-default">
+                      <td class="py-cmn-3 pl-cmn-16 pr-cmn-4 w-full text-text-primary">
+                        {{ account.accountNumberLast4 }}
+                      </td>
+                      <td class="py-cmn-3 px-cmn-4 text-text-secondary">
+                        {{ account.accountType }}
+                      </td>
+                      <td
+                        class="py-cmn-3 px-cmn-4 text-right font-mono tabular-nums text-text-primary min-w-[7rem]"
+                      >
+                        {{ account | accountBalance }}
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </details>
+          }
         </cmn-card>
       </div>
     }

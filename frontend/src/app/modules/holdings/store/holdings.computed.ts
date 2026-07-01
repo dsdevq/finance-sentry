@@ -4,7 +4,9 @@ import {ErrorMessageService} from '@dsdevq-common/core';
 import {
   type AccountBalanceItem,
   type CategorySummary,
+  type InstitutionGroup,
 } from '../../../shared/models/wealth/wealth.model';
+import {InstitutionUtils} from '../../../shared/utils/institution.utils';
 import {type Position} from '../models/position/position.model';
 import {type HoldingsState} from './holdings.state';
 
@@ -47,6 +49,11 @@ export function holdingsComputed(store: StateSignals) {
     ),
     allAccounts: computed(
       (): AccountBalanceItem[] => store.summary()?.categories.flatMap(c => c.accounts) ?? []
+    ),
+    allInstitutions: computed((): InstitutionGroup[] =>
+      InstitutionUtils.groupByInstitution(
+        store.summary()?.categories.flatMap(c => c.accounts) ?? []
+      )
     ),
     positions: computed((): Position[] => store.positions()),
     isPositionsLoading: computed(() => store.positionsStatus() === 'loading'),
