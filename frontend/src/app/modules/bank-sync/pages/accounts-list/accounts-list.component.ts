@@ -136,6 +136,14 @@ export class AccountsListComponent implements OnInit {
         if (confirmed !== true) {
           return;
         }
+        if (institution.provider === 'ibkr') {
+          this.store.disconnectIBKR();
+          return;
+        }
+        if (institution.provider === 'binance') {
+          this.store.disconnectBinance();
+          return;
+        }
         this.store.disconnectInstitution({
           provider: institution.provider,
           institutionId: institution.institutionId,
