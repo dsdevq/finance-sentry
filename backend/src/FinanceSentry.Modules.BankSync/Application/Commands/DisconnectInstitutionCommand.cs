@@ -36,9 +36,8 @@ public sealed class DisconnectInstitutionCommandHandler(
 
         foreach (var account in childAccounts)
         {
-            await transactions.SoftDeleteByAccountIdAsync(account.Id, ct);
             await alerts.DeleteAlertsForAccountAsync(account.Id, ct);
-            await accounts.DeleteAsync(account.Id, ct);
+            await accounts.HardDeleteAsync(account.Id, ct);
         }
 
         switch (provider)

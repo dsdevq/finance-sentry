@@ -62,6 +62,21 @@ public class BankAccountRepository(BankSyncDbContext context) : IBankAccountRepo
         return true;
     }
 
+    public async Task<bool> HardDeleteAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var account = await _context.BankAccounts
+            .Include(ba => ba.Transactions)
+            .Include(ba => ba.SyncJobs)
+            .Include(ba => ba.EncryptedCredential)
+            .FirstOrDefaultAsync(ba => ba.Id == id, cancellationToken);
+        if (account == null)
+            return false;
+
+        _context.BankAccounts.Remove(account);
+        await _context.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
     public async Task<IEnumerable<BankAccount>> GetBySyncStatusAsync(string status, CancellationToken cancellationToken = default)
     {
         return await _context.BankAccounts

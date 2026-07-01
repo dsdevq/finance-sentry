@@ -38,6 +38,13 @@ public interface IBankAccountRepository
     Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Hard-remove the bank account row from the DB (used by the institution
+    /// disconnect flow so the parent credential/connection can be removed
+    /// without a dangling FK).
+    /// </summary>
+    Task<bool> HardDeleteAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Get accounts with specific sync status.
     /// </summary>
     Task<IEnumerable<BankAccount>> GetBySyncStatusAsync(string status, CancellationToken cancellationToken = default);
