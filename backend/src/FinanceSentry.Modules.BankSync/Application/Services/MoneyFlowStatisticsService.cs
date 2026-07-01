@@ -1,16 +1,22 @@
 namespace FinanceSentry.Modules.BankSync.Application.Services;
 
+using FinanceSentry.Core.Utils;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
 
 /// <summary>
 /// Monthly cash-flow statistics for a user (inflow / outflow / net per currency).
+/// Amounts are provided both in the source currency and normalized to USD so
+/// consumers can render a single cross-currency total per month.
 /// </summary>
 public record MonthlyFlow(
     string Month,       // "2026-03"
     string Currency,
     decimal Inflow,
     decimal Outflow,
-    decimal Net);
+    decimal Net,
+    decimal InflowUsd,
+    decimal OutflowUsd,
+    decimal NetUsd);
 
 /// <summary>
 /// Computes monthly money-flow statistics using an in-memory join of transactions and accounts.
@@ -62,7 +68,17 @@ public class MoneyFlowStatisticsService(
             {
                 var inflow = g.Where(x => x.Transaction.TransactionType == "credit").Sum(x => x.Transaction.Amount);
                 var outflow = g.Where(x => x.Transaction.TransactionType == "debit").Sum(x => x.Transaction.Amount);
-                return new MonthlyFlow(g.Key.Month, g.Key.Currency, inflow, outflow, inflow - outflow);
+                var inflowUsd = CurrencyConverter.ToUsd(inflow, g.Key.Currency);
+                var outflowUsd = CurrencyConverter.ToUsd(outflow, g.Key.Currency);
+                return new MonthlyFlow(
+                    g.Key.Month,
+                    g.Key.Currency,
+                    inflow,
+                    outflow,
+                    inflow - outflow,
+                    inflowUsd,
+                    outflowUsd,
+                    inflowUsd - outflowUsd);
             })
             .OrderByDescending(mf => mf.Month)
             .ToList();
