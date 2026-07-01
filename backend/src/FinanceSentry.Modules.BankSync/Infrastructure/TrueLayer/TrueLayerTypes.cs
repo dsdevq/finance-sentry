@@ -33,4 +33,5 @@ public record TrueLayerTransaction(
     string Description,
     string? MerchantName,
     string TransactionType,
-    bool IsPending);
+    bool IsPending,
+    IReadOnlyList<string> Classification);

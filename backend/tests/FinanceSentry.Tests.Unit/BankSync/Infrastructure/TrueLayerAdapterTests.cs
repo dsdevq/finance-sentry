@@ -1,5 +1,6 @@
 namespace FinanceSentry.Tests.Unit.BankSync.Infrastructure;
 
+using FinanceSentry.Modules.BankSync.Application.Services.CategoryMapping;
 using FinanceSentry.Modules.BankSync.Infrastructure.TrueLayer;
 using FluentAssertions;
 using Moq;
@@ -13,7 +14,7 @@ public class TrueLayerAdapterTests
     private const string ExternalAccountId = "tl-acct-1234abcd";
 
     private readonly Mock<ITrueLayerClient> _clientMock = new(MockBehavior.Strict);
-    private TrueLayerAdapter CreateSut() => new(_clientMock.Object);
+    private TrueLayerAdapter CreateSut() => new(_clientMock.Object, new TrueLayerCategoryMapper());
 
     [Fact]
     public void ProviderName_IsTrueLayer()
@@ -111,7 +112,8 @@ public class TrueLayerAdapterTests
             Description: "Tesco Galway",
             MerchantName: "Tesco",
             TransactionType: "debit",
-            IsPending: false);
+            IsPending: false,
+            Classification: ["Groceries"]);
 
         var pending = new TrueLayerTransaction(
             TransactionId: "tx-2",
@@ -121,7 +123,8 @@ public class TrueLayerAdapterTests
             Description: "Salary",
             MerchantName: null,
             TransactionType: "credit",
-            IsPending: true);
+            IsPending: true,
+            Classification: []);
 
         _clientMock
             .Setup(c => c.GetTransactionsAsync(AccessToken, ExternalAccountId, It.IsAny<DateOnly?>(), It.IsAny<DateOnly?>(), default))
@@ -143,6 +146,7 @@ public class TrueLayerAdapterTests
         debit.TransactionType.Should().Be("debit");
         debit.IsPending.Should().BeFalse();
         debit.PostedDate.Should().NotBeNull();
+        debit.MerchantCategory.Should().Be("food_and_drink");
 
         var credit = candidates.Single(c => c.Description == "Salary");
         credit.Amount.Should().Be(1000m);

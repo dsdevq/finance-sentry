@@ -165,7 +165,8 @@ public sealed class TrueLayerHttpClient(
             Description: description.Trim(),
             MerchantName: t.MerchantName,
             TransactionType: txType,
-            IsPending: isPending);
+            IsPending: isPending,
+            Classification: t.TransactionClassification ?? []);
     }
 
     private static DateTime ParseTimestamp(string? raw)
@@ -336,5 +337,6 @@ public sealed class TrueLayerHttpClient(
         [JsonPropertyName("description")] public string? Description { get; set; }
         [JsonPropertyName("merchant_name")] public string? MerchantName { get; set; }
         [JsonPropertyName("transaction_type")] public string? TransactionType { get; set; }
+        [JsonPropertyName("transaction_classification")] public List<string>? TransactionClassification { get; set; }
     }
 }

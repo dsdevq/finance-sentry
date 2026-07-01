@@ -91,6 +91,7 @@ public static class BankSyncModule
         services.AddHttpClient(TrueLayerHttpClient.AuthClientName, c => c.BaseAddress = trueLayerAuthBase);
         services.AddHttpClient(TrueLayerHttpClient.ApiClientName, c => c.BaseAddress = trueLayerApiBase);
         services.AddSingleton<ITrueLayerClient, TrueLayerHttpClient>();
+        services.AddSingleton<TrueLayerCategoryMapper>();
         services.AddScoped<TrueLayerAdapter>();
         services.AddScoped<IBankProvider>(sp => sp.GetRequiredService<TrueLayerAdapter>());
 
