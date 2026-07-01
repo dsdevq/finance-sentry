@@ -40,13 +40,16 @@ public class WealthAggregationService(
             .GroupBy(a => ProviderCategoryMapper.GetCategory(a.Provider))
             .Select(g =>
             {
-                var accountDtos = g.Select(a => new AccountBalanceDto(
+                var summaries = g.ToList();
+                var accountDtos = summaries.Select(a => new AccountBalanceDto(
                     a.AccountId, a.BankName, a.AccountType, a.AccountNumberLast4,
                     a.Provider, ProviderCategoryMapper.GetCategory(a.Provider),
                     a.Currency, a.CurrentBalance, a.BalanceUsd,
                     a.SyncStatus, a.LastSyncTimestamp)).ToList();
 
-                return new CategorySummaryDto(g.Key, accountDtos.Sum(d => d.BalanceInBaseCurrency ?? 0m), accountDtos);
+                var institutionCount = CountBankingInstitutions(summaries);
+
+                return new CategorySummaryDto(g.Key, accountDtos.Sum(d => d.BalanceInBaseCurrency ?? 0m), institutionCount, accountDtos);
             })
             .ToList();
 
@@ -60,7 +63,8 @@ public class WealthAggregationService(
                     "USD", h.FreeQuantity + h.LockedQuantity, h.UsdValue, "synced", h.SyncedAt))
                     .ToList<AccountBalanceDto>();
 
-                grouped.Add(new CategorySummaryDto("crypto", holdings.Sum(h => h.UsdValue), dtos));
+                var institutionCount = holdings.Select(h => h.Provider).Distinct(StringComparer.OrdinalIgnoreCase).Count();
+                grouped.Add(new CategorySummaryDto("crypto", holdings.Sum(h => h.UsdValue), institutionCount, dtos));
             }
         }
 
@@ -76,13 +80,24 @@ public class WealthAggregationService(
                     DateTime.UtcNow - h.SyncedAt > StaleThreshold ? "stale" : "synced", h.SyncedAt))
                     .ToList<AccountBalanceDto>();
 
-                grouped.Add(new CategorySummaryDto("brokerage", holdings.Sum(h => h.UsdValue), dtos));
+                var institutionCount = holdings.Select(h => h.Provider).Distinct(StringComparer.OrdinalIgnoreCase).Count();
+                grouped.Add(new CategorySummaryDto("brokerage", holdings.Sum(h => h.UsdValue), institutionCount, dtos));
             }
         }
 
         return new WealthSummaryResponse(
             grouped.Sum(c => c.TotalInBaseCurrency), "USD", grouped,
             new AppliedFiltersDto(category, provider));
+    }
+
+    private static int CountBankingInstitutions(IReadOnlyList<BankingAccountSummary> accounts)
+    {
+        return accounts
+            .Select(a => (
+                Provider: a.Provider.ToLowerInvariant(),
+                InstitutionKey: (a.MonobankCredentialId ?? a.TrueLayerConnectionId ?? a.AccountId).ToString()))
+            .Distinct()
+            .Count();
     }
 
     public async Task<TransactionSummaryResponse> GetTransactionSummaryAsync(

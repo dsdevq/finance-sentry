@@ -15,4 +15,6 @@ public record BankingAccountSummary(
     decimal? CurrentBalance,
     decimal? BalanceUsd,
     string SyncStatus,
-    DateTime? LastSyncTimestamp);
+    DateTime? LastSyncTimestamp,
+    Guid? MonobankCredentialId = null,
+    Guid? TrueLayerConnectionId = null);

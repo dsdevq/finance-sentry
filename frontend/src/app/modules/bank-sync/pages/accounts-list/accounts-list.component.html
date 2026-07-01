@@ -59,8 +59,8 @@
             Banking Institutions
           </h2>
           <span class="text-cmn-xs text-text-secondary"
-            >{{ banking.accounts.length }} account{{
-              banking.accounts.length !== 1 ? 's' : ''
+            >{{ banking.institutionCount }} institution{{
+              banking.institutionCount !== 1 ? 's' : ''
             }}</span
           >
         </div>
@@ -139,7 +139,9 @@
             Brokerage &amp; Investment
           </h2>
           <span class="text-cmn-xs text-text-secondary"
-            >{{ brokerage.accounts.length }} account{{
+            >{{ brokerage.institutionCount }} broker{{
+              brokerage.institutionCount !== 1 ? 's' : ''
+            }} · {{ brokerage.accounts.length }} position{{
               brokerage.accounts.length !== 1 ? 's' : ''
             }}</span
           >
@@ -201,7 +203,11 @@
             Digital Assets
           </h2>
           <span class="text-cmn-xs text-text-secondary"
-            >{{ crypto.accounts.length }} account{{ crypto.accounts.length !== 1 ? 's' : '' }}</span
+            >{{ crypto.institutionCount }} exchange{{
+              crypto.institutionCount !== 1 ? 's' : ''
+            }} · {{ crypto.accounts.length }} asset{{
+              crypto.accounts.length !== 1 ? 's' : ''
+            }}</span
           >
         </div>
         <cmn-card>

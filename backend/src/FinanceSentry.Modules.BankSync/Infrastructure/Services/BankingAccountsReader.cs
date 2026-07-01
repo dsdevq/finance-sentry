@@ -23,7 +23,9 @@ public class BankingAccountsReader(IBankAccountRepository accounts) : IBankingAc
             a.CurrentBalance,
             a.CurrentBalance.HasValue ? CurrencyConverter.ToUsd(a.CurrentBalance.Value, a.Currency) : null,
             a.SyncStatus == "active" ? "synced" : a.SyncStatus,
-            a.UpdatedAt))
+            a.UpdatedAt,
+            a.MonobankCredentialId,
+            a.TrueLayerConnectionId))
         .ToList();
     }
 }
