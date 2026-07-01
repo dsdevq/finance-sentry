@@ -31,6 +31,7 @@ public record InstitutionDto(
     Guid InstitutionId,
     string Provider,
     string Name,
+    string Category,
     decimal TotalInBaseCurrency,
     string SyncStatus,
     DateTime? LastSyncTimestamp,

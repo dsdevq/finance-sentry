@@ -23,6 +23,7 @@ export interface Institution {
   institutionId: string;
   provider: string;
   name: string;
+  category: AccountCategory;
   totalInBaseCurrency: number;
   syncStatus: SyncStatus;
   lastSyncTimestamp: Nullable<string>;
