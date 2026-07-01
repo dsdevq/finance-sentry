@@ -1,8 +1,25 @@
-<div class="flex flex-col gap-cmn-6">
-  <p class="text-cmn-sm text-text-secondary">
-    The IBKR gateway sidecar holds the session for this deployment. Click connect to verify the
-    gateway is authenticated and link your IBKR account.
-  </p>
+<form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-cmn-6">
+  <cmn-form-field
+    [control]="form.controls.username"
+    label="IBKR username"
+    hint="The IBKR Client Portal username. Use a paper-trading or read-only account whenever possible."
+  >
+    <cmn-input
+      formControlName="username"
+      type="text"
+      autocomplete="username"
+      placeholder="IBKR username"
+    />
+  </cmn-form-field>
+
+  <cmn-form-field [control]="form.controls.password" label="IBKR password">
+    <cmn-input
+      formControlName="password"
+      type="password"
+      autocomplete="current-password"
+      placeholder="IBKR password"
+    />
+  </cmn-form-field>
 
   @if (isDuplicateError()) {
     <cmn-alert variant="error">
@@ -17,20 +34,20 @@
     <cmn-alert variant="error">{{ store.errorMessage() }}</cmn-alert>
   }
 
-  <cmn-alert variant="accent" icon="ShieldCheck" title="Single-tenant gateway">
-    No credentials are entered here. The gateway sidecar (IBeam) authenticates with IBKR using the
-    credentials in <code>docker/.env</code>.
+  <cmn-alert variant="accent" icon="ShieldCheck" title="Per-user gateway">
+    Credentials are encrypted at rest (AES-256-GCM). A dedicated IBeam gateway container is
+    spawned for your account and holds the IBKR session privately.
   </cmn-alert>
 
   <cmn-dialog-actions align="between">
     <cmn-button (clicked)="back()" variant="secondary" icon="ArrowLeft">Back</cmn-button>
     <cmn-button
       [loading]="store.isBusy()"
-      [disabled]="store.isBusy()"
-      (clicked)="connect()"
+      [disabled]="form.invalid || store.isBusy()"
       variant="primary"
+      type="submit"
     >
       Connect IBKR
     </cmn-button>
   </cmn-dialog-actions>
-</div>
+</form>
