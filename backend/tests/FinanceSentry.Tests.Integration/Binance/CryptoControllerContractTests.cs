@@ -177,6 +177,9 @@ public class CryptoControllerDisconnectContractTests(CryptoApiFactory factory) :
         _factory.CredentialRepoMock
             .Setup(r => r.GetByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((BinanceCredential?)null);
+        _factory.HoldingRepoMock
+            .Setup(r => r.GetByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
 
         var response = await _client.DeleteAsync("/api/v1/crypto/binance/disconnect");
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -196,6 +199,9 @@ public class CryptoControllerDisconnectContractTests(CryptoApiFactory factory) :
         _factory.CredentialRepoMock
             .Setup(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
+        _factory.HoldingRepoMock
+            .Setup(r => r.GetByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
         _factory.HoldingRepoMock
             .Setup(r => r.DeleteByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);

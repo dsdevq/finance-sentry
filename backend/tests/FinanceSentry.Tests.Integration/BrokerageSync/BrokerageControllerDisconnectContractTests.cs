@@ -32,6 +32,9 @@ public class BrokerageControllerDisconnectContractTests : IClassFixture<Brokerag
         _factory.CredentialRepoMock
             .Setup(r => r.GetByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((IBKRCredential?)null);
+        _factory.HoldingRepoMock
+            .Setup(r => r.GetByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
 
         var response = await _client.DeleteAsync("/api/v1/brokerage/ibkr/disconnect");
 
@@ -54,6 +57,9 @@ public class BrokerageControllerDisconnectContractTests : IClassFixture<Brokerag
         _factory.CredentialRepoMock
             .Setup(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
+        _factory.HoldingRepoMock
+            .Setup(r => r.GetByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
         _factory.HoldingRepoMock
             .Setup(r => r.DeleteByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
