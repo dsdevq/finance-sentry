@@ -18,7 +18,7 @@ public sealed class GetCashflowReportToolTests
         new(_handler.Object, new FakeIdentityResolver(), NullLogger<GetCashflowReportTool>.Instance);
 
     private static GlobalTransactionDto Txn(decimal amount, DateTime date, string transactionType = "debit") =>
-        new(Guid.NewGuid(), Guid.NewGuid(), "TestBank", amount, date, date, "Test", transactionType, null, false, DateTime.UtcNow);
+        new(Guid.NewGuid(), Guid.NewGuid(), "TestBank", "USD", amount, date, date, "Test", transactionType, null, false, DateTime.UtcNow);
 
     private static GlobalTransactionDto Credit(decimal amount, DateTime date) => Txn(amount, date, "credit");
     private static GlobalTransactionDto Debit(decimal amount, DateTime date) => Txn(amount, date, "debit");

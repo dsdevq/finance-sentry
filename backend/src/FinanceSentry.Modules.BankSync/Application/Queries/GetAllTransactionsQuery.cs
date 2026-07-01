@@ -10,6 +10,7 @@ public record GlobalTransactionDto(
     Guid TransactionId,
     Guid AccountId,
     string BankName,
+    string Currency,
     decimal Amount,
     DateTime Date,
     DateTime? PostedDate,
@@ -48,7 +49,7 @@ public class GetAllTransactionsQueryHandler(
     public async Task<AllTransactionsResult> Handle(GetAllTransactionsQuery request, CancellationToken ct)
     {
         var accountList = await _accounts.GetByUserIdAsync(request.UserId, ct);
-        var accountMap = accountList.ToDictionary(a => a.Id, a => a.BankName);
+        var accountMap = accountList.ToDictionary(a => a.Id, a => (a.BankName, a.Currency));
 
         var all = await _transactions.GetByUserIdAsync(request.UserId, ct);
 
@@ -66,19 +67,23 @@ public class GetAllTransactionsQueryHandler(
         var totalCount = ordered.Count;
         var page = ordered.Skip(request.Paging.Offset).Take(request.Paging.Limit).ToList();
 
-        var dtos = page.Select(t => new GlobalTransactionDto(
-            t.Id,
-            t.AccountId,
-            accountMap.GetValueOrDefault(t.AccountId, "Unknown"),
-            t.Amount,
-            t.TransactionDate,
-            t.PostedDate,
-            t.Description,
-            t.TransactionType,
-            t.MerchantCategory,
-            t.IsPending,
-            t.CreatedAt
-        )).ToList();
+        var dtos = page.Select(t =>
+        {
+            var meta = accountMap.TryGetValue(t.AccountId, out var m) ? m : ("Unknown", "USD");
+            return new GlobalTransactionDto(
+                t.Id,
+                t.AccountId,
+                meta.Item1,
+                meta.Item2,
+                t.Amount,
+                t.TransactionDate,
+                t.PostedDate,
+                t.Description,
+                t.TransactionType,
+                t.MerchantCategory,
+                t.IsPending,
+                t.CreatedAt);
+        }).ToList();
 
         return new AllTransactionsResult(dtos, totalCount, request.Paging.Offset + request.Paging.Limit < totalCount, request.Paging.Offset, request.Paging.Limit);
     }
