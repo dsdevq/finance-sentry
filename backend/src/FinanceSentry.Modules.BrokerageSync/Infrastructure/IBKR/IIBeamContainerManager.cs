@@ -27,4 +27,11 @@ public interface IIBeamContainerManager
     /// timeout is reached. Returns true on success, false on timeout.
     /// </summary>
     Task<bool> WaitForAuthAsync(Guid credentialId, CancellationToken ct = default);
+
+    /// <summary>
+    /// True when a container with the user's target name exists AND is
+    /// currently running. False if it is missing, exited, or in any other
+    /// non-running state.
+    /// </summary>
+    Task<bool> IsRunningAsync(Guid credentialId, CancellationToken ct = default);
 }
