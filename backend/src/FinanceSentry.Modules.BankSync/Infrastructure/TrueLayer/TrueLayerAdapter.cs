@@ -1,6 +1,7 @@
 namespace FinanceSentry.Modules.BankSync.Infrastructure.TrueLayer;
 
 using FinanceSentry.Modules.BankSync.Application.Services;
+using FinanceSentry.Modules.BankSync.Application.Services.CategoryMapping;
 using FinanceSentry.Modules.BankSync.Domain.Interfaces;
 
 /// <summary>
@@ -9,9 +10,11 @@ using FinanceSentry.Modules.BankSync.Domain.Interfaces;
 /// exchanging the per-connection refresh_token for a fresh access_token before
 /// invoking this adapter.
 /// </summary>
-public class TrueLayerAdapter(ITrueLayerClient client) : IBankProvider
+public class TrueLayerAdapter(ITrueLayerClient client, TrueLayerCategoryMapper categoryMapper) : IBankProvider
 {
     private const int InitialSyncWindowDays = 90;
+
+    private readonly TrueLayerCategoryMapper _categoryMapper = categoryMapper;
 
     public string ProviderName => "truelayer";
 
@@ -60,7 +63,7 @@ public class TrueLayerAdapter(ITrueLayerClient client) : IBankProvider
 
         var candidates = booked
             .Concat(pending)
-            .Select(t => MapTransaction(t, accountId, userId))
+            .Select(t => MapTransaction(t, accountId, userId, _categoryMapper))
             .ToList();
 
         return (candidates, DateTime.UtcNow);
@@ -69,7 +72,7 @@ public class TrueLayerAdapter(ITrueLayerClient client) : IBankProvider
     public Task DisconnectAsync(string credential, CancellationToken ct = default)
         => Task.CompletedTask;
 
-    private static TransactionCandidate MapTransaction(TrueLayerTransaction t, Guid accountId, Guid userId)
+    private static TransactionCandidate MapTransaction(TrueLayerTransaction t, Guid accountId, Guid userId, TrueLayerCategoryMapper categoryMapper)
     {
         var amount = Math.Abs(t.Amount);
         var txType = t.Amount < 0 || t.TransactionType == "debit" ? "debit" : "credit";
@@ -84,7 +87,7 @@ public class TrueLayerAdapter(ITrueLayerClient client) : IBankProvider
             IsPending: t.IsPending,
             TransactionType: txType,
             MerchantName: t.MerchantName,
-            MerchantCategory: null,
+            MerchantCategory: categoryMapper.Map(t.Classification),
             PlaidTransactionId: null);
     }
 }
