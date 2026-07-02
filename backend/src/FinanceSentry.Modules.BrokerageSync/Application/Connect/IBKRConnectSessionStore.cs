@@ -29,6 +29,21 @@ public sealed class IBKRConnectSessionStore : IIBKRConnectSessionStore, IDisposa
         return (sessionId, cts.Token);
     }
 
+    public Guid? FindActiveByUser(Guid userId)
+    {
+        foreach (var entry in _sessions.Values)
+        {
+            if (entry.UserId != userId)
+                continue;
+            lock (entry.SyncRoot)
+            {
+                if (!IsTerminal(entry.Status))
+                    return entry.Id;
+            }
+        }
+        return null;
+    }
+
     public IBKRConnectSessionSnapshot? Get(Guid sessionId, Guid userId)
     {
         if (!_sessions.TryGetValue(sessionId, out var entry) || entry.UserId != userId)

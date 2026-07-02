@@ -240,4 +240,33 @@ public class IBKRConnectRunnerTests
 
         _sessionStore.Cancel(sessionId, attacker).Should().BeFalse();
     }
+
+    [Fact]
+    public void Store_FindActiveByUser_ReturnsInFlightSession()
+    {
+        var userId = Guid.NewGuid();
+        var (sessionId, _) = _sessionStore.Create(userId);
+
+        _sessionStore.FindActiveByUser(userId).Should().Be(sessionId);
+    }
+
+    [Fact]
+    public void Store_FindActiveByUser_IgnoresTerminalSessions()
+    {
+        var userId = Guid.NewGuid();
+        var (sessionId, _) = _sessionStore.Create(userId);
+        _sessionStore.MarkFailed(sessionId, "IBKR_INVALID_CREDENTIALS", "…");
+
+        _sessionStore.FindActiveByUser(userId).Should().BeNull();
+    }
+
+    [Fact]
+    public void Store_FindActiveByUser_IsolatesUsers()
+    {
+        var owner = Guid.NewGuid();
+        var attacker = Guid.NewGuid();
+        _sessionStore.Create(owner);
+
+        _sessionStore.FindActiveByUser(attacker).Should().BeNull();
+    }
 }

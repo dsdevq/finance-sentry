@@ -37,9 +37,14 @@ public sealed class IBeamOptions
     public string ContainerNamePrefix { get; set; } = "finance-sentry-ibkr";
 
     /// <summary>
-    /// Max seconds to wait for the gateway to auth after spawn.
+    /// Max seconds to wait for the gateway to auth after spawn. Must cover:
+    /// IBeam cold-start (~90–120s for Java + Selenium), form submit + IBKR
+    /// 2FA push round-trip (~5–20s), human tap-approve time (up to ~60s),
+    /// and post-login DOM transition (~5s). 300s (5 min) gives comfortable
+    /// headroom without being so long that a genuinely failed connect
+    /// leaves the user waiting forever.
     /// </summary>
-    public int SpawnTimeoutSeconds { get; set; } = 120;
+    public int SpawnTimeoutSeconds { get; set; } = 300;
 
     /// <summary>
     /// URI to reach the Docker daemon. Defaults to the unix socket bound into

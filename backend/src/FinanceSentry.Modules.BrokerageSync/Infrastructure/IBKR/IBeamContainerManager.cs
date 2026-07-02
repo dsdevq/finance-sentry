@@ -56,11 +56,12 @@ public sealed class IBeamContainerManager : IIBeamContainerManager
                 "IBEAM_GATEWAY_BASE_URL=https://localhost:5000",
                 "IBEAM_LOG_LEVEL=INFO",
                 "IBEAM_ERROR_SCREENSHOTS=True",
-                // Post-login DOM wait. Default is 15s — too short for IB Key push
-                // 2FA where the user has to unlock a phone and tap approve. 90s
-                // gives realistic headroom without exceeding our .NET-side
-                // SpawnTimeoutSeconds=120 budget.
-                "IBEAM_PAGE_LOAD_TIMEOUT=90",
+                // Post-login DOM wait. Default is 15s — too short for IB Key
+                // push 2FA where the user has to unlock a phone and tap
+                // approve, and the round-trip alone is 5–20s. 180s covers the
+                // realistic slow-tap case; must stay under SpawnTimeoutSeconds
+                // (300s) so our .NET wrapper is the outer bound.
+                "IBEAM_PAGE_LOAD_TIMEOUT=180",
                 // Fail-fast on bad credentials / unhandled auth screens. IBeam's
                 // default is 5, which is enough to trip IBKR's account lockout
                 // counter before the caller ever sees a response.
