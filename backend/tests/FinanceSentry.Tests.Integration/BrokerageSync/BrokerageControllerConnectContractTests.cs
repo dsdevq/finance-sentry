@@ -19,11 +19,12 @@ using Xunit;
 
 namespace FinanceSentry.Tests.Integration.BrokerageSync;
 
-// ── Contract tests: POST /api/v1/brokerage/ibkr/connect ──────────────────────
+// ── Contract tests: async IBKR connect flow ──────────────────────────────────
 //
-// Single-tenant model: the IBeam sidecar owns the IBKR session. The endpoint
-// accepts no body — it just verifies the gateway is authenticated, discovers
-// the account, and stores the link metadata.
+// POST /api/v1/brokerage/ibkr/connect returns 202 immediately with a
+// { sessionId } body. GET /api/v1/brokerage/ibkr/connect/{sessionId} exposes
+// the current state (Pending → Spawning → AwaitingAuth → Syncing → Completed
+// | Failed | Cancelled). DELETE .../{sessionId} cancels an in-flight session.
 
 public class BrokerageControllerConnectContractTests(BrokerageApiFactory factory) : IClassFixture<BrokerageApiFactory>
 {
@@ -41,7 +42,7 @@ public class BrokerageControllerConnectContractTests(BrokerageApiFactory factory
     }
 
     [Fact]
-    public async Task Connect_StoresEncryptedCredential_SpawnsGateway_Returns201()
+    public async Task Connect_Returns202_WithSessionId_ThenPollsToCompleted()
     {
         _factory.SetupSuccessfulConnect();
 
@@ -49,48 +50,85 @@ public class BrokerageControllerConnectContractTests(BrokerageApiFactory factory
             "/api/v1/brokerage/ibkr/connect",
             new { Username = "u", Password = "p" });
 
-        if (response.StatusCode != HttpStatusCode.Created)
-        {
-            var bodyText = await response.Content.ReadAsStringAsync();
-            throw new Xunit.Sdk.XunitException($"Expected 201, got {(int)response.StatusCode}. Body: {bodyText}");
-        }
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
-        var body = await response.Content.ReadFromJsonAsync<BrokerageConnectResponseShape>();
-        body.Should().NotBeNull();
-        body!.ConnectedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(1));
+        response.StatusCode.Should().Be(HttpStatusCode.Accepted);
+        var accepted = await response.Content.ReadFromJsonAsync<SessionAcceptedShape>();
+        accepted!.SessionId.Should().NotBe(Guid.Empty);
 
-        // Container was actually spawned and awaited.
+        var final = await PollUntilTerminalAsync(accepted.SessionId);
+        final.Status.Should().Be("completed");
+        final.Result.Should().NotBeNull();
+
         _factory.ContainerManagerMock.Verify(
             m => m.SpawnAsync(It.IsAny<Guid>(), "u", "p", It.IsAny<CancellationToken>()),
-            Times.Once);
-        _factory.ContainerManagerMock.Verify(
-            m => m.WaitForAuthAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
     [Fact]
-    public async Task Connect_AlreadyConnected_Returns409()
+    public async Task Connect_AlreadyConnected_SessionTransitionsTo_FailedALREADY_CONNECTED()
     {
-        var existingCredential = new IBKRCredential(_factory.TestUserId, [1], [2], [3], [4], [5], [6], keyVersion: 1);
-
+        _factory.SetupSuccessfulConnect();
+        var existing = new IBKRCredential(_factory.TestUserId, [1], [2], [3], [4], [5], [6], keyVersion: 1);
+        // Overwrite the sequence with a single "existing active" record so the
+        // runner short-circuits into ALREADY_CONNECTED.
         _factory.CredentialRepoMock
             .Setup(r => r.GetByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingCredential);
+            .ReturnsAsync(existing);
 
         var response = await _client.PostAsJsonAsync(
             "/api/v1/brokerage/ibkr/connect",
             new { Username = "u", Password = "p" });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
-        var body = await response.Content.ReadFromJsonAsync<BrokerageErrorShape>();
-        body!.ErrorCode.Should().Be("ALREADY_CONNECTED");
+        response.StatusCode.Should().Be(HttpStatusCode.Accepted);
+        var accepted = await response.Content.ReadFromJsonAsync<SessionAcceptedShape>();
+
+        var final = await PollUntilTerminalAsync(accepted!.SessionId);
+        final.Status.Should().Be("failed");
+        final.ErrorCode.Should().Be("IBKR_DUPLICATE");
+    }
+
+    [Fact]
+    public async Task GetConnectStatus_UnknownSession_Returns404()
+    {
+        var response = await _client.GetAsync($"/api/v1/brokerage/ibkr/connect/{Guid.NewGuid()}");
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task CancelConnect_UnknownSession_Returns404()
+    {
+        var response = await _client.DeleteAsync($"/api/v1/brokerage/ibkr/connect/{Guid.NewGuid()}");
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    private async Task<SessionShape> PollUntilTerminalAsync(Guid sessionId)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        while (DateTime.UtcNow < deadline)
+        {
+            var resp = await _client.GetAsync($"/api/v1/brokerage/ibkr/connect/{sessionId}");
+            resp.StatusCode.Should().Be(HttpStatusCode.OK);
+            var body = (await resp.Content.ReadFromJsonAsync<SessionShape>())!;
+            if (body.Status is "completed" or "failed" or "cancelled")
+                return body;
+            await Task.Delay(50);
+        }
+        throw new Xunit.Sdk.XunitException($"Session {sessionId} did not reach terminal state within 5s");
     }
 }
 
 // ── Response shapes ───────────────────────────────────────────────────────────
 
 public record BrokerageErrorShape(string Error, string ErrorCode);
-public record BrokerageConnectResponseShape(int HoldingsCount, DateTime ConnectedAt, string AccountId);
+public record SessionAcceptedShape(Guid SessionId);
+public record SessionShape(
+    Guid SessionId,
+    string Status,
+    string? ErrorCode,
+    string? ErrorMessage,
+    ResultShape? Result,
+    DateTime CreatedAt,
+    DateTime UpdatedAt);
+public record ResultShape(int HoldingsCount, DateTime ConnectedAt, string AccountId);
 public record BrokeragePositionShape(string Symbol, string InstrumentType, decimal Quantity, decimal UsdValue);
 public record BrokerageHoldingsResponseShape(
     string Provider,
