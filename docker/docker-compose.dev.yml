@@ -44,9 +44,8 @@ services:
       # Per-user IBeam orchestration
       IBeam__Image: "voyz/ibeam:latest"
       IBeam__Network: "docker_finance-sentry-network"
-      IBeam__ConfHostPath: "${PWD}/ibkr/conf.yaml"
       IBeam__ContainerNamePrefix: "finance-sentry-ibkr"
-      IBeam__SpawnTimeoutSeconds: "120"
+      IBeam__SpawnTimeoutSeconds: "300"
       IBeam__DockerEndpoint: "unix:///var/run/docker.sock"
     ports:
       - "5001:5000"

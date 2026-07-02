@@ -49,6 +49,16 @@ public sealed class IBeamContainerManager : IIBeamContainerManager
         {
             Name = containerName,
             Image = _options.Image,
+            // Matches the env-var shape that empirically worked on the old
+            // single-tenant `ibkr-gateway` service (commit 233224a). The
+            // aggressive limits I added in #245 (IBEAM_MAX_FAILED_AUTH=1,
+            // IBEAM_REQUEST_RETRIES=1) turned out to fight IB Key push 2FA:
+            // IBeam counts "browser login DOM ok but /auth/status still false"
+            // as a failed attempt, and with =1 the container dies before the
+            // user can tap approve on their phone. Reverting to IBeam's own
+            // defaults (5 attempts) so the polling loop overlaps the human
+            // tap window. The PAGE_LOAD_TIMEOUT bump we keep — it's a pure
+            // widening of the Selenium DOM-wait, no downside.
             Env =
             [
                 $"IBEAM_ACCOUNT={ibkrUsername}",
@@ -56,23 +66,14 @@ public sealed class IBeamContainerManager : IIBeamContainerManager
                 "IBEAM_GATEWAY_BASE_URL=https://localhost:5000",
                 "IBEAM_LOG_LEVEL=INFO",
                 "IBEAM_ERROR_SCREENSHOTS=True",
-                // Post-login DOM wait. Default is 15s — too short for IB Key
-                // push 2FA where the user has to unlock a phone and tap
-                // approve, and the round-trip alone is 5–20s. 180s covers the
-                // realistic slow-tap case; must stay under SpawnTimeoutSeconds
-                // (300s) so our .NET wrapper is the outer bound.
                 "IBEAM_PAGE_LOAD_TIMEOUT=180",
-                // Fail-fast on bad credentials / unhandled auth screens. IBeam's
-                // default is 5, which is enough to trip IBKR's account lockout
-                // counter before the caller ever sees a response.
-                "IBEAM_MAX_FAILED_AUTH=1",
-                "IBEAM_REQUEST_RETRIES=1",
             ],
             HostConfig = new HostConfig
             {
-                Binds = string.IsNullOrWhiteSpace(_options.ConfHostPath)
-                    ? null
-                    : [$"{_options.ConfHostPath}:/srv/inputs/conf.yaml:ro"],
+                // No conf.yaml bind-mount. The old single-tenant service that
+                // worked with 2FA didn't mount one either, and the custom conf
+                // we were pinning (ip2loc, allow-ip ranges) is the most likely
+                // reason IBeam's CPG reported authenticated=false after login.
                 NetworkMode = _options.Network,
                 RestartPolicy = new RestartPolicy { Name = RestartPolicyKind.UnlessStopped },
             },

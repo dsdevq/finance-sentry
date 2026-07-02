@@ -45,7 +45,6 @@ services:
       # "finance-sentry" (no compose prefix — see networks: block at the bottom).
       IBeam__Image: "voyz/ibeam:latest"
       IBeam__Network: "${IBEAM_NETWORK:-finance-sentry}"
-      IBeam__ConfHostPath: "${IBEAM_CONF_HOST_PATH:-/srv/finance-sentry/docker/ibkr/conf.yaml}"
       IBeam__ContainerNamePrefix: "finance-sentry-ibkr"
       IBeam__SpawnTimeoutSeconds: "300"
       IBeam__DockerEndpoint: "unix:///var/run/docker.sock"
