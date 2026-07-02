@@ -2,6 +2,7 @@ namespace FinanceSentry.Modules.BrokerageSync;
 
 using Docker.DotNet;
 using FinanceSentry.Core.Interfaces;
+using FinanceSentry.Modules.BrokerageSync.Application.Connect;
 using FinanceSentry.Modules.BrokerageSync.Application.Services;
 using FinanceSentry.Modules.BrokerageSync.Domain.Interfaces;
 using FinanceSentry.Modules.BrokerageSync.Domain.Repositories;
@@ -61,6 +62,13 @@ public static class BrokerageSyncModule
 
         services.AddSingleton<IIBeamGatewayResolver, IBeamGatewayResolver>();
         services.AddSingleton<IIBeamContainerManager, IBeamContainerManager>();
+
+        // Async connect session tracking + orchestrator. Session store is
+        // in-memory + singleton; runner is scoped so it participates in the
+        // request-scoped DI graph (repos, DbContext, sync handler).
+        services.AddSingleton<IIBKRConnectSessionStore, IBKRConnectSessionStore>();
+        services.AddSingleton<IIBKRConnectOrchestrator, IBKRConnectOrchestrator>();
+        services.AddScoped<IBKRConnectRunner>();
 
         services.AddScoped<IBrokerAdapter, IBKRAdapter>();
         services.AddScoped<IIBKRCredentialRepository, IBKRCredentialRepository>();

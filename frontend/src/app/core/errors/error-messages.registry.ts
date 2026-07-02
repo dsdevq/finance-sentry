@@ -13,6 +13,8 @@ export const ERROR_MESSAGES_REGISTRY: ErrorMessagesMap = {
   IBKR_INVALID_CREDENTIALS:
     'IB Gateway rejected the provided credentials. Confirm the 2FA push notification on your phone and try again.',
   IBKR_DUPLICATE: 'IBKR account already connected. Disconnect the existing one to reconnect.',
+  IBKR_GATEWAY_UNAVAILABLE:
+    'Could not reach the IBKR gateway. This is usually temporary — try again in a minute.',
   PLAID_DUPLICATE: 'This bank is already connected. View it in your accounts list.',
   PLAID_SCRIPT_LOAD_FAILED: 'Plaid is unavailable. Disable any ad blocker and refresh the page.',
   VALIDATION_ERROR: 'Some fields look wrong — please review the highlighted errors.',
