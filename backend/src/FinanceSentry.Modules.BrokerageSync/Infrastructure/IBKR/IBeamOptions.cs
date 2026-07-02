@@ -3,10 +3,12 @@ namespace FinanceSentry.Modules.BrokerageSync.Infrastructure.IBKR;
 /// <summary>
 /// Configuration for the per-user IBeam Docker orchestration.
 ///
-/// The API container spawns one <c>voyz/ibeam</c> container per connected user.
-/// Each container joins <see cref="Network"/>, mounts the conf file from
-/// <see cref="ConfHostPath"/>, and gets a stable name so the API can address it
-/// by DNS at <c>https://finance-sentry-ibkr-{shortId}:5000</c>.
+/// The API container spawns one <c>voyz/ibeam</c> container per connected user,
+/// joined to <see cref="Network"/> with a stable name so the API can address it
+/// by DNS at <c>https://finance-sentry-ibkr-{shortId}:5000</c>. IBeam uses its
+/// bundled default IBKR Client Portal Gateway conf; we no longer bind-mount a
+/// custom conf.yaml because the extra vars we were pinning (ip2loc, allow-ip
+/// ranges) interacted badly with the IB Key push 2FA flow.
 /// </summary>
 public sealed class IBeamOptions
 {
@@ -22,12 +24,6 @@ public sealed class IBeamOptions
     /// network the API itself is on so it can resolve container names via DNS.
     /// </summary>
     public string Network { get; set; } = "docker_finance-sentry-network";
-
-    /// <summary>
-    /// Absolute path on the host to <c>docker/ibkr/conf.yaml</c>. The API bind
-    /// mounts this into every spawned IBeam at <c>/srv/inputs/conf.yaml</c>.
-    /// </summary>
-    public string ConfHostPath { get; set; } = string.Empty;
 
     /// <summary>
     /// Prefix for spawned container names. Full name is
