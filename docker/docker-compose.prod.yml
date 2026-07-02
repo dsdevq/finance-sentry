@@ -67,6 +67,12 @@ services:
       - api_logs:/app/logs
       # Docker socket for per-user IBeam container orchestration
       - /var/run/docker.sock:/var/run/docker.sock
+    # The image runs as `nobody` (Dockerfile hardening). To let the API talk to
+    # /var/run/docker.sock (root:docker on the host), we add the host's docker
+    # gid as a supplementary group. deploy.sh exports DOCKER_GID from
+    # `stat -c '%g' /var/run/docker.sock`. Default 999 covers common Linux hosts.
+    group_add:
+      - "${DOCKER_GID:-999}"
     logging:
       driver: json-file
       options: { max-size: "10m", max-file: "3" }
