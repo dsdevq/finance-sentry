@@ -13,6 +13,12 @@ public interface IIBKRConnectSessionStore
     /// orchestrator should observe.</summary>
     (Guid SessionId, CancellationToken Token) Create(Guid userId);
 
+    /// <summary>Find a non-terminal session for the user. Used by the
+    /// orchestrator to make Start(...) idempotent — rapid re-clicks return
+    /// the sessionId of the in-flight run instead of racing a new one against
+    /// the credential row and the still-warming IBeam container.</summary>
+    Guid? FindActiveByUser(Guid userId);
+
     /// <summary>Fetch a snapshot. Returns null when the session doesn't
     /// exist or belongs to a different user (never reveal cross-user state).</summary>
     IBKRConnectSessionSnapshot? Get(Guid sessionId, Guid userId);

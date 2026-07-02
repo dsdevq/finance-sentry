@@ -47,7 +47,7 @@ services:
       IBeam__Network: "${IBEAM_NETWORK:-finance-sentry}"
       IBeam__ConfHostPath: "${IBEAM_CONF_HOST_PATH:-/srv/finance-sentry/docker/ibkr/conf.yaml}"
       IBeam__ContainerNamePrefix: "finance-sentry-ibkr"
-      IBeam__SpawnTimeoutSeconds: "120"
+      IBeam__SpawnTimeoutSeconds: "300"
       IBeam__DockerEndpoint: "unix:///var/run/docker.sock"
     ports:
       - "127.0.0.1:${API_PORT:-5001}:5000"
