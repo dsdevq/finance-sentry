@@ -50,7 +50,7 @@ public class ConnectIBKRCommandTests
     }
 
     [Fact]
-    public async Task Handle_AlreadyConnected_ThrowsBrokerAlreadyConnectedException()
+    public async Task Handle_ExistingActiveCredential_ThrowsBrokerAlreadyConnectedException()
     {
         var userId = Guid.NewGuid();
 
@@ -61,6 +61,41 @@ public class ConnectIBKRCommandTests
         var act = () => CreateHandler().Handle(new ConnectIBKRCommand(userId, "user", "pass"), default);
 
         await act.Should().ThrowAsync<BrokerAlreadyConnectedException>();
+    }
+
+    [Fact]
+    public async Task Handle_ExistingInactiveCredential_RotatesInPlaceInsteadOfAdding()
+    {
+        var userId = Guid.NewGuid();
+        var stale = ExistingCredential(userId);
+        stale.Deactivate();
+        var staleId = stale.Id;
+
+        _credentialRepo
+            .Setup(r => r.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(stale);
+        _encryption
+            .Setup(e => e.Encrypt(It.IsAny<string>()))
+            .Returns((string s) => new EncryptionResult([(byte)s.Length], [1], [2], 1));
+        _credentialRepo
+            .Setup(r => r.Update(It.IsAny<IBKRCredential>()));
+        _credentialRepo
+            .Setup(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        _containerManager
+            .Setup(m => m.SpawnAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        _containerManager
+            .Setup(m => m.WaitForAuthAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        _syncHandler
+            .Setup(h => h.Handle(It.IsAny<SyncIBKRHoldingsCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new SyncIBKRHoldingsResult(0, DateTime.UtcNow));
+
+        await CreateHandler().Handle(new ConnectIBKRCommand(userId, "u", "p"), default);
+
+        _credentialRepo.Verify(r => r.AddAsync(It.IsAny<IBKRCredential>(), It.IsAny<CancellationToken>()), Times.Never);
+        _credentialRepo.Verify(r => r.Update(It.Is<IBKRCredential>(c => c.Id == staleId && c.IsActive)), Times.Once);
     }
 
     [Fact]

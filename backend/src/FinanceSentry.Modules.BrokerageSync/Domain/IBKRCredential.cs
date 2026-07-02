@@ -63,4 +63,26 @@ public sealed class IBKRCredential
     public void RecordSyncError(string error) => LastSyncError = error;
 
     public void Deactivate() => IsActive = false;
+
+    public void Reactivate(
+        byte[] encryptedUsername,
+        byte[] usernameIv,
+        byte[] usernameAuthTag,
+        byte[] encryptedPassword,
+        byte[] passwordIv,
+        byte[] passwordAuthTag,
+        int keyVersion)
+    {
+        IsActive = true;
+        AccountId = null;
+        LastSyncAt = null;
+        LastSyncError = null;
+        EncryptedUsername = encryptedUsername;
+        UsernameIv = usernameIv;
+        UsernameAuthTag = usernameAuthTag;
+        EncryptedPassword = encryptedPassword;
+        PasswordIv = passwordIv;
+        PasswordAuthTag = passwordAuthTag;
+        KeyVersion = keyVersion;
+    }
 }
