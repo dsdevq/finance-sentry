@@ -34,17 +34,33 @@ public sealed class ConnectIBKRCommandHandler(
         var encryptedUsername = encryption.Encrypt(command.Username);
         var encryptedPassword = encryption.Encrypt(command.Password);
 
-        var credential = new IBKRCredential(
-            command.UserId,
-            encryptedUsername.Ciphertext,
-            encryptedUsername.Iv,
-            encryptedUsername.AuthTag,
-            encryptedPassword.Ciphertext,
-            encryptedPassword.Iv,
-            encryptedPassword.AuthTag,
-            encryptedUsername.KeyVersion);
-
-        await credentialRepository.AddAsync(credential, cancellationToken);
+        IBKRCredential credential;
+        if (existing is not null)
+        {
+            existing.Reactivate(
+                encryptedUsername.Ciphertext,
+                encryptedUsername.Iv,
+                encryptedUsername.AuthTag,
+                encryptedPassword.Ciphertext,
+                encryptedPassword.Iv,
+                encryptedPassword.AuthTag,
+                encryptedUsername.KeyVersion);
+            credentialRepository.Update(existing);
+            credential = existing;
+        }
+        else
+        {
+            credential = new IBKRCredential(
+                command.UserId,
+                encryptedUsername.Ciphertext,
+                encryptedUsername.Iv,
+                encryptedUsername.AuthTag,
+                encryptedPassword.Ciphertext,
+                encryptedPassword.Iv,
+                encryptedPassword.AuthTag,
+                encryptedUsername.KeyVersion);
+            await credentialRepository.AddAsync(credential, cancellationToken);
+        }
         await credentialRepository.SaveChangesAsync(cancellationToken);
 
         await containerManager.SpawnAsync(
