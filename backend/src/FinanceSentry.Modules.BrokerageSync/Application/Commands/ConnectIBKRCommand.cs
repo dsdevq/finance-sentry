@@ -4,6 +4,7 @@ using FinanceSentry.Modules.BrokerageSync.Domain;
 using FinanceSentry.Modules.BrokerageSync.Domain.Exceptions;
 using FinanceSentry.Modules.BrokerageSync.Domain.Repositories;
 using FinanceSentry.Modules.BrokerageSync.Infrastructure.IBKR;
+using Microsoft.Extensions.Logging;
 
 namespace FinanceSentry.Modules.BrokerageSync.Application.Commands;
 
@@ -21,7 +22,8 @@ public sealed class ConnectIBKRCommandHandler(
     IIBKRCredentialRepository credentialRepository,
     ICredentialEncryptionService encryption,
     IIBeamContainerManager containerManager,
-    ICommandHandler<SyncIBKRHoldingsCommand, SyncIBKRHoldingsResult> syncHandler)
+    ICommandHandler<SyncIBKRHoldingsCommand, SyncIBKRHoldingsResult> syncHandler,
+    ILogger<ConnectIBKRCommandHandler> logger)
     : ICommandHandler<ConnectIBKRCommand, ConnectIBKRResult>
 {
     public async Task<ConnectIBKRResult> Handle(ConnectIBKRCommand command, CancellationToken cancellationToken)
@@ -63,21 +65,62 @@ public sealed class ConnectIBKRCommandHandler(
         }
         await credentialRepository.SaveChangesAsync(cancellationToken);
 
-        await containerManager.SpawnAsync(
-            credential.Id, command.Username, command.Password, cancellationToken);
+        // Everything below can fail (docker unreachable, IBKR auth timeout, sync
+        // error). Any failure must roll the credential back to IsActive=false and
+        // best-effort tear down the container, otherwise the row gets stuck
+        // active and the user's next Connect returns ALREADY_CONNECTED.
+        try
+        {
+            await containerManager.SpawnAsync(
+                credential.Id, command.Username, command.Password, cancellationToken);
 
-        var authenticated = await containerManager.WaitForAuthAsync(credential.Id, cancellationToken);
-        if (!authenticated)
-            throw new BrokerAuthException(
-                "IBKR gateway did not authenticate within the configured timeout. Check the credentials and gateway logs.",
-                "IBKR");
+            var authenticated = await containerManager.WaitForAuthAsync(credential.Id, cancellationToken);
+            if (!authenticated)
+                throw new BrokerAuthException(
+                    "IBKR gateway did not authenticate within the configured timeout. Check the credentials and gateway logs.",
+                    "IBKR");
 
-        var syncResult = await syncHandler.Handle(
-            new SyncIBKRHoldingsCommand(command.UserId), cancellationToken);
+            var syncResult = await syncHandler.Handle(
+                new SyncIBKRHoldingsCommand(command.UserId), cancellationToken);
 
-        return new ConnectIBKRResult(
-            syncResult.HoldingsCount,
-            syncResult.SyncedAt,
-            credential.AccountId ?? string.Empty);
+            return new ConnectIBKRResult(
+                syncResult.HoldingsCount,
+                syncResult.SyncedAt,
+                credential.AccountId ?? string.Empty);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            await RollbackAsync(credential, cancellationToken);
+            throw;
+        }
+    }
+
+    private async Task RollbackAsync(IBKRCredential credential, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await containerManager.StopAndRemoveAsync(credential.Id, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(
+                ex,
+                "Rollback: failed to stop IBeam container for credential {CredentialId}; continuing with credential deactivation",
+                credential.Id);
+        }
+
+        try
+        {
+            credential.Deactivate();
+            credentialRepository.Update(credential);
+            await credentialRepository.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogError(
+                ex,
+                "Rollback: failed to deactivate credential {CredentialId} after connect failure. Row may be stuck IsActive=true and require manual intervention.",
+                credential.Id);
+        }
     }
 }
