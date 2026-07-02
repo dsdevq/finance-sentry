@@ -28,6 +28,15 @@ echo "[deploy] decrypt docker/.env.sops"
 SOPS_AGE_KEY_FILE="$KEYFILE" sops --decrypt --input-type dotenv --output-type dotenv docker/.env.sops > docker/.env
 chmod 600 docker/.env
 
+echo "[deploy] detect host docker gid for socket access"
+if [[ -S /var/run/docker.sock ]]; then
+  DOCKER_GID="$(stat -c '%g' /var/run/docker.sock)"
+  export DOCKER_GID
+  echo "[deploy] DOCKER_GID=${DOCKER_GID}"
+else
+  echo "warning: /var/run/docker.sock missing on host — IBeam orchestration will not work" >&2
+fi
+
 echo "[deploy] docker compose build + up"
 docker compose -f docker/docker-compose.prod.yml --env-file docker/.env up -d --build --remove-orphans
 
