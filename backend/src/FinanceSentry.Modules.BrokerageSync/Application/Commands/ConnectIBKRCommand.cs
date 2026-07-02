@@ -66,9 +66,10 @@ public sealed class ConnectIBKRCommandHandler(
         await credentialRepository.SaveChangesAsync(cancellationToken);
 
         // Everything below can fail (docker unreachable, IBKR auth timeout, sync
-        // error). Any failure must roll the credential back to IsActive=false and
-        // best-effort tear down the container, otherwise the row gets stuck
-        // active and the user's next Connect returns ALREADY_CONNECTED.
+        // error, request cancellation). Any exit must roll the credential back
+        // to IsActive=false and best-effort tear down the container; otherwise
+        // the row gets stuck active and the container silently retries IBKR
+        // login in the background, which trips the account's lockout counter.
         try
         {
             await containerManager.SpawnAsync(
@@ -88,12 +89,17 @@ public sealed class ConnectIBKRCommandHandler(
                 syncResult.SyncedAt,
                 credential.AccountId ?? string.Empty);
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch
         {
-            await RollbackAsync(credential, cancellationToken);
+            // Fresh, bounded token: if the caller cancelled us, we still need to
+            // finish the tear-down. Any leaked container keeps hammering IBKR.
+            using var rollbackCts = new CancellationTokenSource(RollbackTimeout);
+            await RollbackAsync(credential, rollbackCts.Token);
             throw;
         }
     }
+
+    private static readonly TimeSpan RollbackTimeout = TimeSpan.FromSeconds(30);
 
     private async Task RollbackAsync(IBKRCredential credential, CancellationToken cancellationToken)
     {

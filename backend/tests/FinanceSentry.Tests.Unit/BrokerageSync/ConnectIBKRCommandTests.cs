@@ -241,6 +241,48 @@ public class ConnectIBKRCommandTests
     }
 
     [Fact]
+    public async Task Handle_Cancellation_StillRollsBackCredentialAndContainer()
+    {
+        var userId = Guid.NewGuid();
+        IBKRCredential? saved = null;
+        using var cts = new CancellationTokenSource();
+
+        _credentialRepo
+            .Setup(r => r.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IBKRCredential?)null);
+        _encryption
+            .Setup(e => e.Encrypt(It.IsAny<string>()))
+            .Returns((string s) => new EncryptionResult([(byte)s.Length], [1], [2], 1));
+        _credentialRepo
+            .Setup(r => r.AddAsync(It.IsAny<IBKRCredential>(), It.IsAny<CancellationToken>()))
+            .Callback<IBKRCredential, CancellationToken>((c, _) => saved = c)
+            .Returns(Task.CompletedTask);
+        _credentialRepo
+            .Setup(r => r.Update(It.IsAny<IBKRCredential>()));
+        _credentialRepo
+            .Setup(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        _containerManager
+            .Setup(m => m.SpawnAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback(() => cts.Cancel())
+            .Returns(Task.CompletedTask);
+        _containerManager
+            .Setup(m => m.WaitForAuthAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException());
+        _containerManager
+            .Setup(m => m.StopAndRemoveAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var act = () => CreateHandler().Handle(new ConnectIBKRCommand(userId, "u", "p"), cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+
+        saved!.IsActive.Should().BeFalse();
+        _containerManager.Verify(m => m.StopAndRemoveAsync(saved.Id, It.IsAny<CancellationToken>()), Times.Once);
+        _credentialRepo.Verify(r => r.Update(It.Is<IBKRCredential>(c => !c.IsActive)), Times.Once);
+    }
+
+    [Fact]
     public async Task Handle_PersistsEncryptedCredentialBoundToUser()
     {
         var userId = Guid.NewGuid();
