@@ -1,10 +1,11 @@
 import {ChangeDetectionStrategy, Component, input, output} from '@angular/core';
 
 import {IconComponent} from '../icon/icon.component';
+import {MenuComponent, type MenuItem} from '../menu/menu.component';
 
 @Component({
   selector: 'cmn-top-bar',
-  imports: [IconComponent],
+  imports: [IconComponent, MenuComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <header
@@ -40,13 +41,14 @@ import {IconComponent} from '../icon/icon.component';
       </button>
 
       <!-- Avatar -->
-      <button
-        [title]="avatarLabel()"
-        (click)="avatarClick.emit()"
-        class="flex h-8 w-8 items-center justify-center rounded-cmn-full bg-accent-default text-cmn-xs font-semibold text-text-inverse hover:opacity-90 transition-opacity"
+      <cmn-menu
+        [items]="avatarMenuItems()"
+        (itemSelect)="avatarMenuSelect.emit($event)"
+        ariaLabel="Account menu"
+        triggerClass="h-8 w-8 rounded-cmn-full bg-accent-default text-cmn-xs font-semibold text-text-inverse hover:opacity-90 transition-opacity"
       >
         {{ avatarInitial() }}
-      </button>
+      </cmn-menu>
     </header>
   `,
 })
@@ -54,10 +56,11 @@ export class TopBarComponent {
   public readonly title = input<string>('');
   public readonly isDark = input<boolean>(false);
   public readonly avatarLabel = input<string>('');
+  public readonly avatarMenuItems = input<MenuItem[]>([]);
 
   public readonly searchClick = output<void>();
   public readonly themeToggle = output<void>();
-  public readonly avatarClick = output<void>();
+  public readonly avatarMenuSelect = output<MenuItem>();
 
   public avatarInitial(): string {
     return this.avatarLabel().charAt(0).toUpperCase() || '?';

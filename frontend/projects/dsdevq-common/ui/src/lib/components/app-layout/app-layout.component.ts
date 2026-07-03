@@ -1,5 +1,6 @@
 import {ChangeDetectionStrategy, Component, input, output} from '@angular/core';
 
+import {type MenuItem} from '../menu/menu.component';
 import {type NavItem, SidebarNavComponent} from '../sidebar-nav/sidebar-nav.component';
 import {TopBarComponent} from '../top-bar/top-bar.component';
 
@@ -22,9 +23,10 @@ export {type NavItem} from '../sidebar-nav/sidebar-nav.component';
           [title]="title()"
           [isDark]="isDark()"
           [avatarLabel]="avatarLabel()"
+          [avatarMenuItems]="avatarMenuItems()"
           (searchClick)="searchClick.emit()"
           (themeToggle)="themeToggle.emit()"
-          (avatarClick)="avatarClick.emit()"
+          (avatarMenuSelect)="avatarMenuSelect.emit($event)"
         />
         <main class="flex-1 overflow-y-auto">
           <ng-content />
@@ -39,10 +41,11 @@ export class AppLayoutComponent {
   public readonly title = input<string>('');
   public readonly isDark = input<boolean>(false);
   public readonly avatarLabel = input<string>('');
+  public readonly avatarMenuItems = input<MenuItem[]>([]);
 
   public readonly navClick = output<NavItem>();
   public readonly collapsedChange = output<boolean>();
   public readonly searchClick = output<void>();
   public readonly themeToggle = output<void>();
-  public readonly avatarClick = output<void>();
+  public readonly avatarMenuSelect = output<MenuItem>();
 }

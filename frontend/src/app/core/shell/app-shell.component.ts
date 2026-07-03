@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, computed, inject} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, HostListener, inject} from '@angular/core';
 import {toSignal} from '@angular/core/rxjs-interop';
 import {NavigationEnd, Router, RouterOutlet} from '@angular/router';
 import {
@@ -7,6 +7,7 @@ import {
   CmnDialogService,
   CommandPaletteComponent,
   type CommandPaletteItem,
+  type MenuItem,
   type NavItem,
   type PaletteResult,
   ThemeService,
@@ -31,21 +32,25 @@ const PALETTE_ITEMS: CommandPaletteItem[] = [
   {id: '_logout', label: 'Sign Out', icon: 'LogOut', group: 'Actions'},
 ];
 
+const AVATAR_MENU_ITEMS: MenuItem[] = [
+  {id: '/settings', label: 'Settings', icon: 'Settings2'},
+  {id: '_logout', label: 'Log out', icon: 'LogOut', destructive: true},
+];
+
 @Component({
   selector: 'fns-app-shell',
   imports: [AppLayoutComponent, RouterOutlet],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: {
-    '(window:keydown)': 'onGlobalKeyDown($event)',
-  },
   template: `
     <cmn-app-layout
       [navItems]="navItems"
       [activeRoute]="activeRoute()"
       [isDark]="isDark()"
+      [avatarMenuItems]="avatarMenuItems"
       (navClick)="navigate($event)"
       (themeToggle)="themeService.toggle()"
       (searchClick)="openPalette()"
+      (avatarMenuSelect)="handleAvatarMenuSelect($event)"
       avatarLabel="D"
     >
       <router-outlet />
@@ -70,6 +75,7 @@ export class AppShellComponent {
   private readonly alertsStore = inject(AlertsStore);
 
   public readonly themeService = inject(ThemeService);
+  public readonly avatarMenuItems: MenuItem[] = AVATAR_MENU_ITEMS;
   public readonly navItems: NavItem[] = [
     {label: 'Dashboard', icon: 'LayoutDashboard', route: AppRoute.Dashboard},
     {label: 'Accounts', icon: 'Building2', route: AppRoute.AccountsList},
@@ -92,6 +98,7 @@ export class AppShellComponent {
     return match?.route ?? '';
   });
 
+  @HostListener('window:keydown', ['$event'])
   public onGlobalKeyDown(e: KeyboardEvent): void {
     if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
       e.preventDefault();
@@ -101,6 +108,16 @@ export class AppShellComponent {
 
   public navigate(item: NavItem): void {
     void this.router.navigateByUrl(item.route);
+  }
+
+  public handleAvatarMenuSelect(item: MenuItem): void {
+    if (item.id === '/settings') {
+      void this.router.navigateByUrl(AppRoute.Settings);
+      return;
+    }
+    if (item.id === '_logout') {
+      this.authStore.logout();
+    }
   }
 
   public openPalette(): void {
