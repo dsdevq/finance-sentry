@@ -1,38 +1,14 @@
 /**
- * Per-user IBKR async connect. The frontend POSTs credentials, gets back a
- * sessionId, then polls GET /brokerage/ibkr/connect/{sessionId} until it
- * observes a terminal state (`completed`, `failed`, `cancelled`).
+ * IBKR connect: single blocking POST /brokerage/ibkr/connect that resolves
+ * with the initial holdings result on success or a 4xx error body on failure.
  */
 export interface ConnectIBKRRequest {
   username: string;
   password: string;
 }
 
-export interface ConnectIBKRSessionAccepted {
-  sessionId: string;
-}
-
-export type IBKRConnectStatus =
-  | 'pending'
-  | 'spawning'
-  | 'awaitingAuth'
-  | 'syncing'
-  | 'completed'
-  | 'failed'
-  | 'cancelled';
-
 export interface IBKRConnectResult {
   accountId: string;
   holdingsCount: number;
   connectedAt: string;
-}
-
-export interface IBKRConnectSessionSnapshot {
-  sessionId: string;
-  status: IBKRConnectStatus;
-  errorCode: string | null;
-  errorMessage: string | null;
-  result: IBKRConnectResult | null;
-  createdAt: string;
-  updatedAt: string;
 }

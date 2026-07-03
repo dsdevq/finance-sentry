@@ -63,12 +63,11 @@ public static class BrokerageSyncModule
         services.AddSingleton<IIBeamGatewayResolver, IBeamGatewayResolver>();
         services.AddSingleton<IIBeamContainerManager, IBeamContainerManager>();
 
-        // Async connect session tracking + orchestrator. Session store is
-        // in-memory + singleton; runner is scoped so it participates in the
-        // request-scoped DI graph (repos, DbContext, sync handler).
-        services.AddSingleton<IIBKRConnectSessionStore, IBKRConnectSessionStore>();
-        services.AddSingleton<IIBKRConnectOrchestrator, IBKRConnectOrchestrator>();
-        services.AddScoped<IBKRConnectRunner>();
+        // Blocking connect: request-scoped, awaited by the controller. No
+        // session store, no polling — the HTTP request itself is the state
+        // machine, and client disconnect cancels the whole pipeline via the
+        // request CancellationToken (which triggers rollback in the connector).
+        services.AddScoped<IIBKRConnector, IBKRConnector>();
 
         services.AddScoped<IBrokerAdapter, IBKRAdapter>();
         services.AddScoped<IIBKRCredentialRepository, IBKRCredentialRepository>();

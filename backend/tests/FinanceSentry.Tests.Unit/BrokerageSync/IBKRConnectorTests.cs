@@ -12,21 +12,19 @@ using Xunit;
 
 namespace FinanceSentry.Tests.Unit.BrokerageSync;
 
-public class IBKRConnectRunnerTests
+public class IBKRConnectorTests
 {
     private readonly Mock<IIBKRCredentialRepository> _credentialRepo = new(MockBehavior.Strict);
     private readonly Mock<ICredentialEncryptionService> _encryption = new(MockBehavior.Strict);
     private readonly Mock<IIBeamContainerManager> _containerManager = new(MockBehavior.Strict);
     private readonly Mock<ICommandHandler<SyncIBKRHoldingsCommand, SyncIBKRHoldingsResult>> _syncHandler = new(MockBehavior.Strict);
-    private readonly IBKRConnectSessionStore _sessionStore = new();
 
-    private IBKRConnectRunner CreateRunner() => new(
-        _sessionStore,
+    private IBKRConnector CreateConnector() => new(
         _credentialRepo.Object,
         _encryption.Object,
         _containerManager.Object,
         _syncHandler.Object,
-        NullLogger<IBKRConnectRunner>.Instance);
+        NullLogger<IBKRConnector>.Instance);
 
     private static IBKRCredential Existing(Guid userId) =>
         new(userId, [1], [2], [3], [4], [5], [6], keyVersion: 1);
@@ -62,41 +60,35 @@ public class IBKRConnectRunnerTests
     }
 
     [Fact]
-    public async Task Run_HappyPath_TransitionsThroughSpawningAwaitingAuthSyncingCompleted()
+    public async Task Connect_HappyPath_ReturnsResult_WithHoldingsCount()
     {
         var userId = Guid.NewGuid();
         SetupHappyPath(holdings: 7);
-        var (sessionId, token) = _sessionStore.Create(userId);
 
-        await CreateRunner().RunAsync(sessionId, userId, "u", "p", token);
+        var result = await CreateConnector().ConnectAsync(userId, "u", "p", CancellationToken.None);
 
-        var snap = _sessionStore.Get(sessionId, userId)!;
-        snap.Status.Should().Be(IBKRConnectStatus.Completed);
-        snap.Result!.HoldingsCount.Should().Be(7);
-        snap.ErrorCode.Should().BeNull();
+        result.HoldingsCount.Should().Be(7);
     }
 
     [Fact]
-    public async Task Run_ExistingActiveCredential_MarksFailedALREADY_CONNECTED_WithoutTouchingContainer()
+    public async Task Connect_ExistingActiveCredential_Throws_DUPLICATE_WithoutTouchingContainer()
     {
         var userId = Guid.NewGuid();
         _credentialRepo
             .Setup(r => r.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Existing(userId));
 
-        var (sessionId, token) = _sessionStore.Create(userId);
-        await CreateRunner().RunAsync(sessionId, userId, "u", "p", token);
+        var act = () => CreateConnector().ConnectAsync(userId, "u", "p", CancellationToken.None);
 
-        var snap = _sessionStore.Get(sessionId, userId)!;
-        snap.Status.Should().Be(IBKRConnectStatus.Failed);
-        snap.ErrorCode.Should().Be("IBKR_DUPLICATE");
+        var ex = await act.Should().ThrowAsync<IBKRConnectException>();
+        ex.Which.ErrorCode.Should().Be("IBKR_DUPLICATE");
         _containerManager.Verify(
             m => m.SpawnAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
     [Fact]
-    public async Task Run_ExistingInactiveCredential_RotatesInPlaceInsteadOfAdding()
+    public async Task Connect_ExistingInactiveCredential_RotatesInPlaceInsteadOfAdding()
     {
         var userId = Guid.NewGuid();
         var stale = Existing(userId);
@@ -123,32 +115,28 @@ public class IBKRConnectRunnerTests
             .Setup(h => h.Handle(It.IsAny<SyncIBKRHoldingsCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new SyncIBKRHoldingsResult(0, DateTime.UtcNow));
 
-        var (sessionId, token) = _sessionStore.Create(userId);
-        await CreateRunner().RunAsync(sessionId, userId, "u", "p", token);
+        await CreateConnector().ConnectAsync(userId, "u", "p", CancellationToken.None);
 
         _credentialRepo.Verify(r => r.AddAsync(It.IsAny<IBKRCredential>(), It.IsAny<CancellationToken>()), Times.Never);
         _credentialRepo.Verify(r => r.Update(It.Is<IBKRCredential>(c => c.IsActive)), Times.Once);
-        _sessionStore.Get(sessionId, userId)!.Status.Should().Be(IBKRConnectStatus.Completed);
     }
 
     [Fact]
-    public async Task Run_AuthTimeout_MarksFailedINVALID_CREDENTIALS_AndRollsBack()
+    public async Task Connect_AuthTimeout_Throws_INVALID_CREDENTIALS_AndRollsBack()
     {
         var userId = Guid.NewGuid();
         SetupHappyPath(authResult: false);
-        var (sessionId, token) = _sessionStore.Create(userId);
 
-        await CreateRunner().RunAsync(sessionId, userId, "u", "p", token);
+        var act = () => CreateConnector().ConnectAsync(userId, "u", "p", CancellationToken.None);
+        var ex = await act.Should().ThrowAsync<IBKRConnectException>();
+        ex.Which.ErrorCode.Should().Be("IBKR_INVALID_CREDENTIALS");
 
-        var snap = _sessionStore.Get(sessionId, userId)!;
-        snap.Status.Should().Be(IBKRConnectStatus.Failed);
-        snap.ErrorCode.Should().Be("IBKR_INVALID_CREDENTIALS");
         _containerManager.Verify(m => m.StopAndRemoveAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Once);
         _credentialRepo.Verify(r => r.Update(It.Is<IBKRCredential>(c => !c.IsActive)), Times.Once);
     }
 
     [Fact]
-    public async Task Run_SpawnHttpFailure_MarksFailedGATEWAY_UNAVAILABLE_AndRollsBack()
+    public async Task Connect_SpawnHttpFailure_Throws_GATEWAY_UNAVAILABLE_AndRollsBack()
     {
         var userId = Guid.NewGuid();
         _credentialRepo
@@ -172,17 +160,15 @@ public class IBKRConnectRunnerTests
             .Setup(m => m.StopAndRemoveAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        var (sessionId, token) = _sessionStore.Create(userId);
-        await CreateRunner().RunAsync(sessionId, userId, "u", "p", token);
+        var act = () => CreateConnector().ConnectAsync(userId, "u", "p", CancellationToken.None);
+        var ex = await act.Should().ThrowAsync<IBKRConnectException>();
+        ex.Which.ErrorCode.Should().Be("IBKR_GATEWAY_UNAVAILABLE");
 
-        var snap = _sessionStore.Get(sessionId, userId)!;
-        snap.Status.Should().Be(IBKRConnectStatus.Failed);
-        snap.ErrorCode.Should().Be("IBKR_GATEWAY_UNAVAILABLE");
         _credentialRepo.Verify(r => r.Update(It.Is<IBKRCredential>(c => !c.IsActive)), Times.Once);
     }
 
     [Fact]
-    public async Task Run_Cancellation_MarksCancelled_AndRollsBack()
+    public async Task Connect_ClientDisconnect_PropagatesCancellation_AndRollsBack()
     {
         var userId = Guid.NewGuid();
         _credentialRepo
@@ -199,12 +185,8 @@ public class IBKRConnectRunnerTests
             .Returns(Task.CompletedTask);
         _credentialRepo
             .Setup(r => r.Update(It.IsAny<IBKRCredential>()));
-
-        var (sessionId, token) = _sessionStore.Create(userId);
-
         _containerManager
             .Setup(m => m.SpawnAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Callback(() => _sessionStore.Cancel(sessionId, userId))
             .Returns(Task.CompletedTask);
         _containerManager
             .Setup(m => m.WaitForAuthAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
@@ -213,60 +195,12 @@ public class IBKRConnectRunnerTests
             .Setup(m => m.StopAndRemoveAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        await CreateRunner().RunAsync(sessionId, userId, "u", "p", token);
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+        var act = () => CreateConnector().ConnectAsync(userId, "u", "p", cts.Token);
 
-        var snap = _sessionStore.Get(sessionId, userId)!;
-        snap.Status.Should().Be(IBKRConnectStatus.Cancelled);
+        await act.Should().ThrowAsync<OperationCanceledException>();
         _containerManager.Verify(m => m.StopAndRemoveAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Once);
         _credentialRepo.Verify(r => r.Update(It.Is<IBKRCredential>(c => !c.IsActive)), Times.Once);
-    }
-
-    [Fact]
-    public void Store_GetForDifferentUser_ReturnsNull()
-    {
-        var owner = Guid.NewGuid();
-        var attacker = Guid.NewGuid();
-        var (sessionId, _) = _sessionStore.Create(owner);
-
-        _sessionStore.Get(sessionId, attacker).Should().BeNull();
-    }
-
-    [Fact]
-    public void Store_CancelForDifferentUser_ReturnsFalse()
-    {
-        var owner = Guid.NewGuid();
-        var attacker = Guid.NewGuid();
-        var (sessionId, _) = _sessionStore.Create(owner);
-
-        _sessionStore.Cancel(sessionId, attacker).Should().BeFalse();
-    }
-
-    [Fact]
-    public void Store_FindActiveByUser_ReturnsInFlightSession()
-    {
-        var userId = Guid.NewGuid();
-        var (sessionId, _) = _sessionStore.Create(userId);
-
-        _sessionStore.FindActiveByUser(userId).Should().Be(sessionId);
-    }
-
-    [Fact]
-    public void Store_FindActiveByUser_IgnoresTerminalSessions()
-    {
-        var userId = Guid.NewGuid();
-        var (sessionId, _) = _sessionStore.Create(userId);
-        _sessionStore.MarkFailed(sessionId, "IBKR_INVALID_CREDENTIALS", "…");
-
-        _sessionStore.FindActiveByUser(userId).Should().BeNull();
-    }
-
-    [Fact]
-    public void Store_FindActiveByUser_IsolatesUsers()
-    {
-        var owner = Guid.NewGuid();
-        var attacker = Guid.NewGuid();
-        _sessionStore.Create(owner);
-
-        _sessionStore.FindActiveByUser(attacker).Should().BeNull();
     }
 }
