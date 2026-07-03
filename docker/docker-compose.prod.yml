@@ -43,7 +43,10 @@ services:
       TrueLayer__Scopes: "info accounts balance transactions cards offline_access"
       # Per-user IBeam orchestration. On this VPS the compose network is named
       # "finance-sentry" (no compose prefix — see networks: block at the bottom).
-      IBeam__Image: "voyz/ibeam:latest"
+      # Image is our custom build (Dockerfile.ibeam) with a widened conf.yaml
+      # ips.allow — upstream voyz/ibeam only permits 172.17.0.* and silently
+      # 404s cross-container calls from any other Docker subnet.
+      IBeam__Image: "finance-sentry/ibeam:local"
       IBeam__Network: "${IBEAM_NETWORK:-finance-sentry}"
       IBeam__ContainerNamePrefix: "finance-sentry-ibkr"
       IBeam__SpawnTimeoutSeconds: "300"
@@ -152,6 +155,20 @@ services:
   # the Docker socket (mounted above). No shared single-tenant ibkr-gateway
   # service — connect via POST /api/v1/brokerage/ibkr/connect to spin one up
   # under the name finance-sentry-ibkr-{shortId}.
+  #
+  # The image itself (our custom variant of voyz/ibeam with a wider
+  # ips.allow: 172.* in conf.yaml) is built once on deploy via this phantom
+  # service. It runs `/bin/true` and exits immediately — its only job is to
+  # give compose a build target so `docker compose up -d --build` produces the
+  # `finance-sentry/ibeam:local` tag the API references at spawn time.
+  ibeam-image:
+    image: finance-sentry/ibeam:local
+    build:
+      context: .
+      dockerfile: Dockerfile.ibeam
+      platforms: [linux/arm64]
+    entrypoint: ["/bin/true"]
+    restart: "no"
 
 volumes:
   postgres_data:

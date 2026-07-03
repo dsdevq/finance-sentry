@@ -70,10 +70,10 @@ public sealed class IBeamContainerManager : IIBeamContainerManager
             ],
             HostConfig = new HostConfig
             {
-                // No conf.yaml bind-mount. The old single-tenant service that
-                // worked with 2FA didn't mount one either, and the custom conf
-                // we were pinning (ip2loc, allow-ip ranges) is the most likely
-                // reason IBeam's CPG reported authenticated=false after login.
+                // No conf.yaml bind-mount — the widened ips.allow lives baked
+                // into the custom image (see IBeamOptions.Image remarks and
+                // docker/Dockerfile.ibeam). Bind-mounting instead would leak
+                // host-path assumptions into per-user spawns.
                 NetworkMode = _options.Network,
                 RestartPolicy = new RestartPolicy { Name = RestartPolicyKind.UnlessStopped },
             },
@@ -90,7 +90,7 @@ public sealed class IBeamContainerManager : IIBeamContainerManager
         }, ct);
 
         await _docker.Containers.StartContainerAsync(createResp.ID, new ContainerStartParameters(), ct);
-        _logger.LogInformation(
+        _logger.LogDebug(
             "Spawned IBeam container {Container} (id {Id}) for credential {CredentialId}",
             containerName, createResp.ID, credentialId);
     }
@@ -118,7 +118,7 @@ public sealed class IBeamContainerManager : IIBeamContainerManager
 
     public async Task<bool> WaitForAuthAsync(Guid credentialId, CancellationToken ct = default)
     {
-        var baseUrl = _resolver.BaseUrl(credentialId);
+        var authUri = new Uri(_resolver.BaseUrl(credentialId), "/v1/api/iserver/auth/status");
         var deadline = DateTime.UtcNow.AddSeconds(_options.SpawnTimeoutSeconds);
 
         using var http = CreateInsecureClient();
@@ -128,7 +128,16 @@ public sealed class IBeamContainerManager : IIBeamContainerManager
             ct.ThrowIfCancellationRequested();
             try
             {
-                var response = await http.GetAsync(new Uri(baseUrl, "/v1/api/iserver/auth/status"), ct);
+                // Explicit HTTP/1.1 request: CPG returns a bare 403 Access Denied
+                // to any client that upgrades to HTTP/2 or sends an empty
+                // User-Agent (see CreateInsecureClient). curl and wget both stick
+                // to 1.1 and set a UA — hence "works from wget, fails from .NET".
+                using var request = new HttpRequestMessage(HttpMethod.Get, authUri)
+                {
+                    Version = System.Net.HttpVersion.Version11,
+                    VersionPolicy = System.Net.Http.HttpVersionPolicy.RequestVersionOrLower,
+                };
+                var response = await http.SendAsync(request, ct);
                 if (response.IsSuccessStatusCode)
                 {
                     var body = await response.Content.ReadAsStringAsync(ct);
@@ -166,7 +175,7 @@ public sealed class IBeamContainerManager : IIBeamContainerManager
 
         foreach (var container in existing)
         {
-            _logger.LogInformation("Removing existing IBeam container {Container} (id {Id})", containerName, container.ID);
+            _logger.LogDebug("Removing existing IBeam container {Container} (id {Id})", containerName, container.ID);
             try
             {
                 await _docker.Containers.RemoveContainerAsync(container.ID, new ContainerRemoveParameters
@@ -195,7 +204,7 @@ public sealed class IBeamContainerManager : IIBeamContainerManager
         if (images.Count > 0)
             return;
 
-        _logger.LogInformation("Pulling IBeam image {Image}", image);
+        _logger.LogDebug("Pulling IBeam image {Image}", image);
         await _docker.Images.CreateImageAsync(
             new ImagesCreateParameters { FromImage = image },
             authConfig: null,
@@ -212,6 +221,8 @@ public sealed class IBeamContainerManager : IIBeamContainerManager
         {
             ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
         };
-        return new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(10) };
+        var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(10) };
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("finance-sentry-api/1.0");
+        return client;
     }
 }

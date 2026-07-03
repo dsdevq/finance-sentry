@@ -1,0 +1,12 @@
+# IBeam + Client Portal Gateway with our conf.yaml baked in.
+#
+# The upstream `voyz/ibeam` image ships CPG's default conf.yaml, which
+# allowlists `172.17.0.*` (the Docker default-bridge subnet) only. Our compose
+# network sits on a different subnet (e.g. `172.18.0.*`), so cross-container
+# requests from the API to the spawned gateway were silently rejected as 404 —
+# authenticated=true internally, but every /v1/api/* path unreachable from
+# outside. Baking in a conf.yaml that allows the broader `172.*` range fixes
+# that without reintroducing the host bind-mount that #248 (correctly) removed.
+FROM voyz/ibeam:latest
+
+COPY ibkr/conf.yaml /srv/clientportal.gw/root/conf.yaml

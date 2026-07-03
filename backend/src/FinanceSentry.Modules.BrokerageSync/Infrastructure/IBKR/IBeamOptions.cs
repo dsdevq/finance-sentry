@@ -3,21 +3,28 @@ namespace FinanceSentry.Modules.BrokerageSync.Infrastructure.IBKR;
 /// <summary>
 /// Configuration for the per-user IBeam Docker orchestration.
 ///
-/// The API container spawns one <c>voyz/ibeam</c> container per connected user,
-/// joined to <see cref="Network"/> with a stable name so the API can address it
-/// by DNS at <c>https://finance-sentry-ibkr-{shortId}:5000</c>. IBeam uses its
-/// bundled default IBKR Client Portal Gateway conf; we no longer bind-mount a
-/// custom conf.yaml because the extra vars we were pinning (ip2loc, allow-ip
-/// ranges) interacted badly with the IB Key push 2FA flow.
+/// The API container spawns one IBeam container per connected user, joined to
+/// <see cref="Network"/> with a stable name so the API can address it by DNS
+/// at <c>https://finance-sentry-ibkr-{shortId}:5000</c>.
+///
+/// <see cref="Image"/> points at our custom build (docker/Dockerfile.ibeam),
+/// not upstream <c>voyz/ibeam:latest</c>. The upstream image ships a CPG
+/// conf.yaml that allowlists only <c>172.17.0.*</c> (Docker's default bridge
+/// subnet); our conf.yaml widens that to <c>172.*</c> so the API — running on
+/// any user-defined compose network — can reach the gateway. Without this,
+/// IBeam authenticates internally but every /v1/api/* path returns 404 to
+/// external callers, and WaitForAuthAsync hangs until timeout.
 /// </summary>
 public sealed class IBeamOptions
 {
     public const string SectionName = "IBeam";
 
     /// <summary>
-    /// Docker image reference for IBeam. Defaults to <c>voyz/ibeam:latest</c>.
+    /// Docker image reference for IBeam. Defaults to the local custom build
+    /// (docker/Dockerfile.ibeam); see the type-level remarks for why the
+    /// upstream <c>voyz/ibeam:latest</c> is not usable here directly.
     /// </summary>
-    public string Image { get; set; } = "voyz/ibeam:latest";
+    public string Image { get; set; } = "finance-sentry/ibeam:local";
 
     /// <summary>
     /// Compose network name to attach spawned containers to. Must match the
