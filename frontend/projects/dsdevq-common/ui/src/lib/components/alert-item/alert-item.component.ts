@@ -1,7 +1,7 @@
 import {ChangeDetectionStrategy, Component, computed, input, output} from '@angular/core';
 
-import {TagComponent} from '../tag/tag.component';
 import {IconComponent, type LucideIconName} from '../icon/icon.component';
+import {TagComponent} from '../tag/tag.component';
 
 export type AlertItemSeverity = 'error' | 'warning' | 'info';
 
@@ -87,6 +87,11 @@ function formatRelativeTime(value: Nullable<string | number | Date>): string {
             }}</span>
           }
         </div>
+        @if (description()) {
+          <p class="mb-cmn-1 text-[11px] font-medium uppercase tracking-wide text-text-secondary">
+            {{ description() }}
+          </p>
+        }
         <p class="mb-cmn-2 text-cmn-xs leading-relaxed text-text-secondary">
           {{ message() }}
         </p>
@@ -115,6 +120,7 @@ export class AlertItemComponent {
   public readonly icon = input<Nullable<LucideIconName>>(null);
   public readonly badgeLabel = input<Nullable<string>>(null);
   public readonly referenceLabel = input<Nullable<string>>(null);
+  public readonly description = input<Nullable<string>>(null);
   public readonly timestamp = input<Nullable<string | number | Date>>(null);
   public readonly isRead = input<boolean>(false);
   public readonly dismissible = input<boolean>(true);

@@ -11,6 +11,7 @@ import {
 } from '@dsdevq-common/ui';
 
 import {AppRoute} from '../../../../shared/enums/app-route/app-route.enum';
+import {ALERT_TYPE_META_REGISTRY} from '../../constants/alert-type-meta.constants';
 import {
   type Alert,
   type AlertFilter,
@@ -18,28 +19,6 @@ import {
   type AlertType,
 } from '../../models/alert/alert.model';
 import {AlertsStore} from '../../store/alerts/alerts.store';
-
-function iconForType(type: AlertType): LucideIconName {
-  switch (type) {
-    case 'LowBalance':
-      return 'TriangleAlert';
-    case 'SyncFailure':
-      return 'CircleAlert';
-    case 'UnusualSpend':
-      return 'Zap';
-  }
-}
-
-function labelForType(type: AlertType): string {
-  switch (type) {
-    case 'LowBalance':
-      return 'low balance';
-    case 'SyncFailure':
-      return 'sync error';
-    case 'UnusualSpend':
-      return 'unusual spend';
-  }
-}
 
 function severityFor(severity: AlertSeverity): AlertItemSeverity {
   switch (severity) {
@@ -91,11 +70,15 @@ export class AlertsComponent {
   ];
 
   public iconFor(type: AlertType): LucideIconName {
-    return iconForType(type);
+    return ALERT_TYPE_META_REGISTRY[type].icon;
   }
 
   public typeLabel(type: AlertType): string {
-    return labelForType(type);
+    return ALERT_TYPE_META_REGISTRY[type].label;
+  }
+
+  public typeDescription(type: AlertType): string {
+    return ALERT_TYPE_META_REGISTRY[type].description;
   }
 
   public severityFor(severity: AlertSeverity): AlertItemSeverity {

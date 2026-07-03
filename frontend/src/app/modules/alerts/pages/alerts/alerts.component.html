@@ -66,6 +66,7 @@
               [severity]="severityFor(alert.severity)"
               [icon]="iconFor(alert.type)"
               [badgeLabel]="typeLabel(alert.type)"
+              [description]="typeDescription(alert.type)"
               [referenceLabel]="alert.referenceLabel"
               [timestamp]="alert.createdAt"
               [isRead]="alert.isRead"
