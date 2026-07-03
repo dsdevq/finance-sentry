@@ -132,14 +132,6 @@
                           •••• {{ account.accountNumberLast4 }}
                         </p>
                       </td>
-                      <td class="py-cmn-3 px-cmn-4">
-                        <cmn-status-indicator
-                          [variant]="account.syncStatus | syncStatusVariant"
-                          [timestampLabel]="account.lastSyncTimestamp | relativeTime"
-                        >
-                          {{ account.syncStatus | syncStatusLabel }}
-                        </cmn-status-indicator>
-                      </td>
                       <td
                         class="py-cmn-3 px-cmn-4 text-right font-mono tabular-nums text-text-primary min-w-[7rem]"
                       >
@@ -186,6 +178,12 @@
                     </p>
                   </div>
                 </div>
+                <cmn-status-indicator
+                  [variant]="inst.syncStatus | syncStatusVariant"
+                  [timestampLabel]="inst.lastSyncTimestamp | relativeTime"
+                >
+                  {{ inst.syncStatus | syncStatusLabel }}
+                </cmn-status-indicator>
                 <div
                   class="font-mono tabular-nums font-medium text-text-primary text-right min-w-[7rem]"
                 >
@@ -273,6 +271,12 @@
                     </p>
                   </div>
                 </div>
+                <cmn-status-indicator
+                  [variant]="inst.syncStatus | syncStatusVariant"
+                  [timestampLabel]="inst.lastSyncTimestamp | relativeTime"
+                >
+                  {{ inst.syncStatus | syncStatusLabel }}
+                </cmn-status-indicator>
                 <div
                   class="font-mono tabular-nums font-medium text-text-primary text-right min-w-[7rem]"
                 >
