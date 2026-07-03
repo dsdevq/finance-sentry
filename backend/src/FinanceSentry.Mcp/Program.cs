@@ -27,6 +27,7 @@ Assembly[] moduleAssemblies =
     typeof(FinanceSentry.Modules.CryptoSync.CryptoSyncModule).Assembly,
     typeof(FinanceSentry.Modules.Subscriptions.SubscriptionsModule).Assembly,
     typeof(FinanceSentry.Modules.Wealth.WealthModule).Assembly,
+    typeof(FinanceSentry.Modules.Research.ResearchModule).Assembly,
 ];
 
 var mcpAssembly = typeof(IReadOnlyMcpTool).Assembly;

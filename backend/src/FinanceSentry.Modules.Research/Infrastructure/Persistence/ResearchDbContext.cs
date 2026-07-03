@@ -1,0 +1,110 @@
+namespace FinanceSentry.Modules.Research.Infrastructure.Persistence;
+
+using System.Text.Json;
+using FinanceSentry.Modules.Research.Domain;
+using Microsoft.EntityFrameworkCore;
+
+public class ResearchDbContext(DbContextOptions<ResearchDbContext> options) : DbContext(options)
+{
+    public DbSet<WatchlistItem> WatchlistItems { get; set; } = null!;
+
+    public DbSet<InvestmentThesis> Theses { get; set; } = null!;
+
+    public DbSet<QuoteCacheEntry> QuoteCache { get; set; } = null!;
+
+    public DbSet<NewsArticle> News { get; set; } = null!;
+
+    public DbSet<MacroEvent> MacroEvents { get; set; } = null!;
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.HasDefaultSchema("research");
+        base.OnModelCreating(modelBuilder);
+
+        var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+
+        var wb = modelBuilder.Entity<WatchlistItem>();
+        wb.ToTable("watchlist_items");
+        wb.HasKey(x => x.Id);
+        wb.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
+        wb.Property(x => x.UserId).IsRequired();
+        wb.Property(x => x.Ticker).IsRequired().HasMaxLength(20);
+        wb.Property(x => x.Exchange).HasMaxLength(20);
+        wb.Property(x => x.Note).HasMaxLength(500);
+        wb.Property(x => x.AddedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+        wb.HasIndex(x => new { x.UserId, x.Ticker }).IsUnique().HasDatabaseName("idx_watchlist_user_ticker");
+
+        var tb = modelBuilder.Entity<InvestmentThesis>();
+        tb.ToTable("theses");
+        tb.HasKey(x => x.Id);
+        tb.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
+        tb.Property(x => x.UserId).IsRequired();
+        tb.Property(x => x.Ticker).IsRequired().HasMaxLength(20);
+        tb.Property(x => x.ThesisText).IsRequired().HasMaxLength(4000);
+        tb.Property(x => x.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+        tb.Property(x => x.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+        tb.Property(x => x.BrokenReason).HasMaxLength(1000);
+        tb.Property(x => x.KeyDataPoints)
+            .HasColumnType("jsonb")
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, jsonOptions),
+                v => JsonSerializer.Deserialize<List<ThesisDataPoint>>(v, jsonOptions) ?? new());
+        tb.Property(x => x.Catalysts)
+            .HasColumnType("jsonb")
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, jsonOptions),
+                v => JsonSerializer.Deserialize<List<ThesisCatalyst>>(v, jsonOptions) ?? new());
+        tb.Property(x => x.InvalidationTriggers)
+            .HasColumnType("jsonb")
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, jsonOptions),
+                v => JsonSerializer.Deserialize<List<ThesisInvalidationTrigger>>(v, jsonOptions) ?? new());
+        tb.HasIndex(x => new { x.UserId, x.Ticker }).HasDatabaseName("idx_thesis_user_ticker");
+
+        var nb = modelBuilder.Entity<NewsArticle>();
+        nb.ToTable("news_articles");
+        nb.HasKey(x => x.Id);
+        nb.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
+        nb.Property(x => x.Source).IsRequired().HasMaxLength(50);
+        nb.Property(x => x.Title).IsRequired().HasMaxLength(500);
+        nb.Property(x => x.Url).IsRequired().HasMaxLength(2000);
+        nb.Property(x => x.Summary).HasMaxLength(4000);
+        nb.Property(x => x.ContentHash).IsRequired().HasMaxLength(64);
+        nb.Property(x => x.PublishedAt).IsRequired();
+        nb.Property(x => x.IngestedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+        nb.Property(x => x.Tickers)
+            .HasColumnType("jsonb")
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, jsonOptions),
+                v => JsonSerializer.Deserialize<List<string>>(v, jsonOptions) ?? new());
+        nb.Property(x => x.Categories)
+            .HasColumnType("jsonb")
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, jsonOptions),
+                v => JsonSerializer.Deserialize<List<string>>(v, jsonOptions) ?? new());
+        nb.HasIndex(x => x.ContentHash).IsUnique().HasDatabaseName("idx_news_hash");
+        nb.HasIndex(x => x.PublishedAt).IsDescending().HasDatabaseName("idx_news_published");
+
+        var mb = modelBuilder.Entity<MacroEvent>();
+        mb.ToTable("macro_events");
+        mb.HasKey(x => x.Id);
+        mb.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
+        mb.Property(x => x.EventDate).IsRequired();
+        mb.Property(x => x.Event).IsRequired().HasMaxLength(200);
+        mb.Property(x => x.Region).IsRequired().HasMaxLength(10);
+        mb.Property(x => x.Importance).IsRequired().HasMaxLength(10);
+        mb.Property(x => x.Source).IsRequired().HasMaxLength(200);
+        mb.Property(x => x.IngestedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+        mb.HasIndex(x => new { x.EventDate, x.Region, x.Event }).IsUnique().HasDatabaseName("idx_macro_dedup");
+        mb.HasIndex(x => x.EventDate).HasDatabaseName("idx_macro_date");
+
+        var qb = modelBuilder.Entity<QuoteCacheEntry>();
+        qb.ToTable("quote_cache");
+        qb.HasKey(x => x.Ticker);
+        qb.Property(x => x.Ticker).HasMaxLength(20);
+        qb.Property(x => x.Price).HasColumnType("numeric(18,6)");
+        qb.Property(x => x.PreviousClose).HasColumnType("numeric(18,6)");
+        qb.Property(x => x.Currency).HasMaxLength(6).HasDefaultValue("USD");
+        qb.Property(x => x.FetchedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+    }
+}
