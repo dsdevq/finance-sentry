@@ -16,17 +16,23 @@ public class NetWorthSnapshotJob(
 
     [AutomaticRetry(Attempts = 2)]
     public async Task ExecuteAsync(CancellationToken ct = default)
-    {
-        var userIds = await _bankingTotals.GetActiveUserIdsAsync(ct);
-        foreach (var userId in userIds)
-            await TakeSnapshotAsync(userId, ct);
-    }
+        => await CaptureAllUsersAsync(DateOnly.FromDateTime(DateTime.UtcNow), ct);
 
     [AutomaticRetry(Attempts = 2)]
     public async Task ExecuteForUserAsync(Guid userId, CancellationToken ct = default)
-        => await TakeSnapshotAsync(userId, ct);
+        => await CaptureForUserAsync(userId, DateOnly.FromDateTime(DateTime.UtcNow), ct);
 
-    private async Task TakeSnapshotAsync(Guid userId, CancellationToken ct)
+    public async Task CaptureAllUsersAsync(DateOnly snapshotDate, CancellationToken ct = default)
+    {
+        var userIds = await _bankingTotals.GetActiveUserIdsAsync(ct);
+        foreach (var userId in userIds)
+            await CaptureForUserAsync(userId, snapshotDate, ct);
+    }
+
+    public async Task CaptureForUserAsync(Guid userId, DateOnly snapshotDate, CancellationToken ct = default)
+        => await TakeSnapshotAsync(userId, snapshotDate, ct);
+
+    private async Task TakeSnapshotAsync(Guid userId, DateOnly snapshotDate, CancellationToken ct)
     {
         var bankingTotal = await _bankingTotals.GetTotalUsdAsync(userId, ct);
 
@@ -35,8 +41,6 @@ public class NetWorthSnapshotJob(
 
         var brokerageHoldings = await _brokerageReader.GetHoldingsAsync(userId, ct);
         var brokerageTotal = brokerageHoldings.Sum(h => h.UsdValue);
-
-        var snapshotDate = DateOnly.FromDateTime(DateTime.UtcNow);
 
         await _snapshotService.PersistSnapshotAsync(userId, new NetWorthSnapshotData(
             snapshotDate, bankingTotal, brokerageTotal, cryptoTotal), ct);

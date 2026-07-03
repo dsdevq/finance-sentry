@@ -64,10 +64,16 @@ public class NetWorthSnapshotJobTests
     public async Task ExecuteForUserAsync_PersistsSnapshotForSpecificUser()
     {
         Guid? capturedUserId = null;
+        DateOnly? capturedSnapshotDate = null;
+        var expectedDate = DateOnly.FromDateTime(DateTime.UtcNow);
         var snapshotServiceMock = new Mock<INetWorthSnapshotService>();
         snapshotServiceMock
             .Setup(s => s.PersistSnapshotAsync(It.IsAny<Guid>(), It.IsAny<NetWorthSnapshotData>(), It.IsAny<CancellationToken>()))
-            .Callback<Guid, NetWorthSnapshotData, CancellationToken>((uid, _, _) => capturedUserId = uid)
+            .Callback<Guid, NetWorthSnapshotData, CancellationToken>((uid, data, _) =>
+            {
+                capturedUserId = uid;
+                capturedSnapshotDate = data.SnapshotDate;
+            })
             .Returns(Task.CompletedTask);
 
         var bankingMock = new Mock<IBankingTotalsReader>();
@@ -83,5 +89,30 @@ public class NetWorthSnapshotJobTests
         await sut.ExecuteForUserAsync(UserId);
 
         capturedUserId.Should().Be(UserId);
+        capturedSnapshotDate.Should().Be(expectedDate);
+    }
+
+    [Fact]
+    public async Task CaptureForUserAsync_UsesProvidedSnapshotDate()
+    {
+        NetWorthSnapshotData? captured = null;
+        var snapshotServiceMock = new Mock<INetWorthSnapshotService>();
+        snapshotServiceMock
+            .Setup(s => s.PersistSnapshotAsync(UserId, It.IsAny<NetWorthSnapshotData>(), It.IsAny<CancellationToken>()))
+            .Callback<Guid, NetWorthSnapshotData, CancellationToken>((_, data, _) => captured = data)
+            .Returns(Task.CompletedTask);
+
+        var sut = new NetWorthSnapshotJob(
+            BankingMock(total: 2000m).Object,
+            CryptoMock(usdValue: 500m).Object,
+            BrokerageMock(usdValue: 1000m).Object,
+            snapshotServiceMock.Object);
+
+        var snapshotDate = new DateOnly(2026, 6, 29);
+
+        await sut.CaptureForUserAsync(UserId, snapshotDate);
+
+        captured.Should().NotBeNull();
+        captured!.SnapshotDate.Should().Be(snapshotDate);
     }
 }
