@@ -37,6 +37,22 @@ public static class BankSyncModule
         public void RegisterJobs(IServiceProvider sp)
         {
             var mgr = sp.GetRequiredService<IRecurringJobManager>();
+
+            mgr.AddOrUpdate<SyncScheduler>(
+                "bank-account-sync-scheduler",
+                s => s.ScheduleAllActiveAccounts(CancellationToken.None),
+                "*/10 * * * *");
+
+            mgr.AddOrUpdate<DataRetentionJob>(
+                "data-retention",
+                job => job.RunAsync(false, CancellationToken.None),
+                Cron.Monthly());
+
+            mgr.AddOrUpdate<CredentialBackupJob>(
+                "credential-backup",
+                job => job.RunAsync(CancellationToken.None),
+                Cron.Weekly());
+
             mgr.AddOrUpdate<UnusualSpendDetectionJob>(
                 "unusual-spend-detection",
                 job => job.ExecuteAsync(CancellationToken.None),
@@ -45,6 +61,9 @@ public static class BankSyncModule
                 "subscription-detection",
                 job => job.ExecuteAsync(CancellationToken.None),
                 Cron.Daily());
+
+            BackgroundJob.Enqueue<SyncScheduler>(
+                s => s.ScheduleAllActiveAccounts(CancellationToken.None));
         }
     }
 

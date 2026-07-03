@@ -32,30 +32,22 @@ public class SyncScheduler(
     IBankAccountRepository accounts,
     IRecurringJobManager recurringJobs)
 {
+    private const string PerAccountCron = "*/30 * * * *";
+
     private readonly IBankAccountRepository _accounts = accounts;
     private readonly IRecurringJobManager _recurringJobs = recurringJobs;
 
     public async Task ScheduleAllActiveAccounts(CancellationToken ct = default)
     {
         var activeAccounts = await _accounts.GetAllActiveAsync(ct);
+        var activeIds = new HashSet<Guid>(activeAccounts.Select(a => a.Id));
 
         foreach (var account in activeAccounts)
         {
             _recurringJobs.AddOrUpdate<ScheduledSyncJob>(
                 $"sync-account-{account.Id}",
                 job => job.ExecuteSyncAsync(account.Id),
-                "0 */2 * * *");
+                PerAccountCron);
         }
-
-        _recurringJobs.AddOrUpdate<DataRetentionJob>(
-            "data-retention",
-            job => job.RunAsync(false, CancellationToken.None),
-            Cron.Monthly());
-
-        _recurringJobs.AddOrUpdate<CredentialBackupJob>(
-            "credential-backup",
-            job => job.RunAsync(CancellationToken.None),
-            Cron.Weekly());
-
     }
 }
