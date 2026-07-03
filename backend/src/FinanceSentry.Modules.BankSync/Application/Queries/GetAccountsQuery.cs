@@ -76,7 +76,7 @@ public class GetAccountsQueryHandler(IBankAccountRepository accounts) : IQueryHa
             a.CurrentBalance,
             null,
             a.SyncStatus,
-            null,
+            a.UpdatedAt,
             a.CreatedAt,
             a.Provider
         )).ToList();
