@@ -26,11 +26,11 @@ describe('IbkrConnectStrategy', () => {
     expect(ibkr.connect).toHaveBeenCalledWith(payload);
   });
 
-  it('maps the holdingsCount into a broker/POLLING outcome', () => {
+  it('maps the holdingsCount into a broker/CONNECTED outcome', () => {
     ibkr.connect.mockReturnValue(of({holdingsCount: 4, accountId: 'DU123', connectedAt: 'now'}));
     let outcome: unknown;
     strategy.submit({username: 'u', password: 'p'}).subscribe(o => (outcome = o));
-    expect(outcome).toEqual({successCode: 'POLLING', count: 4, institutionType: 'broker'});
+    expect(outcome).toEqual({successCode: 'CONNECTED', count: 4, institutionType: 'broker'});
   });
 
   it('exposes slug "ibkr"', () => {

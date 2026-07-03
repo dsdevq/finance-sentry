@@ -19,12 +19,11 @@ using Xunit;
 
 namespace FinanceSentry.Tests.Integration.BrokerageSync;
 
-// ── Contract tests: async IBKR connect flow ──────────────────────────────────
+// ── Contract tests: blocking IBKR connect ────────────────────────────────────
 //
-// POST /api/v1/brokerage/ibkr/connect returns 202 immediately with a
-// { sessionId } body. GET /api/v1/brokerage/ibkr/connect/{sessionId} exposes
-// the current state (Pending → Spawning → AwaitingAuth → Syncing → Completed
-// | Failed | Cancelled). DELETE .../{sessionId} cancels an in-flight session.
+// POST /api/v1/brokerage/ibkr/connect awaits the full flow (spawn → auth →
+// initial sync) and returns 200 with { holdingsCount, connectedAt, accountId }
+// or a 4xx with { errorCode, errorMessage } on failure. No session polling.
 
 public class BrokerageControllerConnectContractTests(BrokerageApiFactory factory) : IClassFixture<BrokerageApiFactory>
 {
@@ -42,7 +41,7 @@ public class BrokerageControllerConnectContractTests(BrokerageApiFactory factory
     }
 
     [Fact]
-    public async Task Connect_Returns202_WithSessionId_ThenPollsToCompleted()
+    public async Task Connect_HappyPath_Returns200_WithConnectResult()
     {
         _factory.SetupSuccessfulConnect();
 
@@ -50,13 +49,10 @@ public class BrokerageControllerConnectContractTests(BrokerageApiFactory factory
             "/api/v1/brokerage/ibkr/connect",
             new { Username = "u", Password = "p" });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Accepted);
-        var accepted = await response.Content.ReadFromJsonAsync<SessionAcceptedShape>();
-        accepted!.SessionId.Should().NotBe(Guid.Empty);
-
-        var final = await PollUntilTerminalAsync(accepted.SessionId);
-        final.Status.Should().Be("completed");
-        final.Result.Should().NotBeNull();
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var result = await response.Content.ReadFromJsonAsync<ResultShape>();
+        result.Should().NotBeNull();
+        result!.AccountId.Should().NotBeNullOrEmpty();
 
         _factory.ContainerManagerMock.Verify(
             m => m.SpawnAsync(It.IsAny<Guid>(), "u", "p", It.IsAny<CancellationToken>()),
@@ -64,12 +60,10 @@ public class BrokerageControllerConnectContractTests(BrokerageApiFactory factory
     }
 
     [Fact]
-    public async Task Connect_AlreadyConnected_SessionTransitionsTo_FailedALREADY_CONNECTED()
+    public async Task Connect_AlreadyConnected_Returns409_WithDUPLICATE()
     {
         _factory.SetupSuccessfulConnect();
         var existing = new IBKRCredential(_factory.TestUserId, [1], [2], [3], [4], [5], [6], keyVersion: 1);
-        // Overwrite the sequence with a single "existing active" record so the
-        // runner short-circuits into ALREADY_CONNECTED.
         _factory.CredentialRepoMock
             .Setup(r => r.GetByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(existing);
@@ -78,56 +72,36 @@ public class BrokerageControllerConnectContractTests(BrokerageApiFactory factory
             "/api/v1/brokerage/ibkr/connect",
             new { Username = "u", Password = "p" });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Accepted);
-        var accepted = await response.Content.ReadFromJsonAsync<SessionAcceptedShape>();
-
-        var final = await PollUntilTerminalAsync(accepted!.SessionId);
-        final.Status.Should().Be("failed");
-        final.ErrorCode.Should().Be("IBKR_DUPLICATE");
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var body = await response.Content.ReadFromJsonAsync<BrokerageErrorShape>();
+        body!.ErrorCode.Should().Be("IBKR_DUPLICATE");
     }
 
     [Fact]
-    public async Task GetConnectStatus_UnknownSession_Returns404()
+    public async Task Connect_AuthTimeout_Returns401_WithINVALID_CREDENTIALS()
     {
-        var response = await _client.GetAsync($"/api/v1/brokerage/ibkr/connect/{Guid.NewGuid()}");
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-    }
+        _factory.SetupSuccessfulConnect();
+        _factory.ContainerManagerMock
+            .Setup(m => m.WaitForAuthAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
 
-    [Fact]
-    public async Task CancelConnect_UnknownSession_Returns404()
-    {
-        var response = await _client.DeleteAsync($"/api/v1/brokerage/ibkr/connect/{Guid.NewGuid()}");
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-    }
+        var response = await _client.PostAsJsonAsync(
+            "/api/v1/brokerage/ibkr/connect",
+            new { Username = "u", Password = "p" });
 
-    private async Task<SessionShape> PollUntilTerminalAsync(Guid sessionId)
-    {
-        var deadline = DateTime.UtcNow.AddSeconds(5);
-        while (DateTime.UtcNow < deadline)
-        {
-            var resp = await _client.GetAsync($"/api/v1/brokerage/ibkr/connect/{sessionId}");
-            resp.StatusCode.Should().Be(HttpStatusCode.OK);
-            var body = (await resp.Content.ReadFromJsonAsync<SessionShape>())!;
-            if (body.Status is "completed" or "failed" or "cancelled")
-                return body;
-            await Task.Delay(50);
-        }
-        throw new Xunit.Sdk.XunitException($"Session {sessionId} did not reach terminal state within 5s");
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        var body = await response.Content.ReadFromJsonAsync<BrokerageErrorShape>();
+        body!.ErrorCode.Should().Be("IBKR_INVALID_CREDENTIALS");
+
+        _factory.ContainerManagerMock.Verify(
+            m => m.StopAndRemoveAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }
 
 // ── Response shapes ───────────────────────────────────────────────────────────
 
-public record BrokerageErrorShape(string Error, string ErrorCode);
-public record SessionAcceptedShape(Guid SessionId);
-public record SessionShape(
-    Guid SessionId,
-    string Status,
-    string? ErrorCode,
-    string? ErrorMessage,
-    ResultShape? Result,
-    DateTime CreatedAt,
-    DateTime UpdatedAt);
+public record BrokerageErrorShape(string ErrorCode, string ErrorMessage);
 public record ResultShape(int HoldingsCount, DateTime ConnectedAt, string AccountId);
 public record BrokeragePositionShape(string Symbol, string InstrumentType, decimal Quantity, decimal UsdValue);
 public record BrokerageHoldingsResponseShape(
