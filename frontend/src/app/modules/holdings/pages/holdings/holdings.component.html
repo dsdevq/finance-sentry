@@ -2,10 +2,28 @@
   <div class="mx-auto max-w-screen-lg space-y-cmn-5">
     <!-- Header -->
     <div>
-      <h1 class="font-headline text-cmn-2xl font-bold text-text-primary">Asset Allocation</h1>
+      <h1 class="font-headline text-cmn-2xl font-bold text-text-primary">Holdings</h1>
       <p class="text-cmn-sm text-text-secondary mt-cmn-1">
-        Portfolio breakdown across all connected accounts
+        Allocation across institutions, or a flat position-level view for brokerage + crypto.
       </p>
+    </div>
+
+    <!-- Tab bar -->
+    <div class="flex gap-cmn-2 border-b border-border-default">
+      <button
+        [class]="tabClass('holdings')"
+        (click)="switchTab('holdings')"
+        type="button"
+      >
+        Allocation
+      </button>
+      <button
+        [class]="tabClass('positions')"
+        (click)="switchTab('positions')"
+        type="button"
+      >
+        Positions
+      </button>
     </div>
 
     <!-- Error state -->
@@ -23,7 +41,7 @@
       <div class="h-64 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse"></div>
     }
 
-    @if (!store.isLoading() && !store.errorMessage()) {
+    @if (activeTab() === 'holdings' && !store.isLoading() && !store.errorMessage()) {
       <!-- KPI cards -->
       <div class="grid grid-cols-3 gap-4">
         <cmn-stat-card [value]="store.totalNetWorth() | currencyAmount" label="Net Asset Value" />
@@ -162,6 +180,84 @@
           </div>
         }
       </cmn-card>
+    }
+
+    @if (activeTab() === 'positions') {
+      @if (store.isPositionsLoading()) {
+        <div class="h-64 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse"></div>
+      } @else if (store.positionsErrorMessage()) {
+        <cmn-alert variant="error">{{ store.positionsErrorMessage() }}</cmn-alert>
+      } @else {
+        <cmn-stat-card
+          [value]="store.totalPositionsValue() | currencyAmount"
+          label="Total position value"
+        />
+
+        @if (store.positionsByAssetClass().length === 0) {
+          <cmn-card>
+            <div class="py-cmn-8 text-center text-text-secondary text-cmn-sm">
+              No positions yet. Connect a brokerage or crypto account to see holdings.
+            </div>
+          </cmn-card>
+        } @else {
+          @for (group of store.positionsByAssetClass(); track group.assetClass) {
+            <cmn-card class="grid gap-cmn-4">
+              <div class="flex items-baseline justify-between">
+                <h2 class="font-headline text-cmn-lg font-semibold text-text-primary">
+                  {{ group.label }}
+                </h2>
+                <span class="font-mono tabular-nums text-cmn-sm text-text-secondary">
+                  {{ group.totalValue | currencyAmount }}
+                </span>
+              </div>
+
+              <div class="overflow-x-auto -mx-cmn-4">
+                <table class="w-full text-cmn-sm">
+                  <thead>
+                    <tr class="text-left text-text-secondary uppercase text-cmn-xs tracking-wide">
+                      <th class="py-cmn-2 pl-cmn-4 pr-cmn-3">Symbol</th>
+                      <th class="py-cmn-2 pr-cmn-3">Provider</th>
+                      <th class="py-cmn-2 pr-cmn-3 text-right">Quantity</th>
+                      <th class="py-cmn-2 pr-cmn-3 text-right">Price</th>
+                      <th class="py-cmn-2 pr-cmn-3 text-right">Value</th>
+                      <th class="py-cmn-2 pr-cmn-3 text-right">P&amp;L %</th>
+                      <th class="py-cmn-2 pr-cmn-4 text-right">Weight</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (row of group.rows; track row.symbol + row.provider) {
+                      <tr class="border-t border-border-default">
+                        <td class="py-cmn-2 pl-cmn-4 pr-cmn-3 font-semibold text-text-primary">
+                          {{ row.symbol }}
+                        </td>
+                        <td class="py-cmn-2 pr-cmn-3 text-text-secondary">{{ row.provider }}</td>
+                        <td class="py-cmn-2 pr-cmn-3 text-right font-mono tabular-nums">
+                          {{ row.quantity | number: '1.0-8' }}
+                        </td>
+                        <td class="py-cmn-2 pr-cmn-3 text-right font-mono tabular-nums">
+                          {{ row.currentPrice | currencyAmount }}
+                        </td>
+                        <td class="py-cmn-2 pr-cmn-3 text-right font-mono tabular-nums font-semibold">
+                          {{ row.currentValue | currencyAmount }}
+                        </td>
+                        <td
+                          [class]="row.pnlPercent >= 0 ? pnlPositiveClass : pnlNegativeClass"
+                          class="py-cmn-2 pr-cmn-3 text-right font-mono tabular-nums"
+                        >
+                          {{ row.pnlPercent | number: '1.2-2' }}%
+                        </td>
+                        <td class="py-cmn-2 pr-cmn-4 text-right font-mono tabular-nums text-text-secondary">
+                          {{ row.weightPercent | number: '1.1-1' }}%
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </cmn-card>
+          }
+        }
+      }
     }
   </div>
 </div>
