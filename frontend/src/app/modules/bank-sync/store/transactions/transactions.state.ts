@@ -1,19 +1,17 @@
 import {type Transaction} from '../../models/transaction/transaction.model';
-
-export interface TransactionsFilter {
-  accountId: string;
-  startDate: string;
-  endDate: string;
-  offset: number;
-}
+import {
+  type TransactionDateRangeFilter,
+  type TransactionProviderFilter,
+} from './transactions.constants';
 
 export interface TransactionsState {
   accountId: string;
   bankName: string;
   currency: string;
   transactions: Transaction[];
-  startDate: string;
-  endDate: string;
+  selectedProviders: TransactionProviderFilter[];
+  selectedCategories: string[];
+  selectedDateRange: TransactionDateRangeFilter;
 }
 
 export const PAGE_SIZE = 50;
@@ -23,6 +21,7 @@ export const initialTransactionsState: TransactionsState = {
   bankName: '',
   currency: '',
   transactions: [],
-  startDate: '',
-  endDate: '',
+  selectedProviders: [],
+  selectedCategories: [],
+  selectedDateRange: 'all',
 };

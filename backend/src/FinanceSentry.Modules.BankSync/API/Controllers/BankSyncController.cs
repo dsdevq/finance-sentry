@@ -127,7 +127,9 @@ public class BankSyncController(
             t.TransactionType,
             t.MerchantCategory,
             t.IsPending,
-            t.CreatedAt
+            t.CreatedAt,
+            account.Provider,
+            account.AccountType
         )).ToList();
 
         return Ok(new TransactionPageResponse(

@@ -29,6 +29,8 @@ export interface Transaction extends Timestamped {
   isPending: boolean;
   description: string;
   merchantCategory: Nullable<string>;
+  provider?: Nullable<string>;
+  accountType?: Nullable<string>;
   syncedAt: string;
 }
 

@@ -4,5 +4,5 @@
     "outDir": "../../../out-tsc/lib"
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["e2e/**/*"]
+  "exclude": ["src/**/*.stories.ts", "e2e/**/*"]
 }

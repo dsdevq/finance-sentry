@@ -14,28 +14,48 @@
 
   <!-- Filters -->
   <cmn-card class="mb-cmn-6">
-    <div class="flex items-end gap-cmn-4">
-      <div class="flex flex-col gap-cmn-1">
-        <label class="text-cmn-sm font-medium text-text-secondary" for="startDate">From</label>
-        <input
-          [(ngModel)]="startDate"
-          id="startDate"
-          type="date"
-          aria-label="Start date filter"
-          class="rounded border border-neutral-300 px-cmn-3 py-cmn-2 text-cmn-sm text-text-primary bg-surface focus:outline-none focus:ring-2 focus:ring-primary"
-        />
+    <div class="flex flex-col gap-cmn-5">
+      <div class="flex flex-col gap-cmn-2">
+        <p class="text-cmn-sm font-medium text-text-secondary">Provider</p>
+        <div class="flex flex-wrap gap-cmn-2">
+          @for (provider of store.providerFilters(); track provider.value) {
+            <cmn-chip
+              [selected]="store.selectedProviders().includes(provider.value)"
+              (clicked)="store.toggleProvider(provider.value)"
+            >
+              {{ provider.label }}
+            </cmn-chip>
+          }
+        </div>
       </div>
-      <div class="flex flex-col gap-cmn-1">
-        <label class="text-cmn-sm font-medium text-text-secondary" for="endDate">To</label>
-        <input
-          [(ngModel)]="endDate"
-          id="endDate"
-          type="date"
-          aria-label="End date filter"
-          class="rounded border border-neutral-300 px-cmn-3 py-cmn-2 text-cmn-sm text-text-primary bg-surface focus:outline-none focus:ring-2 focus:ring-primary"
-        />
+
+      <div class="flex flex-col gap-cmn-2">
+        <p class="text-cmn-sm font-medium text-text-secondary">Category</p>
+        <div class="flex flex-wrap gap-cmn-2">
+          @for (category of store.categoryFilters(); track category.value) {
+            <cmn-chip
+              [selected]="store.selectedCategories().includes(category.value)"
+              (clicked)="store.toggleCategory(category.value)"
+            >
+              {{ category.label }}
+            </cmn-chip>
+          }
+        </div>
       </div>
-      <cmn-button (clicked)="applyFilters()" variant="secondary">Apply</cmn-button>
+
+      <div class="flex flex-col gap-cmn-2">
+        <p class="text-cmn-sm font-medium text-text-secondary">Date range</p>
+        <div class="flex flex-wrap gap-cmn-2">
+          @for (range of store.dateRangeFilters(); track range.value) {
+            <cmn-chip
+              [selected]="store.selectedDateRange() === range.value"
+              (clicked)="store.setDateRange(range.value)"
+            >
+              {{ range.label }}
+            </cmn-chip>
+          }
+        </div>
+      </div>
     </div>
   </cmn-card>
 
@@ -50,7 +70,7 @@
   <!-- Content -->
   @if (!store.errorMessage()) {
     <cmn-data-table
-      [rows]="store.transactions()"
+      [rows]="store.filteredTransactions()"
       [loading]="store.isLoading()"
       [pagination]="store.pagination()"
       (previousPage)="previousPage()"
