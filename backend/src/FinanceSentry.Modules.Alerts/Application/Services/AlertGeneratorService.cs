@@ -6,6 +6,10 @@ using FinanceSentry.Modules.Alerts.Domain.Repositories;
 
 public class AlertGeneratorService(IAlertRepository alerts) : IAlertGeneratorService
 {
+    private static readonly TimeSpan LowBalanceSilenceWindow = TimeSpan.FromHours(24);
+    private static readonly TimeSpan SyncFailureSilenceWindow = TimeSpan.FromHours(12);
+    private static readonly TimeSpan UnusualSpendSilenceWindow = TimeSpan.FromDays(7);
+
     private readonly IAlertRepository _alerts = alerts;
 
     public async Task GenerateLowBalanceAlertAsync(
@@ -14,6 +18,10 @@ public class AlertGeneratorService(IAlertRepository alerts) : IAlertGeneratorSer
     {
         var existing = await _alerts.FindActiveAsync(userId, AlertType.LowBalance, accountId, ct);
         if (existing is not null) return;
+
+        var quietSince = DateTimeOffset.UtcNow - LowBalanceSilenceWindow;
+        if (await _alerts.HasRecentAsync(userId, AlertType.LowBalance, accountId, accountName, quietSince, ct))
+            return;
 
         await _alerts.AddAsync(new Alert
         {
@@ -41,6 +49,10 @@ public class AlertGeneratorService(IAlertRepository alerts) : IAlertGeneratorSer
     {
         var existing = await _alerts.FindActiveAsync(userId, AlertType.SyncFailure, accountId, ct);
         if (existing is not null) return;
+
+        var quietSince = DateTimeOffset.UtcNow - SyncFailureSilenceWindow;
+        if (await _alerts.HasRecentAsync(userId, AlertType.SyncFailure, accountId, accountName, quietSince, ct))
+            return;
 
         var label = accountName ?? provider;
         var detail = errorCode is null ? string.Empty : $" (error: {errorCode})";
@@ -74,6 +86,10 @@ public class AlertGeneratorService(IAlertRepository alerts) : IAlertGeneratorSer
     {
         var existing = await _alerts.FindActiveAsync(userId, AlertType.UnusualSpend, null, ct);
         if (existing is not null && existing.ReferenceLabel == category) return;
+
+        var quietSince = DateTimeOffset.UtcNow - UnusualSpendSilenceWindow;
+        if (await _alerts.HasRecentAsync(userId, AlertType.UnusualSpend, null, category, quietSince, ct))
+            return;
 
         await _alerts.AddAsync(new Alert
         {

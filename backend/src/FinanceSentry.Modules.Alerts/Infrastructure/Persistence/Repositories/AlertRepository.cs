@@ -53,6 +53,18 @@ public class AlertRepository(AlertsDbContext db) : IAlertRepository
             .FirstOrDefaultAsync(ct);
     }
 
+    public Task<bool> HasRecentAsync(
+        Guid userId, string type, Guid? referenceId, string? referenceLabel, DateTimeOffset createdAfter,
+        CancellationToken ct = default)
+    {
+        return _db.Alerts.AsNoTracking()
+            .AnyAsync(a => a.UserId == userId
+                        && a.Type == type
+                        && a.ReferenceId == referenceId
+                        && a.ReferenceLabel == referenceLabel
+                        && a.CreatedAt >= createdAfter, ct);
+    }
+
     public async Task<bool> MarkReadAsync(Guid userId, Guid alertId, CancellationToken ct = default)
     {
         var alert = await _db.Alerts.FirstOrDefaultAsync(a => a.Id == alertId && a.UserId == userId, ct);

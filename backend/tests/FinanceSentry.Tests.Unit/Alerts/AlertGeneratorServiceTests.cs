@@ -23,6 +23,9 @@ public class AlertGeneratorServiceTests
     {
         _repo.Setup(r => r.FindActiveAsync(_userId, AlertType.LowBalance, _accountId, default))
             .ReturnsAsync((Alert?)null);
+        _repo.Setup(r => r.HasRecentAsync(
+                _userId, AlertType.LowBalance, _accountId, "Chase", It.IsAny<DateTimeOffset>(), default))
+            .ReturnsAsync(false);
 
         await _service.GenerateLowBalanceAlertAsync(_userId, _accountId, "Chase", 100m, 500m);
 
@@ -38,6 +41,25 @@ public class AlertGeneratorServiceTests
     {
         _repo.Setup(r => r.FindActiveAsync(_userId, AlertType.LowBalance, _accountId, default))
             .ReturnsAsync(new Alert { Id = Guid.NewGuid() });
+
+        await _service.GenerateLowBalanceAlertAsync(_userId, _accountId, "Chase", 100m, 500m);
+
+        _repo.Verify(r => r.AddAsync(It.IsAny<Alert>(), default), Times.Never);
+        _repo.Verify(
+            r => r.HasRecentAsync(
+                It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<Guid?>(), It.IsAny<string?>(),
+                It.IsAny<DateTimeOffset>(), default),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task GenerateLowBalance_RecentDismissed_SkipsCreation()
+    {
+        _repo.Setup(r => r.FindActiveAsync(_userId, AlertType.LowBalance, _accountId, default))
+            .ReturnsAsync((Alert?)null);
+        _repo.Setup(r => r.HasRecentAsync(
+                _userId, AlertType.LowBalance, _accountId, "Chase", It.IsAny<DateTimeOffset>(), default))
+            .ReturnsAsync(true);
 
         await _service.GenerateLowBalanceAlertAsync(_userId, _accountId, "Chase", 100m, 500m);
 
@@ -72,6 +94,9 @@ public class AlertGeneratorServiceTests
     {
         _repo.Setup(r => r.FindActiveAsync(_userId, AlertType.SyncFailure, _accountId, default))
             .ReturnsAsync((Alert?)null);
+        _repo.Setup(r => r.HasRecentAsync(
+                _userId, AlertType.SyncFailure, _accountId, "Chase", It.IsAny<DateTimeOffset>(), default))
+            .ReturnsAsync(false);
 
         await _service.GenerateSyncFailureAlertAsync(_userId, "plaid", _accountId, "Chase", "ITEM_LOGIN_REQUIRED");
 
@@ -93,10 +118,27 @@ public class AlertGeneratorServiceTests
     }
 
     [Fact]
+    public async Task GenerateSyncFailure_RecentDismissed_SkipsCreation()
+    {
+        _repo.Setup(r => r.FindActiveAsync(_userId, AlertType.SyncFailure, _accountId, default))
+            .ReturnsAsync((Alert?)null);
+        _repo.Setup(r => r.HasRecentAsync(
+                _userId, AlertType.SyncFailure, _accountId, "Chase", It.IsAny<DateTimeOffset>(), default))
+            .ReturnsAsync(true);
+
+        await _service.GenerateSyncFailureAlertAsync(_userId, "plaid", _accountId, "Chase", "ITEM_LOGIN_REQUIRED");
+
+        _repo.Verify(r => r.AddAsync(It.IsAny<Alert>(), default), Times.Never);
+    }
+
+    [Fact]
     public async Task GenerateUnusualSpend_NoExisting_AddsInfoAlert()
     {
         _repo.Setup(r => r.FindActiveAsync(_userId, AlertType.UnusualSpend, null, default))
             .ReturnsAsync((Alert?)null);
+        _repo.Setup(r => r.HasRecentAsync(
+                _userId, AlertType.UnusualSpend, null, "Restaurants", It.IsAny<DateTimeOffset>(), default))
+            .ReturnsAsync(false);
 
         await _service.GenerateUnusualSpendAlertAsync(_userId, "Restaurants", 1200m, 400m);
 
@@ -104,5 +146,19 @@ public class AlertGeneratorServiceTests
             a.Type == AlertType.UnusualSpend &&
             a.Severity == AlertSeverity.Info &&
             a.ReferenceLabel == "Restaurants"), default), Times.Once);
+    }
+
+    [Fact]
+    public async Task GenerateUnusualSpend_RecentDismissed_SkipsCreation()
+    {
+        _repo.Setup(r => r.FindActiveAsync(_userId, AlertType.UnusualSpend, null, default))
+            .ReturnsAsync((Alert?)null);
+        _repo.Setup(r => r.HasRecentAsync(
+                _userId, AlertType.UnusualSpend, null, "Restaurants", It.IsAny<DateTimeOffset>(), default))
+            .ReturnsAsync(true);
+
+        await _service.GenerateUnusualSpendAlertAsync(_userId, "Restaurants", 1200m, 400m);
+
+        _repo.Verify(r => r.AddAsync(It.IsAny<Alert>(), default), Times.Never);
     }
 }

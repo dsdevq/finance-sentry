@@ -29,6 +29,7 @@ export * from './components/icon/icon.component';
 export * from './components/input/input.component';
 export * from './components/institution-avatar/institution-avatar.component';
 export * from './components/line-chart/line-chart.component';
+export * from './components/menu/menu.component';
 export * from './components/password-strength/password-strength.component';
 export * from './components/selectable-card/selectable-card.component';
 export * from './components/sidebar-nav/sidebar-nav.component';

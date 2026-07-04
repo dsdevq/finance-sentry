@@ -18,7 +18,6 @@ public sealed record DisconnectInstitutionResult(int RemovedAccounts);
 
 public sealed class DisconnectInstitutionCommandHandler(
     IBankAccountRepository accounts,
-    ITransactionRepository transactions,
     IMonobankCredentialRepository monobankCredentials,
     ITrueLayerConnectionRepository trueLayerConnections,
     IAlertGeneratorService alerts)
