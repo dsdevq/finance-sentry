@@ -7,6 +7,7 @@ export * from './components/command-palette/command-palette.component';
 export * from './components/command-palette/command-palette-item.model';
 export * from './components/app-layout/app-layout.component';
 export * from './components/badge/badge.component';
+export * from './components/menu/menu.component';
 export * from './components/tag/tag.component';
 export * from './components/button/button.component';
 export * from './components/card/card.component';

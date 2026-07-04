@@ -1,11 +1,19 @@
-import {By} from '@angular/platform-browser';
+/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
 import {type ComponentFixture, TestBed} from '@angular/core/testing';
+import {By} from '@angular/platform-browser';
+import {beforeEach, describe, expect, it} from 'vitest';
 
+import {type MenuItem} from '../menu/menu.component';
 import {AppLayoutComponent, type NavItem} from './app-layout.component';
 
 const NAV_ITEMS: NavItem[] = [
   {label: 'Dashboard', icon: 'LayoutDashboard', route: '/dashboard'},
   {label: 'Accounts', icon: 'Building2', route: '/accounts'},
+];
+
+const AVATAR_MENU_ITEMS: MenuItem[] = [
+  {id: '/settings', label: 'Settings', icon: 'Settings2'},
+  {id: '_logout', label: 'Log out', icon: 'LogOut', destructive: true},
 ];
 
 describe('AppLayoutComponent', () => {
@@ -18,6 +26,7 @@ describe('AppLayoutComponent', () => {
     fixture.componentRef.setInput('activeRoute', '/dashboard');
     fixture.componentRef.setInput('title', 'Dashboard');
     fixture.componentRef.setInput('avatarLabel', 'D');
+    fixture.componentRef.setInput('avatarMenuItems', AVATAR_MENU_ITEMS);
     fixture.detectChanges();
   });
 
