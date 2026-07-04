@@ -10,6 +10,10 @@ public interface IAlertRepository
     Task<Alert?> FindActiveAsync(
         Guid userId, string type, Guid? referenceId, CancellationToken ct = default);
 
+    Task<bool> HasRecentAsync(
+        Guid userId, string type, Guid? referenceId, string? referenceLabel, DateTimeOffset createdAfter,
+        CancellationToken ct = default);
+
     Task<bool> MarkReadAsync(Guid userId, Guid alertId, CancellationToken ct = default);
 
     Task MarkAllReadAsync(Guid userId, CancellationToken ct = default);

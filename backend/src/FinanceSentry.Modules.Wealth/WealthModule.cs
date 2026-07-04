@@ -41,10 +41,12 @@ public static class WealthModule
 
         services.AddScoped<INetWorthSnapshotRepository, NetWorthSnapshotRepository>();
         services.AddScoped<INetWorthSnapshotService, NetWorthSnapshotService>();
+        services.AddScoped<NetWorthSnapshotBackfillService>();
         services.AddScoped<INetWorthSnapshotJobScheduler, NetWorthSnapshotJobScheduler>();
         services.AddScoped<IWealthAggregationService, WealthAggregationService>();
 
         services.AddScoped<NetWorthSnapshotJob>();
+        services.AddHostedService<NetWorthSnapshotCatchUpHostedService>();
 
         services.AddSingleton<IJobRegistrar, JobRegistrar>();
 

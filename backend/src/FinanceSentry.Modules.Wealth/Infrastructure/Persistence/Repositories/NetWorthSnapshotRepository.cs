@@ -17,6 +17,13 @@ public class NetWorthSnapshotRepository(WealthDbContext db) : INetWorthSnapshotR
     public Task<bool> ExistsAsync(Guid userId, DateOnly snapshotDate, CancellationToken ct = default)
         => _db.NetWorthSnapshots.AnyAsync(s => s.UserId == userId && s.SnapshotDate == snapshotDate, ct);
 
+    public Task<NetWorthSnapshot?> GetLatestByUserIdAsync(Guid userId, CancellationToken ct = default)
+        => _db.NetWorthSnapshots
+            .Where(s => s.UserId == userId)
+            .OrderByDescending(s => s.SnapshotDate)
+            .ThenByDescending(s => s.TakenAt)
+            .FirstOrDefaultAsync(ct);
+
     public async Task<IReadOnlyList<NetWorthSnapshot>> GetByUserIdAsync(Guid userId, DateOnly? from, DateOnly? to, CancellationToken ct = default)
     {
         var query = _db.NetWorthSnapshots.Where(s => s.UserId == userId);
