@@ -16,12 +16,24 @@ public sealed class SubscriptionDetectionJob(
     ILogger<SubscriptionDetectionJob> logger)
 {
     private const int LookbackMonths = 13;
-    private const int MinOccurrences = 3;
-    private const double MaxAmountCv = 0.20;
+    private const int MinOccurrences = 4;
+    private const double MaxAmountCv = 0.10;
     private const int MonthlyMinDays = 28;
     private const int MonthlyMaxDays = 35;
     private const int AnnualMinDays = 351;
     private const int AnnualMaxDays = 379;
+
+    private static readonly string[] UnidentifiableNormalizedNames =
+    [
+        "unknown",
+        "transfer",
+        "top-up",
+        "topup",
+        "recharge",
+        "withdrawal",
+        "atm",
+        "cash",
+    ];
 
     public async Task ExecuteAsync(CancellationToken ct = default)
     {
@@ -157,6 +169,7 @@ public sealed class SubscriptionDetectionJob(
                     var sorted = merchantGroup.OrderBy(t => t.TransactionDate).ToList();
 
                     if (sorted.Count < MinOccurrences) continue;
+                    if (IsUnidentifiableMerchant(normalized)) continue;
 
                     var dates = sorted.Select(t => t.TransactionDate).ToList();
                     var intervals = new List<int>();
@@ -217,6 +230,16 @@ public sealed class SubscriptionDetectionJob(
                 logger.LogWarning(ex, "Heuristic subscription detection failed for user {UserId}", userId);
             }
         }
+    }
+
+    public static bool IsUnidentifiableMerchant(string normalized)
+    {
+        if (string.IsNullOrWhiteSpace(normalized)) return true;
+        foreach (var marker in UnidentifiableNormalizedNames)
+        {
+            if (normalized.Contains(marker, StringComparison.Ordinal)) return true;
+        }
+        return false;
     }
 
     private static string? MapFrequency(string frequency) => frequency switch
