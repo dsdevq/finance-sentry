@@ -9,8 +9,6 @@ import {BankSyncService} from '../../services/bank-sync.service';
 
 interface EffectsStore {
   accountId: Signal<string>;
-  startDate: Signal<string>;
-  endDate: Signal<string>;
   offset: Signal<number>;
   limit: Signal<number>;
   setLoading: () => void;
@@ -37,8 +35,6 @@ export function transactionsEffects(store: EffectsStore) {
             .getTransactions(accountId, {
               offset: store.offset(),
               limit: store.limit(),
-              startDate: store.startDate() || undefined,
-              endDate: store.endDate() || undefined,
             })
             .pipe(
               tap(res => {

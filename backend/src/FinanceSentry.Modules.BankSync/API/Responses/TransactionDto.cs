@@ -10,4 +10,6 @@ public record TransactionDto(
     string? TransactionType,
     string? MerchantCategory,
     bool IsPending,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    string Provider,
+    string AccountType);

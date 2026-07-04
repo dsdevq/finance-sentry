@@ -1,7 +1,7 @@
 {
   "extends": "@dsdevq-common/config/tsconfig.base.json",
   "compilerOptions": {
-    "types": ["node", "google.accounts"],
+    "types": ["node", "google.accounts", "vitest/globals"],
     "paths": {
       "@core/*": ["./src/app/core/*"],
       "@dsdevq-common/core": ["./projects/dsdevq-common/core/src/public-api.ts"],
@@ -10,5 +10,5 @@
       "@modules/*": ["./src/app/modules/*"]
     }
   },
-  "exclude": ["**/*.spec.ts", "**/*.stories.ts"]
+  "exclude": ["**/*.stories.ts"]
 }
