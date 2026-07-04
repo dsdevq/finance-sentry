@@ -34,10 +34,12 @@ public interface IMoneyFlowStatisticsService
 /// <inheritdoc />
 public class MoneyFlowStatisticsService(
     ITransactionRepository transactions,
-    IBankAccountRepository accounts) : IMoneyFlowStatisticsService
+    IBankAccountRepository accounts,
+    ITransferDetectionService transferDetection) : IMoneyFlowStatisticsService
 {
     private readonly ITransactionRepository _transactions = transactions ?? throw new ArgumentNullException(nameof(transactions));
     private readonly IBankAccountRepository _accounts = accounts ?? throw new ArgumentNullException(nameof(accounts));
+    private readonly ITransferDetectionService _transferDetection = transferDetection ?? throw new ArgumentNullException(nameof(transferDetection));
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<MonthlyFlow>> GetMonthlyFlowAsync(
@@ -54,9 +56,12 @@ public class MoneyFlowStatisticsService(
         // 2. Fetch transactions in window
         var txList = await _transactions.GetByUserIdSinceAsync(userId, since, ct);
 
-        // 3. Group by (currency, year-month) and sum inflow/outflow
+        // 3. Detect internal transfer pairs so they don't inflate inflow / outflow
+        var transferIds = _transferDetection.DetectTransferTransactionIds(txList.ToList());
+
+        // 4. Group by (currency, year-month) and sum inflow/outflow
         var result = txList
-            .Where(t => !t.IsPending && t.IsActive)
+            .Where(t => !t.IsPending && t.IsActive && !transferIds.Contains(t.Id))
             .Select(t => new
             {
                 Transaction = t,

@@ -21,18 +21,22 @@ public interface IMerchantCategoryStatisticsService
 }
 
 /// <inheritdoc />
-public class MerchantCategoryStatisticsService(ITransactionRepository transactions) : IMerchantCategoryStatisticsService
+public class MerchantCategoryStatisticsService(
+    ITransactionRepository transactions,
+    ITransferDetectionService transferDetection) : IMerchantCategoryStatisticsService
 {
     private readonly ITransactionRepository _transactions = transactions ?? throw new ArgumentNullException(nameof(transactions));
+    private readonly ITransferDetectionService _transferDetection = transferDetection ?? throw new ArgumentNullException(nameof(transferDetection));
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<CategoryStat>> GetTopCategoriesAsync(
           Guid userId, int limit = 10, CancellationToken ct = default)
     {
         var txList = await _transactions.GetByUserIdAsync(userId, ct);
+        var transferIds = _transferDetection.DetectTransferTransactionIds(txList.ToList());
 
         var debits = txList
-            .Where(t => !t.IsPending && t.IsActive && t.TransactionType == "debit")
+            .Where(t => !t.IsPending && t.IsActive && t.TransactionType == "debit" && !transferIds.Contains(t.Id))
             .ToList();
 
         if (debits.Count == 0)

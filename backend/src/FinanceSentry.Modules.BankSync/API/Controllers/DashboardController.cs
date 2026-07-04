@@ -32,26 +32,28 @@ public class DashboardController(
     public async Task<IActionResult> GetTransfers(CancellationToken ct)
     {
         var allTx = (await _transactions.GetByUserIdAsync(User.RequireUserId(), ct)).ToList();
+        var transferIds = _transferDetection.DetectTransferTransactionIds(allTx);
 
-        var debits = allTx.Where(t => t.TransactionType == "debit" && !t.IsPending).ToList();
-        var credits = allTx.Where(t => t.TransactionType == "credit" && !t.IsPending).ToList();
-
+        var byId = allTx.ToDictionary(t => t.Id);
+        var consumedCredits = new HashSet<Guid>();
         var pairs = new List<TransferPairDto>();
 
-        foreach (var debit in debits)
+        foreach (var debit in allTx.Where(t => t.TransactionType == "debit" && transferIds.Contains(t.Id)))
         {
-            foreach (var credit in credits)
+            foreach (var credit in allTx.Where(t => t.TransactionType == "credit" && transferIds.Contains(t.Id)))
             {
-                if (_transferDetection.IsLikelyTransfer(debit, credit))
-                {
-                    pairs.Add(new TransferPairDto(
-                        new TransferItemDto(
-                            debit.Id, debit.AccountId, debit.Amount,
-                            debit.PostedDate ?? debit.TransactionDate, debit.Description),
-                        new TransferItemDto(
-                            credit.Id, credit.AccountId, credit.Amount,
-                            credit.PostedDate ?? credit.TransactionDate, credit.Description)));
-                }
+                if (consumedCredits.Contains(credit.Id)) continue;
+                if (!_transferDetection.IsLikelyTransfer(debit, credit)) continue;
+
+                pairs.Add(new TransferPairDto(
+                    new TransferItemDto(
+                        debit.Id, debit.AccountId, debit.Amount,
+                        debit.PostedDate ?? debit.TransactionDate, debit.Description),
+                    new TransferItemDto(
+                        credit.Id, credit.AccountId, credit.Amount,
+                        credit.PostedDate ?? credit.TransactionDate, credit.Description)));
+                consumedCredits.Add(credit.Id);
+                break;
             }
         }
 

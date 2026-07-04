@@ -13,6 +13,14 @@ public interface ITransferDetectionService
     /// and at least one is type "transfer" or the descriptions share similarity.
     /// </summary>
     bool IsLikelyTransfer(Transaction debit, Transaction credit);
+
+    /// <summary>
+    /// Detects all likely internal transfers within a batch and returns the union of
+    /// matched debit + credit transaction Ids. Each credit is consumed by at most one
+    /// debit so an ambiguous credit is not double-counted. Pending / inactive rows are
+    /// ignored — the caller does not need to pre-filter.
+    /// </summary>
+    HashSet<Guid> DetectTransferTransactionIds(IReadOnlyCollection<Transaction> transactions);
 }
 
 /// <inheritdoc />
@@ -53,6 +61,45 @@ public class TransferDetectionService : ITransferDetectionService
 
         // Fallback: check description similarity (shared significant words)
         return HaveSimilarDescriptions(debit.Description, credit.Description);
+    }
+
+    /// <inheritdoc />
+    public HashSet<Guid> DetectTransferTransactionIds(IReadOnlyCollection<Transaction> transactions)
+    {
+        if (transactions == null) throw new ArgumentNullException(nameof(transactions));
+
+        var matched = new HashSet<Guid>();
+        if (transactions.Count == 0)
+            return matched;
+
+        var debits = new List<Transaction>();
+        var credits = new List<Transaction>();
+        foreach (var tx in transactions)
+        {
+            if (tx.IsPending || !tx.IsActive) continue;
+            if (tx.TransactionType == "debit") debits.Add(tx);
+            else if (tx.TransactionType == "credit") credits.Add(tx);
+        }
+
+        if (debits.Count == 0 || credits.Count == 0)
+            return matched;
+
+        var consumedCredits = new HashSet<Guid>();
+        foreach (var debit in debits)
+        {
+            foreach (var credit in credits)
+            {
+                if (consumedCredits.Contains(credit.Id)) continue;
+                if (!IsLikelyTransfer(debit, credit)) continue;
+
+                matched.Add(debit.Id);
+                matched.Add(credit.Id);
+                consumedCredits.Add(credit.Id);
+                break;
+            }
+        }
+
+        return matched;
     }
 
     private static bool HaveSimilarDescriptions(string a, string b)

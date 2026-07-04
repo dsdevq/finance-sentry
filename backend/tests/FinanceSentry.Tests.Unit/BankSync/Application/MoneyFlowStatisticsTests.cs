@@ -65,7 +65,7 @@ public class MoneyFlowStatisticsTests
         accountRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
                        .ReturnsAsync([account]);
 
-        var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object);
+        var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService());
 
         // Act
         var result = await sut.GetMonthlyFlowAsync(UserId, 6);
@@ -109,7 +109,7 @@ public class MoneyFlowStatisticsTests
         accountRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
                        .ReturnsAsync([account]);
 
-        var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object);
+        var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService());
 
         // Act
         var result = await sut.GetMonthlyFlowAsync(UserId, 6);
@@ -147,7 +147,7 @@ public class MoneyFlowStatisticsTests
         accountRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
                        .ReturnsAsync([eurAccount, usdAccount]);
 
-        var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object);
+        var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService());
 
         // Act
         var result = await sut.GetMonthlyFlowAsync(UserId, 6);
@@ -164,6 +164,46 @@ public class MoneyFlowStatisticsTests
         usdFlow.Inflow.Should().Be(800m);
         usdFlow.Outflow.Should().Be(300m);
         usdFlow.Net.Should().Be(500m);
+    }
+
+    // ── Transfer exclusion: internal transfer pair must not inflate inflow/outflow ─
+
+    [Fact]
+    public async Task GetMonthlyFlow_ExcludesInternalTransferPair()
+    {
+        var (accountA, accountAId) = MakeAccount("USD");
+        var (accountB, accountBId) = MakeAccount("USD");
+        var date = new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc);
+
+        var transferDebit  = MakeTx(accountAId, 500m, "debit",  date);
+        var transferCredit = MakeTx(accountBId, 500m, "credit", date);
+        transferDebit.Description  = "Transfer to savings";
+        transferCredit.Description = "Transfer to savings";
+
+        var transactions = new List<Transaction>
+        {
+            transferDebit,
+            transferCredit,
+            MakeTx(accountAId, 100m, "debit",  date),  // real spending — kept
+            MakeTx(accountAId, 300m, "credit", date),  // real income   — kept
+        };
+
+        var txRepoMock = new Mock<ITransactionRepository>();
+        txRepoMock.Setup(r => r.GetByUserIdSinceAsync(UserId, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+                  .ReturnsAsync(transactions);
+
+        var accountRepoMock = new Mock<IBankAccountRepository>();
+        accountRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
+                       .ReturnsAsync([accountA, accountB]);
+
+        var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService());
+
+        var result = await sut.GetMonthlyFlowAsync(UserId, 6);
+
+        result.Should().HaveCount(1);
+        result[0].Inflow.Should().Be(300m);   // transfer credit excluded
+        result[0].Outflow.Should().Be(100m);  // transfer debit  excluded
+        result[0].Net.Should().Be(200m);
     }
 
     // ── T413 Test 4: Debit/credit classification ──────────────────────────────
@@ -190,7 +230,7 @@ public class MoneyFlowStatisticsTests
         accountRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
                        .ReturnsAsync([account]);
 
-        var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object);
+        var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService());
 
         // Act
         var result = await sut.GetMonthlyFlowAsync(UserId, 6);
