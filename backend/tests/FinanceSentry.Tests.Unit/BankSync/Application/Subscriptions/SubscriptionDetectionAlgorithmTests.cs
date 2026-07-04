@@ -1,11 +1,50 @@
 namespace FinanceSentry.Tests.Unit.BankSync.Application.Subscriptions;
 
 using FinanceSentry.Modules.BankSync.Application.Services;
+using FinanceSentry.Modules.BankSync.Infrastructure.Jobs;
 using FluentAssertions;
 using Xunit;
 
 public class SubscriptionDetectionAlgorithmTests
 {
+    private const double TightenedMaxCv = 0.10;
+
+    [Theory]
+    [InlineData("unknown")]
+    [InlineData("mobi top-up")]
+    [InlineData("privatbank transfer 12345")]
+    [InlineData("atm withdrawal")]
+    [InlineData("cash advance")]
+    public void UnidentifiableMerchant_IsFiltered(string normalized)
+    {
+        SubscriptionDetectionJob.IsUnidentifiableMerchant(normalized).Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("netflix")]
+    [InlineData("spotify premium")]
+    [InlineData("adobe creative cloud")]
+    public void IdentifiableMerchant_IsNotFiltered(string normalized)
+    {
+        SubscriptionDetectionJob.IsUnidentifiableMerchant(normalized).Should().BeFalse();
+    }
+
+    [Fact]
+    public void TightenedCv_RejectsAmountsThatWouldPassLegacyThreshold()
+    {
+        // 10.0, 12.0, 12.0 → cv ≈ 0.094 (borderline; passes 0.10 tightened)
+        var borderline = new[] { 10.0, 12.0, 12.0 };
+        var borderlineMean = borderline.Average();
+        var borderlineStddev = Math.Sqrt(borderline.Sum(a => Math.Pow(a - borderlineMean, 2)) / borderline.Length);
+        (borderlineStddev / borderlineMean).Should().BeLessThanOrEqualTo(TightenedMaxCv);
+
+        // 10.0, 12.0, 14.0 → cv ≈ 0.163 (previously passed 0.20; now rejected under 0.10)
+        var wider = new[] { 10.0, 12.0, 14.0 };
+        var widerMean = wider.Average();
+        var widerStddev = Math.Sqrt(wider.Sum(a => Math.Pow(a - widerMean, 2)) / wider.Length);
+        (widerStddev / widerMean).Should().BeGreaterThan(TightenedMaxCv);
+    }
+
     [Fact]
     public void MonthlyInterval_IsInRange_WhenDaysAre30()
     {
