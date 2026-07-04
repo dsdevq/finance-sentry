@@ -16,6 +16,39 @@ interface StateSignals {
 
 const DEFAULT_ERROR = 'Failed to load holdings. Please try again.';
 const DEFAULT_POSITIONS_ERROR = 'Failed to load positions.';
+const WEIGHT_TO_PERCENT = 100;
+
+export type AssetClass = 'equity' | 'crypto';
+
+export interface PositionRow {
+  symbol: string;
+  provider: string;
+  quantity: number;
+  currentPrice: number;
+  currentValue: number;
+  pnlPercent: number;
+  weightPercent: number;
+}
+
+export interface PositionAssetGroup {
+  assetClass: AssetClass;
+  label: string;
+  rows: PositionRow[];
+  totalValue: number;
+}
+
+const ASSET_CLASS_ORDER: readonly AssetClass[] = ['equity', 'crypto'];
+
+const ASSET_CLASS_LABEL: Record<AssetClass, string> = {
+  equity: 'Equities',
+  crypto: 'Crypto',
+};
+
+const CRYPTO_PROVIDERS = new Set<string>(['binance']);
+
+function resolveAssetClass(provider: string): AssetClass {
+  return CRYPTO_PROVIDERS.has(provider) ? 'crypto' : 'equity';
+}
 
 export function holdingsComputed(store: StateSignals) {
   const errorMessages = inject(ErrorMessageService);
@@ -55,6 +88,40 @@ export function holdingsComputed(store: StateSignals) {
         return '';
       }
       return errorMessages.resolve(store.positionsErrorCode()) ?? DEFAULT_POSITIONS_ERROR;
+    }),
+    totalPositionsValue: computed(() =>
+      store.positions().reduce((sum, p) => sum + p.currentValue, 0)
+    ),
+    positionsByAssetClass: computed(() => {
+      const positions = store.positions();
+      const totalValue = positions.reduce((sum, p) => sum + p.currentValue, 0);
+      const groups = new Map<AssetClass, PositionRow[]>();
+
+      for (const p of positions) {
+        const assetClass = resolveAssetClass(p.provider);
+        const row: PositionRow = {
+          symbol: p.symbol,
+          provider: p.provider,
+          quantity: p.quantity,
+          currentPrice: p.currentPrice,
+          currentValue: p.currentValue,
+          pnlPercent: p.mockPnlPercent,
+          weightPercent: totalValue > 0 ? (p.currentValue / totalValue) * WEIGHT_TO_PERCENT : 0,
+        };
+        const bucket = groups.get(assetClass);
+        if (bucket) {
+          bucket.push(row);
+        } else {
+          groups.set(assetClass, [row]);
+        }
+      }
+
+      return ASSET_CLASS_ORDER.filter(cls => groups.has(cls)).map(cls => ({
+        assetClass: cls,
+        label: ASSET_CLASS_LABEL[cls],
+        rows: (groups.get(cls) ?? []).sort((a, b) => b.currentValue - a.currentValue),
+        totalValue: (groups.get(cls) ?? []).reduce((sum, r) => sum + r.currentValue, 0),
+      }));
     }),
   };
 }
