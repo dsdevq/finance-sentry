@@ -52,3 +52,4 @@ The current runtime surface contains 21 tools: 17 read-only and 4 mutating. Ther
 - Tool identity comes from the MCP SDK attributes (`[McpServerToolType]` and `[McpServerTool]`), not from a separate local tool interface.
 - Each tool is a thin MCP adapter around the existing CQRS handlers in the module projects.
 - Development usually runs over `stdio`; production compose runs the same server over HTTP with request-based JWT auth.
+- The longer-term OAuth migration plan is documented in `docs/mcp-oauth-roadmap.md`.
