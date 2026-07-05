@@ -55,6 +55,7 @@ public static class ResearchModule
         services.AddScoped<IQuoteCacheRepository, QuoteCacheRepository>();
         services.AddScoped<INewsRepository, NewsRepository>();
         services.AddScoped<IMacroCalendarRepository, MacroCalendarRepository>();
+        services.AddScoped<IIpsRepository, IpsRepository>();
 
         services.AddHttpClient(YahooMarketDataService.HttpClientName, client =>
         {

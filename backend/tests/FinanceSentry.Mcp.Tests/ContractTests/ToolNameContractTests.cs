@@ -1,4 +1,3 @@
-using FinanceSentry.Mcp.Tests;
 using FluentAssertions;
 using Xunit;
 
@@ -14,6 +13,7 @@ public sealed class ToolNameContractTests
         "get_budget_status",
         "get_cashflow_report",
         "get_crypto_pnl_detail",
+        "get_ips",
         "get_macro_calendar",
         "get_net_worth_history",
         "get_news_for_ticker",
@@ -27,6 +27,7 @@ public sealed class ToolNameContractTests
         "list_transactions",
         "list_watchlist",
         "remove_from_watchlist",
+        "save_ips",
         "save_thesis",
         "search_market_news",
     };
@@ -38,6 +39,6 @@ public sealed class ToolNameContractTests
 
         actual.Should().BeEquivalentTo(
             AgreedToolSurface,
-            because: "the MCP tool surface must match the agreed 21-tool contract — no more, no fewer");
+            because: "the MCP tool surface must match the agreed 23-tool contract — no more, no fewer");
     }
 }

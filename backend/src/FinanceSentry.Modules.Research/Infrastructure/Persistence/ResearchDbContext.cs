@@ -16,6 +16,8 @@ public class ResearchDbContext(DbContextOptions<ResearchDbContext> options) : Db
 
     public DbSet<MacroEvent> MacroEvents { get; set; } = null!;
 
+    public DbSet<InvestmentPolicyStatement> PolicyStatements { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema("research");
@@ -106,5 +108,50 @@ public class ResearchDbContext(DbContextOptions<ResearchDbContext> options) : Db
         qb.Property(x => x.PreviousClose).HasColumnType("numeric(18,6)");
         qb.Property(x => x.Currency).HasMaxLength(6).HasDefaultValue("USD");
         qb.Property(x => x.FetchedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+        var ib = modelBuilder.Entity<InvestmentPolicyStatement>();
+        ib.ToTable("investment_policy_statements");
+        ib.HasKey(x => x.Id);
+        ib.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
+        ib.Property(x => x.UserId).IsRequired();
+        ib.Property(x => x.Version).IsRequired();
+        ib.Property(x => x.IsCurrent).IsRequired();
+        ib.Property(x => x.PrimaryHorizonYears).IsRequired();
+        ib.Property(x => x.EmergencyCushionUsd).HasColumnType("numeric(18,2)");
+        ib.Property(x => x.RiskTolerance).IsRequired();
+        ib.Property(x => x.MaxDrawdownTolerancePct).HasColumnType("numeric(6,2)");
+        ib.Property(x => x.SellDiscipline).HasMaxLength(2000);
+        ib.Property(x => x.CoolingOffDays).IsRequired();
+        ib.Property(x => x.MaxSinglePositionPct).HasColumnType("numeric(6,2)");
+        ib.Property(x => x.ReviewCadence).IsRequired().HasMaxLength(20);
+        ib.Property(x => x.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+        ib.Property(x => x.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+        ib.Property(x => x.Goals)
+            .HasColumnType("jsonb")
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, jsonOptions),
+                v => JsonSerializer.Deserialize<List<InvestmentGoal>>(v, jsonOptions) ?? new());
+        ib.Property(x => x.AllocationTargets)
+            .HasColumnType("jsonb")
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, jsonOptions),
+                v => JsonSerializer.Deserialize<List<AllocationTarget>>(v, jsonOptions) ?? new());
+        ib.Property(x => x.Exclusions)
+            .HasColumnType("jsonb")
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, jsonOptions),
+                v => JsonSerializer.Deserialize<List<string>>(v, jsonOptions) ?? new());
+        ib.Property(x => x.RebalancingRule)
+            .HasColumnType("jsonb")
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, jsonOptions),
+                v => JsonSerializer.Deserialize<RebalancingRule>(v, jsonOptions) ?? RebalancingRule.Default);
+        ib.Property(x => x.ContributionPlan)
+            .HasColumnType("jsonb")
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, jsonOptions),
+                v => JsonSerializer.Deserialize<ContributionPlan>(v, jsonOptions));
+        ib.HasIndex(x => new { x.UserId, x.IsCurrent }).HasDatabaseName("idx_ips_user_current");
+        ib.HasIndex(x => new { x.UserId, x.Version }).IsUnique().HasDatabaseName("idx_ips_user_version");
     }
 }
