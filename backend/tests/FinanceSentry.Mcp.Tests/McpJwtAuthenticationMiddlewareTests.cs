@@ -79,6 +79,7 @@ public sealed class McpJwtAuthenticationMiddlewareTests
             [
                 new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
                 new Claim(JwtRegisteredClaimNames.Email, email),
+                new Claim(JwtRegisteredClaimNames.Aud, "mcp"),
                 new Claim(ClaimTypes.NameIdentifier, userId.ToString())
             ],
             expires: DateTime.UtcNow.AddHours(1),

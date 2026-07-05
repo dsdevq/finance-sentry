@@ -18,6 +18,11 @@ export const APP_ROUTES: Routes = [
     canActivate: [guestGuard],
   },
   {
+    path: AppRoute.McpConnect.slice(1),
+    loadComponent: () =>
+      import('./modules/auth/pages/mcp-connect/mcp-connect.component').then(m => m.McpConnectComponent),
+  },
+  {
     path: '',
     loadComponent: () => import('./core/shell/app-shell.component').then(m => m.AppShellComponent),
     canActivate: [authGuard],

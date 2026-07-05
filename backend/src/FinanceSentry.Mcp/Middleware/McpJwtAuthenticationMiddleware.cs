@@ -10,8 +10,6 @@ namespace FinanceSentry.Mcp.Middleware;
 
 public sealed class McpJwtAuthenticationMiddleware
 {
-    private const string AccessTokenCookie = "fs_access_token";
-
     private readonly RequestDelegate _next;
     private readonly ILogger<McpJwtAuthenticationMiddleware> _logger;
     private readonly TokenValidationParameters _validationParams;
@@ -32,7 +30,8 @@ public sealed class McpJwtAuthenticationMiddleware
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
             ValidateIssuer = false,
-            ValidateAudience = false,
+            ValidateAudience = true,
+            ValidAudience = "mcp",
             ClockSkew = TimeSpan.FromSeconds(30)
         };
     }
@@ -71,8 +70,7 @@ public sealed class McpJwtAuthenticationMiddleware
         const string prefix = "Bearer ";
         if (authorization.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
             return authorization[prefix.Length..].Trim();
-
-        return context.Request.Cookies[AccessTokenCookie];
+        return null;
     }
 
     private static async Task WriteUnauthorizedAsync(HttpContext context, string message, string code)

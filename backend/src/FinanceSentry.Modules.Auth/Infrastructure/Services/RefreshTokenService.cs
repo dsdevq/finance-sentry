@@ -60,6 +60,19 @@ public class RefreshTokenService(AuthDbContext db) : IRefreshTokenService
         await db.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task RevokeTokenAsync(string rawToken, CancellationToken cancellationToken = default)
+    {
+        var hash = Hash(rawToken);
+        var entity = await db.RefreshTokens
+            .FirstOrDefaultAsync(t => t.TokenHash == hash, cancellationToken);
+
+        if (entity is null || entity.IsRevoked)
+            return;
+
+        entity.Revoke();
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
     private static string GenerateRawToken()
         => Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
 

@@ -15,4 +15,7 @@ public interface IRefreshTokenService
 
     /// <summary>Revokes all refresh tokens for the given user (logout).</summary>
     Task RevokeAsync(string userId, CancellationToken cancellationToken = default);
+
+    /// <summary>Revokes a specific refresh token when present.</summary>
+    Task RevokeTokenAsync(string rawToken, CancellationToken cancellationToken = default);
 }

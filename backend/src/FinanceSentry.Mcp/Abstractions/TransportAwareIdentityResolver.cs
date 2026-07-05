@@ -7,7 +7,7 @@ namespace FinanceSentry.Mcp.Abstractions;
 
 public sealed class TransportAwareIdentityResolver(
     IHttpContextAccessor httpContextAccessor,
-    JwtIdentityResolver startupTokenResolver) : IIdentityResolver
+    LocalMcpAccessTokenProvider localTokenProvider) : IIdentityResolver
 {
     public Guid? GetUserId()
     {
@@ -15,7 +15,7 @@ public sealed class TransportAwareIdentityResolver(
         if (principal?.Identity?.IsAuthenticated == true)
             return principal.GetUserId();
 
-        return startupTokenResolver.GetUserId();
+        return localTokenProvider.GetCurrentPrincipal()?.GetUserId();
     }
 
     public string? GetEmail()
@@ -27,7 +27,9 @@ public sealed class TransportAwareIdentityResolver(
                 ?? principal.FindFirst(ClaimTypes.Email)?.Value;
         }
 
-        return startupTokenResolver.GetEmail();
+        principal = localTokenProvider.GetCurrentPrincipal();
+        return principal?.FindFirst(JwtRegisteredClaimNames.Email)?.Value
+            ?? principal?.FindFirst(ClaimTypes.Email)?.Value;
     }
 
     public bool IsConfigured
@@ -38,7 +40,7 @@ public sealed class TransportAwareIdentityResolver(
             if (principal?.Identity?.IsAuthenticated == true)
                 return principal.GetUserId().HasValue;
 
-            return startupTokenResolver.IsConfigured;
+            return localTokenProvider.GetCurrentPrincipal()?.GetUserId().HasValue == true;
         }
     }
 }

@@ -11,7 +11,8 @@ namespace FinanceSentry.Modules.Auth.Infrastructure.Services;
 public class JwtTokenService(IConfiguration configuration) : ITokenService
 {
     public const string McpAudience = "mcp";
-    private const int McpTokenLifetimeDays = 365;
+    private const string McpScope = "mcp.full_access";
+    private const int McpAccessTokenLifetimeMinutes = 15;
 
     private readonly string _secret = configuration["Jwt:Secret"] ?? throw new InvalidOperationException("Jwt:Secret is not configured.");
     private readonly int _expiryMinutes = int.TryParse(configuration["Jwt:ExpiryMinutes"], out var minutes) ? minutes : 60;
@@ -39,11 +40,12 @@ public class JwtTokenService(IConfiguration configuration) : ITokenService
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
-    public string GenerateMcpToken(ApplicationUser user)
+    public (string Token, DateTime ExpiresAt) GenerateMcpAccessToken(ApplicationUser user)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secret));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
         var now = DateTime.UtcNow;
+        var expiresAt = now.AddMinutes(McpAccessTokenLifetimeMinutes);
 
         var claims = new[]
         {
@@ -51,15 +53,17 @@ public class JwtTokenService(IConfiguration configuration) : ITokenService
             new Claim(JwtRegisteredClaimNames.Email, user.Email!),
             new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
             new Claim(JwtRegisteredClaimNames.Aud, McpAudience),
+            new Claim("scope", McpScope),
+            new Claim(ClaimTypes.NameIdentifier, user.Id),
         };
 
         var token = new JwtSecurityToken(
             claims: claims,
             notBefore: now,
-            expires: now.AddDays(McpTokenLifetimeDays),
+            expires: expiresAt,
             signingCredentials: credentials
         );
 
-        return new JwtSecurityTokenHandler().WriteToken(token);
+        return (new JwtSecurityTokenHandler().WriteToken(token), expiresAt);
     }
 }

@@ -4,13 +4,12 @@
 
 As of this branch:
 
-- `stdio` MCP uses a local `MCP_TOKEN` fallback identity.
-- HTTP MCP requires per-request JWT authentication using:
-  - `Authorization: Bearer <jwt>`, or
-  - the existing `fs_access_token` cookie
-- Identity is resolved per request for HTTP and from the startup token for `stdio`.
+- `stdio` MCP uses locally stored MCP OAuth credentials.
+- HTTP MCP requires per-request `Authorization: Bearer <mcp access token>`.
+- Identity is resolved per request for HTTP and from locally refreshed MCP credentials for `stdio`.
+- The API exposes MCP-specific authorization, token, and revoke endpoints.
 
-This is a meaningful improvement over the previous boot-time-only identity model, but it is **not yet a full OAuth-based MCP integration**.
+This is now a real MCP-specific OAuth-style flow for first-party clients, though it is **not yet a full general-purpose external OAuth platform**.
 
 ## What "Real OAuth MCP" Means
 
@@ -60,7 +59,7 @@ Best target:
 
 Fallback:
 
-- Keep `MCP_TOKEN` support for headless/dev workflows
+- Keep a local login helper for headless/dev workflows
 
 ### HTTP transport
 
@@ -73,54 +72,42 @@ Best target:
 
 ## Phased Delivery Plan
 
-### Phase 1: Completed on this branch
+### Phase 1: Completed
 
 - HTTP MCP uses request-based JWT auth
 - Identity comes from `HttpContext.User` for HTTP
-- `stdio` still works with local `MCP_TOKEN`
+- `stdio` works with local OAuth bootstrap and stored refreshable credentials
 
-### Phase 2: Dedicated MCP access tokens
+### Phase 2: Completed
 
-Implement:
+- dedicated short-lived MCP access tokens
+- explicit MCP audience validation on HTTP
+- frontend SPA cookies removed from MCP HTTP authentication
 
-- dedicated short-lived MCP access token issuance
-- explicit MCP audience or scope validation on HTTP
-- a clean distinction between frontend SPA tokens and MCP tokens
-
-Suggested result:
-
-- HTTP MCP stops accepting the frontend cookie as a first-class auth mechanism
-- remote MCP clients use bearer tokens only
-
-### Phase 3: OAuth-compatible endpoints for MCP hosts
-
-Implement:
+### Phase 3: Completed for first-party MCP clients
 
 - authorization endpoint
 - token endpoint
 - refresh token support for MCP clients
-- client registration strategy:
-  - fixed first-party clients at first
-  - dynamic registration only if truly needed later
+- revoke endpoint
 
-### Phase 4: Local MCP OAuth UX
+### Phase 4: Completed for host-run `stdio`
 
-Implement:
-
-- `mcp login` or equivalent helper
+- `auth login`
 - browser callback flow for desktop/dev clients
-- device-code fallback for headless terminals
-- local secure token storage
+- local credential storage with automatic refresh
+
+Remaining gap:
+
+- device-code or equivalent headless/container login UX
 
 ## Code-Level Next Step
 
 The next engineering step should be:
 
-1. Introduce **dedicated short-lived MCP access tokens**
-2. Validate an MCP-specific audience for HTTP MCP
-3. Stop treating the frontend cookie as the long-term remote MCP auth model
-
-This is the smallest step that moves Finance Sentry toward real OAuth instead of extending the current hybrid state.
+1. Add a device-code or comparable headless login flow for containerized/local MCP processes
+2. Introduce explicit MCP client registration metadata for first-party clients
+3. Tighten authorization so authenticated HTTP MCP tools no longer accept arbitrary `userId` overrides
 
 ## Non-Goals For Now
 
@@ -140,5 +127,6 @@ The repo is now in a better state than before, but the real OAuth destination is
 - per-request authorization
 - transport-specific auth behavior
 - local login UX for `stdio`
+- a headless login path for non-host `stdio` deployments
 
-That should be built in phases, not by stretching `MCP_TOKEN` further.
+That should continue from the current MCP OAuth foundation instead of reintroducing static server tokens.

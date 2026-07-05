@@ -16,10 +16,9 @@ public sealed class TransportAwareIdentityResolverTests
     [Fact]
     public void GetUserId_Prefers_HttpContext_User_When_Authenticated()
     {
-        var startupUserId = Guid.NewGuid();
         var requestUserId = Guid.NewGuid();
 
-        var startupResolver = CreateStartupResolver(startupUserId, "startup@example.com");
+        var localProvider = CreateLocalProvider(Guid.NewGuid(), "startup@example.com");
         var accessor = new HttpContextAccessor
         {
             HttpContext = new DefaultHttpContext
@@ -28,7 +27,7 @@ public sealed class TransportAwareIdentityResolverTests
             }
         };
 
-        var resolver = new TransportAwareIdentityResolver(accessor, startupResolver);
+        var resolver = new TransportAwareIdentityResolver(accessor, localProvider);
 
         resolver.GetUserId().Should().Be(requestUserId);
         resolver.GetEmail().Should().Be("request@example.com");
@@ -36,30 +35,47 @@ public sealed class TransportAwareIdentityResolverTests
     }
 
     [Fact]
-    public void GetUserId_Falls_Back_To_Startup_Token_When_No_HttpContext_User()
+    public void GetUserId_Falls_Back_To_Local_Credentials_When_No_HttpContext_User()
     {
         var startupUserId = Guid.NewGuid();
-        var startupResolver = CreateStartupResolver(startupUserId, "startup@example.com");
-        var resolver = new TransportAwareIdentityResolver(new HttpContextAccessor(), startupResolver);
+        var localProvider = CreateLocalProvider(startupUserId, "startup@example.com");
+        var resolver = new TransportAwareIdentityResolver(new HttpContextAccessor(), localProvider);
 
         resolver.GetUserId().Should().Be(startupUserId);
         resolver.GetEmail().Should().Be("startup@example.com");
         resolver.IsConfigured.Should().BeTrue();
     }
 
-    private static JwtIdentityResolver CreateStartupResolver(Guid userId, string email)
+    private static LocalMcpAccessTokenProvider CreateLocalProvider(Guid userId, string email)
     {
         const string secret = "super-secret-key-for-mcp-tests-123456";
         var token = CreateJwt(secret, userId, email, audience: "mcp");
+        var tempDir = Path.Combine(Path.GetTempPath(), $"mcp-auth-test-{Guid.NewGuid():N}");
+        var credentialFile = Path.Combine(tempDir, "mcp-auth.json");
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Jwt:Secret"] = secret,
-                ["Mcp:Token"] = token
+                ["Mcp:CredentialFile"] = credentialFile
             })
             .Build();
 
-        return new JwtIdentityResolver(config, NullLogger<JwtIdentityResolver>.Instance);
+        var store = new LocalMcpCredentialStore(config);
+        store.Save(new StoredMcpCredentials(
+            "http://localhost:5001/api/v1",
+            "http://localhost:4200",
+            token,
+            "refresh-token",
+            DateTime.UtcNow.AddHours(1),
+            userId.ToString(),
+            email,
+            "mcp.full_access"));
+
+        return new LocalMcpAccessTokenProvider(
+            store,
+            new McpOAuthTokenClient(NullLogger<McpOAuthTokenClient>.Instance),
+            config,
+            NullLogger<LocalMcpAccessTokenProvider>.Instance);
     }
 
     private static ClaimsPrincipal CreatePrincipal(Guid userId, string email)

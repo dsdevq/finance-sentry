@@ -38,8 +38,11 @@ public static class AuthModule
             .AddEntityFrameworkStores<AuthDbContext>()
             .AddDefaultTokenProviders();
 
+        services.AddMemoryCache();
         services.AddSingleton<ITokenService, JwtTokenService>();
         services.AddScoped<IRefreshTokenService, RefreshTokenService>();
+        services.AddSingleton<IMcpAuthorizationCodeStore, InMemoryMcpAuthorizationCodeStore>();
+        services.AddScoped<IMcpOAuthService, McpOAuthService>();
 
         services.Configure<GoogleOAuthOptions>(config.GetSection("GoogleOAuth"));
         services.AddScoped<IGoogleCredentialVerifier, GoogleCredentialVerifier>();

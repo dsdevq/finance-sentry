@@ -19,6 +19,16 @@ using ModelContextProtocol.Server;
 //                     container.
 var transport = (Environment.GetEnvironmentVariable("MCP_TRANSPORT") ?? "stdio").Trim().ToLowerInvariant();
 
+var bootstrapLoggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+var cliExitCode = await McpAuthCli.TryRunAsync(args, new ConfigurationBuilder()
+    .AddJsonFile("appsettings.json", optional: true)
+    .AddEnvironmentVariables()
+    .Build(), bootstrapLoggerFactory);
+if (cliExitCode.HasValue)
+{
+    Environment.Exit(cliExitCode.Value);
+}
+
 Assembly[] moduleAssemblies =
 [
     typeof(FinanceSentry.Modules.Alerts.AlertsModule).Assembly,
@@ -93,7 +103,9 @@ void RegisterShared(IServiceCollection services, IConfiguration config)
     }
 
     services.AddHttpContextAccessor();
-    services.AddSingleton<JwtIdentityResolver>();
+    services.AddSingleton<LocalMcpCredentialStore>();
+    services.AddSingleton<McpOAuthTokenClient>();
+    services.AddSingleton<LocalMcpAccessTokenProvider>();
     services.AddSingleton<IIdentityResolver, TransportAwareIdentityResolver>();
 
     foreach (var toolType in mcpAssembly.GetTypes()

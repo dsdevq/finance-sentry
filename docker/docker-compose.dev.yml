@@ -87,11 +87,9 @@ services:
       MCP_CONNECTION_STRING: ${MCP_CONNECTION_STRING:-Host=postgres;Port=5432;Database=finance_sentry;Username=finance_user;Password=finance_password}
       ConnectionStrings__Default: ${MCP_CONNECTION_STRING:-Host=postgres;Port=5432;Database=finance_sentry;Username=finance_user;Password=finance_password}
       Deduplication__MasterKeyBase64: dGVzdC1kZWR1cGxpY2F0aW9uLWtleS1jaGFuZ2UtaW4tcHJvZHVjdGlvbg==
-      # MCP identity: long-lived JWT issued by POST /api/v1/auth/mcp-token. Without it,
-      # tools require an explicit userId arg. With it, every tool defaults to the user
-      # encoded in the token's sub claim.
       Jwt__Secret: ${JWT_SECRET:-your-secret-key-change-in-production}
-      Mcp__Token: ${MCP_TOKEN:-}
+      Mcp__ApiBaseUrl: http://api:5000/api/v1
+      Mcp__FrontendBaseUrl: http://localhost:4200
     depends_on:
       postgres:
         condition: service_healthy

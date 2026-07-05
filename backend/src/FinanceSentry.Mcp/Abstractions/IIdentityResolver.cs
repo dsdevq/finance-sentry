@@ -3,12 +3,12 @@ namespace FinanceSentry.Mcp.Abstractions;
 /// <summary>
 /// Resolves the caller's identity for MCP requests.
 /// HTTP transport uses the authenticated HttpContext user.
-/// stdio transport falls back to a locally provisioned MCP_TOKEN.
+/// stdio transport uses locally stored OAuth credentials.
 /// </summary>
 public interface IIdentityResolver
 {
     /// <summary>
-    /// Returns the configured user's ID, or null when MCP_TOKEN is missing/invalid.
+    /// Returns the configured user's ID, or null when no valid MCP identity is available.
     /// </summary>
     Guid? GetUserId();
 
@@ -18,7 +18,7 @@ public interface IIdentityResolver
     string? GetEmail();
 
     /// <summary>
-    /// True when a valid MCP_TOKEN was loaded successfully.
+    /// True when a valid MCP identity was loaded successfully.
     /// </summary>
     bool IsConfigured { get; }
 }

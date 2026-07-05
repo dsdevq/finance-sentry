@@ -90,9 +90,9 @@ services:
     environment:
       ConnectionStrings__Default: "Host=postgres;Port=5432;Database=${DB_NAME:-finance_sentry};Username=${DB_USER:-finance_user};Password=${DB_PASSWORD}"
       Deduplication__MasterKeyBase64: ${DEDUPLICATION_MASTER_KEY_BASE64}
-      # MCP identity: long-lived JWT issued by POST /api/v1/auth/mcp-token.
       Jwt__Secret: ${JWT_SECRET}
-      Mcp__Token: ${MCP_TOKEN:-}
+      Mcp__ApiBaseUrl: http://api:5000/api/v1
+      Mcp__FrontendBaseUrl: ${FRONTEND_BASE_URL:-http://localhost:4200}
       # Streamable HTTP transport. OpenClaw can't spawn docker-exec from inside its
       # gateway container, so we expose MCP over HTTP on the shared compose_default
       # network. Reachable from openclaw container as http://finance-sentry-mcp:5100/.

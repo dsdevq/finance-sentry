@@ -11,11 +11,12 @@
 
 ## Identity
 
-- `stdio` transport uses a locally provisioned `MCP_TOKEN` as a fallback identity.
-- `http` transport requires per-request authentication via `Authorization: Bearer <jwt>` or the existing `fs_access_token` cookie.
+- `stdio` transport uses locally stored MCP OAuth credentials obtained via `dotnet FinanceSentry.Mcp.dll auth login`.
+- `http` transport requires per-request authentication via `Authorization: Bearer <mcp access token>`.
 - For HTTP, the MCP server resolves identity from the authenticated request user, not from a boot-time server token.
-- The existing API refresh flow remains the way clients renew short-lived access tokens.
-- This is request-based bearer authentication integrated with the existing auth module; a full external OAuth authorization-server flow for third-party MCP hosts is not implemented yet.
+- `stdio` refresh is automatic through the MCP token endpoint and locally stored refresh token.
+- HTTP clients refresh through the MCP token endpoint using dedicated MCP refresh tokens.
+- The browser-based `auth login` flow is intended for a host-run `stdio` MCP process. Containerized clients should prefer HTTP MCP.
 
 ## Tool Surface
 

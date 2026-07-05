@@ -2,6 +2,7 @@ export enum AppRoute {
   Root = '/',
   Login = '/login',
   Register = '/register',
+  McpConnect = '/mcp/connect',
   Accounts = '/accounts',
   AccountsList = '/accounts/list',
   Dashboard = '/dashboard',
