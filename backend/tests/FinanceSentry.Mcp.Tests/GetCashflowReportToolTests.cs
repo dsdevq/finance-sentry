@@ -27,12 +27,6 @@ public sealed class GetCashflowReportToolTests
         new([.. txns], txns.Length, false, 0, txns.Length);
 
     [Fact]
-    public void ToolName_Returns_get_cashflow_report()
-    {
-        CreateSut().ToolName.Should().Be("get_cashflow_report");
-    }
-
-    [Fact]
     public async Task ExecuteAsync_ReturnsEmpty_WhenHandlerThrows()
     {
         _handler

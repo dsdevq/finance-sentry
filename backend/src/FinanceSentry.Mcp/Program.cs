@@ -1,6 +1,7 @@
 using System.Reflection;
 using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Core.Interfaces;
+using FinanceSentry.Mcp;
 using FinanceSentry.Mcp.Abstractions;
 using FinanceSentry.Mcp.Middleware;
 using Microsoft.AspNetCore.Builder;

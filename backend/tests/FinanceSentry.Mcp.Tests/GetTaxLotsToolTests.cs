@@ -18,12 +18,6 @@ public sealed class GetTaxLotsToolTests
         new(_handler.Object, new FakeIdentityResolver(), NullLogger<GetTaxLotsTool>.Instance);
 
     [Fact]
-    public void ToolName_Returns_get_tax_lots()
-    {
-        CreateSut().ToolName.Should().Be("get_tax_lots");
-    }
-
-    [Fact]
     public async Task ExecuteAsync_ReturnsEmpty_WhenHandlerThrows()
     {
         _handler

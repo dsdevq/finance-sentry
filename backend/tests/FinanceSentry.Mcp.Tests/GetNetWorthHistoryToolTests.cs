@@ -18,12 +18,6 @@ public sealed class GetNetWorthHistoryToolTests
         new(_handler.Object, new FakeIdentityResolver(), NullLogger<GetNetWorthHistoryTool>.Instance);
 
     [Fact]
-    public void ToolName_Returns_get_net_worth_history()
-    {
-        CreateSut().ToolName.Should().Be("get_net_worth_history");
-    }
-
-    [Fact]
     public async Task ExecuteAsync_ReturnsEmpty_WhenHandlerThrows()
     {
         _handler

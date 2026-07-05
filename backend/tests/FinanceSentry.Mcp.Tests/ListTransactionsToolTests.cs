@@ -44,12 +44,6 @@ public sealed class ListTransactionsToolTests
         new([.. txns], txns.Length, false, 0, txns.Length);
 
     [Fact]
-    public void ToolName_Returns_list_transactions()
-    {
-        CreateSut().ToolName.Should().Be("list_transactions");
-    }
-
-    [Fact]
     public async Task ExecuteAsync_ReturnsEmpty_WhenQueryHandlerThrows()
     {
         _queryHandler

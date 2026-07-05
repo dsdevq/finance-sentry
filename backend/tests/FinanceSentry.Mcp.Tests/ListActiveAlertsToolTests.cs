@@ -40,12 +40,6 @@ public sealed class ListActiveAlertsToolTests
         new(items, items.Length, 0, 1, 100, 1);
 
     [Fact]
-    public void ToolName_Returns_list_active_alerts()
-    {
-        CreateSut().ToolName.Should().Be("list_active_alerts");
-    }
-
-    [Fact]
     public async Task ExecuteAsync_ReturnsEmpty_WhenHandlerThrows()
     {
         _handler

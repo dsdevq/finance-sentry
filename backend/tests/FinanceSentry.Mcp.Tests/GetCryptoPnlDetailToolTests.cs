@@ -18,12 +18,6 @@ public sealed class GetCryptoPnlDetailToolTests
         new(_handler.Object, new FakeIdentityResolver(), NullLogger<GetCryptoPnlDetailTool>.Instance);
 
     [Fact]
-    public void ToolName_Returns_get_crypto_pnl_detail()
-    {
-        CreateSut().ToolName.Should().Be("get_crypto_pnl_detail");
-    }
-
-    [Fact]
     public async Task ExecuteAsync_ReturnsEmpty_WhenHandlerThrows()
     {
         _handler

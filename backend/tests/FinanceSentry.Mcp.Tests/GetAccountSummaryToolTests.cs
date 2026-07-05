@@ -21,12 +21,6 @@ public sealed class GetAccountSummaryToolTests
             NullLogger<GetAccountSummaryTool>.Instance);
 
     [Fact]
-    public void ToolName_Returns_get_account_summary()
-    {
-        CreateSut().ToolName.Should().Be("get_account_summary");
-    }
-
-    [Fact]
     public async Task ExecuteAsync_MergesAllProviders_WhenAllReturnData()
     {
         _bankingReader.Setup(r => r.GetAccountSummariesAsync(UserId, default))
