@@ -74,7 +74,10 @@ else if (transport is "http" or "streamable-http")
 
     builder.Services
         .AddMcpServer()
-        .WithHttpTransport(o => o.Stateless = false)
+        // Stateless: each tool-call POST is handled inline within its HTTP request, so the
+        // authenticated HttpContext (and thus per-request identity) flows to the tool. With
+        // stateful sessions the tool runs on a background loop where HttpContext is null.
+        .WithHttpTransport(o => o.Stateless = true)
         .WithToolsFromAssembly(mcpAssembly);
 
     var port = int.TryParse(Environment.GetEnvironmentVariable("MCP_HTTP_PORT"), out var p) ? p : 5100;
