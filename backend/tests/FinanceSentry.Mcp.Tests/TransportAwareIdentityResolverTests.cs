@@ -18,7 +18,7 @@ public sealed class TransportAwareIdentityResolverTests
     {
         var requestUserId = Guid.NewGuid();
 
-        var localProvider = CreateLocalProvider(Guid.NewGuid(), "startup@example.com");
+        var localSession = CreateLocalSession(Guid.NewGuid(), "startup@example.com");
         var accessor = new HttpContextAccessor
         {
             HttpContext = new DefaultHttpContext
@@ -27,7 +27,7 @@ public sealed class TransportAwareIdentityResolverTests
             }
         };
 
-        var resolver = new TransportAwareIdentityResolver(accessor, localProvider);
+        var resolver = new TransportAwareIdentityResolver(accessor, localSession);
 
         resolver.GetUserId().Should().Be(requestUserId);
         resolver.GetEmail().Should().Be("request@example.com");
@@ -38,15 +38,15 @@ public sealed class TransportAwareIdentityResolverTests
     public void GetUserId_Falls_Back_To_Local_Credentials_When_No_HttpContext_User()
     {
         var startupUserId = Guid.NewGuid();
-        var localProvider = CreateLocalProvider(startupUserId, "startup@example.com");
-        var resolver = new TransportAwareIdentityResolver(new HttpContextAccessor(), localProvider);
+        var localSession = CreateLocalSession(startupUserId, "startup@example.com");
+        var resolver = new TransportAwareIdentityResolver(new HttpContextAccessor(), localSession);
 
         resolver.GetUserId().Should().Be(startupUserId);
         resolver.GetEmail().Should().Be("startup@example.com");
         resolver.IsConfigured.Should().BeTrue();
     }
 
-    private static LocalMcpAccessTokenProvider CreateLocalProvider(Guid userId, string email)
+    private static LocalMcpSession CreateLocalSession(Guid userId, string email)
     {
         const string secret = "super-secret-key-for-mcp-tests-123456";
         var token = CreateJwt(secret, userId, email, audience: "mcp");
@@ -71,11 +71,13 @@ public sealed class TransportAwareIdentityResolverTests
             email,
             "mcp.full_access"));
 
-        return new LocalMcpAccessTokenProvider(
+        var session = new LocalMcpSession(
             store,
             new McpOAuthTokenClient(NullLogger<McpOAuthTokenClient>.Instance),
             config,
-            NullLogger<LocalMcpAccessTokenProvider>.Instance);
+            NullLogger<LocalMcpSession>.Instance);
+        session.InitializeAsync().GetAwaiter().GetResult();
+        return session;
     }
 
     private static ClaimsPrincipal CreatePrincipal(Guid userId, string email)

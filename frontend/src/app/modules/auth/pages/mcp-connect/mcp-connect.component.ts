@@ -2,6 +2,7 @@ import {ChangeDetectionStrategy, Component, effect, inject} from '@angular/core'
 import {ActivatedRoute, Router} from '@angular/router';
 
 import {AppRoute} from '../../../../shared/enums/app-route/app-route.enum';
+import {environment} from '../../../../../environments/environment';
 import {AuthStore} from '../../store/auth.store';
 
 @Component({
@@ -33,20 +34,27 @@ export class McpConnectComponent {
 
   public constructor() {
     effect(() => {
-      const authorizeUrl = this.route.snapshot.queryParamMap.get('authorizeUrl');
-      if (!authorizeUrl) {
-        this.message = 'Missing MCP authorization URL.';
+      const redirectUri = this.route.snapshot.queryParamMap.get('redirectUri');
+      const state = this.route.snapshot.queryParamMap.get('state');
+      if (!redirectUri || !state) {
+        this.message = 'Missing MCP authorization parameters.';
         return;
       }
 
       if (!this.authStore.isAuthenticated()) {
+        const returnUrl = this.router.createUrlTree([AppRoute.McpConnect], {
+          queryParams: {redirectUri, state},
+        }).toString();
         void this.router.navigate([AppRoute.Login], {
-          queryParams: { returnUrl: `${AppRoute.McpConnect}?authorizeUrl=${encodeURIComponent(authorizeUrl)}` },
+          queryParams: {returnUrl},
         });
         return;
       }
 
-      window.location.assign(authorizeUrl);
+      const authorizeUrl = new URL(`${environment.apiBaseUrl}/auth/mcp/authorize`);
+      authorizeUrl.searchParams.set('redirectUri', redirectUri);
+      authorizeUrl.searchParams.set('state', state);
+      window.location.assign(authorizeUrl.toString());
     });
   }
 }

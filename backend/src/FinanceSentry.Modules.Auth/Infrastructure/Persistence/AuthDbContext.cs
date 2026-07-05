@@ -6,6 +6,7 @@ namespace FinanceSentry.Modules.Auth.Infrastructure.Persistence;
 
 public class AuthDbContext(DbContextOptions<AuthDbContext> options) : IdentityDbContext<ApplicationUser>(options)
 {
+    public DbSet<McpAuthorizationCode> McpAuthorizationCodes => Set<McpAuthorizationCode>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder builder)
@@ -20,6 +21,17 @@ public class AuthDbContext(DbContextOptions<AuthDbContext> options) : IdentityDb
             entity.HasIndex(t => t.UserId);
             entity.Property(t => t.TokenHash).HasMaxLength(64).IsRequired();
             entity.Property(t => t.UserId).IsRequired();
+        });
+
+        builder.Entity<McpAuthorizationCode>(entity =>
+        {
+            entity.HasKey(t => t.Id);
+            entity.HasIndex(t => t.CodeHash).IsUnique();
+            entity.HasIndex(t => t.UserId);
+            entity.Property(t => t.UserId).IsRequired();
+            entity.Property(t => t.Email).IsRequired();
+            entity.Property(t => t.CodeHash).HasMaxLength(64).IsRequired();
+            entity.Property(t => t.RedirectUri).IsRequired();
         });
     }
 }

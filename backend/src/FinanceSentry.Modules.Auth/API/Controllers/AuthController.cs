@@ -1,14 +1,11 @@
 using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Modules.Auth.Application.Commands;
 using FinanceSentry.Modules.Auth.Application.Interfaces;
-using FinanceSentry.Modules.Auth.Domain.Entities;
 using FinanceSentry.Modules.Auth.Domain.Exceptions;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Hosting;
-using System.Text.Json.Serialization;
 
 namespace FinanceSentry.Modules.Auth.API.Controllers;
 
@@ -20,11 +17,10 @@ public class AuthController(
     ICommandHandler<RefreshCommand, AuthResult> refreshHandler,
     ICommandHandler<VerifyGoogleCredentialCommand, AuthResult> googleVerifyHandler,
     ICommandHandler<LogoutCommand, Unit> logoutHandler,
+    ICommandHandler<AuthorizeMcpCommand, AuthorizeMcpResult> authorizeMcpHandler,
+    ICommandHandler<ExchangeMcpTokenCommand, McpOAuthTokenResponse> exchangeMcpTokenHandler,
+    ICommandHandler<RevokeMcpTokenCommand, Unit> revokeMcpTokenHandler,
     IQueryHandler<GetMeQuery, GetMeResult> getMeHandler,
-    IRefreshTokenService refreshTokenService,
-    IMcpAuthorizationCodeStore mcpAuthorizationCodeStore,
-    IMcpOAuthService mcpOAuthService,
-    UserManager<ApplicationUser> userManager,
     IWebHostEnvironment env) : ControllerBase
 {
     private const string RefreshTokenCookie = "fs_refresh_token";
@@ -105,42 +101,25 @@ public class AuthController(
         if (string.IsNullOrWhiteSpace(rawToken))
             throw new InvalidRefreshTokenException("No session found.");
 
-        var existing = await refreshTokenService.ValidateAsync(rawToken, HttpContext.RequestAborted)
-            ?? throw new InvalidRefreshTokenException("No session found.");
-
-        var user = await userManager.FindByIdAsync(existing.UserId)
-            ?? throw new InvalidRefreshTokenException("No session found.");
-
-        var code = await mcpAuthorizationCodeStore.IssueAsync(user.Id, user.Email!, redirectUri, HttpContext.RequestAborted);
-        var separator = redirectUri.Contains('?') ? "&" : "?";
-        var redirect = $"{redirectUri}{separator}code={Uri.EscapeDataString(code)}";
-        if (!string.IsNullOrWhiteSpace(state))
-            redirect += $"&state={Uri.EscapeDataString(state)}";
-
-        return Redirect(redirect);
+        var result = await authorizeMcpHandler.Handle(
+            new AuthorizeMcpCommand(rawToken, redirectUri, state),
+            HttpContext.RequestAborted);
+        return Redirect(result.RedirectUrl);
     }
 
     [HttpPost("mcp/token")]
     public async Task<IActionResult> ExchangeMcpToken([FromBody] McpTokenRequest request)
     {
-        McpOAuthTokenResponse response = request.GrantType switch
-        {
-            "authorization_code" when !string.IsNullOrWhiteSpace(request.Code) && !string.IsNullOrWhiteSpace(request.RedirectUri)
-                => await mcpOAuthService.ExchangeAuthorizationCodeAsync(request.Code, request.RedirectUri, HttpContext.RequestAborted),
-            "refresh_token" when !string.IsNullOrWhiteSpace(request.RefreshToken)
-                => await mcpOAuthService.RefreshAsync(request.RefreshToken, HttpContext.RequestAborted),
-            _ => throw new InvalidRefreshTokenException("Unsupported MCP token grant.")
-        };
-
+        var response = await exchangeMcpTokenHandler.Handle(
+            new ExchangeMcpTokenCommand(request.GrantType, request.Code, request.RedirectUri, request.RefreshToken),
+            HttpContext.RequestAborted);
         return Ok(response);
     }
 
     [HttpPost("mcp/revoke")]
     public async Task<IActionResult> RevokeMcpToken([FromBody] McpRevokeRequest request)
     {
-        if (!string.IsNullOrWhiteSpace(request.RefreshToken))
-            await mcpOAuthService.RevokeAsync(request.RefreshToken, HttpContext.RequestAborted);
-
+        await revokeMcpTokenHandler.Handle(new RevokeMcpTokenCommand(request.RefreshToken), HttpContext.RequestAborted);
         return NoContent();
     }
 
@@ -204,12 +183,3 @@ public class AuthController(
         });
     }
 }
-
-public sealed record McpTokenRequest(
-    [property: JsonPropertyName("grant_type")] string GrantType,
-    [property: JsonPropertyName("code")] string? Code = null,
-    [property: JsonPropertyName("redirect_uri")] string? RedirectUri = null,
-    [property: JsonPropertyName("refresh_token")] string? RefreshToken = null);
-
-public sealed record McpRevokeRequest(
-    [property: JsonPropertyName("refresh_token")] string? RefreshToken);

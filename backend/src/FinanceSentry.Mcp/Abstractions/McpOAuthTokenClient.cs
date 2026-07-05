@@ -5,6 +5,8 @@ namespace FinanceSentry.Mcp.Abstractions;
 
 public sealed class McpOAuthTokenClient(ILogger<McpOAuthTokenClient> logger)
 {
+    public const string McpScope = "mcp.full_access";
+
     public async Task<StoredMcpCredentials> ExchangeAuthorizationCodeAsync(
         string apiBaseUrl,
         string frontendBaseUrl,

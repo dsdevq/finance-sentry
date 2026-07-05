@@ -53,13 +53,16 @@ if (transport is "stdio")
     builder.Logging.AddConsole(o => o.LogToStandardErrorThreshold = LogLevel.Trace);
 
     RegisterShared(builder.Services, builder.Configuration);
+    builder.Services.AddHostedService<LocalMcpSessionRefreshService>();
 
     builder.Services
         .AddMcpServer()
         .WithStdioServerTransport()
         .WithToolsFromAssembly(mcpAssembly);
 
-    await builder.Build().RunAsync();
+    var host = builder.Build();
+    await host.Services.GetRequiredService<LocalMcpSession>().InitializeAsync();
+    await host.RunAsync();
 }
 else if (transport is "http" or "streamable-http")
 {
@@ -105,7 +108,7 @@ void RegisterShared(IServiceCollection services, IConfiguration config)
     services.AddHttpContextAccessor();
     services.AddSingleton<LocalMcpCredentialStore>();
     services.AddSingleton<McpOAuthTokenClient>();
-    services.AddSingleton<LocalMcpAccessTokenProvider>();
+    services.AddSingleton<LocalMcpSession>();
     services.AddSingleton<IIdentityResolver, TransportAwareIdentityResolver>();
 
     foreach (var toolType in mcpAssembly.GetTypes()

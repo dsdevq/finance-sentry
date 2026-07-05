@@ -43,8 +43,7 @@ internal static class McpAuthCli
 
         using var listener = StartListener(out var redirectUri);
         var state = Guid.NewGuid().ToString("N");
-        var authorizeEndpoint = $"{apiBaseUrl.TrimEnd('/')}/auth/mcp/authorize?redirectUri={Uri.EscapeDataString(redirectUri)}&state={Uri.EscapeDataString(state)}";
-        var connectUrl = $"{frontendBaseUrl.TrimEnd('/')}/mcp/connect?authorizeUrl={Uri.EscapeDataString(authorizeEndpoint)}";
+        var connectUrl = $"{frontendBaseUrl.TrimEnd('/')}/mcp/connect?redirectUri={Uri.EscapeDataString(redirectUri)}&state={Uri.EscapeDataString(state)}";
 
         try
         {
