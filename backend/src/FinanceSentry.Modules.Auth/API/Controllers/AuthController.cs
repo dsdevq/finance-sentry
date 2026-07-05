@@ -20,6 +20,8 @@ public class AuthController(
     ICommandHandler<AuthorizeMcpCommand, AuthorizeMcpResult> authorizeMcpHandler,
     ICommandHandler<ExchangeMcpTokenCommand, McpOAuthTokenResponse> exchangeMcpTokenHandler,
     ICommandHandler<RevokeMcpTokenCommand, Unit> revokeMcpTokenHandler,
+    ICommandHandler<IssueMcpServiceTokenCommand, IssueMcpServiceTokenResult> issueMcpServiceTokenHandler,
+    ICommandHandler<RevokeMcpServiceTokenCommand, Unit> revokeMcpServiceTokenHandler,
     IQueryHandler<GetMeQuery, GetMeResult> getMeHandler,
     IWebHostEnvironment env) : ControllerBase
 {
@@ -120,6 +122,34 @@ public class AuthController(
     public async Task<IActionResult> RevokeMcpToken([FromBody] McpRevokeRequest request)
     {
         await revokeMcpTokenHandler.Handle(new RevokeMcpTokenCommand(request.RefreshToken), HttpContext.RequestAborted);
+        return NoContent();
+    }
+
+    // Mints a long-lived, revocable service token for headless first-party MCP clients
+    // (e.g. the OpenClaw gateway) that cannot perform the interactive OAuth refresh flow.
+    [HttpPost("mcp/service-token")]
+    public async Task<IActionResult> IssueMcpServiceToken([FromBody] McpServiceTokenRequest request)
+    {
+        var rawToken = Request.Cookies[RefreshTokenCookie];
+        if (string.IsNullOrWhiteSpace(rawToken))
+            throw new InvalidRefreshTokenException("No session found.");
+
+        var result = await issueMcpServiceTokenHandler.Handle(
+            new IssueMcpServiceTokenCommand(rawToken, request.Label, request.LifetimeDays),
+            HttpContext.RequestAborted);
+        return Ok(result);
+    }
+
+    [HttpPost("mcp/service-token/revoke")]
+    public async Task<IActionResult> RevokeMcpServiceToken([FromBody] McpServiceTokenRevokeRequest request)
+    {
+        var rawToken = Request.Cookies[RefreshTokenCookie];
+        if (string.IsNullOrWhiteSpace(rawToken))
+            throw new InvalidRefreshTokenException("No session found.");
+
+        await revokeMcpServiceTokenHandler.Handle(
+            new RevokeMcpServiceTokenCommand(rawToken, request.Jti),
+            HttpContext.RequestAborted);
         return NoContent();
     }
 

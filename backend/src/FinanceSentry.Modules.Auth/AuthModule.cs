@@ -41,6 +41,7 @@ public static class AuthModule
         services.AddSingleton<ITokenService, JwtTokenService>();
         services.AddScoped<IRefreshTokenService, RefreshTokenService>();
         services.AddScoped<IMcpAuthorizationCodeStore, PersistedMcpAuthorizationCodeStore>();
+        services.AddScoped<IMcpServiceTokenStore, PersistedMcpServiceTokenStore>();
         services.AddScoped<IMcpOAuthService, McpOAuthService>();
 
         services.Configure<GoogleOAuthOptions>(config.GetSection("GoogleOAuth"));

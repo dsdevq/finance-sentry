@@ -8,6 +8,7 @@ public class AuthDbContext(DbContextOptions<AuthDbContext> options) : IdentityDb
 {
     public DbSet<McpAuthorizationCode> McpAuthorizationCodes => Set<McpAuthorizationCode>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<McpServiceToken> McpServiceTokens => Set<McpServiceToken>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -32,6 +33,14 @@ public class AuthDbContext(DbContextOptions<AuthDbContext> options) : IdentityDb
             entity.Property(t => t.Email).IsRequired();
             entity.Property(t => t.CodeHash).HasMaxLength(64).IsRequired();
             entity.Property(t => t.RedirectUri).IsRequired();
+        });
+
+        builder.Entity<McpServiceToken>(entity =>
+        {
+            entity.HasKey(t => t.Id);
+            entity.HasIndex(t => t.UserId);
+            entity.Property(t => t.UserId).IsRequired();
+            entity.Property(t => t.Label).HasMaxLength(200).IsRequired();
         });
     }
 }
