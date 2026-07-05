@@ -12,18 +12,16 @@ namespace FinanceSentry.Mcp.Tools;
 public sealed class ListActiveAlertsTool(
     IQueryHandler<GetAlertsQuery, AlertsPageResponse> alertsHandler,
     IIdentityResolver identity,
-    ILogger<ListActiveAlertsTool> logger) : IReadOnlyMcpTool
+    ILogger<ListActiveAlertsTool> logger)
 {
     private readonly IQueryHandler<GetAlertsQuery, AlertsPageResponse> _alertsHandler = alertsHandler;
     private readonly IIdentityResolver _identity = identity;
     private readonly ILogger<ListActiveAlertsTool> _logger = logger;
 
-    public string ToolName => "list_active_alerts";
-
     [McpServerTool(Name = "list_active_alerts")]
-    [Description("Returns unread, unresolved alerts (Fired). Defaults to the MCP_TOKEN identity when userId is omitted.")]
+    [Description("Returns unread, unresolved alerts (Fired). Defaults to the authenticated MCP identity when userId is omitted.")]
     public async Task<IReadOnlyList<ActiveAlertEntry>> ExecuteAsync(
-        [Description("Optional user GUID. Defaults to the identity baked into MCP_TOKEN.")] Guid? userId = null,
+        [Description("Optional user GUID. Defaults to the authenticated MCP identity.")] Guid? userId = null,
         CancellationToken cancellationToken = default)
     {
         var effective = userId ?? _identity.GetUserId();

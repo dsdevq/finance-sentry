@@ -11,18 +11,16 @@ namespace FinanceSentry.Mcp.Tools;
 public sealed class GetCryptoPnlDetailTool(
     IQueryHandler<GetCryptoPnlDetailQuery, CryptoPnlDetailResponse> pnlHandler,
     IIdentityResolver identity,
-    ILogger<GetCryptoPnlDetailTool> logger) : IReadOnlyMcpTool
+    ILogger<GetCryptoPnlDetailTool> logger)
 {
     private readonly IQueryHandler<GetCryptoPnlDetailQuery, CryptoPnlDetailResponse> _pnlHandler = pnlHandler;
     private readonly IIdentityResolver _identity = identity;
     private readonly ILogger<GetCryptoPnlDetailTool> _logger = logger;
 
-    public string ToolName => "get_crypto_pnl_detail";
-
     [McpServerTool(Name = "get_crypto_pnl_detail")]
-    [Description("Returns per-asset crypto P&L. Cost basis and realized P&L are derived from Binance trade history (USDT-paired). Cost basis is null for assets that have never been traded via a USD-stablecoin pair (e.g. airdrops, transfers). Defaults to the MCP_TOKEN identity when userId is omitted.")]
+    [Description("Returns per-asset crypto P&L. Cost basis and realized P&L are derived from Binance trade history (USDT-paired). Cost basis is null for assets that have never been traded via a USD-stablecoin pair (e.g. airdrops, transfers). Defaults to the authenticated MCP identity when userId is omitted.")]
     public async Task<IReadOnlyList<CryptoPnlAssetEntry>> ExecuteAsync(
-        [Description("Optional user GUID. Defaults to the identity baked into MCP_TOKEN.")] Guid? userId = null,
+        [Description("Optional user GUID. Defaults to the authenticated MCP identity.")] Guid? userId = null,
         CancellationToken cancellationToken = default)
     {
         var effective = userId ?? _identity.GetUserId();

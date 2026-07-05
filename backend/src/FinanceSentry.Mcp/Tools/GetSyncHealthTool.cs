@@ -15,7 +15,7 @@ public sealed class GetSyncHealthTool(
     CryptoSyncDbContext cryptoSyncDbContext,
     BrokerageSyncDbContext brokerageSyncDbContext,
     IIdentityResolver identity,
-    ILogger<GetSyncHealthTool> logger) : IReadOnlyMcpTool
+    ILogger<GetSyncHealthTool> logger)
 {
     private readonly BankSyncDbContext _bankSync = bankSyncDbContext;
     private readonly CryptoSyncDbContext _cryptoSync = cryptoSyncDbContext;
@@ -23,12 +23,10 @@ public sealed class GetSyncHealthTool(
     private readonly IIdentityResolver _identity = identity;
     private readonly ILogger<GetSyncHealthTool> _logger = logger;
 
-    public string ToolName => "get_sync_health";
-
     [McpServerTool(Name = "get_sync_health")]
-    [Description("Returns the last sync timestamp, status, and error for each provider (Plaid, Monobank, Binance, IBKR). Defaults to the MCP_TOKEN identity when userId is omitted.")]
+    [Description("Returns the last sync timestamp, status, and error for each provider (Plaid, Monobank, Binance, IBKR). Defaults to the authenticated MCP identity when userId is omitted.")]
     public async Task<IReadOnlyList<SyncHealthEntry>> ExecuteAsync(
-        [Description("Optional user GUID. Defaults to the identity baked into MCP_TOKEN.")] Guid? userId = null,
+        [Description("Optional user GUID. Defaults to the authenticated MCP identity.")] Guid? userId = null,
         CancellationToken cancellationToken = default)
     {
         var effective = userId ?? _identity.GetUserId();

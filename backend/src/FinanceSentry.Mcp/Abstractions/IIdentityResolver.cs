@@ -1,8 +1,9 @@
 namespace FinanceSentry.Mcp.Abstractions;
 
 /// <summary>
-/// Resolves the caller's identity for stdio MCP requests. Backed by a long-lived JWT
-/// (MCP_TOKEN env var) issued by POST /api/v1/auth/mcp-token.
+/// Resolves the caller's identity for MCP requests.
+/// HTTP transport uses the authenticated HttpContext user.
+/// stdio transport falls back to a locally provisioned MCP_TOKEN.
 /// </summary>
 public interface IIdentityResolver
 {

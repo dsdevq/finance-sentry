@@ -12,7 +12,7 @@ public sealed class GetAccountSummaryTool(
     ICryptoHoldingsReader cryptoReader,
     IBrokerageHoldingsReader brokerageReader,
     IIdentityResolver identity,
-    ILogger<GetAccountSummaryTool> logger) : IReadOnlyMcpTool
+    ILogger<GetAccountSummaryTool> logger)
 {
     private readonly IBankingAccountsReader _bankingReader = bankingReader;
     private readonly ICryptoHoldingsReader _cryptoReader = cryptoReader;
@@ -20,12 +20,10 @@ public sealed class GetAccountSummaryTool(
     private readonly IIdentityResolver _identity = identity;
     private readonly ILogger<GetAccountSummaryTool> _logger = logger;
 
-    public string ToolName => "get_account_summary";
-
     [McpServerTool(Name = "get_account_summary")]
-    [Description("Returns a consolidated account summary across banking, crypto, and brokerage providers. Defaults to the MCP_TOKEN identity when userId is omitted.")]
+    [Description("Returns a consolidated account summary across banking, crypto, and brokerage providers. Defaults to the authenticated MCP identity when userId is omitted.")]
     public async Task<IReadOnlyList<AccountSummaryEntry>> ExecuteAsync(
-        [Description("Optional user GUID. Defaults to the identity baked into MCP_TOKEN.")] Guid? userId = null,
+        [Description("Optional user GUID. Defaults to the authenticated MCP identity.")] Guid? userId = null,
         CancellationToken cancellationToken = default)
     {
         var effective = userId ?? _identity.GetUserId();

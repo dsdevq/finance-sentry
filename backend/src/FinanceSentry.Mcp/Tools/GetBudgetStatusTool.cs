@@ -12,18 +12,16 @@ namespace FinanceSentry.Mcp.Tools;
 public sealed class GetBudgetStatusTool(
     IQueryHandler<GetBudgetSummaryQuery, BudgetSummaryResponse> budgetSummaryHandler,
     IIdentityResolver identity,
-    ILogger<GetBudgetStatusTool> logger) : IReadOnlyMcpTool
+    ILogger<GetBudgetStatusTool> logger)
 {
     private readonly IQueryHandler<GetBudgetSummaryQuery, BudgetSummaryResponse> _budgetSummaryHandler = budgetSummaryHandler;
     private readonly IIdentityResolver _identity = identity;
     private readonly ILogger<GetBudgetStatusTool> _logger = logger;
 
-    public string ToolName => "get_budget_status";
-
     [McpServerTool(Name = "get_budget_status")]
-    [Description("Returns all active budgets, including spending and utilization for the requested period. Defaults to the MCP_TOKEN identity when userId is omitted.")]
+    [Description("Returns all active budgets, including spending and utilization for the requested period. Defaults to the authenticated MCP identity when userId is omitted.")]
     public async Task<IReadOnlyList<BudgetStatusEntry>> ExecuteAsync(
-        [Description("Optional user GUID. Defaults to the identity baked into MCP_TOKEN.")] Guid? userId = null,
+        [Description("Optional user GUID. Defaults to the authenticated MCP identity.")] Guid? userId = null,
         [Description("Year of the budget period (e.g. 2024). Defaults to the current year.")] int? year = null,
         [Description("Month of the budget period (1–12). Defaults to the current month.")] int? month = null,
         CancellationToken cancellationToken = default)

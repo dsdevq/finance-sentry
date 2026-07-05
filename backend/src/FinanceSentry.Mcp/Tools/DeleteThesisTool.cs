@@ -9,17 +9,13 @@ namespace FinanceSentry.Mcp.Tools;
 [McpServerToolType]
 public sealed class DeleteThesisTool(
     ICommandHandler<DeleteThesisCommand, bool> handler,
-    IIdentityResolver identity) : IReadOnlyMcpTool
+    IIdentityResolver identity)
 {
-    public string ToolName => "delete_thesis";
-
-    public bool IsReadOnly => false;
-
     [McpServerTool(Name = "delete_thesis")]
     [Description("Deletes an investment thesis by id. Returns true when a row was deleted.")]
     public async Task<bool> ExecuteAsync(
         [Description("Thesis id.")] Guid id,
-        [Description("Optional user GUID. Defaults to MCP_TOKEN identity.")] Guid? userId = null,
+        [Description("Optional user GUID. Defaults to the authenticated MCP identity.")] Guid? userId = null,
         CancellationToken cancellationToken = default)
     {
         var effective = userId ?? identity.GetUserId();

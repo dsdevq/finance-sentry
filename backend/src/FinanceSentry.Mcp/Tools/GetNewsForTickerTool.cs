@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using FinanceSentry.Core.Cqrs;
-using FinanceSentry.Mcp.Abstractions;
 using FinanceSentry.Modules.Research.API.Responses;
 using FinanceSentry.Modules.Research.Application.Queries;
 using ModelContextProtocol.Server;
@@ -9,10 +8,8 @@ namespace FinanceSentry.Mcp.Tools;
 
 [McpServerToolType]
 public sealed class GetNewsForTickerTool(
-    IQueryHandler<GetNewsForTickerQuery, IReadOnlyList<NewsArticleDto>> handler) : IReadOnlyMcpTool
+    IQueryHandler<GetNewsForTickerQuery, IReadOnlyList<NewsArticleDto>> handler)
 {
-    public string ToolName => "get_news_for_ticker";
-
     [McpServerTool(Name = "get_news_for_ticker")]
     [Description("Fetch recent news articles tagged with a specific ticker. Use this when answering \"why is X moving?\" — pull the last 24-48h of headlines for that ticker.")]
     public async Task<IReadOnlyList<NewsArticleDto>> ExecuteAsync(

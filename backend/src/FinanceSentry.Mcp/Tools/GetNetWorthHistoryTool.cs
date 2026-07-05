@@ -11,18 +11,16 @@ namespace FinanceSentry.Mcp.Tools;
 public sealed class GetNetWorthHistoryTool(
     IQueryHandler<GetNetWorthHistoryQuery, NetWorthHistoryResponse> historyHandler,
     IIdentityResolver identity,
-    ILogger<GetNetWorthHistoryTool> logger) : IReadOnlyMcpTool
+    ILogger<GetNetWorthHistoryTool> logger)
 {
     private readonly IQueryHandler<GetNetWorthHistoryQuery, NetWorthHistoryResponse> _historyHandler = historyHandler;
     private readonly IIdentityResolver _identity = identity;
     private readonly ILogger<GetNetWorthHistoryTool> _logger = logger;
 
-    public string ToolName => "get_net_worth_history";
-
     [McpServerTool(Name = "get_net_worth_history")]
-    [Description("Returns historical net worth snapshots (banking + brokerage + crypto totals per day), optionally bounded by from/to dates. Defaults to the MCP_TOKEN identity when userId is omitted.")]
+    [Description("Returns historical net worth snapshots (banking + brokerage + crypto totals per day), optionally bounded by from/to dates. Defaults to the authenticated MCP identity when userId is omitted.")]
     public async Task<IReadOnlyList<NetWorthHistoryEntry>> ExecuteAsync(
-        [Description("Optional user GUID. Defaults to the identity baked into MCP_TOKEN.")] Guid? userId = null,
+        [Description("Optional user GUID. Defaults to the authenticated MCP identity.")] Guid? userId = null,
         [Description("Optional inclusive start date (e.g. 2024-01-01).")] DateOnly? fromDate = null,
         [Description("Optional inclusive end date (e.g. 2024-12-31).")] DateOnly? toDate = null,
         CancellationToken cancellationToken = default)

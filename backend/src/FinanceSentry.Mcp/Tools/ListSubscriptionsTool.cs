@@ -12,18 +12,16 @@ namespace FinanceSentry.Mcp.Tools;
 public sealed class ListSubscriptionsTool(
     IQueryHandler<GetSubscriptionsQuery, SubscriptionsListResponse> subscriptionsHandler,
     IIdentityResolver identity,
-    ILogger<ListSubscriptionsTool> logger) : IReadOnlyMcpTool
+    ILogger<ListSubscriptionsTool> logger)
 {
     private readonly IQueryHandler<GetSubscriptionsQuery, SubscriptionsListResponse> _subscriptionsHandler = subscriptionsHandler;
     private readonly IIdentityResolver _identity = identity;
     private readonly ILogger<ListSubscriptionsTool> _logger = logger;
 
-    public string ToolName => "list_subscriptions";
-
     [McpServerTool(Name = "list_subscriptions")]
-    [Description("Returns detected recurring charges (subscriptions), excluding dismissed ones. Defaults to the MCP_TOKEN identity when userId is omitted.")]
+    [Description("Returns detected recurring charges (subscriptions), excluding dismissed ones. Defaults to the authenticated MCP identity when userId is omitted.")]
     public async Task<IReadOnlyList<SubscriptionEntry>> ExecuteAsync(
-        [Description("Optional user GUID. Defaults to the identity baked into MCP_TOKEN.")] Guid? userId = null,
+        [Description("Optional user GUID. Defaults to the authenticated MCP identity.")] Guid? userId = null,
         CancellationToken cancellationToken = default)
     {
         var effective = userId ?? _identity.GetUserId();

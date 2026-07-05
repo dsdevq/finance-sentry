@@ -2,12 +2,14 @@ using System.Reflection;
 using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Mcp.Abstractions;
+using FinanceSentry.Mcp.Middleware;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using ModelContextProtocol.Server;
 
 // MCP_TRANSPORT selects how this process speaks MCP:
 //   stdio (default) — JSON-RPC over stdin/stdout, used by Claude Desktop and the
@@ -30,8 +32,7 @@ Assembly[] moduleAssemblies =
     typeof(FinanceSentry.Modules.Research.ResearchModule).Assembly,
 ];
 
-var mcpAssembly = typeof(IReadOnlyMcpTool).Assembly;
-var toolInterface = typeof(IReadOnlyMcpTool);
+var mcpAssembly = typeof(FinanceSentry.Mcp.Tools.GetAccountSummaryTool).Assembly;
 
 if (transport is "stdio")
 {
@@ -66,6 +67,7 @@ else if (transport is "http" or "streamable-http")
     builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
     var app = builder.Build();
+    app.UseMiddleware<McpJwtAuthenticationMiddleware>();
     app.MapMcp();
     await app.RunAsync();
 }
@@ -90,12 +92,13 @@ void RegisterShared(IServiceCollection services, IConfiguration config)
         }
     }
 
-    services.AddSingleton<IIdentityResolver, JwtIdentityResolver>();
+    services.AddHttpContextAccessor();
+    services.AddSingleton<JwtIdentityResolver>();
+    services.AddSingleton<IIdentityResolver, TransportAwareIdentityResolver>();
 
     foreach (var toolType in mcpAssembly.GetTypes()
-        .Where(t => !t.IsAbstract && !t.IsInterface && toolInterface.IsAssignableFrom(t)))
+        .Where(t => !t.IsAbstract && !t.IsInterface && t.GetCustomAttribute<McpServerToolTypeAttribute>() is not null))
     {
         services.AddScoped(toolType);
-        services.AddScoped(toolInterface, sp => sp.GetRequiredService(toolType));
     }
 }

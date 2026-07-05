@@ -14,19 +14,17 @@ public sealed class ListTransactionsTool(
     IQueryHandler<GetAllTransactionsQuery, AllTransactionsResult> transactionQueryHandler,
     IBankingAccountsReader accountsReader,
     IIdentityResolver identity,
-    ILogger<ListTransactionsTool> logger) : IReadOnlyMcpTool
+    ILogger<ListTransactionsTool> logger)
 {
     private readonly IQueryHandler<GetAllTransactionsQuery, AllTransactionsResult> _transactionQueryHandler = transactionQueryHandler;
     private readonly IBankingAccountsReader _accountsReader = accountsReader;
     private readonly IIdentityResolver _identity = identity;
     private readonly ILogger<ListTransactionsTool> _logger = logger;
 
-    public string ToolName => "list_transactions";
-
     [McpServerTool(Name = "list_transactions")]
-    [Description("Returns a paginated list of bank transactions, optionally filtered by account, date range, or merchant category. Defaults to the MCP_TOKEN identity when userId is omitted.")]
+    [Description("Returns a paginated list of bank transactions, optionally filtered by account, date range, or merchant category. Defaults to the authenticated MCP identity when userId is omitted.")]
     public async Task<IReadOnlyList<TransactionEntry>> ExecuteAsync(
-        [Description("Optional user GUID. Defaults to the identity baked into MCP_TOKEN.")] Guid? userId = null,
+        [Description("Optional user GUID. Defaults to the authenticated MCP identity.")] Guid? userId = null,
         [Description("Optional account ID (GUID string) to scope results to a single account.")] string? accountId = null,
         [Description("Optional inclusive start date (e.g. 2024-01-01) for filtering transactions.")] DateOnly? fromDate = null,
         [Description("Optional inclusive end date (e.g. 2024-12-31) for filtering transactions.")] DateOnly? toDate = null,

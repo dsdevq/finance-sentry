@@ -10,14 +10,12 @@ namespace FinanceSentry.Mcp.Tools;
 [McpServerToolType]
 public sealed class ListThesesTool(
     IQueryHandler<GetThesesQuery, IReadOnlyList<ThesisDto>> handler,
-    IIdentityResolver identity) : IReadOnlyMcpTool
+    IIdentityResolver identity)
 {
-    public string ToolName => "list_theses";
-
     [McpServerTool(Name = "list_theses")]
     [Description("Lists the caller's investment theses, including key data points, catalysts, and invalidation triggers.")]
     public async Task<IReadOnlyList<ThesisDto>> ExecuteAsync(
-        [Description("Optional user GUID. Defaults to MCP_TOKEN identity.")] Guid? userId = null,
+        [Description("Optional user GUID. Defaults to the authenticated MCP identity.")] Guid? userId = null,
         CancellationToken cancellationToken = default)
     {
         var effective = userId ?? identity.GetUserId();

@@ -1,17 +1,54 @@
-# Finance Sentry MCP Tools
+# Finance Sentry MCP Server
 
-All tools are read-only. Real tools query live data; stubs return `{ status, reason }` until the backing module is implemented.
+`backend/src/FinanceSentry.Mcp` is an MCP server executable. It does not contain an MCP client. External clients connect to it over either `stdio` or streamable HTTP.
 
-| Tool Name | Description | Input Parameters | Return Schema | Real/Stub |
+## Transports
+
+| Transport | Selected By | Intended Client |
+|---|---|---|
+| `stdio` | `MCP_TRANSPORT=stdio` | Claude Desktop, `mcp-probe.sh`, any local process that can spawn `dotnet FinanceSentry.Mcp.dll` |
+| `http` | `MCP_TRANSPORT=http` | Containerized clients such as OpenClaw that cannot spawn the MCP process directly |
+
+## Identity
+
+- `stdio` transport uses a locally provisioned `MCP_TOKEN` as a fallback identity.
+- `http` transport requires per-request authentication via `Authorization: Bearer <jwt>` or the existing `fs_access_token` cookie.
+- For HTTP, the MCP server resolves identity from the authenticated request user, not from a boot-time server token.
+- The existing API refresh flow remains the way clients renew short-lived access tokens.
+- This is request-based bearer authentication integrated with the existing auth module; a full external OAuth authorization-server flow for third-party MCP hosts is not implemented yet.
+
+## Tool Surface
+
+The current runtime surface contains 21 tools: 17 read-only and 4 mutating. There are no stub tools in the current source tree.
+
+| Tool Name | Mode | Domain | Key Inputs | Notes |
 |---|---|---|---|---|
-| `get_account_summary` | Returns a consolidated account summary across banking, crypto, and brokerage providers for a given user. | `userId` (Guid, required) | `Array<{ accountId: string, name: string, provider: string, currency: string, balance: decimal }>` | Real |
-| `list_transactions` | Returns a paginated list of bank transactions, optionally filtered by account, date range, or merchant category. | `userId` (Guid, required), `accountId` (string, optional), `fromDate` (DateOnly, optional), `toDate` (DateOnly, optional), `category` (string, optional), `page` (int, default 1), `pageSize` (int, default 50) | `Array<{ transactionId: string, accountId: string, date: DateTime, amount: decimal, currency: string, category: string\|null, description: string, provider: string }>` | Real |
-| `get_budget_status` | Returns all active budgets for a user, including spending and utilization for the requested period. | `userId` (Guid, required), `year` (int, optional — defaults to current year), `month` (int 1–12, optional — defaults to current month) | `Array<{ budgetId: string, name: string, period: string (YYYY-MM), limitAmount: decimal, spentAmount: decimal, currency: string, utilizationPercent: decimal }>` | Real |
-| `list_active_alerts` | Returns unread, unresolved (Fired) alerts. Acknowledged, resolved, and dismissed alerts are excluded. | `userId` (Guid, required) | `Array<{ alertId: string, type: string, severity: string, title: string, message: string, firedAt: DateTimeOffset, status: "Fired" }>` | Real |
-| `get_portfolio_snapshot` | Returns a unified snapshot combining IBKR brokerage positions and Binance crypto holdings. `costBasis` is null when not available from the provider. | `userId` (Guid, required) | `Array<{ symbol: string, assetClass: string, quantity: decimal, costBasis: decimal\|null, currentValue: decimal, provider: string }>` | Real |
-| `list_subscriptions` | Returns detected recurring charges for a user, excluding dismissed ones. | `userId` (Guid, required) | `Array<{ subscriptionId: string, merchant: string, estimatedMonthlyAmount: decimal, currency: string, lastChargedAt: DateOnly, detectedAt: DateTimeOffset }>` | Real |
-| `get_sync_health` | Returns last sync timestamp, status, and error for each provider (Plaid, Monobank, Binance, IBKR). Always returns exactly 4 entries. | `userId` (Guid, required) | `Array<{ provider: string, lastSyncAt: DateTime\|null, status: "ok"\|"error"\|"never_synced", errorMessage: string\|null }>` — one entry per provider | Real |
-| `get_crypto_pnl_detail` | Returns crypto P&L breakdown per asset. Not yet available — CryptoSync P&L calculation is not implemented. | _(none)_ | `{ status: "not_yet_available", reason: string }` | Stub |
-| `get_tax_lots` | Returns tax lot details per holding. Not yet available — tax lot tracking is not implemented in BrokerageSync. | _(none)_ | `{ status: "not_yet_available", reason: string }` | Stub |
-| `get_cashflow_report` | Returns a cashflow report for a given period. Not yet available — cashflow reporting module is not implemented. | _(none)_ | `{ status: "not_yet_available", reason: string }` | Stub |
-| `get_net_worth_history` | Returns historical net worth snapshots over time. Not yet available — historical snapshot storage is not implemented. | _(none)_ | `{ status: "not_yet_available", reason: string }` | Stub |
+| `get_account_summary` | Read | Portfolio | `userId?` | Consolidated banking, crypto, and brokerage balances |
+| `list_transactions` | Read | Banking | `userId?`, `accountId?`, `fromDate?`, `toDate?`, `category?`, `page`, `pageSize` | Paginated transaction listing |
+| `get_budget_status` | Read | Budgets | `userId?`, `year?`, `month?` | Budget utilization for a period |
+| `list_active_alerts` | Read | Alerts | `userId?` | Only unread unresolved alerts |
+| `get_portfolio_snapshot` | Read | Portfolio | `userId?` | Unified brokerage + crypto holdings |
+| `list_subscriptions` | Read | Subscriptions | `userId?` | Detected recurring charges |
+| `get_sync_health` | Read | Sync | `userId?` | Status across Plaid, Monobank, Binance, IBKR |
+| `get_crypto_pnl_detail` | Read | Crypto | `userId?` | Per-asset crypto P&L from trade history |
+| `get_tax_lots` | Read | Brokerage | `userId?` | Current tax lots / average cost data |
+| `get_cashflow_report` | Read | Cashflow | `userId?`, `fromDate?`, `toDate?` | Monthly inflow / outflow / net |
+| `get_net_worth_history` | Read | Wealth | `userId?`, `fromDate?`, `toDate?` | Historical net worth snapshots |
+| `get_macro_calendar` | Read | Research | `from?`, `to?`, `regions?`, `minImportance?` | Scheduled macro events |
+| `get_news_for_ticker` | Read | Research | `ticker`, `since?`, `limit` | Recent ticker-specific news |
+| `get_quotes` | Read | Research | `tickers` | Current quotes for one or more tickers |
+| `search_market_news` | Read | Research | `query?`, `tickers?`, `since?`, `limit` | Search ingested market news |
+| `list_watchlist` | Read | Research | `userId?` | Stored watchlist entries |
+| `list_theses` | Read | Research | `userId?` | Stored investment theses |
+| `add_to_watchlist` | Write | Research | `ticker`, `exchange?`, `note?`, `userId?` | Adds a watchlist entry |
+| `remove_from_watchlist` | Write | Research | `itemId`, `userId?` | Removes a watchlist entry |
+| `save_thesis` | Write | Research | `ticker`, `thesisText`, `keyDataPoints`, `catalysts`, `invalidationTriggers`, `id?`, `userId?` | Creates or updates a thesis |
+| `delete_thesis` | Write | Research | `id`, `userId?` | Deletes a thesis |
+
+## Runtime Model
+
+- The server is assembled in `Program.cs` using `AddMcpServer()`.
+- Tools are discovered by assembly scan via `WithToolsFromAssembly(...)`.
+- Tool identity comes from the MCP SDK attributes (`[McpServerToolType]` and `[McpServerTool]`), not from a separate local tool interface.
+- Each tool is a thin MCP adapter around the existing CQRS handlers in the module projects.
+- Development usually runs over `stdio`; production compose runs the same server over HTTP with request-based JWT auth.

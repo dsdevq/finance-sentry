@@ -11,18 +11,16 @@ namespace FinanceSentry.Mcp.Tools;
 public sealed class GetTaxLotsTool(
     IQueryHandler<GetTaxLotsQuery, TaxLotsResponse> taxLotsHandler,
     IIdentityResolver identity,
-    ILogger<GetTaxLotsTool> logger) : IReadOnlyMcpTool
+    ILogger<GetTaxLotsTool> logger)
 {
     private readonly IQueryHandler<GetTaxLotsQuery, TaxLotsResponse> _taxLotsHandler = taxLotsHandler;
     private readonly IIdentityResolver _identity = identity;
     private readonly ILogger<GetTaxLotsTool> _logger = logger;
 
-    public string ToolName => "get_tax_lots";
-
     [McpServerTool(Name = "get_tax_lots")]
-    [Description("Returns brokerage tax lots — one lot per current position, with average cost basis sourced from IBKR. AverageCost is null for positions where IBKR has not yet reported avgPrice/avgCost. Defaults to the MCP_TOKEN identity when userId is omitted.")]
+    [Description("Returns brokerage tax lots — one lot per current position, with average cost basis sourced from IBKR. AverageCost is null for positions where IBKR has not yet reported avgPrice/avgCost. Defaults to the authenticated MCP identity when userId is omitted.")]
     public async Task<IReadOnlyList<TaxLotEntry>> ExecuteAsync(
-        [Description("Optional user GUID. Defaults to the identity baked into MCP_TOKEN.")] Guid? userId = null,
+        [Description("Optional user GUID. Defaults to the authenticated MCP identity.")] Guid? userId = null,
         CancellationToken cancellationToken = default)
     {
         var effective = userId ?? _identity.GetUserId();

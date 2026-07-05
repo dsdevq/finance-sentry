@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using FinanceSentry.Core.Cqrs;
-using FinanceSentry.Mcp.Abstractions;
 using FinanceSentry.Modules.Research.API.Responses;
 using FinanceSentry.Modules.Research.Application.Queries;
 using ModelContextProtocol.Server;
@@ -9,10 +8,8 @@ namespace FinanceSentry.Mcp.Tools;
 
 [McpServerToolType]
 public sealed class SearchMarketNewsTool(
-    IQueryHandler<SearchMarketNewsQuery, IReadOnlyList<NewsArticleDto>> handler) : IReadOnlyMcpTool
+    IQueryHandler<SearchMarketNewsQuery, IReadOnlyList<NewsArticleDto>> handler)
 {
-    public string ToolName => "search_market_news";
-
     [McpServerTool(Name = "search_market_news")]
     [Description("Search ingested market news (Yahoo Finance RSS per ticker + Fed press releases). Filter by keyword, tickers, and cutoff date. Returns most-recent-first. Sources are ingested every 30 minutes for tickers Denys holds or watches, and every 6 hours for Fed press.")]
     public async Task<IReadOnlyList<NewsArticleDto>> ExecuteAsync(

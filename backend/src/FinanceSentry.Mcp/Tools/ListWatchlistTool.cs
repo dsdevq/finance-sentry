@@ -10,14 +10,12 @@ namespace FinanceSentry.Mcp.Tools;
 [McpServerToolType]
 public sealed class ListWatchlistTool(
     IQueryHandler<GetWatchlistQuery, IReadOnlyList<WatchlistItemDto>> handler,
-    IIdentityResolver identity) : IReadOnlyMcpTool
+    IIdentityResolver identity)
 {
-    public string ToolName => "list_watchlist";
-
     [McpServerTool(Name = "list_watchlist")]
-    [Description("Returns the caller's watchlist (tickers tracked but not necessarily held). Defaults to MCP_TOKEN identity when userId is omitted.")]
+    [Description("Returns the caller's watchlist (tickers tracked but not necessarily held). Defaults to the authenticated MCP identity when userId is omitted.")]
     public async Task<IReadOnlyList<WatchlistItemDto>> ExecuteAsync(
-        [Description("Optional user GUID. Defaults to MCP_TOKEN identity.")] Guid? userId = null,
+        [Description("Optional user GUID. Defaults to the authenticated MCP identity.")] Guid? userId = null,
         CancellationToken cancellationToken = default)
     {
         var effective = userId ?? identity.GetUserId();

@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using FinanceSentry.Core.Cqrs;
-using FinanceSentry.Mcp.Abstractions;
 using FinanceSentry.Modules.Research.API.Responses;
 using FinanceSentry.Modules.Research.Application.Queries;
 using ModelContextProtocol.Server;
@@ -9,10 +8,8 @@ namespace FinanceSentry.Mcp.Tools;
 
 [McpServerToolType]
 public sealed class GetMacroCalendarTool(
-    IQueryHandler<GetMacroCalendarQuery, IReadOnlyList<MacroEventDto>> handler) : IReadOnlyMcpTool
+    IQueryHandler<GetMacroCalendarQuery, IReadOnlyList<MacroEventDto>> handler)
 {
-    public string ToolName => "get_macro_calendar";
-
     [McpServerTool(Name = "get_macro_calendar")]
     [Description("Returns scheduled macro events (FOMC, CPI, NFP, ECB) in a date range. Filter by region (US, EU) and minimum importance (low/medium/high). Use to flag events in the next 24-48h during ledger-scan.")]
     public async Task<IReadOnlyList<MacroEventDto>> ExecuteAsync(

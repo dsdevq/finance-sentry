@@ -11,12 +11,8 @@ namespace FinanceSentry.Mcp.Tools;
 [McpServerToolType]
 public sealed class SaveThesisTool(
     ICommandHandler<SaveThesisCommand, ThesisDto> handler,
-    IIdentityResolver identity) : IReadOnlyMcpTool
+    IIdentityResolver identity)
 {
-    public string ToolName => "save_thesis";
-
-    public bool IsReadOnly => false;
-
     [McpServerTool(Name = "save_thesis")]
     [Description("Creates or updates an investment thesis. Pass id=null to create; pass an existing id to update. At least one invalidationTrigger is expected for thesis-break detection to work.")]
     public async Task<ThesisDto?> ExecuteAsync(
@@ -26,7 +22,7 @@ public sealed class SaveThesisTool(
         [Description("Upcoming catalysts (dates + events) that could confirm or break the thesis.")] IReadOnlyList<ThesisCatalyst> catalysts,
         [Description("Invalidation triggers — quantitative conditions that mark the thesis broken (e.g. gross_margin<40).")] IReadOnlyList<ThesisInvalidationTrigger> invalidationTriggers,
         [Description("Thesis id when updating; null to create.")] Guid? id = null,
-        [Description("Optional user GUID. Defaults to MCP_TOKEN identity.")] Guid? userId = null,
+        [Description("Optional user GUID. Defaults to the authenticated MCP identity.")] Guid? userId = null,
         CancellationToken cancellationToken = default)
     {
         var effective = userId ?? identity.GetUserId();

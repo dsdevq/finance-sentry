@@ -12,7 +12,7 @@ namespace FinanceSentry.Mcp.Tools;
 public sealed class GetCashflowReportTool(
     IQueryHandler<GetAllTransactionsQuery, AllTransactionsResult> transactionsHandler,
     IIdentityResolver identity,
-    ILogger<GetCashflowReportTool> logger) : IReadOnlyMcpTool
+    ILogger<GetCashflowReportTool> logger)
 {
     private const int MaxMonthsBack = 24;
     private const int DefaultMonthsBack = 6;
@@ -21,12 +21,10 @@ public sealed class GetCashflowReportTool(
     private readonly IIdentityResolver _identity = identity;
     private readonly ILogger<GetCashflowReportTool> _logger = logger;
 
-    public string ToolName => "get_cashflow_report";
-
     [McpServerTool(Name = "get_cashflow_report")]
-    [Description("Returns a monthly cashflow report (inflow, outflow, net) aggregated from bank transactions. Negative amounts are treated as outflows, positive as inflows. Defaults to the MCP_TOKEN identity when userId is omitted.")]
+    [Description("Returns a monthly cashflow report (inflow, outflow, net) aggregated from bank transactions. Negative amounts are treated as outflows, positive as inflows. Defaults to the authenticated MCP identity when userId is omitted.")]
     public async Task<IReadOnlyList<CashflowReportEntry>> ExecuteAsync(
-        [Description("Optional user GUID. Defaults to the identity baked into MCP_TOKEN.")] Guid? userId = null,
+        [Description("Optional user GUID. Defaults to the authenticated MCP identity.")] Guid? userId = null,
         [Description("Optional inclusive start date. Defaults to 6 months ago.")] DateOnly? fromDate = null,
         [Description("Optional inclusive end date. Defaults to today.")] DateOnly? toDate = null,
         CancellationToken cancellationToken = default)

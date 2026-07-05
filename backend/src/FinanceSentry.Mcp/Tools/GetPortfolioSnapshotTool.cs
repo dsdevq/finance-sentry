@@ -13,19 +13,17 @@ public sealed class GetPortfolioSnapshotTool(
     IQueryHandler<GetBrokerageHoldingsQuery, BrokerageHoldingsResponse> brokerageHandler,
     IQueryHandler<GetCryptoHoldingsQuery, CryptoHoldingsResponse> cryptoHandler,
     IIdentityResolver identity,
-    ILogger<GetPortfolioSnapshotTool> logger) : IReadOnlyMcpTool
+    ILogger<GetPortfolioSnapshotTool> logger)
 {
     private readonly IQueryHandler<GetBrokerageHoldingsQuery, BrokerageHoldingsResponse> _brokerageHandler = brokerageHandler;
     private readonly IQueryHandler<GetCryptoHoldingsQuery, CryptoHoldingsResponse> _cryptoHandler = cryptoHandler;
     private readonly IIdentityResolver _identity = identity;
     private readonly ILogger<GetPortfolioSnapshotTool> _logger = logger;
 
-    public string ToolName => "get_portfolio_snapshot";
-
     [McpServerTool(Name = "get_portfolio_snapshot")]
-    [Description("Returns a unified portfolio snapshot combining IBKR brokerage positions and Binance crypto holdings. costBasis is null when not available. Defaults to the MCP_TOKEN identity when userId is omitted.")]
+    [Description("Returns a unified portfolio snapshot combining IBKR brokerage positions and Binance crypto holdings. costBasis is null when not available. Defaults to the authenticated MCP identity when userId is omitted.")]
     public async Task<IReadOnlyList<PortfolioSnapshotEntry>> ExecuteAsync(
-        [Description("Optional user GUID. Defaults to the identity baked into MCP_TOKEN.")] Guid? userId = null,
+        [Description("Optional user GUID. Defaults to the authenticated MCP identity.")] Guid? userId = null,
         CancellationToken cancellationToken = default)
     {
         var effective = userId ?? _identity.GetUserId();
