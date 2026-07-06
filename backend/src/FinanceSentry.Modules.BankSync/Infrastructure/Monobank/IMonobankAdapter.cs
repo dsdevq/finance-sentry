@@ -10,5 +10,13 @@ public interface IMonobankAdapter
         string token, string accountId, DateTimeOffset from, DateTimeOffset to,
         CancellationToken ct = default);
 
+    /// <summary>
+    /// Fetches one statement window and maps it to categorized transaction candidates
+    /// (MCC resolved to a category). Window must be ≤ 31 days per Monobank's API limit.
+    /// </summary>
+    Task<IReadOnlyList<Application.Services.TransactionCandidate>> GetCandidatesAsync(
+        string token, string externalAccountId, Guid accountId, Guid userId,
+        DateTimeOffset from, DateTimeOffset to, CancellationToken ct = default);
+
     Task SetWebhookAsync(string token, string url, CancellationToken ct = default);
 }

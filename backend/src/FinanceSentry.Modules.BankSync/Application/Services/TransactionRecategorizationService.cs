@@ -5,6 +5,7 @@ using FinanceSentry.Modules.BankSync.Application.Services.CategoryMapping;
 using FinanceSentry.Modules.BankSync.Domain;
 using FinanceSentry.Modules.BankSync.Domain.Interfaces;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
+using FinanceSentry.Modules.BankSync.Infrastructure.Monobank;
 using FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
 using FinanceSentry.Modules.BankSync.Infrastructure.TrueLayer;
 using Microsoft.Extensions.Logging;
@@ -33,6 +34,7 @@ public class TransactionRecategorizationService(
     ITransactionDeduplicationService dedup,
     IBankProviderFactory providerFactory,
     IMonobankCredentialRepository monobankCredentials,
+    IMonobankAdapter monobankAdapter,
     ITrueLayerConnectionRepository truelayerConnections,
     ITrueLayerClient truelayerClient,
     ICategoryResolver categoryResolver,
@@ -40,6 +42,10 @@ public class TransactionRecategorizationService(
 {
     // Plaid /transactions/sync is paged; cap iterations so a bad cursor can't loop forever.
     private const int MaxPlaidPages = 50;
+
+    // Monobank statement API caps each request at 31 days and ~1 request per 60s per token.
+    private const int MonobankWindowDays = 31;
+    private static readonly TimeSpan MonobankThrottle = TimeSpan.FromSeconds(61);
 
     private readonly IBankAccountRepository _accounts = accounts;
     private readonly ITransactionRepository _transactions = transactions;
@@ -49,10 +55,14 @@ public class TransactionRecategorizationService(
     private readonly ITransactionDeduplicationService _dedup = dedup;
     private readonly IBankProviderFactory _providerFactory = providerFactory;
     private readonly IMonobankCredentialRepository _monobankCredentials = monobankCredentials;
+    private readonly IMonobankAdapter _monobankAdapter = monobankAdapter;
     private readonly ITrueLayerConnectionRepository _truelayerConnections = truelayerConnections;
     private readonly ITrueLayerClient _truelayerClient = truelayerClient;
     private readonly ICategoryResolver _categoryResolver = categoryResolver;
     private readonly ILogger<TransactionRecategorizationService> _logger = logger;
+
+    // Guarantees ≥ MonobankThrottle spacing between statement calls across the whole run.
+    private bool _monobankCalled;
 
     public async Task<RecategorizationResult> RecategorizeUserAsync(Guid userId, CancellationToken ct = default)
     {
@@ -90,7 +100,11 @@ public class TransactionRecategorizationService(
         return updated;
     }
 
-    /// <summary>Pass 2 — provider re-fetch for rows with no stored raw signal (pre-overhaul rows).</summary>
+    /// <summary>
+    /// Pass 2 — provider re-fetch for rows with no stored raw signal (pre-overhaul rows).
+    /// Plaid pages its full history; Monobank walks 31-day windows from each account's oldest
+    /// uncategorized row to now (rate-limited); TrueLayer covers its ~90-day window.
+    /// </summary>
     private async Task<int> ReFetchMissingSignalAsync(
         IReadOnlyList<BankAccount> userAccounts, IReadOnlyList<Transaction> txns, CancellationToken ct)
     {
@@ -108,7 +122,7 @@ public class TransactionRecategorizationService(
             IReadOnlyList<TransactionCandidate> candidates;
             try
             {
-                candidates = await FetchCandidatesAsync(account, ct);
+                candidates = await FetchCandidatesAsync(account, rows, ct);
             }
             catch (Exception ex)
             {
@@ -146,11 +160,11 @@ public class TransactionRecategorizationService(
     }
 
     private async Task<IReadOnlyList<TransactionCandidate>> FetchCandidatesAsync(
-        BankAccount account, CancellationToken ct)
+        BankAccount account, IReadOnlyList<Transaction> rows, CancellationToken ct)
     {
         return account.Provider switch
         {
-            "monobank" => await FetchMonobankAsync(account, ct),
+            "monobank" => await FetchMonobankAsync(account, rows, ct),
             "truelayer" => await FetchTrueLayerAsync(account, ct),
             _ => await FetchPlaidAsync(account, ct),
         };
@@ -177,7 +191,8 @@ public class TransactionRecategorizationService(
         return all;
     }
 
-    private async Task<IReadOnlyList<TransactionCandidate>> FetchMonobankAsync(BankAccount account, CancellationToken ct)
+    private async Task<IReadOnlyList<TransactionCandidate>> FetchMonobankAsync(
+        BankAccount account, IReadOnlyList<Transaction> rows, CancellationToken ct)
     {
         if (account.MonobankCredentialId is null)
             throw new InvalidOperationException($"Monobank account {account.Id} has no credential id.");
@@ -186,10 +201,34 @@ public class TransactionRecategorizationService(
             ?? throw new InvalidOperationException($"Monobank credential {account.MonobankCredentialId} not found.");
         var token = _encryption.Decrypt(cred.EncryptedToken, cred.Iv, cred.AuthTag, cred.KeyVersion);
 
-        // since:null → the adapter's 90-day windowed import (Monobank caps windows at 31 days).
-        var (candidates, _) = await _providerFactory.Resolve("monobank")
-            .SyncTransactionsAsync(token, account.ExternalAccountId, account.Id, account.UserId, null, ct);
-        return candidates;
+        // Cover the full span of this account's uncategorized rows, oldest → now, in ≤31-day
+        // windows (Monobank's per-request cap), spaced to respect the per-token rate limit.
+        var oldest = rows.Min(t => t.PostedDate ?? t.TransactionDate);
+        var windowStart = new DateTimeOffset(DateTime.SpecifyKind(oldest.AddDays(-1), DateTimeKind.Utc));
+        var now = DateTimeOffset.UtcNow;
+
+        var all = new List<TransactionCandidate>();
+        while (windowStart < now)
+        {
+            var windowEnd = windowStart.AddDays(MonobankWindowDays);
+            if (windowEnd > now)
+                windowEnd = now;
+
+            if (_monobankCalled)
+                await Task.Delay(MonobankThrottle, ct);
+            _monobankCalled = true;
+
+            var candidates = await _monobankAdapter.GetCandidatesAsync(
+                token, account.ExternalAccountId, account.Id, account.UserId, windowStart, windowEnd, ct);
+            all.AddRange(candidates);
+
+            _logger.LogInformation(
+                "Monobank window {From:yyyy-MM-dd}..{To:yyyy-MM-dd} for account {AccountId}: {Count} transactions.",
+                windowStart, windowEnd, account.Id, candidates.Count);
+
+            windowStart = windowEnd;
+        }
+        return all;
     }
 
     private async Task<IReadOnlyList<TransactionCandidate>> FetchTrueLayerAsync(BankAccount account, CancellationToken ct)

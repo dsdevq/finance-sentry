@@ -4,8 +4,9 @@
 #
 # Rows ingested before the category overhaul never stored their raw MCC/PFC, so their
 # category cannot be recomputed from the database alone — this re-fetches them from the
-# bank providers (Plaid full history; Monobank/TrueLayer last ~90 days) and updates the
-# stored rows in place. Safe to re-run; it only touches category fields.
+# bank providers (Plaid full history; Monobank full history in 31-day windows, rate-limited;
+# TrueLayer last ~90 days) and updates the stored rows in place. Safe to re-run; it only
+# touches category fields. Monobank history can take a while (one API call per ~minute).
 #
 # Runs a throwaway instance of the API inside the already-running container, so it reuses
 # the app's credentials, decryption key, and provider clients. It does NOT start the web

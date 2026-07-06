@@ -89,6 +89,14 @@ public class MonobankAdapter(MonobankHttpClient client, ICategoryResolver catego
     Task IBankProvider.DisconnectAsync(string credential, CancellationToken ct)
         => Task.CompletedTask;
 
+    public async Task<IReadOnlyList<TransactionCandidate>> GetCandidatesAsync(
+        string token, string externalAccountId, Guid accountId, Guid userId,
+        DateTimeOffset from, DateTimeOffset to, CancellationToken ct = default)
+    {
+        var txns = await _client.GetStatementsAsync(token, externalAccountId, from, to, ct);
+        return MapTransactions(txns, accountId, userId).ToList();
+    }
+
     private IEnumerable<TransactionCandidate> MapTransactions(
         IReadOnlyList<MonobankTransaction> txns, Guid accountId, Guid userId)
     {
