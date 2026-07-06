@@ -12,6 +12,8 @@ public class BankSyncDbContext(DbContextOptions<BankSyncDbContext> options) : Db
     public DbSet<AuditLog> AuditLogs { get; set; } = null!;
     public DbSet<MonobankCredential> MonobankCredentials { get; set; } = null!;
     public DbSet<TrueLayerConnection> TrueLayerConnections { get; set; } = null!;
+    public DbSet<Category> Categories { get; set; } = null!;
+    public DbSet<MccCategory> MccCategories { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -77,12 +79,30 @@ public class BankSyncDbContext(DbContextOptions<BankSyncDbContext> options) : Db
         tb.Property(t => t.TransactionType).HasMaxLength(50);
         tb.Property(t => t.MerchantName).HasMaxLength(255);
         tb.Property(t => t.MerchantCategory).HasMaxLength(100).IsRequired(false);
+        tb.Property(t => t.Mcc).IsRequired(false);
+        tb.Property(t => t.SourceCategory).HasMaxLength(100).IsRequired(false);
         tb.Property(t => t.IsActive).HasDefaultValue(true);
         tb.Property(t => t.DeletedAt).IsRequired(false);
         tb.Property(t => t.ArchivedReason).HasMaxLength(50).IsRequired(false);
         tb.HasQueryFilter(t => t.IsActive);
         tb.HasIndex(t => new { t.AccountId, t.IsActive }).HasDatabaseName("idx_transaction_account_active");
         tb.Property(t => t.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+        var cab = modelBuilder.Entity<Category>();
+        cab.ToTable("categories");
+        cab.HasKey(c => c.Key);
+        cab.Property(c => c.Key).HasMaxLength(100);
+        cab.Property(c => c.Label).IsRequired().HasMaxLength(100);
+        cab.Property(c => c.SortOrder).IsRequired();
+
+        var mccb = modelBuilder.Entity<MccCategory>();
+        mccb.ToTable("mcc_categories");
+        mccb.HasKey(mc => mc.Mcc);
+        mccb.Property(mc => mc.Mcc).ValueGeneratedNever();
+        mccb.Property(mc => mc.CategoryKey).IsRequired().HasMaxLength(100);
+        mccb.Property(mc => mc.Description).IsRequired().HasMaxLength(255);
+        mccb.HasIndex(mc => mc.CategoryKey).HasDatabaseName("idx_mcc_category_category_key");
+        mccb.HasOne<Category>().WithMany().HasForeignKey(mc => mc.CategoryKey).OnDelete(DeleteBehavior.Restrict);
 
         var sjb = modelBuilder.Entity<SyncJob>();
         sjb.HasKey(sj => sj.Id);

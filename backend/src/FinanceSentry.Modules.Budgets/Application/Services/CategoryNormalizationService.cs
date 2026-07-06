@@ -1,5 +1,6 @@
 namespace FinanceSentry.Modules.Budgets.Application.Services;
 
+using FinanceSentry.Modules.BankSync.Domain;
 using FinanceSentry.Modules.Budgets.Domain;
 
 public class CategoryNormalizationService : ICategoryNormalizationService
@@ -7,28 +8,23 @@ public class CategoryNormalizationService : ICategoryNormalizationService
     public string Normalize(string? rawCategory)
     {
         if (string.IsNullOrWhiteSpace(rawCategory))
-            return "other";
+            return CategoryKeys.Uncategorized;
 
-        var lower = rawCategory.ToLowerInvariant();
-        if (lower == rawCategory && CategoryTaxonomy.ValidKeys.Contains(rawCategory))
-            return rawCategory;
+        var upper = rawCategory.Trim().ToUpperInvariant();
+        if (CategoryTaxonomy.ValidKeys.Contains(upper))
+            return upper;
 
-        foreach (var (key, rawValues) in CategoryTaxonomy.RawToKey)
-        {
-            foreach (var raw in rawValues)
-            {
-                if (raw.Equals(rawCategory, StringComparison.OrdinalIgnoreCase))
-                    return key;
-            }
-        }
+        if (CategoryTaxonomy.LegacyKeyMap.TryGetValue(rawCategory.Trim(), out var mapped))
+            return mapped;
 
-        return "other";
+        return CategoryKeys.Uncategorized;
     }
 
     public string GetLabel(string categoryKey)
     {
-        return CategoryTaxonomy.CategoryLabels.TryGetValue(categoryKey, out var label)
+        var normalized = Normalize(categoryKey);
+        return CategoryTaxonomy.CategoryLabels.TryGetValue(normalized, out var label)
             ? label
-            : "Other";
+            : "Uncategorized";
     }
 }

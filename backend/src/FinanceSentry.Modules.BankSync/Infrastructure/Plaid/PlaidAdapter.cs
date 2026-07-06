@@ -4,10 +4,10 @@ using FinanceSentry.Modules.BankSync.Application.Services;
 using FinanceSentry.Modules.BankSync.Application.Services.CategoryMapping;
 using FinanceSentry.Modules.BankSync.Domain.Interfaces;
 
-public class PlaidAdapter(IPlaidClient client, PlaidCategoryMapper categoryMapper) : IPlaidAdapter, IBankProvider
+public class PlaidAdapter(IPlaidClient client, ICategoryResolver categoryResolver) : IPlaidAdapter, IBankProvider
 {
     private readonly IPlaidClient _client = client;
-    private readonly PlaidCategoryMapper _categoryMapper = categoryMapper;
+    private readonly ICategoryResolver _categoryResolver = categoryResolver;
 
     public string ProviderName => "plaid";
 
@@ -72,8 +72,9 @@ public class PlaidAdapter(IPlaidClient client, PlaidCategoryMapper categoryMappe
                 IsPending: t.Pending,
                 TransactionType: t.Amount > 0 ? "debit" : "credit",
                 MerchantName: t.MerchantName,
-                MerchantCategory: _categoryMapper.Map(t.PersonalFinanceCategory),
-                PlaidTransactionId: t.TransactionId))
+                MerchantCategory: _categoryResolver.ResolvePlaidPrimary(t.PersonalFinanceCategory),
+                PlaidTransactionId: t.TransactionId,
+                SourceCategory: t.PersonalFinanceCategory))
             .ToList();
         return (candidates, null);
     }
@@ -97,8 +98,9 @@ public class PlaidAdapter(IPlaidClient client, PlaidCategoryMapper categoryMappe
                 IsPending: t.Pending,
                 TransactionType: t.Amount > 0 ? "debit" : "credit",
                 MerchantName: t.MerchantName,
-                MerchantCategory: _categoryMapper.Map(t.PersonalFinanceCategory),
-                PlaidTransactionId: t.TransactionId))
+                MerchantCategory: _categoryResolver.ResolvePlaidPrimary(t.PersonalFinanceCategory),
+                PlaidTransactionId: t.TransactionId,
+                SourceCategory: t.PersonalFinanceCategory))
             .ToList();
         return (candidates, response.NextCursor);
     }

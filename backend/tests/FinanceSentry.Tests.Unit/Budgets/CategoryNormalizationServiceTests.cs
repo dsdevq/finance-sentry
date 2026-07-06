@@ -9,45 +9,29 @@ public class CategoryNormalizationServiceTests
     private readonly CategoryNormalizationService _sut = new();
 
     [Theory]
-    [InlineData("Food and Drink", "food_and_drink")]
-    [InlineData("Restaurants", "food_and_drink")]
-    [InlineData("Coffee Shop", "food_and_drink")]
-    [InlineData("Groceries", "food_and_drink")]
-    [InlineData("Rent", "housing")]
-    [InlineData("Mortgage & Rent", "housing")]
-    [InlineData("Home Improvement", "housing")]
-    [InlineData("Travel", "transport")]
-    [InlineData("Gas Stations", "transport")]
-    [InlineData("Taxi", "transport")]
-    [InlineData("Public Transportation", "transport")]
-    [InlineData("Shops", "shopping")]
-    [InlineData("Clothing", "shopping")]
-    [InlineData("Recreation", "entertainment")]
-    [InlineData("Movies and DVDs", "entertainment")]
-    [InlineData("Healthcare", "health")]
-    [InlineData("Pharmacies", "health")]
-    [InlineData("Utilities", "utilities")]
-    [InlineData("Electric", "utilities")]
-    [InlineData("Airlines and Aviation Services", "travel")]
-    [InlineData("Hotels and Motels", "travel")]
-    public void Normalize_KnownRawCategory_ReturnsCorrectKey(string raw, string expectedKey)
+    [InlineData("food_and_drink", "FOOD_AND_DRINK")]
+    [InlineData("housing", "HOME_IMPROVEMENT")]
+    [InlineData("transport", "TRANSPORTATION")]
+    [InlineData("shopping", "GENERAL_MERCHANDISE")]
+    [InlineData("entertainment", "ENTERTAINMENT")]
+    [InlineData("health", "MEDICAL")]
+    [InlineData("utilities", "RENT_AND_UTILITIES")]
+    [InlineData("travel", "TRAVEL")]
+    [InlineData("other", "UNCATEGORIZED")]
+    public void Normalize_LegacyKey_RemapsToAdoptedKey(string legacy, string expectedKey)
     {
-        _sut.Normalize(raw).Should().Be(expectedKey);
+        _sut.Normalize(legacy).Should().Be(expectedKey);
     }
 
     [Theory]
-    [InlineData("food_and_drink", "food_and_drink")]
-    [InlineData("housing", "housing")]
-    [InlineData("transport", "transport")]
-    [InlineData("shopping", "shopping")]
-    [InlineData("entertainment", "entertainment")]
-    [InlineData("health", "health")]
-    [InlineData("utilities", "utilities")]
-    [InlineData("travel", "travel")]
-    [InlineData("other", "other")]
-    public void Normalize_InternalKey_ReturnsSameKey(string key, string expectedKey)
+    [InlineData("FOOD_AND_DRINK")]
+    [InlineData("GENERAL_MERCHANDISE")]
+    [InlineData("TRANSPORTATION")]
+    [InlineData("MEDICAL")]
+    [InlineData("UNCATEGORIZED")]
+    public void Normalize_AdoptedKey_ReturnsSameKey(string key)
     {
-        _sut.Normalize(key).Should().Be(expectedKey);
+        _sut.Normalize(key).Should().Be(key);
     }
 
     [Theory]
@@ -56,29 +40,32 @@ public class CategoryNormalizationServiceTests
     [InlineData("   ")]
     [InlineData("unrecognised_category_xyz")]
     [InlineData("PayPal")]
-    public void Normalize_NullOrUnknown_ReturnsOther(string? raw)
+    public void Normalize_NullOrUnknown_ReturnsUncategorized(string? raw)
     {
-        _sut.Normalize(raw).Should().Be("other");
+        _sut.Normalize(raw).Should().Be("UNCATEGORIZED");
     }
 
     [Theory]
-    [InlineData("food_and_drink", "Food & Drink")]
-    [InlineData("housing", "Housing")]
-    [InlineData("transport", "Transport")]
-    [InlineData("shopping", "Shopping")]
-    [InlineData("entertainment", "Entertainment")]
-    [InlineData("health", "Health & Fitness")]
-    [InlineData("utilities", "Utilities")]
-    [InlineData("travel", "Travel")]
-    [InlineData("other", "Other")]
-    public void GetLabel_ValidKey_ReturnsDisplayName(string key, string expectedLabel)
+    [InlineData("FOOD_AND_DRINK", "Food & Drink")]
+    [InlineData("GENERAL_MERCHANDISE", "Shopping")]
+    [InlineData("TRANSPORTATION", "Transport")]
+    [InlineData("MEDICAL", "Health")]
+    [InlineData("RENT_AND_UTILITIES", "Bills & Utilities")]
+    [InlineData("UNCATEGORIZED", "Uncategorized")]
+    public void GetLabel_AdoptedKey_ReturnsDisplayName(string key, string expectedLabel)
     {
         _sut.GetLabel(key).Should().Be(expectedLabel);
     }
 
     [Fact]
-    public void GetLabel_UnknownKey_ReturnsOtherFallback()
+    public void GetLabel_LegacyKey_ReturnsAdoptedDisplayName()
     {
-        _sut.GetLabel("nonexistent").Should().Be("Other");
+        _sut.GetLabel("food_and_drink").Should().Be("Food & Drink");
+    }
+
+    [Fact]
+    public void GetLabel_UnknownKey_ReturnsUncategorizedFallback()
+    {
+        _sut.GetLabel("nonexistent").Should().Be("Uncategorized");
     }
 }

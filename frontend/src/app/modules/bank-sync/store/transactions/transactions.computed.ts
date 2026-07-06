@@ -1,8 +1,8 @@
-import {computed, type Signal} from '@angular/core';
+import {computed, inject, type Signal} from '@angular/core';
 
+import {CategoryStore} from '../../../../shared/store/categories/categories.store';
 import {type Transaction} from '../../models/transaction/transaction.model';
 import {
-  TRANSACTION_CATEGORY_FILTER_OPTIONS,
   TRANSACTION_DATE_RANGE_FILTER_OPTIONS,
   TRANSACTION_PROVIDER_FILTER_OPTIONS,
   type TransactionDateRangeFilter,
@@ -38,9 +38,10 @@ function dateRangeCutoff(range: TransactionDateRangeFilter, now: Date): Nullable
 }
 
 export function transactionsComputed(store: ComputedStore) {
+  const categoryStore = inject(CategoryStore);
   return {
     providerFilters: computed(() => TRANSACTION_PROVIDER_FILTER_OPTIONS),
-    categoryFilters: computed(() => TRANSACTION_CATEGORY_FILTER_OPTIONS),
+    categoryFilters: computed(() => categoryStore.filterOptions()),
     dateRangeFilters: computed(() => TRANSACTION_DATE_RANGE_FILTER_OPTIONS),
     filteredTransactions: computed(() => {
       const providers = store.selectedProviders();
@@ -55,7 +56,7 @@ export function transactionsComputed(store: ComputedStore) {
           }
         }
         if (categories.length > 0) {
-          const category = tx.merchantCategory?.toLowerCase();
+          const category = tx.merchantCategory;
           if (!category || !categories.includes(category)) {
             return false;
           }

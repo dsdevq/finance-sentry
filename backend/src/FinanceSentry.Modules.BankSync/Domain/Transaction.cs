@@ -58,10 +58,22 @@ public class Transaction : Entity
     public string? MerchantName { get; set; }
 
     /// <summary>
-    /// Merchant category as returned by Plaid (e.g., "Groceries", "Transport").
-    /// Used for spending statistics in Phase 5.
+    /// Resolved canonical category key (a <see cref="Category.Key"/>, e.g. "FOOD_AND_DRINK").
+    /// Derived at ingestion from the raw provider signal via the category resolver.
     /// </summary>
     public string? MerchantCategory { get; set; }
+
+    /// <summary>
+    /// Raw ISO 18245 Merchant Category Code from the provider (Monobank), if any.
+    /// Retained so the category can be re-resolved when the MCC map changes.
+    /// </summary>
+    public int? Mcc { get; set; }
+
+    /// <summary>
+    /// Raw provider-native category value (e.g. Plaid PFC primary), if any.
+    /// Retained so the category can be re-resolved without re-syncing the provider.
+    /// </summary>
+    public string? SourceCategory { get; set; }
 
     /// <summary>
     /// Denormalized user FK for efficient user-scoped queries without joining BankAccount.

@@ -54,7 +54,7 @@ public class BudgetsContractTests(BudgetsApiFactory factory) : IClassFixture<Bud
     {
         var anon = _factory.CreateClient();
         var response = await anon.PostAsJsonAsync("/api/v1/budgets",
-            new { category = "food_and_drink", monthlyLimit = 400m });
+            new { category = "FOOD_AND_DRINK", monthlyLimit = 400m });
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
@@ -72,7 +72,7 @@ public class BudgetsContractTests(BudgetsApiFactory factory) : IClassFixture<Bud
     public async Task CreateBudget_ZeroLimit_Returns400()
     {
         var response = await _client.PostAsJsonAsync("/api/v1/budgets",
-            new { category = "food_and_drink", monthlyLimit = 0m });
+            new { category = "FOOD_AND_DRINK", monthlyLimit = 0m });
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var body = await response.Content.ReadFromJsonAsync<ErrorShape>();
         body!.ErrorCode.Should().Be("BUDGET_INVALID_LIMIT");
@@ -82,11 +82,11 @@ public class BudgetsContractTests(BudgetsApiFactory factory) : IClassFixture<Bud
     public async Task CreateBudget_DuplicateCategory_Returns409()
     {
         _factory.BudgetRepoMock
-            .Setup(r => r.FindByUserAndCategoryAsync(It.IsAny<Guid>(), "food_and_drink", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Budget.Create(Guid.NewGuid(), "food_and_drink", 400m, "USD"));
+            .Setup(r => r.FindByUserAndCategoryAsync(It.IsAny<Guid>(), "FOOD_AND_DRINK", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Budget.Create(Guid.NewGuid(), "FOOD_AND_DRINK", 400m, "USD"));
 
         var response = await _client.PostAsJsonAsync("/api/v1/budgets",
-            new { category = "food_and_drink", monthlyLimit = 400m });
+            new { category = "FOOD_AND_DRINK", monthlyLimit = 400m });
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
         var body = await response.Content.ReadFromJsonAsync<ErrorShape>();
         body!.ErrorCode.Should().Be("BUDGET_DUPLICATE_CATEGORY");
@@ -95,20 +95,20 @@ public class BudgetsContractTests(BudgetsApiFactory factory) : IClassFixture<Bud
     [Fact]
     public async Task CreateBudget_Valid_Returns201WithDto()
     {
-        var budget = Budget.Create(_factory.TestUserId, "food_and_drink", 400m, "USD");
+        var budget = Budget.Create(_factory.TestUserId, "FOOD_AND_DRINK", 400m, "USD");
         _factory.BudgetRepoMock
-            .Setup(r => r.FindByUserAndCategoryAsync(It.IsAny<Guid>(), "food_and_drink", It.IsAny<CancellationToken>()))
+            .Setup(r => r.FindByUserAndCategoryAsync(It.IsAny<Guid>(), "FOOD_AND_DRINK", It.IsAny<CancellationToken>()))
             .ReturnsAsync((Budget?)null);
         _factory.BudgetRepoMock
             .Setup(r => r.CreateAsync(It.IsAny<Budget>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Budget b, CancellationToken _) => b);
 
         var response = await _client.PostAsJsonAsync("/api/v1/budgets",
-            new { category = "food_and_drink", monthlyLimit = 400m });
+            new { category = "FOOD_AND_DRINK", monthlyLimit = 400m });
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         var body = await response.Content.ReadFromJsonAsync<BudgetDtoShape>();
         body.Should().NotBeNull();
-        body!.Category.Should().Be("food_and_drink");
+        body!.Category.Should().Be("FOOD_AND_DRINK");
         body.CategoryLabel.Should().Be("Food & Drink");
         body.MonthlyLimit.Should().Be(400m);
     }
@@ -149,7 +149,7 @@ public class BudgetsContractTests(BudgetsApiFactory factory) : IClassFixture<Bud
     [Fact]
     public async Task UpdateBudget_Valid_Returns200WithUpdatedDto()
     {
-        var budget = Budget.Create(_factory.TestUserId, "food_and_drink", 400m, "USD");
+        var budget = Budget.Create(_factory.TestUserId, "FOOD_AND_DRINK", 400m, "USD");
         _factory.BudgetRepoMock
             .Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(budget);
@@ -188,7 +188,7 @@ public class BudgetsContractTests(BudgetsApiFactory factory) : IClassFixture<Bud
     [Fact]
     public async Task DeleteBudget_Existing_Returns204()
     {
-        var budget = Budget.Create(_factory.TestUserId, "housing", 2000m, "USD");
+        var budget = Budget.Create(_factory.TestUserId, "HOME_IMPROVEMENT", 2000m, "USD");
         _factory.BudgetRepoMock
             .Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(budget);

@@ -1,58 +1,56 @@
 namespace FinanceSentry.Tests.Unit.BankSync.Infrastructure;
 
 using FinanceSentry.Modules.BankSync.Application.Services.CategoryMapping;
+using FinanceSentry.Modules.BankSync.Domain;
+using FinanceSentry.Modules.BankSync.Infrastructure.Categorization;
 using FluentAssertions;
 using Xunit;
 
 public class CategoryMappingTests
 {
     [Theory]
-    [InlineData("FOOD_AND_DRINK", "food_and_drink")]
-    [InlineData("GENERAL_MERCHANDISE", "shopping")]
-    [InlineData("PERSONAL_CARE", "shopping")]
-    [InlineData("ENTERTAINMENT", "entertainment")]
-    [InlineData("TRAVEL", "travel")]
-    [InlineData("TRANSPORTATION", "transport")]
-    [InlineData("RENT_AND_UTILITIES", "utilities")]
-    [InlineData("HOME_IMPROVEMENT", "housing")]
-    [InlineData("MEDICAL", "health")]
-    [InlineData("BANK_FEES", "other")]
-    [InlineData("INCOME", "other")]
-    public void PlaidCategoryMapper_MapsCommonPrimaryCategories(string rawCategory, string expected)
+    [InlineData(5411, CategoryKeys.FoodAndDrink)]   // Grocery stores
+    [InlineData(5812, CategoryKeys.FoodAndDrink)]   // Eating places
+    [InlineData(4111, CategoryKeys.Transportation)] // Local transit
+    [InlineData(5541, CategoryKeys.Transportation)] // Service stations (override)
+    [InlineData(5311, CategoryKeys.GeneralMerchandise)] // Department stores
+    [InlineData(5941, CategoryKeys.GeneralMerchandise)] // Sporting goods
+    [InlineData(7911, CategoryKeys.Entertainment)]  // Dance halls
+    [InlineData(5912, CategoryKeys.Medical)]        // Pharmacies (override)
+    [InlineData(4812, CategoryKeys.RentAndUtilities)] // Telecom
+    [InlineData(7011, CategoryKeys.Travel)]         // Lodging
+    [InlineData(7230, CategoryKeys.PersonalCare)]   // Beauty shops (override)
+    [InlineData(8011, CategoryKeys.Medical)]        // Doctors
+    [InlineData(9399, CategoryKeys.GovernmentAndNonProfit)] // Government services
+    public void MccRangeClassifier_MapsCodesToPlaidPrimaries(int mcc, string expected)
     {
-        new PlaidCategoryMapper().Map(rawCategory).Should().Be(expected);
+        MccRangeClassifier.Classify(mcc).Should().Be(expected);
+    }
+
+    [Fact]
+    public void MccRangeClassifier_UnknownCode_IsUncategorized()
+    {
+        MccRangeClassifier.Classify(1).Should().Be(CategoryKeys.Uncategorized);
     }
 
     [Theory]
-    [InlineData("5411", "food_and_drink")]
-    [InlineData("5812", "food_and_drink")]
-    [InlineData("4111", "transport")]
-    [InlineData("5541", "transport")]
-    [InlineData("5311", "shopping")]
-    [InlineData("5941", "shopping")]
-    [InlineData("7911", "entertainment")]
-    [InlineData("5912", "health")]
-    [InlineData("4812", "utilities")]
-    [InlineData("7011", "travel")]
-    [InlineData("7623", "housing")]
-    public void MonobankCategoryMapper_MapsCommonMccCodes(string rawCategory, string expected)
-    {
-        new MonobankCategoryMapper().Map(rawCategory).Should().Be(expected);
-    }
-
-    [Theory]
-    [InlineData("Groceries", "food_and_drink")]
-    [InlineData("Restaurants", "food_and_drink")]
-    [InlineData("Shopping", "shopping")]
-    [InlineData("Personal Care", "shopping")]
-    [InlineData("Healthcare", "health")]
-    [InlineData("Bills & Utilities", "utilities")]
-    [InlineData("Auto & Transport", "transport")]
-    [InlineData("Travel", "travel")]
-    [InlineData("Home Improvement", "housing")]
-    [InlineData("Entertainment", "entertainment")]
+    [InlineData("Groceries", CategoryKeys.FoodAndDrink)]
+    [InlineData("Restaurants", CategoryKeys.FoodAndDrink)]
+    [InlineData("Shopping", CategoryKeys.GeneralMerchandise)]
+    [InlineData("Healthcare", CategoryKeys.Medical)]
+    [InlineData("Bills & Utilities", CategoryKeys.RentAndUtilities)]
+    [InlineData("Auto & Transport", CategoryKeys.Transportation)]
+    [InlineData("Travel", CategoryKeys.Travel)]
+    [InlineData("Home Improvement", CategoryKeys.HomeImprovement)]
+    [InlineData("Entertainment", CategoryKeys.Entertainment)]
     public void TrueLayerCategoryMapper_MapsCommonClassificationLabels(string rawCategory, string expected)
     {
         new TrueLayerCategoryMapper().Map([rawCategory]).Should().Be(expected);
+    }
+
+    [Fact]
+    public void TrueLayerCategoryMapper_UnknownLabel_IsUncategorized()
+    {
+        new TrueLayerCategoryMapper().Map(["Something Unknown"]).Should().Be(CategoryKeys.Uncategorized);
     }
 }

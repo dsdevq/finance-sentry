@@ -2,6 +2,7 @@ import {CurrencyPipe} from '@angular/common';
 import {computed, inject, type Signal} from '@angular/core';
 import {type ChartPoint, type DonutSegment} from '@dsdevq-common/ui';
 
+import {CategoryStore} from '../../../../shared/store/categories/categories.store';
 import {MerchantCategoryUtils} from '../../../../shared/utils/merchant-category.utils';
 import {type DashboardData, type NetWorthSnapshotDto} from '../../models/dashboard/dashboard.model';
 
@@ -45,6 +46,7 @@ function sumCurrentMonthUsd(
 
 export function dashboardComputed(store: StateSignals) {
   const currency = inject(CurrencyPipe);
+  const categoryStore = inject(CategoryStore);
 
   return {
     currencyEntries: computed(() => Object.entries(store.data()?.aggregatedBalance ?? {})),
@@ -77,7 +79,7 @@ export function dashboardComputed(store: StateSignals) {
 
     categoryChartData: computed((): DonutSegment[] =>
       (store.data()?.topCategories ?? []).map(c => ({
-        label: MerchantCategoryUtils.format(c.category),
+        label: categoryStore.labelMap()[c.category] ?? MerchantCategoryUtils.format(c.category),
         value: c.totalSpend,
       }))
     ),

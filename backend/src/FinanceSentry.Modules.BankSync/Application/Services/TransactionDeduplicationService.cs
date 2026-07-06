@@ -48,7 +48,9 @@ public record TransactionCandidate(
     string? TransactionType,
     string? MerchantName,
     string? MerchantCategory,
-    string? PlaidTransactionId
+    string? PlaidTransactionId,
+    int? Mcc = null,
+    string? SourceCategory = null
 )
 {
     /// <summary>
@@ -131,7 +133,9 @@ public class TransactionDeduplicationService : ITransactionDeduplicationService
             PostedDate = candidate.PostedDate,
             TransactionType = candidate.TransactionType,
             MerchantName = candidate.MerchantName,
-            MerchantCategory = candidate.MerchantCategory
+            MerchantCategory = candidate.MerchantCategory,
+            Mcc = candidate.Mcc,
+            SourceCategory = candidate.SourceCategory
         };
     }
 }

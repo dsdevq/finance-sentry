@@ -6,12 +6,9 @@ import {AlertComponent, CardComponent, TagComponent} from '@dsdevq-common/ui';
 import {AppCurrencyPipe} from '../../../../core/pipes/app-currency.pipe';
 import {AppDecimalPipe} from '../../../../core/pipes/app-decimal.pipe';
 import {AppRoute} from '../../../../shared/enums/app-route/app-route.enum';
-import {
-  BUDGETS_MONTHS_IN_YEAR,
-  CATEGORY_COLOR_FALLBACK,
-  CATEGORY_COLOR_MAP,
-  VALID_BUDGET_CATEGORIES,
-} from '../../constants/budget/budget.constants';
+import {CATEGORY_COLOR_FALLBACK} from '../../../../shared/store/categories/categories.computed';
+import {CategoryStore} from '../../../../shared/store/categories/categories.store';
+import {BUDGETS_MONTHS_IN_YEAR} from '../../constants/budget/budget.constants';
 import {BudgetsStore} from '../../store/budgets/budgets.store';
 
 const PCT_MAX = 100;
@@ -33,6 +30,7 @@ const PCT_WARNING_THRESHOLD = 80;
 })
 export class BudgetsComponent {
   private readonly router = inject(Router);
+  private readonly categoryStore = inject(CategoryStore);
 
   public readonly store = inject(BudgetsStore);
 
@@ -40,10 +38,10 @@ export class BudgetsComponent {
   public readonly newCategory = signal('');
   public readonly newLimit = signal('');
 
-  public readonly VALID_CATEGORIES = VALID_BUDGET_CATEGORIES;
+  public readonly categories = this.categoryStore.categories;
 
   public categoryColor(category: string): string {
-    return CATEGORY_COLOR_MAP.get(category) ?? CATEGORY_COLOR_FALLBACK;
+    return this.categoryStore.colorMap()[category] ?? CATEGORY_COLOR_FALLBACK;
   }
 
   public barPct(spent: number, limit: number): number {

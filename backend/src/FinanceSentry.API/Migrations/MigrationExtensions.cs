@@ -1,6 +1,7 @@
 namespace FinanceSentry.API.Migrations;
 
 using FinanceSentry.Modules.Auth.Infrastructure.Persistence;
+using FinanceSentry.Modules.BankSync.Infrastructure.Categorization;
 using FinanceSentry.Modules.BankSync.Infrastructure.Persistence;
 using FinanceSentry.Modules.CryptoSync.Infrastructure.Persistence;
 using FinanceSentry.Modules.BrokerageSync.Infrastructure.Persistence;
@@ -28,7 +29,21 @@ public static class MigrationExtensions
         MigrateContext<WealthDbContext>(sp, app.Logger);
         MigrateContext<ResearchDbContext>(sp, app.Logger);
 
+        SeedBankSyncCategories(sp, app.Logger);
+
         return app;
+    }
+
+    private static void SeedBankSyncCategories(IServiceProvider sp, ILogger logger)
+    {
+        try
+        {
+            CategorySeeder.Seed(sp.GetRequiredService<BankSyncDbContext>());
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Category reference seeding failed. Startup will continue.");
+        }
     }
 
     private static void MigrateContext<TContext>(IServiceProvider sp, ILogger logger)

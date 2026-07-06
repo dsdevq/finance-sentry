@@ -118,7 +118,7 @@
             class="w-full rounded border border-surface-raised bg-surface-bg px-cmn-2 py-1.5 text-cmn-sm text-text-primary outline-none focus:border-accent-default"
           >
             <option value="">Select category…</option>
-            @for (cat of VALID_CATEGORIES; track cat.key) {
+            @for (cat of categories(); track cat.key) {
               <option [value]="cat.key">{{ cat.label }}</option>
             }
           </select>

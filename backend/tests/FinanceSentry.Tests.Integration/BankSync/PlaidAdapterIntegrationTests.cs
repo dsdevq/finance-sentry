@@ -3,6 +3,7 @@ namespace FinanceSentry.Tests.Integration.BankSync;
 using FinanceSentry.Infrastructure.Encryption;
 using FinanceSentry.Modules.BankSync.Application.Services;
 using FinanceSentry.Modules.BankSync.Application.Services.CategoryMapping;
+using FinanceSentry.Modules.BankSync.Domain;
 using FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
 using FluentAssertions;
 using Microsoft.Extensions.Options;
@@ -21,6 +22,19 @@ using Xunit;
 /// with Testcontainers PostgreSQL is added in a future phase when the repository layer is
 /// exercised end-to-end. These tests validate the adapter→domain→deduplication pipeline.
 /// </summary>
+/// <summary>Passthrough resolver mirroring CategoryResolver's Plaid semantics without a DB.</summary>
+file sealed class PassthroughCategoryResolver : ICategoryResolver
+{
+    public string ResolveMcc(int? mcc) => CategoryKeys.Uncategorized;
+
+    public string ResolvePlaidPrimary(string? primary)
+        => string.IsNullOrWhiteSpace(primary) ? CategoryKeys.Uncategorized : primary.Trim().ToUpperInvariant();
+
+    public void Refresh()
+    {
+    }
+}
+
 public class PlaidAdapterIntegrationTests
 {
     private static readonly Guid UserId    = Guid.Parse("aaaaaaaa-0000-0000-0000-000000000001");
@@ -40,7 +54,7 @@ public class PlaidAdapterIntegrationTests
         new("dGVzdGtleS10ZXN0a2V5LXRlc3RrZXktdGVzdGtleTA=");
 
     private readonly Mock<IPlaidClient> _clientMock = new(MockBehavior.Strict);
-    private PlaidAdapter CreateAdapter() => new(_clientMock.Object, new PlaidCategoryMapper());
+    private PlaidAdapter CreateAdapter() => new(_clientMock.Object, new PassthroughCategoryResolver());
 
     // ── Account link flow ────────────────────────────────────────────────────
 
@@ -132,7 +146,7 @@ public class PlaidAdapterIntegrationTests
         var withCategories = candidates.Where(c => c.MerchantCategory != null).ToList();
         withCategories.Should().HaveCount(100, "all transactions have a category");
         withCategories.Select(c => c.MerchantCategory).Should()
-            .Contain("food_and_drink").And.Contain("transport").And.Contain("entertainment");
+            .Contain("FOOD_AND_DRINK").And.Contain("TRANSPORTATION").And.Contain("ENTERTAINMENT");
 
         // Verify pending/posted distinction
         candidates.Count(c => c.IsPending).Should().Be(10, "last 10 transactions are pending");

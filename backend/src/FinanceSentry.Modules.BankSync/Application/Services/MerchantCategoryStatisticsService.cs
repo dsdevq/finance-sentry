@@ -1,5 +1,6 @@
 namespace FinanceSentry.Modules.BankSync.Application.Services;
 
+using FinanceSentry.Modules.BankSync.Domain;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
 
 /// <summary>
@@ -45,7 +46,7 @@ public class MerchantCategoryStatisticsService(
         var totalSpend = debits.Sum(t => t.Amount);
 
         var result = debits
-            .GroupBy(t => t.MerchantCategory ?? "Uncategorized")
+            .GroupBy(t => t.MerchantCategory ?? CategoryKeys.Uncategorized)
             .Select(g =>
             {
                 var spend = g.Sum(t => t.Amount);

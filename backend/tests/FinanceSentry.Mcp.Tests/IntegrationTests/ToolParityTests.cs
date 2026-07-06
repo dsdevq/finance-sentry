@@ -209,7 +209,7 @@ public sealed class ToolParityTests
         _ = svc.GetRequiredService<BankSyncDbContext>();
 
         var budgetDb = svc.GetRequiredService<BudgetsDbContext>();
-        budgetDb.Budgets.Add(Budget.Create(userId, "food_and_drink", 500m, "USD"));
+        budgetDb.Budgets.Add(Budget.Create(userId, "FOOD_AND_DRINK", 500m, "USD"));
         await budgetDb.SaveChangesAsync();
 
         var tool = svc.GetRequiredService<GetBudgetStatusTool>();

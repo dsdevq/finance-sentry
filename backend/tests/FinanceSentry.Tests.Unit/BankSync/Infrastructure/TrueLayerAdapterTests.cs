@@ -146,7 +146,7 @@ public class TrueLayerAdapterTests
         debit.TransactionType.Should().Be("debit");
         debit.IsPending.Should().BeFalse();
         debit.PostedDate.Should().NotBeNull();
-        debit.MerchantCategory.Should().Be("food_and_drink");
+        debit.MerchantCategory.Should().Be("FOOD_AND_DRINK");
 
         var credit = candidates.Single(c => c.Description == "Salary");
         credit.Amount.Should().Be(1000m);
