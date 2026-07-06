@@ -1,4 +1,5 @@
 using Serilog;
+using FinanceSentry.API.Commands;
 using FinanceSentry.API.Conventions;
 using FinanceSentry.API.Hangfire;
 using FinanceSentry.API.Migrations;
@@ -74,6 +75,14 @@ builder.Services.AddRateLimiter(options =>
 var app = builder.Build();
 
 app.MigrateAllModules();
+
+// One-shot maintenance verb (e.g. `dotnet FinanceSentry.API.dll recategorize [userId]`).
+// Runs the task and exits without ever starting the web server.
+if (args.Length > 0 && args[0] == RecategorizationCommand.Verb)
+{
+    await RecategorizationCommand.RunAsync(app.Services, args);
+    return;
+}
 
 app.UseSerilogRequestLogging();
 app.UseCors("Frontend");
