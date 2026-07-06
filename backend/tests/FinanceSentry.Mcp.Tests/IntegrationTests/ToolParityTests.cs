@@ -287,8 +287,8 @@ public sealed class ToolParityTests
         var result = await tool.ExecuteAsync(userId);
 
         result.Should().NotBeNull();
-        result.Should().HaveCountGreaterThanOrEqualTo(2);
-        result.Should().AllSatisfy(e =>
+        result.Positions.Should().HaveCountGreaterThanOrEqualTo(2);
+        result.Positions.Should().AllSatisfy(e =>
         {
             e.Symbol.Should().NotBeNullOrEmpty();
             e.AssetClass.Should().NotBeNullOrEmpty();
@@ -296,8 +296,13 @@ public sealed class ToolParityTests
             e.CurrentValue.Should().BeGreaterThan(0);
             e.Quantity.Should().BeGreaterThan(0);
         });
-        result.Should().ContainSingle(e => e.Provider == "ibkr");
-        result.Should().ContainSingle(e => e.Provider == "binance");
+        result.Positions.Should().ContainSingle(e => e.Provider == "ibkr");
+        result.Positions.Should().ContainSingle(e => e.Provider == "binance");
+
+        // Totals roll up from the positions and stay internally consistent.
+        result.InvestedValueUsd.Should().Be(result.Positions.Sum(p => p.CurrentValue));
+        result.TotalValueUsd.Should().Be(result.InvestedValueUsd + result.CashUsd);
+        result.TotalValueUsd.Should().BeGreaterThan(0);
     }
 
     [Fact]
