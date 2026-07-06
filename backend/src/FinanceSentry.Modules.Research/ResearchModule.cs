@@ -90,12 +90,28 @@ public static class ResearchModule
         })
         .SetHandlerLifetime(TimeSpan.FromHours(2));
 
+        // SEC EDGAR (filings + XBRL fundamentals). SEC policy REQUIRES a descriptive User-Agent
+        // with contact info and permits gzip; a generic UA gets throttled/blocked.
+        services.AddHttpClient(SecEdgarService.HttpClientName, client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(15);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("FinanceSentry/1.0 (contact: payar3282@gmail.com)");
+            client.DefaultRequestHeaders.AcceptEncoding.ParseAdd("gzip, deflate");
+        })
+        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+        {
+            AutomaticDecompression = System.Net.DecompressionMethods.All,
+        });
+
         services.AddScoped<IMarketDataService, YahooMarketDataService>();
         services.AddScoped<IMarketNewsService, RssMarketNewsService>();
         services.AddScoped<IMacroCalendarService, MacroCalendarService>();
 
         // Singleton: holds the cached Yahoo crumb + per-ticker event cache across requests.
         services.AddSingleton<IEarningsCalendarService, YahooEarningsCalendarService>();
+
+        // Singleton: caches the ticker->CIK map + per-ticker EDGAR results across requests.
+        services.AddSingleton<ISecEdgarService, SecEdgarService>();
 
         services.AddScoped<NewsIngestionJob>();
         services.AddScoped<MacroCalendarSeedJob>();
