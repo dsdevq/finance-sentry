@@ -72,9 +72,46 @@ public static class ResearchModule
                 "Mozilla/5.0 (compatible; FinanceSentry/1.0; +https://finance-sentry.local)");
         });
 
+        // Yahoo's quoteSummary/calendarEvents endpoint requires a cookie + crumb pair. Share one
+        // CookieContainer across handler rotations so the seeded consent cookies persist as long as
+        // the crumb the service caches. A browser-like UA is required or Yahoo rejects the request.
+        var yahooEarningsCookies = new System.Net.CookieContainer();
+        services.AddHttpClient(YahooEarningsCalendarService.HttpClientName, client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(12);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+        })
+        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+        {
+            CookieContainer = yahooEarningsCookies,
+            UseCookies = true,
+            AutomaticDecompression = System.Net.DecompressionMethods.All,
+        })
+        .SetHandlerLifetime(TimeSpan.FromHours(2));
+
+        // SEC EDGAR (filings + XBRL fundamentals). SEC policy REQUIRES a descriptive User-Agent
+        // with contact info and permits gzip; a generic UA gets throttled/blocked.
+        services.AddHttpClient(SecEdgarService.HttpClientName, client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(15);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("FinanceSentry/1.0 (contact: payar3282@gmail.com)");
+            client.DefaultRequestHeaders.AcceptEncoding.ParseAdd("gzip, deflate");
+        })
+        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+        {
+            AutomaticDecompression = System.Net.DecompressionMethods.All,
+        });
+
         services.AddScoped<IMarketDataService, YahooMarketDataService>();
         services.AddScoped<IMarketNewsService, RssMarketNewsService>();
         services.AddScoped<IMacroCalendarService, MacroCalendarService>();
+
+        // Singleton: holds the cached Yahoo crumb + per-ticker event cache across requests.
+        services.AddSingleton<IEarningsCalendarService, YahooEarningsCalendarService>();
+
+        // Singleton: caches the ticker->CIK map + per-ticker EDGAR results across requests.
+        services.AddSingleton<ISecEdgarService, SecEdgarService>();
 
         services.AddScoped<NewsIngestionJob>();
         services.AddScoped<MacroCalendarSeedJob>();
