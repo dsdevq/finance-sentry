@@ -1,38 +1,24 @@
 namespace FinanceSentry.Modules.Research.Domain.ThesisMonitor;
 
 using FinanceSentry.Modules.Research.Application.Services;
+using FinanceSentry.Modules.Research.Domain.Scoring;
 
 /// <summary>
 /// Pure, deterministic evaluation of a single <see cref="ThesisInvalidationTrigger"/> against a
 /// target ticker's fundamentals and/or price history. No EF, no HTTP, no LLM — the spine of the
-/// thesis-break monitor (FR-006/FR-007/SC-001/SC-002).
+/// thesis-break monitor (FR-006/FR-007/SC-001/SC-002). Concept mapping + period selection live in
+/// <see cref="FundamentalMath"/>, shared with 019's fundamentals scorer.
 /// </summary>
 public static class ThesisBreakEvaluator
 {
-    private const string FiscalYearPeriod = "FY";
+    private const string FiscalYearPeriod = FundamentalMath.FiscalYearPeriod;
 
-    private static readonly IReadOnlyDictionary<string, string> RawConceptByMetric = new Dictionary<string, string>(StringComparer.Ordinal)
-    {
-        [ThesisMetric.Revenue] = "Revenue",
-        [ThesisMetric.NetIncome] = "NetIncome",
-        [ThesisMetric.DilutedEps] = "DilutedEPS",
-    };
+    private static readonly IReadOnlyDictionary<string, string> RawConceptByMetric = FundamentalMath.RawConceptByMetric;
 
     private static readonly IReadOnlyDictionary<string, (string Numerator, string Denominator)> MarginConceptsByMetric =
-        new Dictionary<string, (string, string)>(StringComparer.Ordinal)
-        {
-            [ThesisMetric.GrossMargin] = ("GrossProfit", "Revenue"),
-            [ThesisMetric.OperatingMargin] = ("OperatingIncome", "Revenue"),
-            [ThesisMetric.NetMargin] = ("NetIncome", "Revenue"),
-        };
+        FundamentalMath.MarginConceptsByMetric;
 
-    private static readonly IReadOnlyDictionary<string, string> YoyConceptByMetric = new Dictionary<string, string>(StringComparer.Ordinal)
-    {
-        [ThesisMetric.RevenueYoy] = "Revenue",
-        [ThesisMetric.NetIncomeYoy] = "NetIncome",
-        [ThesisMetric.OperatingIncomeYoy] = "OperatingIncome",
-        [ThesisMetric.EpsYoy] = "DilutedEPS",
-    };
+    private static readonly IReadOnlyDictionary<string, string> YoyConceptByMetric = FundamentalMath.YoyConceptByMetric;
 
     public static TriggerVerdict Evaluate(
         ThesisInvalidationTrigger trigger,
@@ -252,21 +238,7 @@ public static class ThesisBreakEvaluator
 
     private static IReadOnlyList<FundamentalFact> SelectPeriods(
         IReadOnlyList<FundamentalFact> facts, string concept, ThesisPeriodType periodType)
-        => facts
-            .Where(f => string.Equals(f.Concept, concept, StringComparison.Ordinal) && MatchesPeriodType(f, periodType))
-            .GroupBy(f => f.PeriodEnd)
-            .Select(g => g.First())
-            .OrderByDescending(f => f.PeriodEnd)
-            .ToList();
+        => FundamentalMath.SelectPeriods(facts, concept, periodType);
 
-    private static bool MatchesPeriodType(FundamentalFact fact, ThesisPeriodType periodType) => periodType switch
-    {
-        ThesisPeriodType.Annual => string.Equals(fact.FiscalPeriod, FiscalYearPeriod, StringComparison.OrdinalIgnoreCase),
-        _ => fact.FiscalPeriod is not null && !string.Equals(fact.FiscalPeriod, FiscalYearPeriod, StringComparison.OrdinalIgnoreCase),
-    };
-
-    private static string Label(FundamentalFact fact)
-        => fact.FiscalYear is { } year
-            ? $"{year}{fact.FiscalPeriod ?? FiscalYearPeriod}"
-            : fact.PeriodEnd.ToString("yyyy-MM-dd");
+    private static string Label(FundamentalFact fact) => FundamentalMath.Label(fact);
 }

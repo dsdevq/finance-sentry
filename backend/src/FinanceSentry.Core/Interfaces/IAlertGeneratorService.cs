@@ -91,4 +91,16 @@ public interface IAlertGeneratorService
         string ruleKey,
         string subject,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Raises a top-tier opportunity-candidate Alert (019). <paramref name="referenceId"/> is the
+    /// candidate id so repeated re-scores of the same candidate don't spam duplicate alerts within
+    /// the silence window.
+    /// </summary>
+    Task GenerateOpportunityAlertAsync(
+        Guid userId,
+        Guid referenceId,
+        string ticker,
+        string reason,
+        CancellationToken ct = default);
 }

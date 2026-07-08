@@ -8,4 +8,5 @@ public static class AlertType
     public const string ThesisBroken = "ThesisBroken";
     public const string MarketStructure = "MarketStructure";
     public const string PolicyViolation = "PolicyViolation";
+    public const string Opportunity = "Opportunity";
 }

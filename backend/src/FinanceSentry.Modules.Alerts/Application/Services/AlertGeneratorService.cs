@@ -15,6 +15,7 @@ public class AlertGeneratorService(IAlertRepository alerts) : IAlertGeneratorSer
     private static readonly TimeSpan MarketStructureSilenceWindow = TimeSpan.FromHours(24);
     private static readonly TimeSpan MarketStructureFreshnessSilenceWindow = TimeSpan.FromHours(12);
     private static readonly TimeSpan PolicyViolationSilenceWindow = TimeSpan.FromHours(24);
+    private static readonly TimeSpan OpportunitySilenceWindow = TimeSpan.FromHours(24);
 
     private readonly IAlertRepository _alerts = alerts;
 
@@ -223,6 +224,28 @@ public class AlertGeneratorService(IAlertRepository alerts) : IAlertGeneratorSer
         var existing = await _alerts.FindActiveAsync(userId, AlertType.PolicyViolation, referenceId, ct);
         if (existing is null) return;
         await _alerts.ResolveAsync(existing.Id, ct);
+    }
+
+    public async Task GenerateOpportunityAlertAsync(
+        Guid userId, Guid referenceId, string ticker, string reason, CancellationToken ct = default)
+    {
+        var existing = await _alerts.FindActiveAsync(userId, AlertType.Opportunity, referenceId, ct);
+        if (existing is not null) return;
+
+        var quietSince = DateTimeOffset.UtcNow - OpportunitySilenceWindow;
+        if (await _alerts.HasRecentAsync(userId, AlertType.Opportunity, referenceId, ticker, quietSince, ct))
+            return;
+
+        await _alerts.AddAsync(new Alert
+        {
+            UserId = userId,
+            Type = AlertType.Opportunity,
+            Severity = AlertSeverity.Info,
+            Title = $"Top-tier candidate: {ticker}",
+            Message = $"{ticker} scored top-tier on conviction scoring: {reason}",
+            ReferenceId = referenceId,
+            ReferenceLabel = ticker,
+        }, ct);
     }
 
     /// <summary>Deterministic pseudo-GUID from (ruleKey, subject) so find/resolve are stable across runs.</summary>

@@ -2,7 +2,9 @@ namespace FinanceSentry.Modules.Research.Infrastructure.Persistence;
 
 using System.Text.Json;
 using FinanceSentry.Modules.Research.Domain;
+using FinanceSentry.Modules.Research.Domain.Scoring;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 public class ResearchDbContext(DbContextOptions<ResearchDbContext> options) : DbContext(options)
 {
@@ -19,6 +21,10 @@ public class ResearchDbContext(DbContextOptions<ResearchDbContext> options) : Db
     public DbSet<InvestmentPolicyStatement> PolicyStatements { get; set; } = null!;
 
     public DbSet<ThesisEvent> ThesisEvents { get; set; } = null!;
+
+    public DbSet<OpportunityCandidate> OpportunityCandidates { get; set; } = null!;
+
+    public DbSet<CandidateScore> CandidateScores { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -177,5 +183,62 @@ public class ResearchDbContext(DbContextOptions<ResearchDbContext> options) : Db
             .HasDatabaseName("idx_thesis_events_pending");
         teb.HasIndex(x => new { x.UserId, x.EventType, x.Timestamp })
             .HasDatabaseName("idx_thesis_events_user_type_time");
+
+        var ocb = modelBuilder.Entity<OpportunityCandidate>();
+        ocb.ToTable("opportunity_candidates");
+        ocb.HasKey(x => x.Id);
+        ocb.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
+        ocb.Property(x => x.UserId).IsRequired();
+        ocb.Property(x => x.Ticker).IsRequired().HasMaxLength(20);
+        ocb.Property(x => x.Source).IsRequired().HasConversion<string>().HasMaxLength(20);
+        ocb.Property(x => x.Status).IsRequired().HasConversion<string>().HasMaxLength(20);
+        ocb.Property(x => x.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+        ocb.Property(x => x.ExpiresAt).IsRequired();
+        ocb.Property(x => x.RejectedReason).HasMaxLength(1000);
+        ocb.Property(x => x.NominationReasons)
+            .HasColumnType("jsonb")
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, jsonOptions),
+                v => JsonSerializer.Deserialize<List<string>>(v, jsonOptions) ?? new())
+            .Metadata.SetValueComparer(StringListComparer);
+        ocb.HasIndex(x => new { x.UserId, x.Status }).HasDatabaseName("idx_opportunity_candidates_user_status");
+        ocb.HasIndex(x => new { x.UserId, x.Ticker }).HasDatabaseName("idx_opportunity_candidates_user_ticker");
+
+        var csb = modelBuilder.Entity<CandidateScore>();
+        csb.ToTable("candidate_scores");
+        csb.HasKey(x => x.Id);
+        csb.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
+        csb.Property(x => x.CandidateId).IsRequired();
+        csb.Property(x => x.ScoredAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+        csb.Property(x => x.CrowdingClass).IsRequired().HasConversion<string>().HasMaxLength(20);
+        csb.Property(x => x.FormulaVersion).IsRequired();
+        csb.Property(x => x.IpsFit)
+            .HasColumnType("jsonb")
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, jsonOptions),
+                v => JsonSerializer.Deserialize<IpsFitFacts>(v, jsonOptions) ?? IpsFitFacts.Unknown)
+            .Metadata.SetValueComparer(IpsFitFactsComparer);
+        csb.Property(x => x.Evidence)
+            .HasColumnType("jsonb")
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, jsonOptions),
+                v => JsonSerializer.Deserialize<ScoreEvidence>(v, jsonOptions) ?? ScoreEvidence.Empty)
+            .Metadata.SetValueComparer(ScoreEvidenceComparer);
+        csb.HasIndex(x => new { x.CandidateId, x.ScoredAt }).HasDatabaseName("idx_candidate_scores_candidate_scored");
     }
+
+    private static readonly ValueComparer<List<string>> StringListComparer = new(
+        (a, b) => (a ?? new()).SequenceEqual(b ?? new()),
+        v => v.Aggregate(0, (hash, s) => HashCode.Combine(hash, s.GetHashCode())),
+        v => v.ToList());
+
+    private static readonly ValueComparer<IpsFitFacts> IpsFitFactsComparer = new(
+        (a, b) => Equals(a, b),
+        v => v == null ? 0 : v.GetHashCode(),
+        v => v);
+
+    private static readonly ValueComparer<ScoreEvidence> ScoreEvidenceComparer = new(
+        (a, b) => Equals(a, b),
+        v => v == null ? 0 : v.GetHashCode(),
+        v => v);
 }

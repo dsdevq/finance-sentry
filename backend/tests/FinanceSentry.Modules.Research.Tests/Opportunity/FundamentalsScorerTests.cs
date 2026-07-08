@@ -1,0 +1,85 @@
+namespace FinanceSentry.Modules.Research.Tests.Opportunity;
+
+using FinanceSentry.Modules.Research.Domain;
+using FinanceSentry.Modules.Research.Domain.Scoring;
+using FluentAssertions;
+using Xunit;
+
+public sealed class FundamentalsScorerTests
+{
+    private static FundamentalFact Fact(
+        string concept, decimal value, int fiscalYear, string fiscalPeriod, DateOnly periodEnd)
+        => new("MU", concept, concept, "USD", value, periodEnd, fiscalPeriod, fiscalYear, "10-Q");
+
+    [Fact]
+    public void Score_ReturnsNull_WhenNoFactsAtAll()
+    {
+        var (score, revenueYoy, marginLatest, marginTrend, epsYoy, reasons) =
+            FundamentalsScorer.Score([]);
+
+        score.Should().BeNull();
+        revenueYoy.Should().BeNull();
+        marginLatest.Should().BeNull();
+        marginTrend.Should().BeNull();
+        epsYoy.Should().BeNull();
+        reasons.Should().Contain("no_fundamentals_data");
+    }
+
+    [Fact]
+    public void Score_IsPartial_WhenOnlyRevenueIsAvailable()
+    {
+        var facts = new List<FundamentalFact>
+        {
+            Fact("Revenue", 120m, 2026, "Q2", new DateOnly(2026, 5, 31)),
+            Fact("Revenue", 100m, 2025, "Q2", new DateOnly(2025, 5, 31)),
+        };
+
+        var (score, revenueYoy, marginLatest, marginTrend, epsYoy, reasons) =
+            FundamentalsScorer.Score(facts);
+
+        score.Should().NotBeNull();
+        revenueYoy.Should().Be(0.2m);
+        marginLatest.Should().BeNull();
+        marginTrend.Should().BeNull();
+        epsYoy.Should().BeNull();
+        reasons.Should().Contain("gross_margin_not_evaluable");
+        reasons.Should().Contain("eps_yoy_not_evaluable");
+    }
+
+    [Fact]
+    public void Score_GuardsDivideByZero_ForZeroRevenueDenominator()
+    {
+        var facts = new List<FundamentalFact>
+        {
+            Fact("GrossProfit", 30m, 2026, "Q2", new DateOnly(2026, 5, 31)),
+            Fact("Revenue", 0m, 2026, "Q2", new DateOnly(2026, 5, 31)),
+        };
+
+        var (_, _, marginLatest, _, _, reasons) = FundamentalsScorer.Score(facts);
+
+        marginLatest.Should().BeNull();
+        reasons.Should().Contain("gross_margin_not_evaluable");
+    }
+
+    [Fact]
+    public void Score_IsDeterministic_ForIdenticalInputs()
+    {
+        var facts = new List<FundamentalFact>
+        {
+            Fact("Revenue", 120m, 2026, "Q2", new DateOnly(2026, 5, 31)),
+            Fact("Revenue", 100m, 2025, "Q2", new DateOnly(2025, 5, 31)),
+            Fact("GrossProfit", 60m, 2026, "Q2", new DateOnly(2026, 5, 31)),
+            Fact("GrossProfit", 45m, 2026, "Q1", new DateOnly(2026, 2, 28)),
+            Fact("Revenue", 110m, 2026, "Q1", new DateOnly(2026, 2, 28)),
+            Fact("DilutedEPS", 2.4m, 2026, "Q2", new DateOnly(2026, 5, 31)),
+            Fact("DilutedEPS", 2.0m, 2025, "Q2", new DateOnly(2025, 5, 31)),
+        };
+
+        var run1 = FundamentalsScorer.Score(facts);
+        var run2 = FundamentalsScorer.Score(facts);
+
+        run1.Score.Should().Be(run2.Score);
+        run1.Score.Should().NotBeNull();
+        run1.GrossMarginTrend.Should().NotBeNull();
+    }
+}
