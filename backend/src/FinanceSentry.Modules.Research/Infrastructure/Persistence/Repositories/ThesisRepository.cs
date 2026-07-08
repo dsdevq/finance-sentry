@@ -12,6 +12,12 @@ public class ThesisRepository(ResearchDbContext db) : IThesisRepository
             .OrderByDescending(t => t.UpdatedAt)
             .ToListAsync(ct);
 
+    public async Task<IReadOnlyList<Guid>> GetUserIdsWithThesesAsync(CancellationToken ct = default)
+        => await db.Theses.AsNoTracking()
+            .Select(t => t.UserId)
+            .Distinct()
+            .ToListAsync(ct);
+
     public Task<InvestmentThesis?> FindAsync(Guid userId, Guid id, CancellationToken ct = default)
         => db.Theses.FirstOrDefaultAsync(t => t.UserId == userId && t.Id == id, ct);
 

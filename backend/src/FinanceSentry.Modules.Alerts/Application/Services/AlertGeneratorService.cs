@@ -9,6 +9,7 @@ public class AlertGeneratorService(IAlertRepository alerts) : IAlertGeneratorSer
     private static readonly TimeSpan LowBalanceSilenceWindow = TimeSpan.FromHours(24);
     private static readonly TimeSpan SyncFailureSilenceWindow = TimeSpan.FromHours(12);
     private static readonly TimeSpan UnusualSpendSilenceWindow = TimeSpan.FromDays(7);
+    private static readonly TimeSpan ThesisBrokenSilenceWindow = TimeSpan.FromHours(24);
 
     private readonly IAlertRepository _alerts = alerts;
 
@@ -101,5 +102,35 @@ public class AlertGeneratorService(IAlertRepository alerts) : IAlertGeneratorSer
             ReferenceId = null,
             ReferenceLabel = category,
         }, ct);
+    }
+
+    public async Task GenerateThesisBreakAlertAsync(
+        Guid userId, Guid thesisId, string ticker, string reason, CancellationToken ct = default)
+    {
+        var existing = await _alerts.FindActiveAsync(userId, AlertType.ThesisBroken, thesisId, ct);
+        if (existing is not null) return;
+
+        var quietSince = DateTimeOffset.UtcNow - ThesisBrokenSilenceWindow;
+        if (await _alerts.HasRecentAsync(userId, AlertType.ThesisBroken, thesisId, ticker, quietSince, ct))
+            return;
+
+        await _alerts.AddAsync(new Alert
+        {
+            UserId = userId,
+            Type = AlertType.ThesisBroken,
+            Severity = AlertSeverity.Warning,
+            Title = $"Thesis broken: {ticker}",
+            Message = $"Your investment thesis on {ticker} appears broken: {reason}",
+            ReferenceId = thesisId,
+            ReferenceLabel = ticker,
+        }, ct);
+    }
+
+    public async Task ResolveThesisBreakAlertAsync(
+        Guid userId, Guid thesisId, CancellationToken ct = default)
+    {
+        var existing = await _alerts.FindActiveAsync(userId, AlertType.ThesisBroken, thesisId, ct);
+        if (existing is null) return;
+        await _alerts.ResolveAsync(existing.Id, ct);
     }
 }

@@ -140,6 +140,94 @@ public class YahooMarketDataService(
         }
     }
 
+    public async Task<IReadOnlyList<DailyClose>> GetDailyClosesAsync(
+        string ticker, DateOnly since, CancellationToken ct = default)
+    {
+        var normalized = ticker.Trim().ToUpperInvariant();
+        if (normalized.Length == 0)
+        {
+            return [];
+        }
+
+        var range = ResolveRange(since);
+        var client = httpFactory.CreateClient(HttpClientName);
+        var url = $"/v8/finance/chart/{Uri.EscapeDataString(normalized)}?interval=1d&range={range}";
+
+        try
+        {
+            using var response = await client.GetAsync(url, ct);
+            response.EnsureSuccessStatusCode();
+            await using var stream = await response.Content.ReadAsStreamAsync(ct);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+
+            if (!doc.RootElement.TryGetProperty("chart", out var chart) ||
+                !chart.TryGetProperty("result", out var resultArray) ||
+                resultArray.ValueKind is not JsonValueKind.Array ||
+                resultArray.GetArrayLength() == 0)
+            {
+                return [];
+            }
+
+            var first = resultArray[0];
+            if (!first.TryGetProperty("timestamp", out var timestamps) ||
+                timestamps.ValueKind is not JsonValueKind.Array ||
+                !first.TryGetProperty("indicators", out var indicators) ||
+                !indicators.TryGetProperty("quote", out var quoteArray) ||
+                quoteArray.ValueKind is not JsonValueKind.Array ||
+                quoteArray.GetArrayLength() == 0 ||
+                !quoteArray[0].TryGetProperty("close", out var closes) ||
+                closes.ValueKind is not JsonValueKind.Array)
+            {
+                return [];
+            }
+
+            var result = new List<DailyClose>();
+            var count = Math.Min(timestamps.GetArrayLength(), closes.GetArrayLength());
+            for (var i = 0; i < count; i++)
+            {
+                var closeElement = closes[i];
+                if (closeElement.ValueKind is not JsonValueKind.Number ||
+                    !closeElement.TryGetDecimal(out var close))
+                {
+                    continue;
+                }
+
+                var epochSeconds = timestamps[i].GetInt64();
+                var date = DateOnly.FromDateTime(DateTimeOffset.FromUnixTimeSeconds(epochSeconds).UtcDateTime);
+                if (date < since)
+                {
+                    continue;
+                }
+
+                result.Add(new DailyClose(date, close));
+            }
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Yahoo Finance daily close fetch failed for {Ticker}", normalized);
+            return [];
+        }
+    }
+
+    private static string ResolveRange(DateOnly since)
+    {
+        var daysAgo = DateOnly.FromDateTime(DateTime.UtcNow).DayNumber - since.DayNumber;
+
+        return daysAgo switch
+        {
+            <= 30 => "1mo",
+            <= 90 => "3mo",
+            <= 180 => "6mo",
+            <= 365 => "1y",
+            <= 730 => "2y",
+            <= 1825 => "5y",
+            <= 3650 => "10y",
+            _ => "max",
+        };
+    }
+
     private static decimal? ReadDecimal(JsonElement element, string property)
     {
         if (!element.TryGetProperty(property, out var prop))

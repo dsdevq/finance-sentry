@@ -3,6 +3,7 @@ namespace FinanceSentry.Modules.Research.Application.Commands;
 using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Modules.Research.API.Responses;
 using FinanceSentry.Modules.Research.Domain;
+using FinanceSentry.Modules.Research.Application.Validation;
 using FinanceSentry.Modules.Research.Domain.Exceptions;
 using FinanceSentry.Modules.Research.Domain.Repositories;
 
@@ -20,6 +21,8 @@ public class SaveThesisCommandHandler(IThesisRepository repo)
 {
     public async Task<ThesisDto> Handle(SaveThesisCommand cmd, CancellationToken ct)
     {
+        ThesisTriggerVocabulary.Validate(cmd.InvalidationTriggers);
+
         InvestmentThesis thesis;
 
         if (cmd.Id is { } id)

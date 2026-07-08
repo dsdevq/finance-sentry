@@ -39,4 +39,16 @@ public interface IAlertGeneratorService
     Task DeleteAlertsForAccountAsync(
         Guid accountId,
         CancellationToken ct = default);
+
+    Task GenerateThesisBreakAlertAsync(
+        Guid userId,
+        Guid thesisId,
+        string ticker,
+        string reason,
+        CancellationToken ct = default);
+
+    Task ResolveThesisBreakAlertAsync(
+        Guid userId,
+        Guid thesisId,
+        CancellationToken ct = default);
 }

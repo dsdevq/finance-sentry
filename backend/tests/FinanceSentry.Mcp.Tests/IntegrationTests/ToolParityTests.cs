@@ -1,6 +1,7 @@
 using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Mcp.Tools;
+using FinanceSentry.Modules.Alerts.Application.Services;
 using FinanceSentry.Modules.Alerts.Domain;
 using FinanceSentry.Modules.Alerts.Domain.Repositories;
 using FinanceSentry.Modules.Alerts.Infrastructure.Persistence;
@@ -21,6 +22,11 @@ using FinanceSentry.Modules.Budgets.Domain.Repositories;
 using FinanceSentry.Modules.Budgets.Infrastructure.Persistence;
 using FinanceSentry.Modules.Budgets.Infrastructure.Persistence.Repositories;
 using FinanceSentry.Modules.CryptoSync.Application.Services;
+using FinanceSentry.Modules.Research.Application.Services;
+using FinanceSentry.Modules.Research.Domain;
+using FinanceSentry.Modules.Research.Domain.Repositories;
+using FinanceSentry.Modules.Research.Infrastructure.Persistence;
+using FinanceSentry.Modules.Research.Infrastructure.Persistence.Repositories;
 using FinanceSentry.Modules.CryptoSync.Domain;
 using FinanceSentry.Modules.CryptoSync.Domain.Repositories;
 using FinanceSentry.Modules.CryptoSync.Infrastructure.Persistence;
@@ -52,7 +58,8 @@ public sealed class ToolParityTests
     // ── DI helper ────────────────────────────────────────────────────────────
 
     // dbKey must be unique per test so that each test gets its own in-memory DB.
-    private static ServiceProvider BuildProvider(string dbKey)
+    private static ServiceProvider BuildProvider(
+        string dbKey, IReadOnlyDictionary<string, IReadOnlyList<FundamentalFact>>? edgarFactsByTicker = null)
     {
         var services = new ServiceCollection();
 
@@ -73,6 +80,8 @@ public sealed class ToolParityTests
             o.UseInMemoryDatabase($"subscriptions-{dbKey}"));
         services.AddDbContext<WealthDbContext>(o =>
             o.UseInMemoryDatabase($"wealth-{dbKey}"));
+        services.AddDbContext<ResearchDbContext>(o =>
+            o.UseInMemoryDatabase($"research-{dbKey}"));
 
         // Repositories — real implementations backed by the in-memory contexts above.
         services.AddScoped<IBankAccountRepository, BankAccountRepository>();
@@ -83,6 +92,14 @@ public sealed class ToolParityTests
         services.AddScoped<IBudgetRepository, BudgetRepository>();
         services.AddScoped<IDetectedSubscriptionRepository, DetectedSubscriptionRepository>();
         services.AddScoped<INetWorthSnapshotRepository, NetWorthSnapshotRepository>();
+        services.AddScoped<IThesisRepository, ThesisRepository>();
+
+        // Thesis monitor: real AlertGeneratorService (so alert side effects are exercised) backed by
+        // deterministic fakes for EDGAR fundamentals / market data (no live HTTP in a parity test).
+        services.AddScoped<IAlertGeneratorService, AlertGeneratorService>();
+        services.AddSingleton<ISecEdgarService>(
+            new FakeSecEdgarService(edgarFactsByTicker ?? new Dictionary<string, IReadOnlyList<FundamentalFact>>()));
+        services.AddSingleton<IMarketDataService, FakeMarketDataService>();
 
         // Cross-provider readers used by several tools.
         services.AddScoped<IBankingAccountsReader, BankingAccountsReader>();
@@ -103,7 +120,8 @@ public sealed class ToolParityTests
             typeof(FinanceSentry.Modules.BrokerageSync.BrokerageSyncModule).Assembly,
             typeof(FinanceSentry.Modules.CryptoSync.CryptoSyncModule).Assembly,
             typeof(FinanceSentry.Modules.Subscriptions.SubscriptionsModule).Assembly,
-            typeof(FinanceSentry.Modules.Wealth.WealthModule).Assembly);
+            typeof(FinanceSentry.Modules.Wealth.WealthModule).Assembly,
+            typeof(FinanceSentry.Modules.Research.ResearchModule).Assembly);
 
         services.AddSingleton<FinanceSentry.Mcp.Abstractions.IIdentityResolver>(new FakeIdentityResolver());
         services.AddScoped<GetAccountSummaryTool>();
@@ -117,6 +135,8 @@ public sealed class ToolParityTests
         services.AddScoped<GetCashflowReportTool>();
         services.AddScoped<GetCryptoPnlDetailTool>();
         services.AddScoped<GetTaxLotsTool>();
+        services.AddScoped<RunThesisMonitorTool>();
+        services.AddScoped<ListThesisBreaksTool>();
 
         return services.BuildServiceProvider();
     }
@@ -577,5 +597,68 @@ public sealed class ToolParityTests
         febEntry.Inflow.Should().Be(2_500m);
         febEntry.Outflow.Should().Be(800m);
         febEntry.Net.Should().Be(1_700m);
+    }
+
+    [Fact]
+    public async Task RunThesisMonitor_MarksThesisBroken_AndSubsequentListReflectsIt()
+    {
+        var userId = Guid.NewGuid();
+
+        var breachingFacts = new List<FundamentalFact>
+        {
+            new("MU", "GrossProfit", "GrossProfit", "USD", 30m, new DateOnly(2026, 5, 31), "Q2", 2026, "10-Q"),
+            new("MU", "Revenue", "Revenue", "USD", 100m, new DateOnly(2026, 5, 31), "Q2", 2026, "10-Q"),
+        };
+        var factsByTicker = new Dictionary<string, IReadOnlyList<FundamentalFact>> { ["MU"] = breachingFacts };
+
+        await using var sp = BuildProvider(Guid.NewGuid().ToString("N"), factsByTicker);
+        await using var scope = sp.CreateAsyncScope();
+        var svc = scope.ServiceProvider;
+
+        var researchDb = svc.GetRequiredService<ResearchDbContext>();
+        researchDb.Theses.Add(new InvestmentThesis
+        {
+            UserId = userId,
+            Ticker = "MU",
+            ThesisText = "Memory upcycle",
+            InvalidationTriggers =
+            [
+                new ThesisInvalidationTrigger(
+                    FinanceSentry.Modules.Research.Domain.ThesisMonitor.ThesisMetric.GrossMargin,
+                    "lessThan", 0.35m, ConsecutivePeriods: 1),
+            ],
+        });
+        await researchDb.SaveChangesAsync();
+
+        var runTool = svc.GetRequiredService<RunThesisMonitorTool>();
+        var summary = await runTool.ExecuteAsync(userId);
+
+        summary.Should().NotBeNull();
+        summary!.ThesesEvaluated.Should().Be(1);
+        summary.BreaksRaised.Should().Be(1);
+
+        var listTool = svc.GetRequiredService<ListThesisBreaksTool>();
+        var breaks = await listTool.ExecuteAsync(userId);
+
+        breaks.Should().ContainSingle();
+        var thesisBreak = breaks.Single();
+        thesisBreak.Ticker.Should().Be("MU");
+        thesisBreak.Metric.Should().Be(FinanceSentry.Modules.Research.Domain.ThesisMonitor.ThesisMetric.GrossMargin);
+        thesisBreak.Reason.Should().NotBeNullOrEmpty();
+    }
+
+    [Fact]
+    public async Task ListThesisBreaks_ReturnsEmpty_WhenNoThesesAreBroken()
+    {
+        var userId = Guid.NewGuid();
+        await using var sp = BuildProvider(Guid.NewGuid().ToString("N"));
+        await using var scope = sp.CreateAsyncScope();
+        var svc = scope.ServiceProvider;
+
+        var listTool = svc.GetRequiredService<ListThesisBreaksTool>();
+        var breaks = await listTool.ExecuteAsync(userId);
+
+        breaks.Should().NotBeNull();
+        breaks.Should().BeEmpty();
     }
 }

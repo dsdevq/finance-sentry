@@ -19,4 +19,16 @@ public record ThesisDataPoint(string Metric, string Direction, decimal Threshold
 
 public record ThesisCatalyst(DateOnly Date, string Event);
 
-public record ThesisInvalidationTrigger(string Metric, string Direction, decimal Threshold);
+public record ThesisInvalidationTrigger(
+    string Metric,
+    string Direction,
+    decimal Threshold,
+    string? ProxyTicker = null,
+    int ConsecutivePeriods = 1,
+    ThesisPeriodType PeriodType = ThesisPeriodType.Quarter);
+
+public enum ThesisPeriodType
+{
+    Quarter,
+    Annual,
+}

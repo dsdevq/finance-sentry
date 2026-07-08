@@ -39,6 +39,11 @@ public static class ResearchModule
                 "research-macro-seed",
                 job => job.ExecuteAsync(CancellationToken.None),
                 Cron.Daily(3));
+
+            mgr.AddOrUpdate<ThesisMonitorJob>(
+                "thesis-monitor",
+                job => job.ExecuteAsync(CancellationToken.None),
+                Cron.Daily());
         }
     }
 
@@ -115,6 +120,7 @@ public static class ResearchModule
 
         services.AddScoped<NewsIngestionJob>();
         services.AddScoped<MacroCalendarSeedJob>();
+        services.AddScoped<ThesisMonitorJob>();
 
         services.AddSingleton<IJobRegistrar, JobRegistrar>();
 
