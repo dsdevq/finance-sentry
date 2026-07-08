@@ -44,6 +44,11 @@ public static class ResearchModule
                 "thesis-monitor",
                 job => job.ExecuteAsync(CancellationToken.None),
                 Cron.Daily());
+
+            mgr.AddOrUpdate<ThesisTrackRecordSnapshotJob>(
+                "thesis-track-record-snapshot",
+                job => job.ExecuteAsync(CancellationToken.None),
+                Cron.Weekly());
         }
     }
 
@@ -61,6 +66,7 @@ public static class ResearchModule
         services.AddScoped<INewsRepository, NewsRepository>();
         services.AddScoped<IMacroCalendarRepository, MacroCalendarRepository>();
         services.AddScoped<IIpsRepository, IpsRepository>();
+        services.AddScoped<IThesisEventRepository, ThesisEventRepository>();
 
         services.AddHttpClient(YahooMarketDataService.HttpClientName, client =>
         {
@@ -111,6 +117,9 @@ public static class ResearchModule
         services.AddScoped<IMarketDataService, YahooMarketDataService>();
         services.AddScoped<IMarketNewsService, RssMarketNewsService>();
         services.AddScoped<IMacroCalendarService, MacroCalendarService>();
+        services.AddScoped<IThesisEventRecorder, ThesisEventRecorder>();
+        services.AddScoped<IThesisPerformanceCalculator, ThesisPerformanceCalculator>();
+        services.Configure<FrictionConfig>(config.GetSection(FrictionConfig.SectionName));
 
         // Singleton: holds the cached Yahoo crumb + per-ticker event cache across requests.
         services.AddSingleton<IEarningsCalendarService, YahooEarningsCalendarService>();
@@ -121,6 +130,7 @@ public static class ResearchModule
         services.AddScoped<NewsIngestionJob>();
         services.AddScoped<MacroCalendarSeedJob>();
         services.AddScoped<ThesisMonitorJob>();
+        services.AddScoped<ThesisTrackRecordSnapshotJob>();
 
         services.AddSingleton<IJobRegistrar, JobRegistrar>();
 

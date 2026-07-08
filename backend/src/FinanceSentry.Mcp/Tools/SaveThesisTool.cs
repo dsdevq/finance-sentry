@@ -22,6 +22,7 @@ public sealed class SaveThesisTool(
         [Description("Upcoming catalysts (dates + events) that could confirm or break the thesis.")] IReadOnlyList<ThesisCatalyst> catalysts,
         [Description("Invalidation triggers — quantitative conditions that mark the thesis broken (e.g. gross_margin<40).")] IReadOnlyList<ThesisInvalidationTrigger> invalidationTriggers,
         [Description("Thesis id when updating; null to create.")] Guid? id = null,
+        [Description("Optional contemporaneous reasoning captured at creation time (FR-008b decision journal). Only applied on create.")] string? decisionNote = null,
         [Description("Optional user GUID. Defaults to the authenticated MCP identity.")] Guid? userId = null,
         CancellationToken cancellationToken = default)
     {
@@ -39,7 +40,8 @@ public sealed class SaveThesisTool(
                 thesisText,
                 keyDataPoints ?? [],
                 catalysts ?? [],
-                invalidationTriggers ?? []),
+                invalidationTriggers ?? [],
+                decisionNote),
             cancellationToken);
     }
 }

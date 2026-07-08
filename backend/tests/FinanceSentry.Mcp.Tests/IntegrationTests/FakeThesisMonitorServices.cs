@@ -21,14 +21,27 @@ public sealed class FakeSecEdgarService(IReadOnlyDictionary<string, IReadOnlyLis
 }
 
 /// <summary>
-/// Deterministic test double for <see cref="IMarketDataService"/> — always returns no price
-/// history since the parity tests exercise fundamentals-based triggers only.
+/// Deterministic test double for <see cref="IMarketDataService"/> — returns no price history by
+/// default (parity tests that exercise fundamentals-based triggers only), or the seeded quotes
+/// (020 track-record parity tests) when <paramref name="quotesByTicker"/> is supplied.
 /// </summary>
-public sealed class FakeMarketDataService : IMarketDataService
+public sealed class FakeMarketDataService(
+    IReadOnlyDictionary<string, QuoteCacheEntry>? quotesByTicker = null) : IMarketDataService
 {
     public Task<IReadOnlyDictionary<string, QuoteCacheEntry>> GetQuotesAsync(
         IReadOnlyCollection<string> tickers, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyDictionary<string, QuoteCacheEntry>>(new Dictionary<string, QuoteCacheEntry>());
+    {
+        if (quotesByTicker is null)
+        {
+            return Task.FromResult<IReadOnlyDictionary<string, QuoteCacheEntry>>(
+                new Dictionary<string, QuoteCacheEntry>());
+        }
+
+        var matched = tickers
+            .Where(quotesByTicker.ContainsKey)
+            .ToDictionary(t => t, t => quotesByTicker[t]);
+        return Task.FromResult<IReadOnlyDictionary<string, QuoteCacheEntry>>(matched);
+    }
 
     public Task<IReadOnlyList<DailyClose>> GetDailyClosesAsync(
         string ticker, DateOnly since, CancellationToken ct = default)

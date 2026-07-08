@@ -21,6 +21,7 @@ public class RunThesisMonitorCommandHandler(
     ISecEdgarService secEdgar,
     IMarketDataService marketData,
     IAlertGeneratorService alertGenerator,
+    IThesisEventRecorder eventRecorder,
     ILogger<RunThesisMonitorCommandHandler> logger)
     : ICommandHandler<RunThesisMonitorCommand, ThesisMonitorRunSummary>
 {
@@ -70,6 +71,8 @@ public class RunThesisMonitorCommandHandler(
                     await thesisRepo.UpsertAsync(thesis, ct);
                     await alertGenerator.GenerateThesisBreakAlertAsync(
                         thesis.UserId, thesis.Id, thesis.Ticker, thesis.BrokenReason, ct);
+                    await TryRecordEventAsync(
+                        thesis, ThesisEventType.Broken, thesis.BrokenReason, ct);
                     breaksRaised++;
                 }
                 else if (firstBreach is null && allNonEvaluable)
@@ -85,6 +88,7 @@ public class RunThesisMonitorCommandHandler(
                     thesis.BrokenReason = null;
                     await thesisRepo.UpsertAsync(thesis, ct);
                     await alertGenerator.ResolveThesisBreakAlertAsync(thesis.UserId, thesis.Id, ct);
+                    await TryRecordEventAsync(thesis, ThesisEventType.Unbroken, decisionNote: null, ct);
                     breaksCleared++;
                 }
 
@@ -153,6 +157,27 @@ public class RunThesisMonitorCommandHandler(
             ticker, DateOnly.FromDateTime(since.UtcDateTime), ct);
         cache[ticker] = closes;
         return closes;
+    }
+
+    /// <summary>
+    /// Records a Broken/Unbroken lifecycle event (020 track-record hook). Never allowed to fail or
+    /// abort the monitor run — a recorder/quote failure is caught and logged, matching the
+    /// per-thesis try/catch semantics already used for trigger evaluation above.
+    /// </summary>
+    private async Task TryRecordEventAsync(
+        InvestmentThesis thesis, ThesisEventType eventType, string? decisionNote, CancellationToken ct)
+    {
+        try
+        {
+            await eventRecorder.RecordAsync(
+                thesis.UserId, ThesisSubjectType.Thesis, thesis.Id, thesis.Ticker, eventType, decisionNote, ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex, "Thesis event recording failed for thesis {ThesisId} ({Ticker}, {EventType})",
+                thesis.Id, thesis.Ticker, eventType);
+        }
     }
 
     private static string ComposeReason(TriggerVerdict.Breached breach)

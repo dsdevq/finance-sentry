@@ -30,7 +30,9 @@ public class RunThesisMonitorHandlerTests
 
     private static RunThesisMonitorCommandHandler BuildHandler(
         FakeThesisRepository repo, FakeSecEdgarService secEdgar, FakeAlertGeneratorService alerts)
-        => new(repo, secEdgar, new FakeMarketDataService(), alerts, NullLogger<RunThesisMonitorCommandHandler>.Instance);
+        => new(
+            repo, secEdgar, new FakeMarketDataService(), alerts, new FakeThesisEventRecorder(),
+            NullLogger<RunThesisMonitorCommandHandler>.Instance);
 
     [Fact]
     public async Task StillBroken_RaisesNoNewAlert_AndLeavesBrokenAtUnchanged()
@@ -232,6 +234,19 @@ public class RunThesisMonitorHandlerTests
         public Task<IReadOnlyList<DailyClose>> GetDailyClosesAsync(
             string ticker, DateOnly since, CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<DailyClose>>([]);
+    }
+
+    private sealed class FakeThesisEventRecorder : IThesisEventRecorder
+    {
+        public Task RecordAsync(
+            Guid userId,
+            ThesisSubjectType subjectType,
+            Guid subjectId,
+            string ticker,
+            ThesisEventType eventType,
+            string? decisionNote = null,
+            CancellationToken ct = default)
+            => Task.CompletedTask;
     }
 
     private sealed class FakeAlertGeneratorService : IAlertGeneratorService

@@ -59,7 +59,9 @@ public sealed class ToolParityTests
 
     // dbKey must be unique per test so that each test gets its own in-memory DB.
     private static ServiceProvider BuildProvider(
-        string dbKey, IReadOnlyDictionary<string, IReadOnlyList<FundamentalFact>>? edgarFactsByTicker = null)
+        string dbKey,
+        IReadOnlyDictionary<string, IReadOnlyList<FundamentalFact>>? edgarFactsByTicker = null,
+        IReadOnlyDictionary<string, QuoteCacheEntry>? quotesByTicker = null)
     {
         var services = new ServiceCollection();
 
@@ -99,7 +101,11 @@ public sealed class ToolParityTests
         services.AddScoped<IAlertGeneratorService, AlertGeneratorService>();
         services.AddSingleton<ISecEdgarService>(
             new FakeSecEdgarService(edgarFactsByTicker ?? new Dictionary<string, IReadOnlyList<FundamentalFact>>()));
-        services.AddSingleton<IMarketDataService, FakeMarketDataService>();
+        services.AddSingleton<IMarketDataService>(new FakeMarketDataService(quotesByTicker));
+        services.AddScoped<IThesisEventRepository, ThesisEventRepository>();
+        services.AddScoped<IThesisEventRecorder, ThesisEventRecorder>();
+        services.AddScoped<IThesisPerformanceCalculator, ThesisPerformanceCalculator>();
+        services.Configure<FrictionConfig>(_ => { });
 
         // Cross-provider readers used by several tools.
         services.AddScoped<IBankingAccountsReader, BankingAccountsReader>();
@@ -137,6 +143,10 @@ public sealed class ToolParityTests
         services.AddScoped<GetTaxLotsTool>();
         services.AddScoped<RunThesisMonitorTool>();
         services.AddScoped<ListThesisBreaksTool>();
+        services.AddScoped<ListThesisEventsTool>();
+        services.AddScoped<GetThesisPerformanceTool>();
+        services.AddScoped<GetTrackRecordTool>();
+        services.AddScoped<GetPostmortemPacketTool>();
 
         return services.BuildServiceProvider();
     }
@@ -660,5 +670,117 @@ public sealed class ToolParityTests
 
         breaks.Should().NotBeNull();
         breaks.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SaveThesis_RecordsCreatedEvent_WithPricedQuotes()
+    {
+        var userId = Guid.NewGuid();
+        var quotes = new Dictionary<string, QuoteCacheEntry>
+        {
+            ["MU"] = new() { Ticker = "MU", Price = 100m },
+            ["SPY"] = new() { Ticker = "SPY", Price = 500m },
+        };
+        await using var sp = BuildProvider(Guid.NewGuid().ToString("N"), quotesByTicker: quotes);
+        await using var scope = sp.CreateAsyncScope();
+        var svc = scope.ServiceProvider;
+
+        var saveHandler = svc.GetRequiredService<ICommandHandler<
+            FinanceSentry.Modules.Research.Application.Commands.SaveThesisCommand,
+            FinanceSentry.Modules.Research.API.Responses.ThesisDto>>();
+
+        var thesis = await saveHandler.Handle(
+            new FinanceSentry.Modules.Research.Application.Commands.SaveThesisCommand(
+                userId, null, "MU", "Memory upcycle", [], [], []),
+            CancellationToken.None);
+
+        var listTool = svc.GetRequiredService<ListThesisEventsTool>();
+        var events = await listTool.ExecuteAsync(subjectId: thesis.Id, userId: userId);
+
+        events.Should().ContainSingle();
+        var created = events.Single();
+        created.EventType.Should().Be(ThesisEventType.Created);
+        created.PricesPending.Should().BeFalse();
+        created.SubjectPrice.Should().Be(100m);
+        created.BenchmarkPrice.Should().Be(500m);
+    }
+
+    [Fact]
+    public async Task GetThesisPerformance_ComputesExcessReturn_AgainstLiveQuote()
+    {
+        var userId = Guid.NewGuid();
+        var creationQuotes = new Dictionary<string, QuoteCacheEntry>
+        {
+            ["MU"] = new() { Ticker = "MU", Price = 100m },
+            ["SPY"] = new() { Ticker = "SPY", Price = 500m },
+        };
+        await using var sp = BuildProvider(Guid.NewGuid().ToString("N"), quotesByTicker: creationQuotes);
+        await using var scope = sp.CreateAsyncScope();
+        var svc = scope.ServiceProvider;
+
+        var saveHandler = svc.GetRequiredService<ICommandHandler<
+            FinanceSentry.Modules.Research.Application.Commands.SaveThesisCommand,
+            FinanceSentry.Modules.Research.API.Responses.ThesisDto>>();
+        await saveHandler.Handle(
+            new FinanceSentry.Modules.Research.Application.Commands.SaveThesisCommand(
+                userId, null, "MU", "Memory upcycle", [], [], []),
+            CancellationToken.None);
+
+        var perfTool = svc.GetRequiredService<GetThesisPerformanceTool>();
+        var result = await perfTool.ExecuteAsync(ticker: "MU", userId: userId);
+
+        result.Should().NotBeNull();
+        result!.IsEvaluable.Should().BeTrue();
+        // Live quote == creation quote in this fixture, so absolute/benchmark/excess returns are 0.
+        result.AbsoluteReturnPct.Should().Be(0m);
+        result.BenchmarkReturnPct.Should().Be(0m);
+        result.ExcessReturnPct.Should().Be(0m);
+    }
+
+    [Fact]
+    public async Task GetTrackRecord_ReturnsLowSampleCaveat_WhenFewerThan30ClosedRecords()
+    {
+        var userId = Guid.NewGuid();
+        var quotes = new Dictionary<string, QuoteCacheEntry>
+        {
+            ["MU"] = new() { Ticker = "MU", Price = 100m },
+            ["SPY"] = new() { Ticker = "SPY", Price = 500m },
+        };
+        await using var sp = BuildProvider(Guid.NewGuid().ToString("N"), quotesByTicker: quotes);
+        await using var scope = sp.CreateAsyncScope();
+        var svc = scope.ServiceProvider;
+
+        var saveHandler = svc.GetRequiredService<ICommandHandler<
+            FinanceSentry.Modules.Research.Application.Commands.SaveThesisCommand,
+            FinanceSentry.Modules.Research.API.Responses.ThesisDto>>();
+        await saveHandler.Handle(
+            new FinanceSentry.Modules.Research.Application.Commands.SaveThesisCommand(
+                userId, null, "MU", "Memory upcycle", [], [], []),
+            CancellationToken.None);
+
+        var trackRecordTool = svc.GetRequiredService<GetTrackRecordTool>();
+        var summary = await trackRecordTool.ExecuteAsync(userId: userId);
+
+        summary.Should().NotBeNull();
+        summary!.TotalCount.Should().Be(1);
+        summary.LowSampleCaveat.Should().BeTrue();
+        summary.ByStatus["Active"].Count.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task GetPostmortemPacket_ReturnsEmpty_WhenNoTerminalEventsInPeriod()
+    {
+        var userId = Guid.NewGuid();
+        await using var sp = BuildProvider(Guid.NewGuid().ToString("N"));
+        await using var scope = sp.CreateAsyncScope();
+        var svc = scope.ServiceProvider;
+
+        var tool = svc.GetRequiredService<GetPostmortemPacketTool>();
+        var packet = await tool.ExecuteAsync(
+            periodStart: new DateOnly(2026, 1, 1), periodEnd: new DateOnly(2026, 12, 31), userId: userId);
+
+        packet.Should().NotBeNull();
+        packet!.Entries.Should().BeEmpty();
+        packet.CounterfactualEntries.Should().BeEmpty();
     }
 }

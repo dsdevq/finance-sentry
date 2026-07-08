@@ -18,6 +18,8 @@ public class ResearchDbContext(DbContextOptions<ResearchDbContext> options) : Db
 
     public DbSet<InvestmentPolicyStatement> PolicyStatements { get; set; } = null!;
 
+    public DbSet<ThesisEvent> ThesisEvents { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema("research");
@@ -153,5 +155,27 @@ public class ResearchDbContext(DbContextOptions<ResearchDbContext> options) : Db
                 v => JsonSerializer.Deserialize<ContributionPlan>(v, jsonOptions));
         ib.HasIndex(x => new { x.UserId, x.IsCurrent }).HasDatabaseName("idx_ips_user_current");
         ib.HasIndex(x => new { x.UserId, x.Version }).IsUnique().HasDatabaseName("idx_ips_user_version");
+
+        var teb = modelBuilder.Entity<ThesisEvent>();
+        teb.ToTable("thesis_events");
+        teb.HasKey(x => x.Id);
+        teb.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
+        teb.Property(x => x.UserId).IsRequired();
+        teb.Property(x => x.SubjectType).IsRequired().HasConversion<string>().HasMaxLength(20);
+        teb.Property(x => x.SubjectId).IsRequired();
+        teb.Property(x => x.Ticker).IsRequired().HasMaxLength(20);
+        teb.Property(x => x.EventType).IsRequired().HasConversion<string>().HasMaxLength(20);
+        teb.Property(x => x.Timestamp).HasDefaultValueSql("CURRENT_TIMESTAMP");
+        teb.Property(x => x.SubjectPrice).HasColumnType("numeric(18,6)");
+        teb.Property(x => x.BenchmarkPrice).HasColumnType("numeric(18,6)");
+        teb.Property(x => x.BenchmarkTicker).IsRequired().HasMaxLength(20).HasDefaultValue("SPY");
+        teb.Property(x => x.PricesPending).IsRequired();
+        teb.Property(x => x.DecisionNote).HasMaxLength(4000);
+        teb.HasIndex(x => new { x.SubjectType, x.SubjectId, x.Timestamp })
+            .HasDatabaseName("idx_thesis_events_subject");
+        teb.HasIndex(x => new { x.UserId, x.PricesPending })
+            .HasDatabaseName("idx_thesis_events_pending");
+        teb.HasIndex(x => new { x.UserId, x.EventType, x.Timestamp })
+            .HasDatabaseName("idx_thesis_events_user_type_time");
     }
 }
