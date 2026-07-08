@@ -49,6 +49,11 @@ public static class ResearchModule
                 "thesis-track-record-snapshot",
                 job => job.ExecuteAsync(CancellationToken.None),
                 Cron.Weekly());
+
+            mgr.AddOrUpdate<CandidateExpiryJob>(
+                "opportunity-candidate-expiry",
+                job => job.ExecuteAsync(CancellationToken.None),
+                Cron.Daily());
         }
     }
 
@@ -69,6 +74,9 @@ public static class ResearchModule
         services.AddScoped<IMacroCalendarRepository, MacroCalendarRepository>();
         services.AddScoped<IIpsRepository, IpsRepository>();
         services.AddScoped<IThesisEventRepository, ThesisEventRepository>();
+        services.AddScoped<ICandidateRepository, CandidateRepository>();
+        services.AddScoped<ICandidateScoreRepository, CandidateScoreRepository>();
+        services.Configure<OpportunityOptions>(config.GetSection(OpportunityOptions.SectionName));
 
         services.AddHttpClient(YahooMarketDataService.HttpClientName, client =>
         {
@@ -133,6 +141,7 @@ public static class ResearchModule
         services.AddScoped<MacroCalendarSeedJob>();
         services.AddScoped<ThesisMonitorJob>();
         services.AddScoped<ThesisTrackRecordSnapshotJob>();
+        services.AddScoped<CandidateExpiryJob>();
 
         services.AddSingleton<IJobRegistrar, JobRegistrar>();
 

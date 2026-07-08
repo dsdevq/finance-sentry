@@ -24,6 +24,7 @@ using FinanceSentry.Modules.Budgets.Infrastructure.Persistence.Repositories;
 using FinanceSentry.Modules.CryptoSync.Application.Services;
 using FinanceSentry.Modules.Research.Application.Services;
 using FinanceSentry.Modules.Research.Domain;
+using FinanceSentry.Modules.Research.Domain.Opportunity;
 using FinanceSentry.Modules.Research.Domain.Repositories;
 using FinanceSentry.Modules.Research.Infrastructure.Persistence;
 using FinanceSentry.Modules.Research.Infrastructure.Persistence.Repositories;
@@ -109,6 +110,7 @@ public sealed class ToolParityTests
         services.AddScoped<IDetectedSubscriptionRepository, DetectedSubscriptionRepository>();
         services.AddScoped<INetWorthSnapshotRepository, NetWorthSnapshotRepository>();
         services.AddScoped<IThesisRepository, ThesisRepository>();
+        services.AddScoped<IIpsRepository, IpsRepository>();
 
         // Radar: repositories + read service + options (log-only default).
         services.AddScoped<IDailyBarRepository, DailyBarRepository>();
@@ -129,6 +131,14 @@ public sealed class ToolParityTests
         services.AddScoped<IThesisEventRecorder, ThesisEventRecorder>();
         services.AddScoped<IThesisPerformanceCalculator, ThesisPerformanceCalculator>();
         services.Configure<FrictionConfig>(_ => { });
+
+        // Opportunity scanner (019): candidate repos + options + the two Core seams
+        // (live impls over the in-memory Radar/Risk graphs already registered below).
+        services.AddScoped<ICandidateRepository, CandidateRepository>();
+        services.AddScoped<ICandidateScoreRepository, CandidateScoreRepository>();
+        services.Configure<OpportunityOptions>(_ => { });
+        services.AddScoped<IMarketStructureReader, MarketStructureReader>();
+        services.AddScoped<IRiskPolicyGate, RiskPolicyGate>();
 
         // Cross-provider readers used by several tools.
         services.AddScoped<IBankingAccountsReader, BankingAccountsReader>();
@@ -192,6 +202,10 @@ public sealed class ToolParityTests
         services.AddScoped<SaveRiskRulesTool>();
         services.AddScoped<CheckRiskRulesTool>();
         services.AddScoped<AcknowledgeRiskViolationTool>();
+        services.AddScoped<ScoreCandidateTool>();
+        services.AddScoped<ListCandidatesTool>();
+        services.AddScoped<PromoteCandidateTool>();
+        services.AddScoped<RejectCandidateTool>();
 
         return services.BuildServiceProvider();
     }
@@ -1042,5 +1056,105 @@ public sealed class ToolParityTests
         verdict!.Decision.Should().Be(RiskDecision.Refused);
         verdict.RuleKey.Should().Be(RiskRuleKeys.MaxPositionWeight);
         verdict.MaxCompliantSizeUsd.Should().NotBeNull();
+    }
+
+    // ── Opportunity scanner (019) parity ──────────────────────────────────────
+
+    [Fact]
+    public async Task ScoreCandidate_CreatesCandidate_WithExplainableScorecard()
+    {
+        var userId = Guid.NewGuid();
+        var facts = new Dictionary<string, IReadOnlyList<FundamentalFact>>
+        {
+            ["MSFT"] =
+            [
+                new("MSFT", "Revenue", "Revenue", "USD", 100m, new DateOnly(2026, 3, 31), "Q3", 2026, "10-Q"),
+                new("MSFT", "Revenue", "Revenue", "USD", 80m, new DateOnly(2025, 3, 31), "Q3", 2025, "10-Q"),
+                new("MSFT", "GrossProfit", "GrossProfit", "USD", 70m, new DateOnly(2026, 3, 31), "Q3", 2026, "10-Q"),
+            ],
+        };
+        await using var sp = BuildProvider(Guid.NewGuid().ToString("N"), facts);
+        await using var scope = sp.CreateAsyncScope();
+        var svc = scope.ServiceProvider;
+
+        var tool = svc.GetRequiredService<ScoreCandidateTool>();
+        var result = await tool.ExecuteAsync("MSFT", userId: userId);
+
+        result.Should().NotBeNull();
+        result!.Ticker.Should().Be("MSFT");
+        result.IsNewCandidate.Should().BeTrue();
+        // Fundamentals evaluable from the seeded facts; every sub-score cites its evidence.
+        result.Scorecard.FundamentalsScore.Should().NotBeNull();
+        result.Scorecard.Evidence.RevenueYoy.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task ListCandidates_ReturnsScoredCandidate_AfterScoring()
+    {
+        var userId = Guid.NewGuid();
+        await using var sp = BuildProvider(Guid.NewGuid().ToString("N"));
+        await using var scope = sp.CreateAsyncScope();
+        var svc = scope.ServiceProvider;
+
+        var scoreTool = svc.GetRequiredService<ScoreCandidateTool>();
+        await scoreTool.ExecuteAsync("NVDA", userId: userId);
+
+        var listTool = svc.GetRequiredService<ListCandidatesTool>();
+        var result = await listTool.ExecuteAsync(userId: userId);
+
+        result.Should().ContainSingle(c => c.Ticker == "NVDA" && c.Status == CandidateStatus.Active);
+    }
+
+    [Fact]
+    public async Task PromoteCandidate_CreatesThesis_WhenGateAllows()
+    {
+        var userId = Guid.NewGuid();
+        var quotes = new Dictionary<string, QuoteCacheEntry>
+        {
+            ["AMD"] = new() { Ticker = "AMD", Price = 100m },
+            ["SPY"] = new() { Ticker = "SPY", Price = 500m },
+        };
+        await using var sp = BuildProvider(Guid.NewGuid().ToString("N"), quotesByTicker: quotes);
+        await using var scope = sp.CreateAsyncScope();
+        var svc = scope.ServiceProvider;
+
+        var scoreTool = svc.GetRequiredService<ScoreCandidateTool>();
+        var scored = await scoreTool.ExecuteAsync("AMD", userId: userId);
+
+        var promoteTool = svc.GetRequiredService<PromoteCandidateTool>();
+        // No rule set on file → gate Allowed → thesis created.
+        var result = await promoteTool.ExecuteAsync(id: scored!.CandidateId, userId: userId);
+
+        result.Should().NotBeNull();
+        result!.Gate.Decision.Should().Be(RiskGateDecision.Allowed);
+        result.ThesisId.Should().NotBeNull();
+
+        var researchDb = svc.GetRequiredService<ResearchDbContext>();
+        var candidate = await researchDb.OpportunityCandidates.FirstAsync(c => c.Id == scored.CandidateId);
+        candidate.Status.Should().Be(CandidateStatus.Promoted);
+        candidate.PromotedThesisId.Should().Be(result.ThesisId);
+    }
+
+    [Fact]
+    public async Task RejectCandidate_MarksRejected_WithReason()
+    {
+        var userId = Guid.NewGuid();
+        await using var sp = BuildProvider(Guid.NewGuid().ToString("N"));
+        await using var scope = sp.CreateAsyncScope();
+        var svc = scope.ServiceProvider;
+
+        var scoreTool = svc.GetRequiredService<ScoreCandidateTool>();
+        var scored = await scoreTool.ExecuteAsync("INTC", userId: userId);
+
+        var rejectTool = svc.GetRequiredService<RejectCandidateTool>();
+        var result = await rejectTool.ExecuteAsync(id: scored!.CandidateId, reason: "valuation too rich", userId: userId);
+
+        result.Should().NotBeNull();
+        result!.CandidateFound.Should().BeTrue();
+        result.Status.Should().Be(CandidateStatus.Rejected);
+
+        var listTool = svc.GetRequiredService<ListCandidatesTool>();
+        var listed = await listTool.ExecuteAsync(status: CandidateStatus.Rejected, userId: userId);
+        listed.Should().ContainSingle(c => c.Ticker == "INTC" && c.RejectedReason == "valuation too rich");
     }
 }

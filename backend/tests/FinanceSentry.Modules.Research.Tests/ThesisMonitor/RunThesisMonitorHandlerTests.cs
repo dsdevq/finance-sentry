@@ -304,5 +304,9 @@ public class RunThesisMonitorHandlerTests
         public Task ResolvePolicyViolationAlertAsync(
             Guid userId, string ruleKey, string subject, CancellationToken ct = default)
             => Task.CompletedTask;
+
+        public Task GenerateOpportunityAlertAsync(
+            Guid userId, Guid referenceId, string ticker, string reason, CancellationToken ct = default)
+            => Task.CompletedTask;
     }
 }
