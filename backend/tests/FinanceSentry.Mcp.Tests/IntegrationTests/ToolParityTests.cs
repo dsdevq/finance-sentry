@@ -44,6 +44,11 @@ using FinanceSentry.Modules.Radar.Domain;
 using FinanceSentry.Modules.Radar.Domain.Repositories;
 using FinanceSentry.Modules.Radar.Infrastructure.Persistence;
 using FinanceSentry.Modules.Radar.Infrastructure.Persistence.Repositories;
+using FinanceSentry.Modules.Risk.Application.Services;
+using FinanceSentry.Modules.Risk.Domain;
+using FinanceSentry.Modules.Risk.Domain.Repositories;
+using FinanceSentry.Modules.Risk.Infrastructure.Persistence;
+using FinanceSentry.Modules.Risk.Infrastructure.Persistence.Repositories;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -91,6 +96,8 @@ public sealed class ToolParityTests
             o.UseInMemoryDatabase($"research-{dbKey}"));
         services.AddDbContext<RadarDbContext>(o =>
             o.UseInMemoryDatabase($"radar-{dbKey}"));
+        services.AddDbContext<RiskDbContext>(o =>
+            o.UseInMemoryDatabase($"risk-{dbKey}"));
 
         // Repositories — real implementations backed by the in-memory contexts above.
         services.AddScoped<IBankAccountRepository, BankAccountRepository>();
@@ -125,8 +132,18 @@ public sealed class ToolParityTests
 
         // Cross-provider readers used by several tools.
         services.AddScoped<IBankingAccountsReader, BankingAccountsReader>();
+        services.AddScoped<IBankingTotalsReader, BankingTotalsReader>();
         services.AddScoped<ICryptoHoldingsReader, CryptoHoldingsReader>();
         services.AddScoped<IBrokerageHoldingsReader, BrokerageHoldingsReader>();
+
+        // Risk (022): repositories + pure evaluation services backing the 3 risk MCP tools.
+        services.AddScoped<IRiskRuleSetRepository, RiskRuleSetRepository>();
+        services.AddScoped<IPolicyViolationAckRepository, PolicyViolationAckRepository>();
+        services.AddScoped<IHoldingSnapshotRepository, HoldingSnapshotRepository>();
+        services.AddScoped<IBookSnapshotReader, BookSnapshotReader>();
+        services.AddScoped<IRiskEvaluationService, RiskEvaluationService>();
+        services.AddScoped<ITurnoverTracker, TurnoverTracker>();
+        services.Configure<RiskOptions>(_ => { });
 
         // Domain service needed by GetBudgetSummaryQueryHandler.
         services.AddScoped<ICategoryNormalizationService, CategoryNormalizationService>();
@@ -144,7 +161,8 @@ public sealed class ToolParityTests
             typeof(FinanceSentry.Modules.Subscriptions.SubscriptionsModule).Assembly,
             typeof(FinanceSentry.Modules.Wealth.WealthModule).Assembly,
             typeof(FinanceSentry.Modules.Research.ResearchModule).Assembly,
-            typeof(FinanceSentry.Modules.Radar.RadarModule).Assembly);
+            typeof(FinanceSentry.Modules.Radar.RadarModule).Assembly,
+            typeof(FinanceSentry.Modules.Risk.RiskModule).Assembly);
 
         services.AddSingleton<FinanceSentry.Mcp.Abstractions.IIdentityResolver>(new FakeIdentityResolver());
         services.AddScoped<GetAccountSummaryTool>();
@@ -170,6 +188,10 @@ public sealed class ToolParityTests
         services.AddScoped<GetMarketBreadthTool>();
         services.AddScoped<ListSignalsTool>();
         services.AddScoped<GetRadarSummaryTool>();
+        services.AddScoped<GetRiskRulesTool>();
+        services.AddScoped<SaveRiskRulesTool>();
+        services.AddScoped<CheckRiskRulesTool>();
+        services.AddScoped<AcknowledgeRiskViolationTool>();
 
         return services.BuildServiceProvider();
     }
@@ -943,5 +965,82 @@ public sealed class ToolParityTests
 
         result.Should().NotBeNull();
         result.Breadth.Should().NotBeNull();
+    }
+
+    // ── Risk (022) parity ─────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task SaveRiskRules_ThenGetRiskRules_RoundTripsCurrentVersion()
+    {
+        var userId = Guid.NewGuid();
+        await using var sp = BuildProvider(Guid.NewGuid().ToString("N"));
+        await using var scope = sp.CreateAsyncScope();
+        var svc = scope.ServiceProvider;
+
+        var saveTool = svc.GetRequiredService<SaveRiskRulesTool>();
+        var saved = await saveTool.ExecuteAsync(maxPositionWeightPct: 0.25m, userId: userId);
+
+        saved.Should().NotBeNull();
+        saved!.Version.Should().Be(1);
+        saved.MaxPositionWeightPct.Should().Be(0.25m);
+
+        var getTool = svc.GetRequiredService<GetRiskRulesTool>();
+        var current = await getTool.ExecuteAsync(userId);
+
+        current.Should().NotBeNull();
+        current!.MaxPositionWeightPct.Should().Be(0.25m);
+    }
+
+    [Fact]
+    public async Task CheckRiskRules_NoProposal_ReturnsComplianceReport_WithConcentrationViolation()
+    {
+        var userId = Guid.NewGuid();
+        await using var sp = BuildProvider(Guid.NewGuid().ToString("N"));
+        await using var scope = sp.CreateAsyncScope();
+        var svc = scope.ServiceProvider;
+
+        // One dominant brokerage position (100% of book) against a 25% cap → one violation.
+        var brokerageDb = svc.GetRequiredService<BrokerageSyncDbContext>();
+        brokerageDb.BrokerageHoldings.Add(new BrokerageHolding(userId, "DRAM", "STK", 100m, 6_900m, "ibkr"));
+        await brokerageDb.SaveChangesAsync();
+
+        var saveTool = svc.GetRequiredService<SaveRiskRulesTool>();
+        await saveTool.ExecuteAsync(maxPositionWeightPct: 0.25m, userId: userId);
+
+        var checkTool = svc.GetRequiredService<CheckRiskRulesTool>();
+        var result = await checkTool.ExecuteAsync(userId: userId);
+
+        result.Should().NotBeNull();
+        result!.HasRuleSet.Should().BeTrue();
+        result.Violations.Should().NotBeNull();
+        result.Violations!.Should().ContainSingle(v => v.RuleKey == RiskRuleKeys.MaxPositionWeight && v.Subject == "DRAM");
+    }
+
+    [Fact]
+    public async Task CheckRiskRules_Proposal_ReturnsRefusedVerdict_WhenBreachingConcentration()
+    {
+        var userId = Guid.NewGuid();
+        await using var sp = BuildProvider(Guid.NewGuid().ToString("N"));
+        await using var scope = sp.CreateAsyncScope();
+        var svc = scope.ServiceProvider;
+
+        // Cash-only book of $10k; a $5k new position would be 33% of the projected book vs a 25% cap.
+        var bankDb = svc.GetRequiredService<BankSyncDbContext>();
+        var account = new BankAccount(userId, "ext-risk-001", "Chase", "checking", "1234", "Test", "USD", userId);
+        account.BeginSync();
+        account.MarkActive(10_000m);
+        bankDb.BankAccounts.Add(account);
+        await bankDb.SaveChangesAsync();
+
+        var saveTool = svc.GetRequiredService<SaveRiskRulesTool>();
+        await saveTool.ExecuteAsync(maxPositionWeightPct: 0.25m, userId: userId);
+
+        var checkTool = svc.GetRequiredService<CheckRiskRulesTool>();
+        var verdict = await checkTool.ExecuteAsync(ticker: "NVDA", proposedUsd: 5_000m, userId: userId);
+
+        verdict.Should().NotBeNull();
+        verdict!.Decision.Should().Be(RiskDecision.Refused);
+        verdict.RuleKey.Should().Be(RiskRuleKeys.MaxPositionWeight);
+        verdict.MaxCompliantSizeUsd.Should().NotBeNull();
     }
 }

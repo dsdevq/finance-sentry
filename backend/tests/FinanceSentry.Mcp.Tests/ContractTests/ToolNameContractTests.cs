@@ -7,7 +7,9 @@ public sealed class ToolNameContractTests
 {
     private static readonly IReadOnlySet<string> AgreedToolSurface = new HashSet<string>
     {
+        "acknowledge_risk_violation",
         "add_to_watchlist",
+        "check_risk_rules",
         "delete_thesis",
         "get_account_summary",
         "get_allocation_vs_target",
@@ -27,6 +29,7 @@ public sealed class ToolNameContractTests
         "get_quotes",
         "get_radar_summary",
         "get_recent_filings",
+        "get_risk_rules",
         "get_sync_health",
         "get_tax_lots",
         "get_thesis_performance",
@@ -44,6 +47,7 @@ public sealed class ToolNameContractTests
         "remove_from_watchlist",
         "run_thesis_monitor",
         "save_ips",
+        "save_risk_rules",
         "save_thesis",
         "search_market_news",
     };
@@ -55,6 +59,6 @@ public sealed class ToolNameContractTests
 
         actual.Should().BeEquivalentTo(
             AgreedToolSurface,
-            because: "the MCP tool surface must match the agreed 39-tool contract — no more, no fewer");
+            because: "the MCP tool surface must match the agreed 43-tool contract — no more, no fewer");
     }
 }

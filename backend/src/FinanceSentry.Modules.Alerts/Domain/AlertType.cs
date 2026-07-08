@@ -7,4 +7,5 @@ public static class AlertType
     public const string UnusualSpend = "UnusualSpend";
     public const string ThesisBroken = "ThesisBroken";
     public const string MarketStructure = "MarketStructure";
+    public const string PolicyViolation = "PolicyViolation";
 }

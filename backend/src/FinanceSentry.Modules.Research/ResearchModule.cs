@@ -63,6 +63,7 @@ public static class ResearchModule
         services.AddScoped<IWatchlistRepository, WatchlistRepository>();
         services.AddScoped<IWatchlistReader, WatchlistReader>();
         services.AddScoped<IThesisRepository, ThesisRepository>();
+        services.AddScoped<IBrokenThesisReader, BrokenThesisReader>();
         services.AddScoped<IQuoteCacheRepository, QuoteCacheRepository>();
         services.AddScoped<INewsRepository, NewsRepository>();
         services.AddScoped<IMacroCalendarRepository, MacroCalendarRepository>();

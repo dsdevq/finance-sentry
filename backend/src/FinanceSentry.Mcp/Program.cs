@@ -42,6 +42,7 @@ Assembly[] moduleAssemblies =
     typeof(FinanceSentry.Modules.Wealth.WealthModule).Assembly,
     typeof(FinanceSentry.Modules.Research.ResearchModule).Assembly,
     typeof(FinanceSentry.Modules.Radar.RadarModule).Assembly,
+    typeof(FinanceSentry.Modules.Risk.RiskModule).Assembly,
 ];
 
 var mcpAssembly = typeof(FinanceSentry.Mcp.Tools.GetAccountSummaryTool).Assembly;

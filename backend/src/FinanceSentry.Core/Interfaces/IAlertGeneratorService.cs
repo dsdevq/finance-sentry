@@ -71,4 +71,24 @@ public interface IAlertGeneratorService
         Guid referenceId,
         string reason,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Raises a policy-violation Alert (022) naming the rule, observed value, and limit. When
+    /// <paramref name="isOverride"/> is true, this records an explicit override of a Refused
+    /// verdict rather than a fresh violation (FR-007) — always Info severity, never silent.
+    /// </summary>
+    Task GeneratePolicyViolationAlertAsync(
+        Guid userId,
+        string ruleKey,
+        string subject,
+        decimal observedValue,
+        decimal limitValue,
+        bool isOverride = false,
+        CancellationToken ct = default);
+
+    Task ResolvePolicyViolationAlertAsync(
+        Guid userId,
+        string ruleKey,
+        string subject,
+        CancellationToken ct = default);
 }

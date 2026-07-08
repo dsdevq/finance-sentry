@@ -51,7 +51,7 @@ One-way dependency discipline: Finance Sentry never pushes to a Ledger-specific 
 | 017 | Thesis Break Monitor | Defense: deterministic invalidation of held theses (fundamentals **+ price** triggers) | Low | **Spec ready** — implement first |
 | 020 | Thesis Track Record | Honesty: price-stamp every thesis/candidate; net-of-cost excess return vs SPY | Low | Spec drafted (`020-thesis-track-record`) — **v0 ships second** to start the measurement clock |
 | 018 | Market Structure Scanner + Signal Log | Eyes + accumulation layer all other scanners write to | Low-medium | Spec drafted (`018-market-structure`) — includes log-only calibration phase + historical validation |
-| 022 | Risk Rules | The practitioner layer: position sizing, max loss per thesis, concentration remediation | Low | Spec drafted (`022-risk-rules`) — **gates 019** |
+| 022 | Risk Rules | The practitioner layer: position sizing, max loss per thesis, concentration remediation | Low | **Implemented** (`022-risk-rules`) — **gates 019** |
 | 019 | Opportunity Scanner | Offense: conviction scorecards + promote → thesis. Machine scan deferred to v2 | Medium | Spec drafted (`019-opportunity-scanner`) |
 | 021 | Market Regime Scanner | Context: regime — VIX, yield curve (sentiment indices cut per review) | Low | Sketch below — spec after 018 |
 

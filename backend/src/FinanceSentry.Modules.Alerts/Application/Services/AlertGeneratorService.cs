@@ -1,5 +1,7 @@
 namespace FinanceSentry.Modules.Alerts.Application.Services;
 
+using System.Security.Cryptography;
+using System.Text;
 using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Modules.Alerts.Domain;
 using FinanceSentry.Modules.Alerts.Domain.Repositories;
@@ -12,6 +14,7 @@ public class AlertGeneratorService(IAlertRepository alerts) : IAlertGeneratorSer
     private static readonly TimeSpan ThesisBrokenSilenceWindow = TimeSpan.FromHours(24);
     private static readonly TimeSpan MarketStructureSilenceWindow = TimeSpan.FromHours(24);
     private static readonly TimeSpan MarketStructureFreshnessSilenceWindow = TimeSpan.FromHours(12);
+    private static readonly TimeSpan PolicyViolationSilenceWindow = TimeSpan.FromHours(24);
 
     private readonly IAlertRepository _alerts = alerts;
 
@@ -178,5 +181,54 @@ public class AlertGeneratorService(IAlertRepository alerts) : IAlertGeneratorSer
             ReferenceId = referenceId,
             ReferenceLabel = "freshness",
         }, ct);
+    }
+
+    public async Task GeneratePolicyViolationAlertAsync(
+        Guid userId, string ruleKey, string subject, decimal observedValue, decimal limitValue,
+        bool isOverride = false, CancellationToken ct = default)
+    {
+        var referenceId = ViolationReferenceId(ruleKey, subject);
+
+        if (!isOverride)
+        {
+            var existing = await _alerts.FindActiveAsync(userId, AlertType.PolicyViolation, referenceId, ct);
+            if (existing is not null) return;
+
+            var quietSince = DateTimeOffset.UtcNow - PolicyViolationSilenceWindow;
+            if (await _alerts.HasRecentAsync(userId, AlertType.PolicyViolation, referenceId, subject, quietSince, ct))
+                return;
+        }
+
+        var title = isOverride ? $"Risk rule override: {subject}" : $"Policy violation: {subject}";
+        var message = isOverride
+            ? $"{ruleKey} would have refused {subject} (observed {observedValue}, limit {limitValue}) — proceeded via explicit override."
+            : $"{ruleKey} breached for {subject}: observed {observedValue}, limit {limitValue}.";
+
+        await _alerts.AddAsync(new Alert
+        {
+            UserId = userId,
+            Type = AlertType.PolicyViolation,
+            Severity = isOverride ? AlertSeverity.Info : AlertSeverity.Warning,
+            Title = title,
+            Message = message,
+            ReferenceId = referenceId,
+            ReferenceLabel = subject,
+        }, ct);
+    }
+
+    public async Task ResolvePolicyViolationAlertAsync(
+        Guid userId, string ruleKey, string subject, CancellationToken ct = default)
+    {
+        var referenceId = ViolationReferenceId(ruleKey, subject);
+        var existing = await _alerts.FindActiveAsync(userId, AlertType.PolicyViolation, referenceId, ct);
+        if (existing is null) return;
+        await _alerts.ResolveAsync(existing.Id, ct);
+    }
+
+    /// <summary>Deterministic pseudo-GUID from (ruleKey, subject) so find/resolve are stable across runs.</summary>
+    private static Guid ViolationReferenceId(string ruleKey, string subject)
+    {
+        var bytes = MD5.HashData(Encoding.UTF8.GetBytes($"{ruleKey}:{subject.ToUpperInvariant()}"));
+        return new Guid(bytes);
     }
 }
