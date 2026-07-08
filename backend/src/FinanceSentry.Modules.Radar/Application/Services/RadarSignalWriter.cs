@@ -19,14 +19,17 @@ public sealed class RadarSignalWriter(
 
     private readonly RadarOptions _options = options.Value;
 
-    public async Task AppendSignalAsync(RadarSignalRequest request, CancellationToken ct = default)
+    public async Task<bool> AppendSignalAsync(RadarSignalRequest request, CancellationToken ct = default)
     {
-        if (request.Severity is not SignalSeverity.Info)
+        if (request.OneTime || request.Severity is not SignalSeverity.Info)
         {
-            var since = DateTimeOffset.UtcNow - TimeSpan.FromHours(_options.SilenceWindowHours);
+            // OneTime: ever-seen suppression, regardless of severity.
+            var since = request.OneTime
+                ? DateTimeOffset.MinValue
+                : DateTimeOffset.UtcNow - TimeSpan.FromHours(_options.SilenceWindowHours);
             if (await signals.HasRecentAsync(request.DedupKey, since, ct))
             {
-                return;
+                return false;
             }
         }
 
@@ -43,6 +46,7 @@ public sealed class RadarSignalWriter(
             Payload = ToPayload(request.Payload),
             PayloadVersion = request.PayloadVersion,
         }, ct);
+        return true;
     }
 
     /// <summary>

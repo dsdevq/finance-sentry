@@ -53,14 +53,15 @@ public class RunThesisMonitorCommandHandler(
             {
                 thesesEvaluated++;
 
-                var verdicts = new List<TriggerVerdict>();
+                var evaluations = new List<(ThesisInvalidationTrigger Trigger, TriggerVerdict Verdict)>();
                 foreach (var trigger in thesis.InvalidationTriggers)
                 {
                     triggersEvaluated++;
-                    verdicts.Add(await EvaluateTriggerAsync(
-                        trigger, thesis, fundamentalsCache, closesCache, ct));
+                    evaluations.Add((trigger, await EvaluateTriggerAsync(
+                        trigger, thesis, fundamentalsCache, closesCache, ct)));
                 }
 
+                var verdicts = evaluations.Select(e => e.Verdict).ToList();
                 var firstBreach = verdicts.OfType<TriggerVerdict.Breached>().FirstOrDefault();
                 var allNonEvaluable = verdicts.Count > 0 && verdicts.All(v => v is TriggerVerdict.NonEvaluable);
 
@@ -79,11 +80,12 @@ public class RunThesisMonitorCommandHandler(
                 {
                     skipped++;
                 }
-                else if (firstBreach is null && thesis.BrokenAt is not null)
+                else if (firstBreach is null && thesis.BrokenAt is not null && CanUnbreak(thesis, evaluations))
                 {
-                    // Broken→cleared: at least one trigger evaluated (not all-non-evaluable) and
-                    // none breached. Missing data alone (allNonEvaluable, handled above) must never
-                    // clear a broken thesis (FR-013).
+                    // Broken→cleared: none breached, not all-non-evaluable, AND the trigger that
+                    // originally broke the thesis was itself re-evaluated on fresh data. "Cleared
+                    // in fresh data" (FR-011) — a degraded proxy fetch making the breaching
+                    // trigger non-evaluable must not un-break the thesis.
                     thesis.BrokenAt = null;
                     thesis.BrokenReason = null;
                     await thesisRepo.UpsertAsync(thesis, ct);
@@ -178,6 +180,28 @@ public class RunThesisMonitorCommandHandler(
                 ex, "Thesis event recording failed for thesis {ThesisId} ({Ticker}, {EventType})",
                 thesis.Id, thesis.Ticker, eventType);
         }
+    }
+
+    /// <summary>
+    /// The triggers matching the metric named in <see cref="InvestmentThesis.BrokenReason"/> must
+    /// all be evaluable (Held) before the break clears. When no trigger matches (triggers edited
+    /// since the break), fall back to permitting the clear — none-breached + some-evaluable.
+    /// </summary>
+    private static bool CanUnbreak(
+        InvestmentThesis thesis,
+        IReadOnlyList<(ThesisInvalidationTrigger Trigger, TriggerVerdict Verdict)> evaluations)
+    {
+        var reason = thesis.BrokenReason;
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            return true;
+        }
+
+        var matching = evaluations
+            .Where(e => reason.Contains(e.Trigger.Metric, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        return matching.Count == 0 || matching.All(e => e.Verdict is TriggerVerdict.Held);
     }
 
     private static string ComposeReason(TriggerVerdict.Breached breach)

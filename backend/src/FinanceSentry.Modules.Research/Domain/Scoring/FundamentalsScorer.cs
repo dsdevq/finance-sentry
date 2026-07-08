@@ -24,8 +24,9 @@ public static class FundamentalsScorer
     // Every 5 percentage points of QoQ margin expansion moves the trend component by 15 points.
     private const decimal MarginTrendScaleFactor = 300m;
 
-    // Margin trend compares the latest quarter against the immediately prior one.
-    private const int MarginTrendLookbackQuarters = 1;
+    // Spec 019 FR-004: margin trend spans the last 4 quarters (latest vs one year earlier) —
+    // quarter-over-quarter noise is not a trend.
+    private const int MarginTrendLookbackQuarters = 4;
 
     public static (
         int? Score,

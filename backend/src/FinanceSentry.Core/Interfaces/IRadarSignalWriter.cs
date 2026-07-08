@@ -10,8 +10,11 @@ public interface IRadarSignalWriter
     /// <summary>
     /// Appends a signal. <c>notable</c>+ signals are suppressed within the configured silence
     /// window by <see cref="RadarSignalRequest.DedupKey"/>; <c>info</c> is recorded every run.
+    /// A <see cref="RadarSignalRequest.OneTime"/> signal (any severity) is suppressed forever
+    /// once its DedupKey has ever been recorded. Returns true when the signal was appended,
+    /// false when suppressed — callers gating an Alert on a fresh signal use the return value.
     /// </summary>
-    Task AppendSignalAsync(RadarSignalRequest request, CancellationToken ct = default);
+    Task<bool> AppendSignalAsync(RadarSignalRequest request, CancellationToken ct = default);
 }
 
 /// <summary>Severity of a radar signal. Lives in Core because it crosses the module boundary.</summary>
@@ -31,4 +34,5 @@ public sealed record RadarSignalRequest(
     Guid? UserId,
     string DedupKey,
     object Payload,
-    int PayloadVersion = 1);
+    int PayloadVersion = 1,
+    bool OneTime = false);

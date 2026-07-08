@@ -4,7 +4,10 @@ using FinanceSentry.Modules.Radar.Domain;
 
 public interface IDailyBarRepository
 {
-    /// <summary>Idempotent insert on (Ticker, Date): existing days are skipped. Returns bars added.</summary>
+    /// <summary>
+    /// True upsert on (Ticker, Date): new days insert, existing days update in place (Yahoo
+    /// retroactively rescales adjusted closes after splits/dividends). Returns bars added.
+    /// </summary>
     Task<int> UpsertRangeAsync(IReadOnlyCollection<DailyBar> bars, CancellationToken ct = default);
 
     /// <summary>Bars for a ticker on/after <paramref name="since"/>, ordered oldest→newest.</summary>

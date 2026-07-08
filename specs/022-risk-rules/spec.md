@@ -97,4 +97,5 @@ Averaging down on a thesis that 017 has marked broken is the classic way small b
 - **[DECISION]** The system flags and refuses within its own flows (promotion) but never touches brokerage execution — detection of outside actions (FR-006) is the compensating control.
 - **[DECISION]** Acknowledged-violation flow exists because the book *starts* in violation (DRAM ~46%); the system must manage remediation, not nag daily about a known state.
 - **[OUT OF SCOPE]** Portfolio optimization, VaR/volatility-based sizing models, margin rules, options. Start with weight/cash/loss caps — the rules that actually kill small books.
-- **[MCP CONTRACT]** Three new tools (`check_risk_rules`, `get_risk_rules`, `save_risk_rules`). Update the MCP tool-count contract test.
+- **[MCP CONTRACT]** Four new tools (`check_risk_rules`, `get_risk_rules`, `save_risk_rules`, `acknowledge_risk_violation` — the FR-003 ack flow needs a write surface). Update the MCP tool-count contract test. *(Amended 2026-07-08 from three.)*
+- **[DECISION 2026-07-08]** A thin REST `RiskController` ships alongside MCP (the future web UI reads the same compliance report); plan.md's "MCP-only" note is superseded.

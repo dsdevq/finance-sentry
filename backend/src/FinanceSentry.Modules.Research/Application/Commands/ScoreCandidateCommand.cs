@@ -77,7 +77,10 @@ public sealed class ScoreCandidateCommandHandler(
             grossMarginLatest,
             grossMarginTrend,
             epsYoy,
-            fundamentalsReasons);
+            fundamentalsReasons,
+            SectorRank: structureSnapshot?.SectorRank,
+            SectorRankDelta: structureSnapshot?.SectorRankDelta,
+            DistanceFrom63dHigh: structureSnapshot?.DistanceFrom63dHigh);
 
         var scorecard = new CandidateScorecard(
             structureScore, fundamentalsScore, crowding, ipsFit, evidence, _options.FormulaVersion);
@@ -115,7 +118,7 @@ public sealed class ScoreCandidateCommandHandler(
             SubjectTypeTicker,
             ticker,
             userId,
-            $"{Scanner}:{NominationSignalType}:{ticker}:{userId}:{DateTimeOffset.UtcNow:yyyyMMddHHmmssfff}",
+            $"{Scanner}:{NominationSignalType}:{ticker}:{userId}:{DateTimeOffset.UtcNow:yyyy-MM-dd}",
             new { structureScore, fundamentalsScore }), ct);
 
         var isTopTier = structureScore >= _options.TopTierScoreBar || fundamentalsScore >= _options.TopTierScoreBar;

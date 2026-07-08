@@ -38,7 +38,7 @@ public sealed class CheckRiskRulesTool(
 
         if (result.Report is not null)
         {
-            return CheckRiskRulesResponseDto.FromReport(result.Report);
+            return CheckRiskRulesResponseDto.FromReport(result.Report, result.Context);
         }
 
         var verdict = result.Verdict!;

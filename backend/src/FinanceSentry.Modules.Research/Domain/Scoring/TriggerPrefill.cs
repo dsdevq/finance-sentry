@@ -11,6 +11,10 @@ using FinanceSentry.Modules.Research.Domain.ThesisMonitor;
 public static class TriggerPrefill
 {
     private const int DrawdownRoundingDecimals = 4;
+
+    // Spec 019 FR-011: fundamentals triggers require 2 consecutive quarters — one soft print
+    // must never kill a thesis.
+    private const int FundamentalsConsecutiveQuarters = 2;
     private const string PriceDrawdownRationale = "Standard downside guard: exit if price draws down beyond the configured threshold over the configured window.";
     private const string RevenueYoyRationale = "Thesis assumes continued revenue growth; break if YoY growth turns negative.";
     private const string GrossMarginRationale = "Break if gross margin compresses below the latest observed level, minus a buffer.";
@@ -36,7 +40,7 @@ public static class TriggerPrefill
                 "lessThan",
                 0m,
                 ProxyTicker: null,
-                ConsecutivePeriods: 1,
+                ConsecutivePeriods: FundamentalsConsecutiveQuarters,
                 RevenueYoyRationale));
         }
 
@@ -48,7 +52,7 @@ public static class TriggerPrefill
                 "lessThan",
                 threshold,
                 ProxyTicker: null,
-                ConsecutivePeriods: 1,
+                ConsecutivePeriods: FundamentalsConsecutiveQuarters,
                 GrossMarginRationale));
         }
 

@@ -57,7 +57,7 @@ public class RiskController(
     public async Task<IActionResult> GetCompliance(CancellationToken ct)
     {
         var result = await checkRules.Handle(new CheckRiskRulesQuery(User.RequireUserId()), ct);
-        return Ok(CheckRiskRulesResponseDto.FromReport(result.Report!));
+        return Ok(CheckRiskRulesResponseDto.FromReport(result.Report!, result.Context));
     }
 
     [HttpPost("compliance/check")]

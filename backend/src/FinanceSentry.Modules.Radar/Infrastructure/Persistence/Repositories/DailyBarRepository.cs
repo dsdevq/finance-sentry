@@ -16,27 +16,39 @@ public sealed class DailyBarRepository(RadarDbContext db) : IDailyBarRepository
         var tickers = bars.Select(b => b.Ticker).Distinct().ToArray();
         var minDate = bars.Min(b => b.Date);
 
-        var existing = await db.DailyBars.AsNoTracking()
+        // Tracked read: Yahoo retroactively rescales AdjClose after splits/dividends, so
+        // existing rows must be updated in place — insert-only storage leaves a scale
+        // discontinuity that corrupts returns and z-scores.
+        var existing = await db.DailyBars
             .Where(b => tickers.Contains(b.Ticker) && b.Date >= minDate)
-            .Select(b => new { b.Ticker, b.Date })
-            .ToListAsync(ct);
+            .ToDictionaryAsync(b => (b.Ticker, b.Date), ct);
 
-        var existingSet = existing.Select(e => (e.Ticker, e.Date)).ToHashSet();
-
-        var toAdd = bars
-            .Where(b => !existingSet.Contains((b.Ticker, b.Date)))
+        var incoming = bars
             .GroupBy(b => (b.Ticker, b.Date))
             .Select(g => g.First())
             .ToList();
 
-        if (toAdd.Count == 0)
+        var added = 0;
+        foreach (var bar in incoming)
         {
-            return 0;
+            if (existing.TryGetValue((bar.Ticker, bar.Date), out var row))
+            {
+                row.Open = bar.Open;
+                row.High = bar.High;
+                row.Low = bar.Low;
+                row.Close = bar.Close;
+                row.AdjClose = bar.AdjClose;
+                row.Volume = bar.Volume;
+            }
+            else
+            {
+                db.DailyBars.Add(bar);
+                added++;
+            }
         }
 
-        db.DailyBars.AddRange(toAdd);
         await db.SaveChangesAsync(ct);
-        return toAdd.Count;
+        return added;
     }
 
     public async Task<IReadOnlyList<DailyBar>> GetSinceAsync(

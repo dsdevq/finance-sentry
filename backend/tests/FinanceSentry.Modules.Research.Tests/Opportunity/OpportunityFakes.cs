@@ -86,6 +86,10 @@ internal sealed class FakeMarketStructureReader(MarketStructureSnapshot? snapsho
 {
     public Task<MarketStructureSnapshot?> GetStructureAsync(string ticker, CancellationToken ct = default)
         => Task.FromResult(snapshot);
+
+    public Task<IReadOnlyList<PairwiseCorrelation>> GetPairwiseCorrelationsAsync(
+        IReadOnlyCollection<string> tickers, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<PairwiseCorrelation>>([]);
 }
 
 internal sealed class FakeSecEdgarService(IReadOnlyList<FundamentalFact>? facts = null) : ISecEdgarService
@@ -125,10 +129,10 @@ internal sealed class RecordingRadarSignalWriter : IRadarSignalWriter
 {
     public List<RadarSignalRequest> Signals { get; } = [];
 
-    public Task AppendSignalAsync(RadarSignalRequest request, CancellationToken ct = default)
+    public Task<bool> AppendSignalAsync(RadarSignalRequest request, CancellationToken ct = default)
     {
         Signals.Add(request);
-        return Task.CompletedTask;
+        return Task.FromResult(true);
     }
 }
 

@@ -62,6 +62,7 @@ public static class RadarModule
         services.AddScoped<IRadarUniverseService, RadarUniverseService>();
         services.AddScoped<IStructureQueryService, StructureQueryService>();
         services.AddScoped<IRadarSignalWriter, RadarSignalWriter>();
+        services.AddScoped<IRadarSignalReader, RadarSignalReader>();
         services.AddScoped<IMarketStructureReader, MarketStructureReader>();
 
         services.AddScoped<RadarIngestionJob>();

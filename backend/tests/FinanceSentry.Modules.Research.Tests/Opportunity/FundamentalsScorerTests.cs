@@ -64,13 +64,20 @@ public sealed class FundamentalsScorerTests
     [Fact]
     public void Score_IsDeterministic_ForIdenticalInputs()
     {
+        // Five quarters of margins: the spec's 4-quarter trend window (FR-004) compares the
+        // latest margin against the one a year earlier — margins[0] vs margins[4].
         var facts = new List<FundamentalFact>
         {
             Fact("Revenue", 120m, 2026, "Q2", new DateOnly(2026, 5, 31)),
+            Fact("Revenue", 110m, 2026, "Q1", new DateOnly(2026, 2, 28)),
+            Fact("Revenue", 105m, 2025, "Q4", new DateOnly(2025, 11, 30)),
+            Fact("Revenue", 102m, 2025, "Q3", new DateOnly(2025, 8, 31)),
             Fact("Revenue", 100m, 2025, "Q2", new DateOnly(2025, 5, 31)),
             Fact("GrossProfit", 60m, 2026, "Q2", new DateOnly(2026, 5, 31)),
             Fact("GrossProfit", 45m, 2026, "Q1", new DateOnly(2026, 2, 28)),
-            Fact("Revenue", 110m, 2026, "Q1", new DateOnly(2026, 2, 28)),
+            Fact("GrossProfit", 44m, 2025, "Q4", new DateOnly(2025, 11, 30)),
+            Fact("GrossProfit", 43m, 2025, "Q3", new DateOnly(2025, 8, 31)),
+            Fact("GrossProfit", 42m, 2025, "Q2", new DateOnly(2025, 5, 31)),
             Fact("DilutedEPS", 2.4m, 2026, "Q2", new DateOnly(2026, 5, 31)),
             Fact("DilutedEPS", 2.0m, 2025, "Q2", new DateOnly(2025, 5, 31)),
         };

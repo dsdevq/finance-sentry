@@ -19,6 +19,7 @@ public sealed class RiskCheckJob(
     IPolicyViolationAckRepository ackRepo,
     IHoldingSnapshotRepository snapshotRepo,
     IRiskEvaluationService evaluationService,
+    ITurnoverTracker turnoverTracker,
     IAddToBrokenThesisDetector brokenThesisDetector,
     IBrokenThesisReader brokenThesisReader,
     IAlertGeneratorService alertGenerator,
@@ -61,7 +62,90 @@ public sealed class RiskCheckJob(
         var report = evaluationService.Evaluate(book, ruleSet, acks, now);
 
         await EmitComplianceSignalsAsync(userId, report, ct);
+        await ResolveClearedViolationsAsync(userId, book, report, ct);
+        await CheckTurnoverBudgetAsync(userId, ruleSet, now, ct);
         await DetectAddToBrokenThesisAsync(userId, now, ct);
+    }
+
+    /// <summary>
+    /// FR-002/FR-011-style hygiene: a violation that has cleared in fresh data resolves its active
+    /// Alert. Resolving a subject with no active alert is a no-op, so this simply sweeps every
+    /// currently-compliant subject. Never runs on stale book data — a violation must not
+    /// "auto-clear" because a sync died (spec edge case).
+    /// </summary>
+    private async Task ResolveClearedViolationsAsync(
+        Guid userId, BookSnapshot book, ComplianceReport report, CancellationToken ct)
+    {
+        if (!report.HasRuleSet || report.IsStale)
+        {
+            return;
+        }
+
+        var violated = report.Violations
+            .Select(v => (v.RuleKey, Subject: v.Subject.ToUpperInvariant()))
+            .ToHashSet();
+
+        foreach (var position in book.Positions)
+        {
+            if (!violated.Contains((RiskRuleKeys.MaxPositionWeight, position.Symbol.ToUpperInvariant())))
+            {
+                await alertGenerator.ResolvePolicyViolationAlertAsync(
+                    userId, RiskRuleKeys.MaxPositionWeight, position.Symbol, ct);
+            }
+        }
+
+        foreach (var sleeve in book.Positions.Select(p => p.Sleeve).Distinct())
+        {
+            if (!violated.Contains((RiskRuleKeys.MaxSleeveWeight, sleeve.ToUpperInvariant())))
+            {
+                await alertGenerator.ResolvePolicyViolationAlertAsync(
+                    userId, RiskRuleKeys.MaxSleeveWeight, sleeve, ct);
+            }
+        }
+
+        if (!violated.Contains((RiskRuleKeys.MinCashBuffer, "CASH")))
+        {
+            await alertGenerator.ResolvePolicyViolationAlertAsync(
+                userId, RiskRuleKeys.MinCashBuffer, "CASH", ct);
+        }
+    }
+
+    /// <summary>
+    /// FR-001b: the scheduled check flags when the rolling-quarter discretionary trade count has
+    /// reached the configured budget — one notable signal + Alert per user per calendar quarter.
+    /// </summary>
+    private async Task CheckTurnoverBudgetAsync(
+        Guid userId, RiskRuleSet? ruleSet, DateTimeOffset now, CancellationToken ct)
+    {
+        if (ruleSet?.TurnoverBudgetPerQuarter is not { } budget)
+        {
+            return;
+        }
+
+        var history = await snapshotRepo.ListSinceAsync(userId, now - TimeSpan.FromDays(_rollingQuarterDays), ct);
+        var count = turnoverTracker.CountDiscretionaryTradesInRollingQuarter(history, now);
+        if (count < budget)
+        {
+            return;
+        }
+
+        var quarter = $"{now.Year}-Q{(now.Month - 1) / 3 + 1}";
+        var appended = await signalWriter.AppendSignalAsync(new RadarSignalRequest(
+            Scanner: "risk_rules",
+            SignalType: "turnover_budget_reached",
+            Severity: SignalSeverity.Notable,
+            SubjectType: "User",
+            Subject: userId.ToString(),
+            UserId: userId,
+            DedupKey: $"risk_rules:turnover_budget_reached:{userId}:{quarter}",
+            Payload: new { count, budget, quarter },
+            OneTime: true), ct);
+
+        if (appended)
+        {
+            await alertGenerator.GeneratePolicyViolationAlertAsync(
+                userId, RiskRuleKeys.Turnover, quarter, count, budget, isOverride: false, ct);
+        }
     }
 
     private async Task EmitComplianceSignalsAsync(Guid userId, ComplianceReport report, CancellationToken ct)
@@ -75,8 +159,10 @@ public sealed class RiskCheckJob(
                 SubjectType: "User",
                 Subject: userId.ToString(),
                 UserId: userId,
-                DedupKey: $"risk_rules:no_rules:{userId}:{report.GeneratedAt:yyyy-MM-dd}",
-                Payload: new { }), ct);
+                // Spec edge case: a ONE-TIME setup nudge, not a daily nag.
+                DedupKey: $"risk_rules:no_rules:{userId}",
+                Payload: new { },
+                OneTime: true), ct);
             return;
         }
 
@@ -135,11 +221,10 @@ public sealed class RiskCheckJob(
 
         foreach (var flag in flags)
         {
-            await alertGenerator.GeneratePolicyViolationAlertAsync(
-                userId, RiskRuleKeys.AddToBrokenThesis, flag.Ticker, flag.ToQuantity, flag.FromQuantity,
-                isOverride: false, ct);
-
-            await signalWriter.AppendSignalAsync(new RadarSignalRequest(
+            // One flag per historical add event: the signal's OneTime dedup (keyed on the add
+            // date) decides freshness, and the Alert fires only for a fresh flag — a 90-day-old
+            // add must not re-alert every day for 90 days.
+            var appended = await signalWriter.AppendSignalAsync(new RadarSignalRequest(
                 Scanner: "risk_rules",
                 SignalType: "add_to_broken_thesis",
                 Severity: SignalSeverity.Notable,
@@ -152,7 +237,15 @@ public sealed class RiskCheckJob(
                     flag.FromQuantity,
                     flag.ToQuantity,
                     flag.IncreasedAt,
-                }), ct);
+                },
+                OneTime: true), ct);
+
+            if (appended)
+            {
+                await alertGenerator.GeneratePolicyViolationAlertAsync(
+                    userId, RiskRuleKeys.AddToBrokenThesis, flag.Ticker, flag.ToQuantity, flag.FromQuantity,
+                    isOverride: false, ct);
+            }
         }
     }
 }

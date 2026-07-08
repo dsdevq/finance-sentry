@@ -18,6 +18,7 @@ public record GetPostmortemPacketQuery(
 public class GetPostmortemPacketQueryHandler(
     IThesisEventRepository eventRepo,
     IThesisPerformanceCalculator calculator,
+    FinanceSentry.Core.Interfaces.IRadarSignalReader signalReader,
     IOptions<FrictionConfig> frictionOptions)
     : IQueryHandler<GetPostmortemPacketQuery, PostmortemPacketDto>
 {
@@ -25,6 +26,9 @@ public class GetPostmortemPacketQueryHandler(
     [
         ThesisEventType.Closed,
         ThesisEventType.Expired,
+        // FR-006/FR-008c: a break is a terminal outcome — a thesis broken during the period
+        // belongs in the review packet.
+        ThesisEventType.Broken,
     ];
 
     public async Task<PostmortemPacketDto> Handle(GetPostmortemPacketQuery query, CancellationToken ct)
@@ -51,7 +55,22 @@ public class GetPostmortemPacketQueryHandler(
             counterfactuals.Add(await BuildEntryAsync(query.UserId, rejectedEvent, ct));
         }
 
-        return new PostmortemPacketDto(query.PeriodStart, query.PeriodEnd, entries, counterfactuals);
+        // FR-008c: overrides are decisions too — the review packet must show where the rules were
+        // consciously bypassed.
+        var overrides = await signalReader.ListOverrideSignalsAsync(
+            query.UserId,
+            new DateTimeOffset(query.PeriodStart, TimeOnly.MinValue, TimeSpan.Zero),
+            new DateTimeOffset(query.PeriodEnd, TimeOnly.MaxValue, TimeSpan.Zero),
+            ct);
+
+        return new PostmortemPacketDto(
+            query.PeriodStart,
+            query.PeriodEnd,
+            entries,
+            counterfactuals,
+            overrides
+                .Select(o => new PostmortemOverrideDto(o.Timestamp, o.Scanner, o.SignalType, o.Subject, o.Payload))
+                .ToList());
     }
 
     private async Task<PostmortemEntryDto> BuildEntryAsync(

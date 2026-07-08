@@ -43,7 +43,9 @@ public sealed class RadarSignalRepository(RadarDbContext db) : IRadarSignalRepos
 
         if (filter.UserId is not null)
         {
-            query = query.Where(s => s.UserId == filter.UserId);
+            // Global signals (breadth, rotation, unusual moves on non-held tickers) carry no
+            // UserId; a user-scoped read must still see them or the market disappears.
+            query = query.Where(s => s.UserId == null || s.UserId == filter.UserId);
         }
 
         if (!string.IsNullOrWhiteSpace(filter.Severity) &&

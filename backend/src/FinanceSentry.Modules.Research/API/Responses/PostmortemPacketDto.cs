@@ -10,7 +10,16 @@ public record PostmortemPacketDto(
     DateOnly PeriodStart,
     DateOnly PeriodEnd,
     IReadOnlyList<PostmortemEntryDto> Entries,
-    IReadOnlyList<PostmortemEntryDto> CounterfactualEntries);
+    IReadOnlyList<PostmortemEntryDto> CounterfactualEntries,
+    IReadOnlyList<PostmortemOverrideDto> Overrides);
+
+/// <summary>An explicit risk-gate override recorded during the period — reviewed like any decision.</summary>
+public record PostmortemOverrideDto(
+    DateTimeOffset Timestamp,
+    string Scanner,
+    string SignalType,
+    string Subject,
+    IReadOnlyDictionary<string, object> Payload);
 
 public record PostmortemEntryDto(
     Guid SubjectId,

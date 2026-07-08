@@ -34,15 +34,42 @@ public static class FundamentalMath
         [ThesisMetric.EpsYoy] = "DilutedEPS",
     };
 
-    /// <summary>Newest-first, one fact per period-end, for the given concept + period cadence.</summary>
+    /// <summary>
+    /// Newest-first, one fact per period-end, for the given concept + period cadence. Duplicate
+    /// facts for one period (original + amended filing, or a comparative re-reported in a later
+    /// filing) resolve deterministically: amended forms (…/A) win, then the latest filing
+    /// (highest FiscalYear), then Form ordinal — never source order.
+    /// </summary>
     public static IReadOnlyList<FundamentalFact> SelectPeriods(
         IReadOnlyList<FundamentalFact> facts, string concept, ThesisPeriodType periodType)
         => facts
             .Where(f => string.Equals(f.Concept, concept, StringComparison.Ordinal) && MatchesPeriodType(f, periodType))
             .GroupBy(f => f.PeriodEnd)
-            .Select(g => g.First())
+            .Select(g => g
+                .OrderByDescending(f => f.Form.EndsWith("/A", StringComparison.OrdinalIgnoreCase))
+                .ThenByDescending(f => f.FiscalYear ?? int.MinValue)
+                .ThenBy(f => f.Form, StringComparer.Ordinal)
+                .First())
             .OrderByDescending(f => f.PeriodEnd)
             .ToList();
+
+    /// <summary>
+    /// The fact one fiscal year before <paramref name="current"/>, paired by PERIOD END (closest
+    /// period ending within ±<paramref name="toleranceDays"/> of one year earlier) — never by
+    /// EDGAR's fy/fp labels, which describe the filing rather than the fact's own period and can
+    /// silently misalign the pair. Deterministic: smallest distance, then earlier date.
+    /// </summary>
+    public static FundamentalFact? PriorYearFact(
+        FundamentalFact current, IReadOnlyList<FundamentalFact> periods, int toleranceDays = 45)
+    {
+        var target = current.PeriodEnd.AddYears(-1);
+        return periods
+            .Where(p => p.PeriodEnd < current.PeriodEnd
+                        && Math.Abs(p.PeriodEnd.DayNumber - target.DayNumber) <= toleranceDays)
+            .OrderBy(p => Math.Abs(p.PeriodEnd.DayNumber - target.DayNumber))
+            .ThenBy(p => p.PeriodEnd)
+            .FirstOrDefault();
+    }
 
     public static bool MatchesPeriodType(FundamentalFact fact, ThesisPeriodType periodType) => periodType switch
     {
@@ -72,21 +99,15 @@ public static class FundamentalMath
     /// </summary>
     public static decimal? LatestYoy(IReadOnlyList<FundamentalFact> facts, string concept)
     {
-        var periods = SelectPeriods(facts, concept, ThesisPeriodType.Quarter)
-            .Where(f => f.FiscalYear is not null && f.FiscalPeriod is not null)
-            .ToList();
+        var periods = SelectPeriods(facts, concept, ThesisPeriodType.Quarter);
         if (periods.Count == 0)
         {
             return null;
         }
 
-        var byKey = periods
-            .GroupBy(f => (f.FiscalYear!.Value, f.FiscalPeriod!))
-            .ToDictionary(g => g.Key, g => g.First().Value);
-
         var latest = periods[0];
-        var priorKey = (latest.FiscalYear!.Value - 1, latest.FiscalPeriod!);
-        return byKey.TryGetValue(priorKey, out var prior) ? SafeYoy(latest.Value, prior) : null;
+        var prior = PriorYearFact(latest, periods);
+        return prior is null ? null : SafeYoy(latest.Value, prior.Value);
     }
 
     /// <summary>Latest quarterly margin (numerator/denominator), or null when not evaluable.</summary>

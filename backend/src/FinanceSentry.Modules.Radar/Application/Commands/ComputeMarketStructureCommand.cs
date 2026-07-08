@@ -21,6 +21,8 @@ public sealed class ComputeMarketStructureCommandHandler(
     IBankingTotalsReader bankingTotals,
     IBrokerageHoldingsReader brokerageReader,
     IAlertGeneratorService alerts,
+    Domain.Repositories.IDailyBarRepository bars,
+    Domain.Repositories.IRadarUniverseRepository universe,
     IOptions<RadarOptions> options)
     : ICommandHandler<ComputeMarketStructureCommand, ComputeRunSummary>
 {
@@ -75,7 +77,8 @@ public sealed class ComputeMarketStructureCommandHandler(
                 RadarSubjectTypes.Sector,
                 row.Sector,
                 null,
-                $"{RadarScanners.MarketStructure}:{RadarSignalTypes.RotationShift}:{row.Sector}:{row.Window}:{today:yyyy-MM-dd}",
+                // No date component: the silence window (FR-009) governs cross-day repeats.
+                $"{RadarScanners.MarketStructure}:{RadarSignalTypes.RotationShift}:{row.Sector}:{row.Window}",
                 new Dictionary<string, object>
                 {
                     ["sector"] = row.Sector,
@@ -91,6 +94,12 @@ public sealed class ComputeMarketStructureCommandHandler(
             .Where(r => r.Window == RotationWindow && r.Rank >= _options.LaggardBottomQuartileRank)
             .Select(r => r.Sector)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        // Held stocks are not sector ETFs: map each held ticker to its best-correlated sector
+        // (US2-AS3). Computed only when at least one sector is currently a laggard.
+        var sectorByHeldTicker = laggardSectors.Count > 0
+            ? await BuildSectorAffinityMapAsync(holdersByTicker.Keys, cancellationToken)
+            : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         // ── per-ticker signals ───────────────────────────────────────────────
         var computed = 0;
@@ -128,7 +137,7 @@ public sealed class ComputeMarketStructureCommandHandler(
                     RadarSubjectTypes.Ticker,
                     s.Ticker,
                     isHeld ? holders!.First() : null,
-                    $"{RadarScanners.MarketStructure}:{RadarSignalTypes.UnusualMove}:{s.Ticker}:{today:yyyy-MM-dd}",
+                    $"{RadarScanners.MarketStructure}:{RadarSignalTypes.UnusualMove}:{s.Ticker}",
                     new Dictionary<string, object>
                     {
                         ["ticker"] = s.Ticker,
@@ -154,8 +163,10 @@ public sealed class ComputeMarketStructureCommandHandler(
                 }
             }
 
-            // held_sector_laggard (notable): held ticker whose sector is a laggard
-            if (isHeld && laggardSectors.Count > 0 && laggardSectors.Contains(s.Ticker))
+            // held_sector_laggard (notable): held ticker whose best-correlated sector is a laggard
+            if (isHeld &&
+                sectorByHeldTicker.TryGetValue(s.Ticker, out var heldSector) &&
+                laggardSectors.Contains(heldSector))
             {
                 await signals.AppendSignalAsync(new RadarSignalRequest(
                     RadarScanners.MarketStructure,
@@ -164,13 +175,63 @@ public sealed class ComputeMarketStructureCommandHandler(
                     RadarSubjectTypes.Ticker,
                     s.Ticker,
                     holders!.First(),
-                    $"{RadarScanners.MarketStructure}:{RadarSignalTypes.HeldSectorLaggard}:{s.Ticker}:{today:yyyy-MM-dd}",
-                    new Dictionary<string, object> { ["ticker"] = s.Ticker }), cancellationToken);
+                    $"{RadarScanners.MarketStructure}:{RadarSignalTypes.HeldSectorLaggard}:{s.Ticker}",
+                    new Dictionary<string, object>
+                    {
+                        ["ticker"] = s.Ticker,
+                        ["sector"] = heldSector,
+                        ["sectorAssignment"] = "return_correlation_63d",
+                    }), cancellationToken);
                 Bump(counts, RadarSignalTypes.HeldSectorLaggard);
             }
         }
 
         return new ComputeRunSummary(computed, counts, 0);
+    }
+
+    /// <summary>
+    /// Maps each held ticker to its best-correlated sector ETF (63-day daily-return correlation
+    /// over persisted bars). Tickers without enough overlapping history or below the correlation
+    /// floor are simply absent — never force-assigned.
+    /// </summary>
+    private async Task<Dictionary<string, string>> BuildSectorAffinityMapAsync(
+        IEnumerable<string> heldTickers, CancellationToken ct)
+    {
+        var since = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-120);
+
+        var sectorTickers = (await universe.ListActiveAsync(ct))
+            .Where(m => m.Kind == UniverseKind.Sector)
+            .Select(m => m.Ticker)
+            .ToList();
+
+        var sectorCloses = new Dictionary<string, IReadOnlyDictionary<DateOnly, decimal>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var sector in sectorTickers)
+        {
+            var series = await bars.GetSinceAsync(sector, since, ct);
+            if (series.Count > 0)
+            {
+                sectorCloses[sector] = series.ToDictionary(b => b.Date, b => b.AdjClose);
+            }
+        }
+
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var ticker in heldTickers)
+        {
+            var series = await bars.GetSinceAsync(ticker, since, ct);
+            if (series.Count == 0)
+            {
+                continue;
+            }
+
+            var best = SectorAffinity.BestSector(
+                series.ToDictionary(b => b.Date, b => b.AdjClose), sectorCloses);
+            if (best is not null)
+            {
+                map[ticker] = best;
+            }
+        }
+
+        return map;
     }
 
     private async Task<Dictionary<string, List<Guid>>> BuildHoldersMapAsync(CancellationToken ct)

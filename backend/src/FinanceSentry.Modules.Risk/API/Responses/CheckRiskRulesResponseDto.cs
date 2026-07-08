@@ -1,5 +1,7 @@
 namespace FinanceSentry.Modules.Risk.API.Responses;
 
+using FinanceSentry.Core.Interfaces;
+using FinanceSentry.Modules.Risk.Application.Queries;
 using FinanceSentry.Modules.Risk.Domain;
 
 /// <summary>MCP-facing shape for `check_risk_rules` — either a compliance report or a proposal verdict.</summary>
@@ -15,14 +17,21 @@ public sealed record CheckRiskRulesResponseDto(
     decimal? LimitValue,
     decimal? MaxCompliantSizeUsd,
     decimal? HeadroomUsd,
-    string? Note)
+    string? Note,
+    IReadOnlyList<PairwiseCorrelation>? TopHoldingsCorrelations = null,
+    StressLineDto? StressLine = null)
 {
-    public static CheckRiskRulesResponseDto FromReport(ComplianceReport report) => new(
+    public static CheckRiskRulesResponseDto FromReport(ComplianceReport report, PortfolioContext? context) => new(
         report.GeneratedAt, report.HasRuleSet, report.IsStale, report.StaleSources, report.Violations,
-        null, null, null, null, null, null, null);
+        null, null, null, null, null, null, null,
+        context?.TopHoldingsCorrelations,
+        context?.StressLine is { } s ? new StressLineDto(s.Ticker, s.WeightPct, s.ShockPct, s.BookImpactPct) : null);
 
     public static CheckRiskRulesResponseDto FromVerdict(RiskVerdict verdict, bool hasRuleSet) => new(
         DateTimeOffset.UtcNow, hasRuleSet, false, [], null,
         verdict.Decision, verdict.RuleKey, verdict.ObservedValue, verdict.LimitValue,
         verdict.MaxCompliantSizeUsd, verdict.HeadroomUsd, verdict.Note);
 }
+
+/// <summary>FR-001d fact: "−30% on the top position ⇒ −X% of book". Facts only — no VaR.</summary>
+public sealed record StressLineDto(string Ticker, decimal WeightPct, decimal ShockPct, decimal BookImpactPct);

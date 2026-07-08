@@ -64,15 +64,28 @@ public class GetTrackRecordQueryHandler(
             }
 
             var closed = subjectEvents.FirstOrDefault(e => e.EventType == ThesisEventType.Closed);
-            var status = closed is not null ? StatusClosed : thesis.BrokenAt is not null ? StatusBroken : StatusActive;
+
+            // FR-006: a break is a TERMINAL outcome measured at the break event's stamped prices —
+            // a broken thesis must not keep floating in the active bucket at live quotes.
+            var broken = thesis.BrokenAt is not null
+                ? subjectEvents
+                    .Where(e => e.EventType == ThesisEventType.Broken)
+                    .OrderByDescending(e => e.Timestamp)
+                    .FirstOrDefault()
+                : null;
+
+            var status = closed is not null ? StatusClosed : broken is not null ? StatusBroken : StatusActive;
 
             var input = closed is not null
                 ? BuildInput(thesis, created, ThesisEventType.Closed, closed.Timestamp, closed.SubjectPrice, closed.BenchmarkPrice)
-                : BuildLiveInput(thesis, created, liveQuotes);
+                : broken is not null
+                    ? BuildInput(thesis, created, ThesisEventType.Broken, broken.Timestamp, broken.SubjectPrice, broken.BenchmarkPrice)
+                    : BuildLiveInput(thesis, created, liveQuotes);
 
             var result = calculator.Calculate(input);
 
-            records.Add(new SubjectRecord(SourceUser, status, closed is not null, result));
+            var isTerminal = closed is not null || broken is not null;
+            records.Add(new SubjectRecord(SourceUser, status, isTerminal, result));
         }
 
         var filtered = records
@@ -125,8 +138,8 @@ public class GetTrackRecordQueryHandler(
         var evaluable = records.Where(r => r.Result.IsEvaluable).ToList();
         var excludedCount = records.Count - evaluable.Count;
 
-        var closed = evaluable.Where(r => r.IsClosed).ToList();
-        var active = evaluable.Where(r => !r.IsClosed).ToList();
+        var closed = evaluable.Where(r => r.IsTerminal).ToList();
+        var active = evaluable.Where(r => !r.IsTerminal).ToList();
 
         var excessReturns = evaluable.Select(r => r.Result.ExcessReturnPct!.Value).ToList();
 
@@ -186,5 +199,5 @@ public class GetTrackRecordQueryHandler(
         return result;
     }
 
-    private sealed record SubjectRecord(string Source, string Status, bool IsClosed, ThesisPerformanceResult Result);
+    private sealed record SubjectRecord(string Source, string Status, bool IsTerminal, ThesisPerformanceResult Result);
 }

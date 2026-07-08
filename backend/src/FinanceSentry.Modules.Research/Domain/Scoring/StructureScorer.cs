@@ -24,6 +24,15 @@ public static class StructureScorer
     // Each unit of z-score moves the component by 10 points off the midpoint.
     private const decimal ZScoreScaleFactor = 10m;
 
+    // Sector rank 1..11 maps 100 down to 0; each rank position costs 10 points.
+    private const decimal SectorRankStep = 10m;
+
+    // Each rank position moved (delta) shifts the component by 5 points (falling rank penalizes).
+    private const decimal SectorRankDeltaStep = 5m;
+
+    // Each 1% below the 63-day high costs 4 points; ~25% below the high scores 0.
+    private const decimal BreakoutScaleFactor = 400m;
+
     public static (int? Score, IReadOnlyList<string> NotEvaluableReasons) Score(MarketStructureSnapshot? snapshot)
     {
         if (snapshot is null)
@@ -64,6 +73,33 @@ public static class StructureScorer
         else
         {
             reasons.Add("no_zscore_data");
+        }
+
+        // FR-003: sector rotation position — rank 1 of 11 scores high, laggards low; a rising
+        // rank (negative delta = climbed) nudges up, a falling rank down.
+        if (snapshot.SectorRank is { } rank)
+        {
+            var rankScore = Clamp(MaxScore - ((rank - 1) * SectorRankStep));
+            if (snapshot.SectorRankDelta is { } delta)
+            {
+                rankScore = Clamp(rankScore - (delta * SectorRankDeltaStep));
+            }
+
+            components.Add(rankScore);
+        }
+        else
+        {
+            reasons.Add("no_sector_rank");
+        }
+
+        // FR-003: breakout state — at/near the 63-day high scores high, far below scores low.
+        if (snapshot.DistanceFrom63dHigh is { } distance)
+        {
+            components.Add(Clamp(MaxScore + (distance * BreakoutScaleFactor)));
+        }
+        else
+        {
+            reasons.Add("no_breakout_data");
         }
 
         if (snapshot.Stale)

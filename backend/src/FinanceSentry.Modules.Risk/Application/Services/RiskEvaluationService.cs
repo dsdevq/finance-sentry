@@ -51,18 +51,32 @@ public sealed class RiskEvaluationService : IRiskEvaluationService
                 "Discretionary turnover budget for this quarter is already reached.");
         }
 
+        // An unsynced/empty book has no denominator: weight and cash rules are not evaluable —
+        // report that honestly instead of refusing every first position at "100% weight".
+        if (book.TotalUsd <= 0m)
+        {
+            return new RiskVerdict(
+                RiskDecision.Allowed, null, null, null, null, null,
+                "Book is empty or not yet synced — weight/cash rules are not evaluable for this proposal.");
+        }
+
         var existingUsd = book.Positions
             .Where(p => string.Equals(p.Symbol, ticker, StringComparison.OrdinalIgnoreCase))
             .Sum(p => p.UsdValue);
         var isNewPosition = existingUsd <= 0m;
-        var projectedTotal = book.TotalUsd + proposedUsd;
+
+        // A buy is cash-funded up to available cash (total unchanged); anything beyond cash is
+        // external money and grows the book. One consistent model for weight AND cash checks.
+        var fundedFromCash = Math.Min(proposedUsd, Math.Max(0m, book.CashUsd));
+        var externalTopUp = proposedUsd - fundedFromCash;
+        var projectedTotal = book.TotalUsd + externalTopUp;
 
         if (ruleSet.MaxPositionWeightPct is { } maxWeight && maxWeight is > 0 and <= 1)
         {
-            var projectedWeight = projectedTotal > 0 ? (existingUsd + proposedUsd) / projectedTotal : 0m;
+            var projectedWeight = (existingUsd + proposedUsd) / projectedTotal;
             if (projectedWeight > maxWeight)
             {
-                var maxCompliantSize = MaxCompliantSize(book.TotalUsd, existingUsd, maxWeight);
+                var maxCompliantSize = MaxCompliantSize(book.TotalUsd, existingUsd, book.CashUsd, maxWeight);
                 return new RiskVerdict(
                     RiskDecision.Refused,
                     RiskRuleKeys.MaxPositionWeight,
@@ -75,10 +89,10 @@ public sealed class RiskEvaluationService : IRiskEvaluationService
 
         if (isNewPosition && ruleSet.MaxNewPositionPct is { } maxNew && maxNew is > 0 and <= 1)
         {
-            var projectedWeight = projectedTotal > 0 ? proposedUsd / projectedTotal : 0m;
+            var projectedWeight = proposedUsd / projectedTotal;
             if (projectedWeight > maxNew)
             {
-                var maxCompliantSize = MaxCompliantSize(book.TotalUsd, 0m, maxNew);
+                var maxCompliantSize = MaxCompliantSize(book.TotalUsd, 0m, book.CashUsd, maxNew);
                 return new RiskVerdict(
                     RiskDecision.Refused,
                     RiskRuleKeys.MaxNewPosition,
@@ -91,8 +105,8 @@ public sealed class RiskEvaluationService : IRiskEvaluationService
 
         if (ruleSet.MinCashBufferPct is { } minCash and > 0)
         {
-            var projectedCash = book.CashUsd - proposedUsd;
-            var projectedCashPct = book.TotalUsd > 0 ? projectedCash / book.TotalUsd : 0m;
+            var projectedCash = book.CashUsd - fundedFromCash;
+            var projectedCashPct = projectedCash / projectedTotal;
             if (projectedCashPct < minCash)
             {
                 var headroom = Math.Max(0m, book.CashUsd - (minCash * book.TotalUsd));
@@ -107,22 +121,34 @@ public sealed class RiskEvaluationService : IRiskEvaluationService
         }
 
         var headroomUsd = ruleSet.MaxPositionWeightPct is { } cap
-            ? Math.Max(0m, MaxCompliantSize(book.TotalUsd, existingUsd, cap) - proposedUsd)
+            ? Math.Max(0m, MaxCompliantSize(book.TotalUsd, existingUsd, book.CashUsd, cap) - proposedUsd)
             : (decimal?)null;
 
         return new RiskVerdict(RiskDecision.Allowed, null, null, null, null, headroomUsd);
     }
 
-    /// <summary>Max additional USD that can be added to a position without breaching `cap` weight.</summary>
-    private static decimal MaxCompliantSize(decimal totalUsd, decimal existingUsd, decimal cap)
+    /// <summary>
+    /// Max additional USD that can go into a position without breaching `cap` weight, under the
+    /// cash-funded-then-external model: cash-funded dollars leave the total unchanged
+    /// (x = cap·T − existing while x ≤ cash); external dollars grow the denominator
+    /// (y = (cap·T − existing − cash) / (1 − cap) beyond that).
+    /// </summary>
+    private static decimal MaxCompliantSize(decimal totalUsd, decimal existingUsd, decimal cashUsd, decimal cap)
     {
         if (cap >= 1m)
         {
             return decimal.MaxValue;
         }
 
-        var maxAdd = ((cap * totalUsd) - existingUsd) / (1m - cap);
-        return Math.Max(0m, maxAdd);
+        var cash = Math.Max(0m, cashUsd);
+        var cashFundedMax = (cap * totalUsd) - existingUsd;
+        if (cashFundedMax <= cash)
+        {
+            return Math.Max(0m, cashFundedMax);
+        }
+
+        var externalMax = ((cap * totalUsd) - existingUsd - cash) / (1m - cap);
+        return Math.Max(0m, cash + Math.Max(0m, externalMax));
     }
 
     private static List<PolicyViolation> ComputeRawViolations(BookSnapshot book, RiskRuleSet ruleSet)
@@ -183,6 +209,33 @@ public sealed class RiskEvaluationService : IRiskEvaluationService
                     Math.Max(0m, shortfallUsd),
                     minCash - cashPct,
                     PolicyViolationStatus.New));
+            }
+        }
+
+        // FR-001c: sleeve weight vs configured allocation target, breaching only past the drift
+        // band. ExcessUsd is the rebalancing amount the drift implies (facts; clients attach
+        // friction estimates before suggesting a trade).
+        if (ruleSet.AllocationTargets.Count > 0 && book.TotalUsd > 0)
+        {
+            var weightBySleeve = book.Positions
+                .GroupBy(p => p.Sleeve, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.Sum(p => p.WeightPct), StringComparer.OrdinalIgnoreCase);
+
+            foreach (var target in ruleSet.AllocationTargets)
+            {
+                var actual = weightBySleeve.TryGetValue(target.AssetClass, out var w) ? w : 0m;
+                var drift = actual - target.TargetPct;
+                if (Math.Abs(drift) > target.DriftBandPct)
+                {
+                    violations.Add(new PolicyViolation(
+                        RiskRuleKeys.AllocationDrift,
+                        target.AssetClass,
+                        actual,
+                        target.TargetPct,
+                        Math.Abs(drift) * book.TotalUsd,
+                        Math.Abs(drift) - target.DriftBandPct,
+                        PolicyViolationStatus.New));
+                }
             }
         }
 

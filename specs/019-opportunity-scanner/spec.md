@@ -113,5 +113,7 @@ A candidate Denys accepts is promoted into an `InvestmentThesis` with **proposed
 - **[DECISION]** Two entry paths, one scorecard: user conviction and machine scan produce the same artifact, so 020 can compare their hit rates — measuring whether Denys's intuition or the scan finds better bets.
 - **[DECISION]** IPS fit is reported as facts, not folded into the composite — strategy fit is Denys's call (via Ledger), not a hidden weight.
 - **[DECISION]** Scoring formulas are versioned (`FormulaVersion`) so historical scores stay honest when weights/rules change.
+- **[DECISION 2026-07-08]** FR-006b (expectations/"what's priced in") and FR-006c (base-rate check) are deferred to v1.1 — the scorecard carries reserved null `ValuationContext`/`BaseRateContext` slots, never placeholder data. Recorded here (not only in plan.md) per review: the spec is ground truth.
+- **[DECISION 2026-07-08]** No composite score ships (FR-007); consequently `list_candidates` has no `minScore` filter and v1 exposes four MCP tools, not five.
 - **[OUT OF SCOPE]** LLM-driven theme discovery (Ledger prompt over `radar_signals`), estimate revisions, flow data, options data, backtesting, any UI beyond MCP/REST in v1.
 - **[MCP CONTRACT]** Five new tools (FR-012). Update the MCP tool-count contract test.

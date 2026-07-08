@@ -134,11 +134,6 @@ public static class ThesisBreakEvaluator
             return new TriggerVerdict.NonEvaluable(NonEvaluableReason.NoFundamentals);
         }
 
-        var byFiscalKey = periods
-            .Where(f => f.FiscalYear is not null)
-            .GroupBy(f => (f.FiscalYear!.Value, FiscalPeriod: f.FiscalPeriod ?? FiscalYearPeriod))
-            .ToDictionary(g => g.Key, g => g.First());
-
         var values = new List<decimal>();
         var labels = new List<string>();
 
@@ -149,13 +144,10 @@ public static class ThesisBreakEvaluator
                 break;
             }
 
-            if (fact.FiscalYear is null)
-            {
-                continue;
-            }
-
-            var priorKey = (fact.FiscalYear.Value - 1, fact.FiscalPeriod ?? FiscalYearPeriod);
-            if (!byFiscalKey.TryGetValue(priorKey, out var prior))
+            // Pair by PeriodEnd, not by EDGAR fy/fp labels — those describe the filing, not the
+            // fact's own period, and can silently misalign the YoY pair (2026-07-08 review).
+            var prior = Scoring.FundamentalMath.PriorYearFact(fact, periods);
+            if (prior is null)
             {
                 continue;
             }

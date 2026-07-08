@@ -45,7 +45,10 @@ public sealed record ScoreEvidence(
     decimal? EpsYoy,
     IReadOnlyList<string> FundamentalsNotEvaluableReasons,
     string? ValuationContext = null,
-    string? BaseRateContext = null)
+    string? BaseRateContext = null,
+    int? SectorRank = null,
+    int? SectorRankDelta = null,
+    decimal? DistanceFrom63dHigh = null)
 {
     public static ScoreEvidence Empty { get; } = new(
         new Dictionary<int, decimal?>(),

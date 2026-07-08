@@ -12,7 +12,10 @@ public sealed class StructureScorerTests
         decimal? extension = 0.05m,
         decimal? zScore = 0m,
         decimal? volumeRatio = 1m,
-        bool stale = false)
+        bool stale = false,
+        int? sectorRank = null,
+        int? sectorRankDelta = null,
+        decimal? distanceFrom63dHigh = null)
         => new(
             "MU",
             rsByWindow ?? new Dictionary<int, decimal?> { [63] = 0.10m },
@@ -22,7 +25,10 @@ public sealed class StructureScorerTests
             volumeRatio,
             50m,
             48m,
-            stale);
+            stale,
+            sectorRank,
+            sectorRankDelta,
+            distanceFrom63dHigh);
 
     [Fact]
     public void Score_ReturnsNull_WhenSnapshotIsNull()
@@ -67,7 +73,10 @@ public sealed class StructureScorerTests
         var snapshot = Snapshot(
             rsByWindow: new Dictionary<int, decimal?> { [63] = 5m },
             extension: 2m,
-            zScore: 10m);
+            zScore: 10m,
+            sectorRank: 11,
+            sectorRankDelta: 9,
+            distanceFrom63dHigh: -0.9m);
 
         var (score, reasons) = StructureScorer.Score(snapshot);
 

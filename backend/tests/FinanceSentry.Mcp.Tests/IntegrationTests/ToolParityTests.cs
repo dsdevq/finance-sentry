@@ -118,6 +118,7 @@ public sealed class ToolParityTests
         services.AddScoped<IRadarUniverseRepository, RadarUniverseRepository>();
         services.AddScoped<IStructureQueryService, StructureQueryService>();
         services.AddScoped<IRadarSignalWriter, RadarSignalWriter>();
+        services.AddScoped<IRadarSignalReader, RadarSignalReader>();
         services.AddSingleton<IMarketHistorySource>(new FakeMarketHistorySource());
         services.Configure<RadarOptions>(_ => { });
 
