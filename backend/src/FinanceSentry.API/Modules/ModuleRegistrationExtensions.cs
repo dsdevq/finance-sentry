@@ -13,6 +13,13 @@ public static class ModuleRegistrationExtensions
     {
         var registrarType = typeof(IModuleRegistrar);
 
+        // Force-load every FinanceSentry.Modules.* assembly before scanning. Referenced module
+        // assemblies are otherwise loaded lazily; MVC modules happen to be force-loaded early via
+        // generated ApplicationPart attributes, but MCP-only modules (no controllers, e.g. Radar)
+        // are not — so without this they would be missing from AppDomain.GetAssemblies() here and
+        // their IModuleRegistrar would never be discovered.
+        EnsureModuleAssembliesLoaded();
+
         var registrars = AppDomain.CurrentDomain.GetAssemblies()
             .SelectMany(a =>
             {
@@ -30,5 +37,21 @@ public static class ModuleRegistrationExtensions
             registrar.Register(services, config);
 
         return services;
+    }
+
+    private static void EnsureModuleAssembliesLoaded()
+    {
+        var moduleDlls = Directory.GetFiles(
+            AppContext.BaseDirectory, "FinanceSentry.Modules.*.dll", SearchOption.TopDirectoryOnly);
+
+        foreach (var dll in moduleDlls)
+        {
+            var name = AssemblyName.GetAssemblyName(dll);
+            var alreadyLoaded = AppDomain.CurrentDomain.GetAssemblies()
+                .Any(a => a.GetName().Name == name.Name);
+
+            if (!alreadyLoaded)
+                Assembly.Load(name);
+        }
     }
 }
