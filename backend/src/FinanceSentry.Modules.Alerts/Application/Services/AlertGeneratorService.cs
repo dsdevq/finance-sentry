@@ -10,6 +10,8 @@ public class AlertGeneratorService(IAlertRepository alerts) : IAlertGeneratorSer
     private static readonly TimeSpan SyncFailureSilenceWindow = TimeSpan.FromHours(12);
     private static readonly TimeSpan UnusualSpendSilenceWindow = TimeSpan.FromDays(7);
     private static readonly TimeSpan ThesisBrokenSilenceWindow = TimeSpan.FromHours(24);
+    private static readonly TimeSpan MarketStructureSilenceWindow = TimeSpan.FromHours(24);
+    private static readonly TimeSpan MarketStructureFreshnessSilenceWindow = TimeSpan.FromHours(12);
 
     private readonly IAlertRepository _alerts = alerts;
 
@@ -132,5 +134,49 @@ public class AlertGeneratorService(IAlertRepository alerts) : IAlertGeneratorSer
         var existing = await _alerts.FindActiveAsync(userId, AlertType.ThesisBroken, thesisId, ct);
         if (existing is null) return;
         await _alerts.ResolveAsync(existing.Id, ct);
+    }
+
+    public async Task GenerateMarketStructureAlertAsync(
+        Guid userId, Guid referenceId, string ticker, string reason, CancellationToken ct = default)
+    {
+        var existing = await _alerts.FindActiveAsync(userId, AlertType.MarketStructure, referenceId, ct);
+        if (existing is not null) return;
+
+        var quietSince = DateTimeOffset.UtcNow - MarketStructureSilenceWindow;
+        if (await _alerts.HasRecentAsync(userId, AlertType.MarketStructure, referenceId, ticker, quietSince, ct))
+            return;
+
+        await _alerts.AddAsync(new Alert
+        {
+            UserId = userId,
+            Type = AlertType.MarketStructure,
+            Severity = AlertSeverity.Warning,
+            Title = $"Unusual move: {ticker}",
+            Message = $"Market structure flagged {ticker}: {reason}",
+            ReferenceId = referenceId,
+            ReferenceLabel = ticker,
+        }, ct);
+    }
+
+    public async Task GenerateMarketStructureFreshnessAlertAsync(
+        Guid userId, Guid referenceId, string reason, CancellationToken ct = default)
+    {
+        var existing = await _alerts.FindActiveAsync(userId, AlertType.MarketStructure, referenceId, ct);
+        if (existing is not null) return;
+
+        var quietSince = DateTimeOffset.UtcNow - MarketStructureFreshnessSilenceWindow;
+        if (await _alerts.HasRecentAsync(userId, AlertType.MarketStructure, referenceId, "freshness", quietSince, ct))
+            return;
+
+        await _alerts.AddAsync(new Alert
+        {
+            UserId = userId,
+            Type = AlertType.MarketStructure,
+            Severity = AlertSeverity.Error,
+            Title = "Radar data is stale",
+            Message = $"Market-structure data may be unreliable: {reason}",
+            ReferenceId = referenceId,
+            ReferenceLabel = "freshness",
+        }, ct);
     }
 }

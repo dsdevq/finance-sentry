@@ -39,6 +39,11 @@ using FinanceSentry.Modules.Wealth.Domain;
 using FinanceSentry.Modules.Wealth.Domain.Repositories;
 using FinanceSentry.Modules.Wealth.Infrastructure.Persistence;
 using FinanceSentry.Modules.Wealth.Infrastructure.Persistence.Repositories;
+using FinanceSentry.Modules.Radar.Application.Services;
+using FinanceSentry.Modules.Radar.Domain;
+using FinanceSentry.Modules.Radar.Domain.Repositories;
+using FinanceSentry.Modules.Radar.Infrastructure.Persistence;
+using FinanceSentry.Modules.Radar.Infrastructure.Persistence.Repositories;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -84,6 +89,8 @@ public sealed class ToolParityTests
             o.UseInMemoryDatabase($"wealth-{dbKey}"));
         services.AddDbContext<ResearchDbContext>(o =>
             o.UseInMemoryDatabase($"research-{dbKey}"));
+        services.AddDbContext<RadarDbContext>(o =>
+            o.UseInMemoryDatabase($"radar-{dbKey}"));
 
         // Repositories — real implementations backed by the in-memory contexts above.
         services.AddScoped<IBankAccountRepository, BankAccountRepository>();
@@ -95,6 +102,15 @@ public sealed class ToolParityTests
         services.AddScoped<IDetectedSubscriptionRepository, DetectedSubscriptionRepository>();
         services.AddScoped<INetWorthSnapshotRepository, NetWorthSnapshotRepository>();
         services.AddScoped<IThesisRepository, ThesisRepository>();
+
+        // Radar: repositories + read service + options (log-only default).
+        services.AddScoped<IDailyBarRepository, DailyBarRepository>();
+        services.AddScoped<IRadarSignalRepository, RadarSignalRepository>();
+        services.AddScoped<IRadarUniverseRepository, RadarUniverseRepository>();
+        services.AddScoped<IStructureQueryService, StructureQueryService>();
+        services.AddScoped<IRadarSignalWriter, RadarSignalWriter>();
+        services.AddSingleton<IMarketHistorySource>(new FakeMarketHistorySource());
+        services.Configure<RadarOptions>(_ => { });
 
         // Thesis monitor: real AlertGeneratorService (so alert side effects are exercised) backed by
         // deterministic fakes for EDGAR fundamentals / market data (no live HTTP in a parity test).
@@ -127,7 +143,8 @@ public sealed class ToolParityTests
             typeof(FinanceSentry.Modules.CryptoSync.CryptoSyncModule).Assembly,
             typeof(FinanceSentry.Modules.Subscriptions.SubscriptionsModule).Assembly,
             typeof(FinanceSentry.Modules.Wealth.WealthModule).Assembly,
-            typeof(FinanceSentry.Modules.Research.ResearchModule).Assembly);
+            typeof(FinanceSentry.Modules.Research.ResearchModule).Assembly,
+            typeof(FinanceSentry.Modules.Radar.RadarModule).Assembly);
 
         services.AddSingleton<FinanceSentry.Mcp.Abstractions.IIdentityResolver>(new FakeIdentityResolver());
         services.AddScoped<GetAccountSummaryTool>();
@@ -147,6 +164,12 @@ public sealed class ToolParityTests
         services.AddScoped<GetThesisPerformanceTool>();
         services.AddScoped<GetTrackRecordTool>();
         services.AddScoped<GetPostmortemPacketTool>();
+        services.AddScoped<GetMarketStructureTool>();
+        services.AddScoped<GetRelativeStrengthTool>();
+        services.AddScoped<GetSectorRotationTool>();
+        services.AddScoped<GetMarketBreadthTool>();
+        services.AddScoped<ListSignalsTool>();
+        services.AddScoped<GetRadarSummaryTool>();
 
         return services.BuildServiceProvider();
     }
@@ -782,5 +805,143 @@ public sealed class ToolParityTests
         packet.Should().NotBeNull();
         packet!.Entries.Should().BeEmpty();
         packet.CounterfactualEntries.Should().BeEmpty();
+    }
+
+    // ── Radar (018) parity ──────────────────────────────────────────────────
+
+    private static void SeedRadarBars(RadarDbContext db, string ticker, int count, decimal start)
+    {
+        var date = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-count);
+        for (var i = 0; i < count; i++)
+        {
+            var price = start + i;
+            db.DailyBars.Add(new FinanceSentry.Modules.Radar.Domain.DailyBar
+            {
+                Id = Guid.NewGuid(),
+                Ticker = ticker,
+                Date = date.AddDays(i),
+                Open = price,
+                High = price + 1,
+                Low = price - 1,
+                Close = price,
+                AdjClose = price,
+                Volume = 1_000_000 + i,
+            });
+        }
+    }
+
+    private static async Task SeedRadarUniverseAsync(IServiceProvider svc)
+    {
+        var db = svc.GetRequiredService<RadarDbContext>();
+        SeedRadarBars(db, "SPY", 260, 400m);
+        SeedRadarBars(db, "NVDA", 260, 100m);
+        db.UniverseMembers.Add(new RadarUniverseMember { Id = Guid.NewGuid(), Ticker = "SPY", Kind = UniverseKind.Benchmark, Source = UniverseSource.Seed, Active = true });
+        db.UniverseMembers.Add(new RadarUniverseMember { Id = Guid.NewGuid(), Ticker = "NVDA", Kind = UniverseKind.Holding, Source = UniverseSource.Auto, Active = true });
+        await db.SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task GetMarketStructure_ReturnsMetrics_WhenBarsSeeded()
+    {
+        await using var sp = BuildProvider(Guid.NewGuid().ToString("N"));
+        await using var scope = sp.CreateAsyncScope();
+        var svc = scope.ServiceProvider;
+        await SeedRadarUniverseAsync(svc);
+
+        var tool = svc.GetRequiredService<GetMarketStructureTool>();
+        var result = await tool.ExecuteAsync("NVDA");
+
+        result.Should().NotBeNull();
+        result!.Ticker.Should().Be("NVDA");
+        result.ReturnByWindow[21].Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task GetRelativeStrength_ReturnsUniverse_WhenBarsSeeded()
+    {
+        await using var sp = BuildProvider(Guid.NewGuid().ToString("N"));
+        await using var scope = sp.CreateAsyncScope();
+        var svc = scope.ServiceProvider;
+        await SeedRadarUniverseAsync(svc);
+
+        var tool = svc.GetRequiredService<GetRelativeStrengthTool>();
+        var result = await tool.ExecuteAsync();
+
+        result.Should().NotBeNull();
+        result.Should().Contain(s => s.Ticker == "NVDA");
+    }
+
+    [Fact]
+    public async Task GetSectorRotation_ReturnsRows_WithoutThrowing()
+    {
+        await using var sp = BuildProvider(Guid.NewGuid().ToString("N"));
+        await using var scope = sp.CreateAsyncScope();
+        var svc = scope.ServiceProvider;
+        await SeedRadarUniverseAsync(svc);
+
+        var tool = svc.GetRequiredService<GetSectorRotationTool>();
+        var result = await tool.ExecuteAsync();
+
+        result.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task GetMarketBreadth_ReturnsEvaluatedCount_WhenBarsSeeded()
+    {
+        await using var sp = BuildProvider(Guid.NewGuid().ToString("N"));
+        await using var scope = sp.CreateAsyncScope();
+        var svc = scope.ServiceProvider;
+        await SeedRadarUniverseAsync(svc);
+
+        var tool = svc.GetRequiredService<GetMarketBreadthTool>();
+        var result = await tool.ExecuteAsync();
+
+        result.Should().NotBeNull();
+        result.Evaluated.Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task ListSignals_ReturnsSeededSignal()
+    {
+        await using var sp = BuildProvider(Guid.NewGuid().ToString("N"));
+        await using var scope = sp.CreateAsyncScope();
+        var svc = scope.ServiceProvider;
+
+        var db = svc.GetRequiredService<RadarDbContext>();
+        db.RadarSignals.Add(new RadarSignal
+        {
+            Id = Guid.NewGuid(),
+            Timestamp = DateTimeOffset.UtcNow,
+            Scanner = "market_structure",
+            SignalType = "unusual_move",
+            Severity = FinanceSentry.Core.Interfaces.SignalSeverity.Notable,
+            SubjectType = "Ticker",
+            Subject = "NVDA",
+            DedupKey = "market_structure:unusual_move:NVDA:today",
+            Payload = new Dictionary<string, object> { ["zScore"] = 3.4m },
+            PayloadVersion = 1,
+        });
+        await db.SaveChangesAsync();
+
+        var tool = svc.GetRequiredService<ListSignalsTool>();
+        var result = await tool.ExecuteAsync(scanner: "market_structure");
+
+        result.Should().NotBeNull();
+        result.Should().ContainSingle(s => s.Subject == "NVDA" && s.SignalType == "unusual_move");
+    }
+
+    [Fact]
+    public async Task GetRadarSummary_ReturnsSnapshot_WhenBarsSeeded()
+    {
+        await using var sp = BuildProvider(Guid.NewGuid().ToString("N"));
+        await using var scope = sp.CreateAsyncScope();
+        var svc = scope.ServiceProvider;
+        await SeedRadarUniverseAsync(svc);
+
+        var tool = svc.GetRequiredService<GetRadarSummaryTool>();
+        var result = await tool.ExecuteAsync();
+
+        result.Should().NotBeNull();
+        result.Breadth.Should().NotBeNull();
     }
 }

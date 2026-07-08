@@ -1,0 +1,83 @@
+namespace FinanceSentry.Modules.Radar;
+
+using FinanceSentry.Core.Interfaces;
+using FinanceSentry.Modules.Radar.Application.Services;
+using FinanceSentry.Modules.Radar.Domain.Repositories;
+using FinanceSentry.Modules.Radar.Infrastructure.Jobs;
+using FinanceSentry.Modules.Radar.Infrastructure.MarketData;
+using FinanceSentry.Modules.Radar.Infrastructure.Persistence;
+using FinanceSentry.Modules.Radar.Infrastructure.Persistence.Repositories;
+using Hangfire;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+
+public static class RadarModule
+{
+    internal sealed class ModuleRegistrar : IModuleRegistrar
+    {
+        public void Register(IServiceCollection services, IConfiguration config)
+            => services.AddRadarModule(config);
+    }
+
+    private sealed class JobRegistrar : IJobRegistrar
+    {
+        public void RegisterJobs(IServiceProvider sp)
+        {
+            var mgr = sp.GetRequiredService<IRecurringJobManager>();
+            var options = sp.GetRequiredService<IOptions<RadarOptions>>().Value;
+
+            mgr.AddOrUpdate<RadarIngestionJob>(
+                "radar-ingestion",
+                job => job.ExecuteAsync(CancellationToken.None),
+                Cron.Daily(options.IngestionHourUtc));
+
+            mgr.AddOrUpdate<RadarComputeJob>(
+                "radar-compute",
+                job => job.ExecuteAsync(CancellationToken.None),
+                Cron.Daily(options.ComputeHourUtc));
+
+            mgr.AddOrUpdate<RadarFreshnessWatchdogJob>(
+                "radar-freshness-watchdog",
+                job => job.ExecuteAsync(CancellationToken.None),
+                Cron.Daily(options.ComputeHourUtc));
+        }
+    }
+
+    public static IServiceCollection AddRadarModule(
+        this IServiceCollection services, IConfiguration config)
+    {
+        services.AddDbContext<RadarDbContext>(
+            o => o.UseNpgsql(
+                config.GetConnectionString("Default")!,
+                b => b.MigrationsHistoryTable("__ef_migrations_history_radar", "public")));
+
+        services.Configure<RadarOptions>(config.GetSection(RadarOptions.SectionName));
+
+        services.AddScoped<IDailyBarRepository, DailyBarRepository>();
+        services.AddScoped<IRadarSignalRepository, RadarSignalRepository>();
+        services.AddScoped<IRadarUniverseRepository, RadarUniverseRepository>();
+
+        services.AddScoped<IRadarUniverseService, RadarUniverseService>();
+        services.AddScoped<IStructureQueryService, StructureQueryService>();
+        services.AddScoped<IRadarSignalWriter, RadarSignalWriter>();
+
+        services.AddScoped<RadarIngestionJob>();
+        services.AddScoped<RadarComputeJob>();
+        services.AddScoped<RadarFreshnessWatchdogJob>();
+
+        services.AddHttpClient(YahooMarketHistorySource.HttpClientName, client =>
+        {
+            client.BaseAddress = new Uri("https://query1.finance.yahoo.com");
+            client.Timeout = TimeSpan.FromSeconds(10);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd(
+                "Mozilla/5.0 (compatible; FinanceSentry/1.0; +https://finance-sentry.local)");
+        });
+        services.AddScoped<IMarketHistorySource, YahooMarketHistorySource>();
+
+        services.AddSingleton<IJobRegistrar, JobRegistrar>();
+
+        return services;
+    }
+}

@@ -287,5 +287,13 @@ public class RunThesisMonitorHandlerTests
             ResolveCalls++;
             return Task.CompletedTask;
         }
+
+        public Task GenerateMarketStructureAlertAsync(
+            Guid userId, Guid referenceId, string ticker, string reason, CancellationToken ct = default)
+            => Task.CompletedTask;
+
+        public Task GenerateMarketStructureFreshnessAlertAsync(
+            Guid userId, Guid referenceId, string reason, CancellationToken ct = default)
+            => Task.CompletedTask;
     }
 }

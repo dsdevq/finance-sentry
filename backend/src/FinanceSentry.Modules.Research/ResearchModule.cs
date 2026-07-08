@@ -61,6 +61,7 @@ public static class ResearchModule
                 b => b.MigrationsHistoryTable("__ef_migrations_history_research", "public")));
 
         services.AddScoped<IWatchlistRepository, WatchlistRepository>();
+        services.AddScoped<IWatchlistReader, WatchlistReader>();
         services.AddScoped<IThesisRepository, ThesisRepository>();
         services.AddScoped<IQuoteCacheRepository, QuoteCacheRepository>();
         services.AddScoped<INewsRepository, NewsRepository>();

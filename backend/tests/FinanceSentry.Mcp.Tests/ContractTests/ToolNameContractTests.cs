@@ -18,17 +18,23 @@ public sealed class ToolNameContractTests
         "get_fundamentals",
         "get_ips",
         "get_macro_calendar",
+        "get_market_breadth",
+        "get_market_structure",
         "get_net_worth_history",
         "get_news_for_ticker",
         "get_portfolio_snapshot",
         "get_postmortem_packet",
         "get_quotes",
+        "get_radar_summary",
         "get_recent_filings",
         "get_sync_health",
         "get_tax_lots",
         "get_thesis_performance",
         "get_track_record",
+        "get_relative_strength",
+        "get_sector_rotation",
         "list_active_alerts",
+        "list_signals",
         "list_subscriptions",
         "list_theses",
         "list_thesis_breaks",
@@ -49,6 +55,6 @@ public sealed class ToolNameContractTests
 
         actual.Should().BeEquivalentTo(
             AgreedToolSurface,
-            because: "the MCP tool surface must match the agreed 33-tool contract — no more, no fewer");
+            because: "the MCP tool surface must match the agreed 39-tool contract — no more, no fewer");
     }
 }
