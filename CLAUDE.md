@@ -340,6 +340,8 @@ After **all tasks in a feature are complete**, act as a QA engineer: spin up the
 - PostgreSQL 14 — new `alerts` table in `AlertsDbContext` with its own migrations (012-alerts-system)
 - C# 13 / .NET 9 + ASP.NET Core 9, EF Core 9, Hangfire, Serilog, `ModelContextProtocol` (MCP SDK); no new NuGet packages (017-thesis-monitor)
 - PostgreSQL 14 — existing `research.theses` table; migration **M004** rewrites the `invalidation_triggers` jsonb shape and backfills the two seeded theses. No new tables required (optional `ThesisMonitorRun` observability table deferred to P2). (017-thesis-monitor)
+- C# 13 / .NET 9 + ASP.NET Core 9, EF Core 9, Hangfire, `FinanceSentry.Core.Cqrs` (hand-rolled `ICommand(Handler)`/`IQuery(Handler)` — **no MediatR**, none exists anywhere in this codebase), existing `IMarketDataService` (Yahoo-backed, in `FinanceSentry.Modules.Research`) (020-thesis-track-record)
+- PostgreSQL 14 — new `thesis_events` table added to the existing `ResearchDbContext` (same DB context as `InvestmentThesis`, `Watchlist`, `Ips`; new migration `M004_ThesisEvents`) (020-thesis-track-record)
 
 - `@ngrx/signals` 21.1.0 (NgRx SignalStore) — pilot AuthStore 2026-04-24, extended to DashboardStore + AccountsStore same day
 - C# 13 / .NET 9 (backend) · TypeScript 5.x strict (frontend) + ASP.NET Core 9, EF Core 9, MediatR, ASP.NET Core Identity (`Microsoft.AspNetCore.Identity.EntityFrameworkCore`), Npgsql.EF Core (backend) · Angular 20, RxJS, Angular standalone routing (frontend) (003-auth-flow)
