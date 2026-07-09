@@ -133,3 +133,19 @@ Multi-agent LLM trading framework (~92k stars, Apache-2.0, active; arXiv 2412.20
 - **Portfolio & event scanners as signal emitters** — the underlying data/tools exist; formalizing them as `radar_signals` writers is post-019 plumbing.
 - **Backtesting / historical simulation** — 020 measures forward from creation; no retro-simulation in v1.
 - **Trade execution** — never in scope. The system informs; Denys decides.
+
+---
+
+# Platform — Production-Practice Track (added 2026-07-09)
+
+Separate from the Radar program: a deliberate production-engineering ladder (observability → retention → gateway → messaging → orchestration → service extraction → RPC). Each step is one specced, versioned release; order is load-bearing (don't orchestrate what you can't observe).
+
+| Spec | Feature | Depends on |
+|---|---|---|
+| `023-observability-stack` | Metrics + log aggregation + dashboards on the VPS | — |
+| `024-data-retention` | Per-table retention policies + off-host verified backups | 023 (visibility) |
+| `025-edge-gateway` | Single reverse-proxy entrypoint, TLS, rate limits | — |
+| `026-event-bus-outbox` | Broker + transactional outbox inside the monolith | 023 |
+| `027-k8s-migration` | Single-node cluster replaces compose in prod | 025; 023/024 strongly advised |
+| `028-extract-market-data-service` | Radar/market-data becomes its own service | 026, 025, radar (018) stable |
+| `029-grpc-internal-contract` | One internal call goes contract-first RPC | 028 |
