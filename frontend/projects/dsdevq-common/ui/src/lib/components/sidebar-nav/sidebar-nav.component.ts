@@ -55,12 +55,27 @@ export interface NavItem {
           </button>
         }
       </nav>
+
+      <!-- Version footer -->
+      @if (versionLabel()) {
+        <div
+          [title]="collapsed() ? versionLabel() : ''"
+          class="border-t border-border-default px-cmn-4 py-cmn-2 text-cmn-xs text-text-secondary"
+        >
+          @if (!collapsed()) {
+            {{ versionLabel() }}
+          } @else {
+            <cmn-icon name="Info" size="sm" />
+          }
+        </div>
+      }
     </aside>
   `,
 })
 export class SidebarNavComponent {
   public readonly items = input<NavItem[]>([]);
   public readonly activeRoute = input<string>('');
+  public readonly versionLabel = input<string>('');
 
   public readonly navClick = output<NavItem>();
   public readonly collapsedChange = output<boolean>();

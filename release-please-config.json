@@ -14,6 +14,10 @@
         {
           "type": "generic",
           "path": "backend/src/FinanceSentry.API/FinanceSentry.API.csproj"
+        },
+        {
+          "type": "generic",
+          "path": "frontend/src/app/shared/constants/version/version.constants.ts"
         }
       ]
     }

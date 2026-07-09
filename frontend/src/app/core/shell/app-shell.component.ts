@@ -16,6 +16,7 @@ import {filter, map} from 'rxjs';
 
 import {AlertsStore} from '../../modules/alerts/store/alerts/alerts.store';
 import {AuthStore} from '../../modules/auth/store/auth.store';
+import {APP_VERSION} from '../../shared/constants/version/version.constants';
 import {AppRoute} from '../../shared/enums/app-route/app-route.enum';
 
 const PALETTE_ITEMS: CommandPaletteItem[] = [
@@ -47,6 +48,7 @@ const AVATAR_MENU_ITEMS: MenuItem[] = [
       [activeRoute]="activeRoute()"
       [isDark]="isDark()"
       [avatarMenuItems]="avatarMenuItems"
+      [versionLabel]="versionLabel"
       (navClick)="navigate($event)"
       (themeToggle)="themeService.toggle()"
       (searchClick)="openPalette()"
@@ -76,6 +78,7 @@ export class AppShellComponent {
 
   public readonly themeService = inject(ThemeService);
   public readonly avatarMenuItems: MenuItem[] = AVATAR_MENU_ITEMS;
+  public readonly versionLabel = `v${APP_VERSION}`;
   public readonly navItems: NavItem[] = [
     {label: 'Dashboard', icon: 'LayoutDashboard', route: AppRoute.Dashboard},
     {label: 'Accounts', icon: 'Building2', route: AppRoute.AccountsList},

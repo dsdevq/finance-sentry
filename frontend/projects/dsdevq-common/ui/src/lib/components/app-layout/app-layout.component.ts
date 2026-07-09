@@ -15,6 +15,7 @@ export {type NavItem} from '../sidebar-nav/sidebar-nav.component';
       <cmn-sidebar-nav
         [items]="navItems()"
         [activeRoute]="activeRoute()"
+        [versionLabel]="versionLabel()"
         (navClick)="navClick.emit($event)"
         (collapsedChange)="collapsedChange.emit($event)"
       />
@@ -42,6 +43,7 @@ export class AppLayoutComponent {
   public readonly isDark = input<boolean>(false);
   public readonly avatarLabel = input<string>('');
   public readonly avatarMenuItems = input<MenuItem[]>([]);
+  public readonly versionLabel = input<string>('');
 
   public readonly navClick = output<NavItem>();
   public readonly collapsedChange = output<boolean>();
