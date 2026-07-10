@@ -24,7 +24,7 @@ describe('TypePickerComponent', () => {
   });
 
   it('connectionsByType counts providers by institution type from the store', () => {
-    const store = buildStore(new Set<Provider>(['plaid', 'monobank', 'binance']));
+    const store = buildStore(new Set<Provider>(['truelayer', 'monobank', 'binance']));
     configure(store);
 
     const fixture = TestBed.createComponent(TypePickerComponent);

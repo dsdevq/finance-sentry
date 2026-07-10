@@ -1,10 +1,10 @@
 import {inject} from '@angular/core';
+import {toObservable} from '@angular/core/rxjs-interop';
 import {rxMethod} from '@ngrx/signals/rxjs-interop';
-import {pipe, switchMap, tap} from 'rxjs';
+import {pipe, skip, switchMap, tap} from 'rxjs';
 
 import {StoreErrorUtils} from '../../../shared/utils/store-error.utils';
-import {BinanceService} from '../../bank-sync/services/binance.service';
-import {IBKRService} from '../../bank-sync/services/ibkr.service';
+import {AccountsStore} from '../../bank-sync/store/accounts/accounts.store';
 import {type Position} from '../models/position/position.model';
 import {HoldingsService} from '../services/holdings.service';
 import {PositionsService} from '../services/positions.service';
@@ -21,8 +21,6 @@ interface StoreMethods {
 
 export function holdingsEffects(store: StoreMethods) {
   const holdingsService = inject(HoldingsService);
-  const binanceService = inject(BinanceService);
-  const ibkrService = inject(IBKRService);
   const positionsService = inject(PositionsService);
 
   const load = rxMethod<void>(
@@ -51,33 +49,26 @@ export function holdingsEffects(store: StoreMethods) {
     )
   );
 
-  const disconnectBinance = rxMethod<void>(
-    pipe(
-      switchMap(() =>
-        binanceService.disconnect().pipe(
-          tap(() => load()),
-          StoreErrorUtils.catchAndSetError(store)
-        )
-      )
-    )
-  );
-
-  const disconnectIBKR = rxMethod<void>(
-    pipe(
-      switchMap(() =>
-        ibkrService.disconnect().pipe(
-          tap(() => load()),
-          StoreErrorUtils.catchAndSetError(store)
-        )
-      )
-    )
-  );
-
-  return {load, loadPositions, disconnectBinance, disconnectIBKR};
+  return {load, loadPositions};
 }
 
 export function holdingsHooks(store: ReturnType<typeof holdingsEffects>) {
   return {
-    onInit: () => store.load(),
+    onInit: () => {
+      store.load();
+      // Disconnect actions live exclusively in AccountsStore; refresh the
+      // holdings summary whenever it reports a completed disconnect. Optional
+      // so the store keeps working (minus the reaction) if a host page does
+      // not provide AccountsStore.
+      const accountsStore = inject(AccountsStore, {optional: true});
+      if (accountsStore) {
+        rxMethod<number>(
+          pipe(
+            skip(1),
+            tap(() => store.load())
+          )
+        )(toObservable(accountsStore.disconnectVersion));
+      }
+    },
   };
 }

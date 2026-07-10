@@ -8,7 +8,7 @@ import {
   InputComponent,
 } from '@dsdevq-common/ui';
 
-import {HoldingsStore} from '../../../holdings/store/holdings.store';
+import {AccountsStore} from '../../store/accounts/accounts.store';
 import {ConnectStore} from '../../store/connect/connect.store';
 import {CONNECT_STRATEGY} from '../../strategies/connect-strategy.token';
 import {BINANCE_HELP_URL} from './connect-modal.constants';
@@ -28,7 +28,7 @@ import {BINANCE_HELP_URL} from './connect-modal.constants';
 })
 export class BinanceFormComponent {
   private readonly strategy = inject(CONNECT_STRATEGY);
-  private readonly holdingsStore = inject(HoldingsStore, {optional: true});
+  private readonly accountsStore = inject(AccountsStore);
 
   public readonly store = inject(ConnectStore);
 
@@ -58,7 +58,7 @@ export class BinanceFormComponent {
   }
 
   public disconnectExisting(): void {
-    this.holdingsStore?.disconnectBinance();
+    this.accountsStore.disconnectBinance();
     this.store.resetError();
     this.form.reset({apiKey: '', apiSecret: ''});
   }

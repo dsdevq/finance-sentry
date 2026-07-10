@@ -2,7 +2,7 @@ import {signal} from '@angular/core';
 import {TestBed} from '@angular/core/testing';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 
-import {HoldingsStore} from '../../../holdings/store/holdings.store';
+import {AccountsStore} from '../../store/accounts/accounts.store';
 import {ConnectStore} from '../../store/connect/connect.store';
 import {type ConnectStrategy} from '../../strategies/connect-strategy';
 import {CONNECT_STRATEGY} from '../../strategies/connect-strategy.token';
@@ -19,7 +19,7 @@ function buildConnectStore(errorCode: Nullable<string> = null) {
   };
 }
 
-function buildHoldingsStore() {
+function buildAccountsStore() {
   return {disconnectBinance: vi.fn(), disconnectIBKR: vi.fn()};
 }
 
@@ -33,13 +33,13 @@ function buildStrategy(): ConnectStrategy {
 
 function configure(
   store: ReturnType<typeof buildConnectStore>,
-  holdings: ReturnType<typeof buildHoldingsStore>,
+  accounts: ReturnType<typeof buildAccountsStore>,
   strategy: ConnectStrategy
 ): void {
   TestBed.configureTestingModule({
     providers: [
       {provide: ConnectStore, useValue: store},
-      {provide: HoldingsStore, useValue: holdings},
+      {provide: AccountsStore, useValue: accounts},
       {provide: CONNECT_STRATEGY, useValue: strategy},
     ],
   });
@@ -53,7 +53,7 @@ describe('IbkrFormComponent', () => {
   it('submit() dispatches store.connect with the trimmed credentials', () => {
     const store = buildConnectStore();
     const strategy = buildStrategy();
-    configure(store, buildHoldingsStore(), strategy);
+    configure(store, buildAccountsStore(), strategy);
 
     const fixture = TestBed.createComponent(IbkrFormComponent);
     const cmp = fixture.componentInstance;
@@ -69,7 +69,7 @@ describe('IbkrFormComponent', () => {
 
   it('submit() blocks and marks touched when the form is invalid', () => {
     const store = buildConnectStore();
-    configure(store, buildHoldingsStore(), buildStrategy());
+    configure(store, buildAccountsStore(), buildStrategy());
 
     const fixture = TestBed.createComponent(IbkrFormComponent);
     fixture.componentInstance.submit();
@@ -80,16 +80,16 @@ describe('IbkrFormComponent', () => {
 
   it('isDuplicateError flips when error code is IBKR_DUPLICATE', () => {
     const store = buildConnectStore('IBKR_DUPLICATE');
-    configure(store, buildHoldingsStore(), buildStrategy());
+    configure(store, buildAccountsStore(), buildStrategy());
 
     const fixture = TestBed.createComponent(IbkrFormComponent);
     expect(fixture.componentInstance.isDuplicateError()).toBe(true);
   });
 
-  it('disconnectExisting calls holdingsStore.disconnectIBKR, resets error, and clears the form', () => {
+  it('disconnectExisting calls accountsStore.disconnectIBKR, resets error, and clears the form', () => {
     const store = buildConnectStore('IBKR_DUPLICATE');
-    const holdings = buildHoldingsStore();
-    configure(store, holdings, buildStrategy());
+    const accounts = buildAccountsStore();
+    configure(store, accounts, buildStrategy());
 
     const fixture = TestBed.createComponent(IbkrFormComponent);
     const cmp = fixture.componentInstance;
@@ -97,7 +97,7 @@ describe('IbkrFormComponent', () => {
 
     cmp.disconnectExisting();
 
-    expect(holdings.disconnectIBKR).toHaveBeenCalledOnce();
+    expect(accounts.disconnectIBKR).toHaveBeenCalledOnce();
     expect(store.resetError).toHaveBeenCalledOnce();
     expect(cmp.form.controls.username.value).toBe('');
     expect(cmp.form.controls.password.value).toBe('');

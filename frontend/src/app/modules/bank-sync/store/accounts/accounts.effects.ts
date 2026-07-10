@@ -14,6 +14,7 @@ interface EffectsStore {
   setSuccess: () => void;
   setError: (errorCode: Nullable<string>) => void;
   setSummary: (summary: WealthSummaryResponse) => void;
+  bumpDisconnectVersion: () => void;
 }
 
 export function accountsEffects(store: EffectsStore) {
@@ -44,7 +45,10 @@ export function accountsEffects(store: EffectsStore) {
     pipe(
       switchMap(() =>
         bankSyncService.disconnectMonobank().pipe(
-          tap(() => load()),
+          tap(() => {
+            store.bumpDisconnectVersion();
+            load();
+          }),
           catchError((err: unknown) => {
             store.setError(extractErrorCode(err));
             return EMPTY;
@@ -58,7 +62,10 @@ export function accountsEffects(store: EffectsStore) {
     pipe(
       switchMap(accountId =>
         bankSyncService.disconnectAccount(accountId).pipe(
-          tap(() => load()),
+          tap(() => {
+            store.bumpDisconnectVersion();
+            load();
+          }),
           catchError((err: unknown) => {
             store.setError(extractErrorCode(err));
             return EMPTY;
@@ -72,7 +79,10 @@ export function accountsEffects(store: EffectsStore) {
     pipe(
       switchMap(({provider, institutionId}) =>
         bankSyncService.disconnectInstitution(provider, institutionId).pipe(
-          tap(() => load()),
+          tap(() => {
+            store.bumpDisconnectVersion();
+            load();
+          }),
           catchError((err: unknown) => {
             store.setError(extractErrorCode(err));
             return EMPTY;
@@ -86,7 +96,10 @@ export function accountsEffects(store: EffectsStore) {
     pipe(
       switchMap(() =>
         ibkrService.disconnect().pipe(
-          tap(() => load()),
+          tap(() => {
+            store.bumpDisconnectVersion();
+            load();
+          }),
           catchError((err: unknown) => {
             store.setError(extractErrorCode(err));
             return EMPTY;
@@ -100,7 +113,10 @@ export function accountsEffects(store: EffectsStore) {
     pipe(
       switchMap(() =>
         binanceService.disconnect().pipe(
-          tap(() => load()),
+          tap(() => {
+            store.bumpDisconnectVersion();
+            load();
+          }),
           catchError((err: unknown) => {
             store.setError(extractErrorCode(err));
             return EMPTY;

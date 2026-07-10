@@ -14,6 +14,7 @@ import {type Provider} from '../../../../shared/models/provider/provider.model';
 import {SyncStatusLabelPipe} from '../../../../shared/pipes/sync-status-label.pipe';
 import {SyncStatusVariantPipe} from '../../../../shared/pipes/sync-status-variant.pipe';
 import {DisconnectDialogComponent} from '../../../bank-sync/components/disconnect-dialog/disconnect-dialog.component';
+import {AccountsStore} from '../../../bank-sync/store/accounts/accounts.store';
 import {CategoryLabelPipe} from '../../pipes/category-label.pipe';
 import {CurrencyAmountPipe} from '../../pipes/currency-amount.pipe';
 import {HoldingBalancePipe} from '../../pipes/holding-balance.pipe';
@@ -44,11 +45,13 @@ export type HoldingsTab = 'holdings' | 'positions';
   ],
   templateUrl: './holdings.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  providers: [HoldingsStore],
+  providers: [AccountsStore, HoldingsStore],
 })
 export class HoldingsComponent {
   private readonly dialog = inject(CmnDialogService);
   private readonly viewContainerRef = inject(ViewContainerRef);
+
+  private readonly accountsStore = inject(AccountsStore);
 
   public readonly store = inject(HoldingsStore);
   public readonly activeTab = signal<HoldingsTab>('holdings');
@@ -88,9 +91,9 @@ export class HoldingsComponent {
           return;
         }
         if (provider === 'binance') {
-          this.store.disconnectBinance();
+          this.accountsStore.disconnectBinance();
         } else if (provider === 'ibkr') {
-          this.store.disconnectIBKR();
+          this.accountsStore.disconnectIBKR();
         }
       });
   }

@@ -8,7 +8,7 @@ import {
   InputComponent,
 } from '@dsdevq-common/ui';
 
-import {HoldingsStore} from '../../../holdings/store/holdings.store';
+import {AccountsStore} from '../../store/accounts/accounts.store';
 import {ConnectStore} from '../../store/connect/connect.store';
 import {CONNECT_STRATEGY} from '../../strategies/connect-strategy.token';
 
@@ -27,7 +27,7 @@ import {CONNECT_STRATEGY} from '../../strategies/connect-strategy.token';
 })
 export class IbkrFormComponent {
   private readonly strategy = inject(CONNECT_STRATEGY);
-  private readonly holdingsStore = inject(HoldingsStore, {optional: true});
+  private readonly accountsStore = inject(AccountsStore);
 
   public readonly store = inject(ConnectStore);
 
@@ -55,7 +55,7 @@ export class IbkrFormComponent {
   }
 
   public disconnectExisting(): void {
-    this.holdingsStore?.disconnectIBKR();
+    this.accountsStore.disconnectIBKR();
     this.store.resetError();
     this.form.reset({username: '', password: ''});
   }

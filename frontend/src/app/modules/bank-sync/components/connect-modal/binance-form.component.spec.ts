@@ -2,7 +2,7 @@ import {signal} from '@angular/core';
 import {TestBed} from '@angular/core/testing';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 
-import {HoldingsStore} from '../../../holdings/store/holdings.store';
+import {AccountsStore} from '../../store/accounts/accounts.store';
 import {ConnectStore} from '../../store/connect/connect.store';
 import {type ConnectStrategy} from '../../strategies/connect-strategy';
 import {CONNECT_STRATEGY} from '../../strategies/connect-strategy.token';
@@ -19,7 +19,7 @@ function buildConnectStore(errorCode: Nullable<string> = null) {
   };
 }
 
-function buildHoldingsStore() {
+function buildAccountsStore() {
   return {disconnectBinance: vi.fn(), disconnectIBKR: vi.fn()};
 }
 
@@ -33,13 +33,13 @@ function buildStrategy(): ConnectStrategy {
 
 function configure(
   store: ReturnType<typeof buildConnectStore>,
-  holdings: ReturnType<typeof buildHoldingsStore>,
+  accounts: ReturnType<typeof buildAccountsStore>,
   strategy: ConnectStrategy
 ): void {
   TestBed.configureTestingModule({
     providers: [
       {provide: ConnectStore, useValue: store},
-      {provide: HoldingsStore, useValue: holdings},
+      {provide: AccountsStore, useValue: accounts},
       {provide: CONNECT_STRATEGY, useValue: strategy},
     ],
   });
@@ -53,7 +53,7 @@ describe('BinanceFormComponent', () => {
   it('does not dispatch when either field is empty', () => {
     const store = buildConnectStore();
     const strategy = buildStrategy();
-    configure(store, buildHoldingsStore(), strategy);
+    configure(store, buildAccountsStore(), strategy);
 
     const fixture = TestBed.createComponent(BinanceFormComponent);
     fixture.componentInstance.form.controls.apiKey.setValue('keyOnly');
@@ -65,7 +65,7 @@ describe('BinanceFormComponent', () => {
   it('dispatches connect with trimmed key + secret when both are filled', () => {
     const store = buildConnectStore();
     const strategy = buildStrategy();
-    configure(store, buildHoldingsStore(), strategy);
+    configure(store, buildAccountsStore(), strategy);
 
     const fixture = TestBed.createComponent(BinanceFormComponent);
     fixture.componentInstance.form.setValue({
@@ -82,22 +82,22 @@ describe('BinanceFormComponent', () => {
 
   it('isDuplicateError flips when error code is BINANCE_DUPLICATE', () => {
     const store = buildConnectStore('BINANCE_DUPLICATE');
-    configure(store, buildHoldingsStore(), buildStrategy());
+    configure(store, buildAccountsStore(), buildStrategy());
 
     const fixture = TestBed.createComponent(BinanceFormComponent);
     expect(fixture.componentInstance.isDuplicateError()).toBe(true);
   });
 
-  it('disconnectExisting calls holdingsStore.disconnectBinance and resets error/form', () => {
+  it('disconnectExisting calls accountsStore.disconnectBinance and resets error/form', () => {
     const store = buildConnectStore('BINANCE_DUPLICATE');
-    const holdings = buildHoldingsStore();
-    configure(store, holdings, buildStrategy());
+    const accounts = buildAccountsStore();
+    configure(store, accounts, buildStrategy());
 
     const fixture = TestBed.createComponent(BinanceFormComponent);
     fixture.componentInstance.form.setValue({apiKey: 'k', apiSecret: 's'});
     fixture.componentInstance.disconnectExisting();
 
-    expect(holdings.disconnectBinance).toHaveBeenCalledOnce();
+    expect(accounts.disconnectBinance).toHaveBeenCalledOnce();
     expect(store.resetError).toHaveBeenCalledOnce();
     expect(fixture.componentInstance.form.getRawValue()).toEqual({apiKey: '', apiSecret: ''});
   });
