@@ -67,6 +67,11 @@ public sealed class IBeamContainerManager : IIBeamContainerManager
                 "IBEAM_LOG_LEVEL=INFO",
                 "IBEAM_ERROR_SCREENSHOTS=True",
                 "IBEAM_PAGE_LOAD_TIMEOUT=180",
+                // Opt-in handling of IBKR's "Select Second Factor Device"
+                // dropdown (accounts with >1 2FA method). Requires the image
+                // to carry IBeam PR #277 (voyz/ibeam:0.5.11-rc1) — without it
+                // login stalls on that screen until Selenium timeout.
+                "IBEAM_TWO_FA_SELECT=true",
                 $"IBEAM_TWO_FA_SELECT_TARGET={_options.TwoFaSelectTarget}",
             ],
             HostConfig = new HostConfig

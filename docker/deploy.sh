@@ -37,6 +37,9 @@ else
   echo "warning: /var/run/docker.sock missing on host — IBeam orchestration will not work" >&2
 fi
 
+echo "[deploy] build IBeam image (spawned per-user by the API, not part of compose)"
+docker build -f docker/Dockerfile.ibeam -t finance-sentry/ibeam:local docker/
+
 echo "[deploy] docker compose build + up"
 docker compose -f docker/docker-compose.prod.yml --env-file docker/.env up -d --build --remove-orphans
 

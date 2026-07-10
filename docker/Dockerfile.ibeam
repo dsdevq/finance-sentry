@@ -7,6 +7,11 @@
 # authenticated=true internally, but every /v1/api/* path unreachable from
 # outside. Baking in a conf.yaml that allows the broader `172.*` range fixes
 # that without reintroducing the host bind-mount that #248 (correctly) removed.
-FROM voyz/ibeam:latest
+# Pinned to 0.5.11-rc1: the maintainer's build of PR #277, which handles the
+# "Select Second Factor Device" dropdown IBKR shows for accounts with multiple
+# 2FA methods enrolled (opt-in via IBEAM_TWO_FA_SELECT=true). 0.5.12/latest
+# does NOT include it — IBeam times out on that screen (issue #271). Move back
+# to a stable tag once the PR is merged and released.
+FROM voyz/ibeam:0.5.11-rc1
 
 COPY ibkr/conf.yaml /srv/clientportal.gw/root/conf.yaml
