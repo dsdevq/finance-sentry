@@ -54,4 +54,14 @@ public sealed class IBeamOptions
     /// the API container.
     /// </summary>
     public string DockerEndpoint { get; set; } = "unix:///var/run/docker.sock";
+
+    /// <summary>
+    /// Option text IBeam clicks when IBKR shows the "select second factor
+    /// device" screen (accounts with more than one 2FA method enrolled).
+    /// Passed as IBEAM_TWO_FA_SELECT_TARGET; must match the option text on the
+    /// login page exactly or IBeam stalls on the selector until timeout.
+    /// IBeam's own default is "IB Key"; newer IBKR login pages label the
+    /// mobile-app option "IBKR Mobile".
+    /// </summary>
+    public string TwoFaSelectTarget { get; set; } = "IB Key";
 }

@@ -51,6 +51,11 @@ services:
       IBeam__ContainerNamePrefix: "finance-sentry-ibkr"
       IBeam__SpawnTimeoutSeconds: "300"
       IBeam__DockerEndpoint: "unix:///var/run/docker.sock"
+      # 2FA method IBeam clicks when the account has multiple second-factor
+      # devices enrolled and IBKR shows the selector screen. Must match the
+      # option text on the login page exactly ("IB Key" or "IBKR Mobile"
+      # depending on page version) — override via .env if the default stalls.
+      IBeam__TwoFaSelectTarget: "${IBEAM_TWO_FA_SELECT_TARGET:-IB Key}"
     ports:
       - "127.0.0.1:${API_PORT:-5001}:5000"
     depends_on:

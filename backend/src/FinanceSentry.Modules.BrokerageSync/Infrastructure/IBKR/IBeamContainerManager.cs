@@ -67,6 +67,7 @@ public sealed class IBeamContainerManager : IIBeamContainerManager
                 "IBEAM_LOG_LEVEL=INFO",
                 "IBEAM_ERROR_SCREENSHOTS=True",
                 "IBEAM_PAGE_LOAD_TIMEOUT=180",
+                $"IBEAM_TWO_FA_SELECT_TARGET={_options.TwoFaSelectTarget}",
             ],
             HostConfig = new HostConfig
             {
