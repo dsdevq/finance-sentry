@@ -67,6 +67,12 @@ public sealed class IBeamContainerManager : IIBeamContainerManager
                 "IBEAM_LOG_LEVEL=INFO",
                 "IBEAM_ERROR_SCREENSHOTS=True",
                 "IBEAM_PAGE_LOAD_TIMEOUT=180",
+                // Post-2FA-select waits (login_handler binds
+                // wait_and_identify_trigger to OAUTH_TIMEOUT, not
+                // PAGE_LOAD_TIMEOUT) default to 15s — shorter than a human
+                // can tap the IB Key push. Widen so the attempt survives
+                // until the tap flips the page to "Client login succeeds".
+                "IBEAM_OAUTH_TIMEOUT=180",
                 // Opt-in handling of IBKR's "Select Second Factor Device"
                 // dropdown (accounts with >1 2FA method). Requires the image
                 // to carry IBeam PR #277 (voyz/ibeam:0.5.11-rc1) — without it
