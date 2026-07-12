@@ -22,9 +22,11 @@ public interface IIBeamContainerManager
     Task StopAndRemoveAsync(Guid credentialId, CancellationToken ct = default);
 
     /// <summary>
-    /// Waits until the user's IBeam container reports an authenticated session
-    /// (auth/status returns <c>authenticated=true</c>) or the configured
-    /// timeout is reached. Returns true on success, false on timeout.
+    /// Waits until the user's IBeam gateway has a live tier-1 Portal session
+    /// (<c>/portfolio/accounts</c> returns an account list) or the configured
+    /// timeout is reached. Read-only IBKR users never reach a tier-2 brokerage
+    /// session, so Portal-session readiness — not <c>iserver/auth/status</c>
+    /// — is the signal. Returns true on success, false on timeout.
     /// </summary>
     Task<bool> WaitForAuthAsync(Guid credentialId, CancellationToken ct = default);
 

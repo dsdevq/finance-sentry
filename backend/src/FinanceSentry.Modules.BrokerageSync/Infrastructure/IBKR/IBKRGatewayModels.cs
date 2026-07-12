@@ -2,9 +2,15 @@ using System.Text.Json.Serialization;
 
 namespace FinanceSentry.Modules.BrokerageSync.Infrastructure.IBKR;
 
-public sealed record IBKRAuthStatusResponse(
-    [property: JsonPropertyName("authenticated")] bool Authenticated,
-    [property: JsonPropertyName("connected")] bool Connected);
+/// <summary>
+/// One entry of the <c>/v1/api/portfolio/accounts</c> response — the tier-1
+/// (read-only Portal session) account list. Unlike <c>/iserver/accounts</c>
+/// this endpoint needs no brokerage session, so it works for read-only IBKR
+/// users who can never open a tier-2 <c>/iserver</c> session.
+/// </summary>
+public sealed record IBKRPortfolioAccountResponse(
+    [property: JsonPropertyName("accountId")] string? AccountId,
+    [property: JsonPropertyName("id")] string? Id);
 
 public sealed record IBKRAccountsResponse(
     [property: JsonPropertyName("accounts")] List<string> Accounts);

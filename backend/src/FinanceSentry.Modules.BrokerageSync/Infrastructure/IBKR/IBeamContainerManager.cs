@@ -73,6 +73,17 @@ public sealed class IBeamContainerManager : IIBeamContainerManager
                 // can tap the IB Key push. Widen so the attempt survives
                 // until the tap flips the page to "Client login succeeds".
                 "IBEAM_OAUTH_TIMEOUT=180",
+                // Read-only IBKR users (e.g. a dedicated view-only second user)
+                // only ever reach the tier-1 Portal session; the tier-2
+                // brokerage session (/iserver, ssodh/init) requires trading
+                // permissions they don't have, so iserver/auth/status stays
+                // authenticated:false forever. Left on defaults, IBeam's
+                // maintenance loop reads that as a broken session and relogins
+                // on a cycle — re-firing the IB Key 2FA push. Disabling
+                // restart-on-failure makes IBeam log in ONCE, then leave the
+                // live Portal session alone (FS's /portfolio polling keeps it
+                // warm). Portfolio reads never need tier 2.
+                "IBEAM_RESTART_FAILED_SESSIONS=False",
                 // Opt-in handling of IBKR's "Select Second Factor Device"
                 // dropdown (accounts with >1 2FA method). Requires the image
                 // to carry IBeam PR #277 (voyz/ibeam:0.5.11-rc1) — without it
@@ -130,7 +141,12 @@ public sealed class IBeamContainerManager : IIBeamContainerManager
 
     public async Task<bool> WaitForAuthAsync(Guid credentialId, CancellationToken ct = default)
     {
-        var authUri = new Uri(_resolver.BaseUrl(credentialId), "/v1/api/iserver/auth/status");
+        // Read-only IBKR users only ever reach the tier-1 Portal session — they
+        // cannot open a tier-2 /iserver brokerage session, so iserver/auth/status
+        // stays authenticated:false forever. "Ready" therefore means the Portal
+        // session is live: /portfolio/accounts returns 200 with a populated
+        // account array. That endpoint needs no brokerage session.
+        var readyUri = new Uri(_resolver.BaseUrl(credentialId), "/v1/api/portfolio/accounts");
         var deadline = DateTime.UtcNow.AddSeconds(_options.SpawnTimeoutSeconds);
 
         using var http = CreateInsecureClient();
@@ -144,7 +160,7 @@ public sealed class IBeamContainerManager : IIBeamContainerManager
                 // to any client that upgrades to HTTP/2 or sends an empty
                 // User-Agent (see CreateInsecureClient). curl and wget both stick
                 // to 1.1 and set a UA — hence "works from wget, fails from .NET".
-                using var request = new HttpRequestMessage(HttpMethod.Get, authUri)
+                using var request = new HttpRequestMessage(HttpMethod.Get, readyUri)
                 {
                     Version = System.Net.HttpVersion.Version11,
                     VersionPolicy = System.Net.Http.HttpVersionPolicy.RequestVersionOrLower,
@@ -153,9 +169,13 @@ public sealed class IBeamContainerManager : IIBeamContainerManager
                 if (response.IsSuccessStatusCode)
                 {
                     var body = await response.Content.ReadAsStringAsync(ct);
-                    if (body.Contains("\"authenticated\":true", StringComparison.OrdinalIgnoreCase))
+                    // Before login completes CPG returns 401 or an empty array;
+                    // once the Portal session is up each account object carries
+                    // an "accountId" field.
+                    if (body.Contains("\"accountId\"", StringComparison.OrdinalIgnoreCase))
                     {
-                        _logger.LogInformation("IBeam container for credential {CredentialId} authenticated", credentialId);
+                        _logger.LogInformation(
+                            "IBeam container for credential {CredentialId}: Portal session ready", credentialId);
                         return true;
                     }
                 }
@@ -169,7 +189,7 @@ public sealed class IBeamContainerManager : IIBeamContainerManager
         }
 
         _logger.LogWarning(
-            "IBeam container for credential {CredentialId} did not authenticate within {Timeout}s",
+            "IBeam container for credential {CredentialId} Portal session not ready within {Timeout}s",
             credentialId, _options.SpawnTimeoutSeconds);
         return false;
     }

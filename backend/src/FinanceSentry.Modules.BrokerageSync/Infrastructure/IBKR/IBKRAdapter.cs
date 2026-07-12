@@ -18,12 +18,26 @@ public sealed class IBKRAdapter : IBrokerAdapter
 
     public async Task EnsureSessionAsync(Guid credentialId, CancellationToken ct = default)
     {
+        // Read-only IBKR users only ever hold the tier-1 Portal session — they
+        // cannot open a tier-2 /iserver brokerage session (IBKR requires trading
+        // permissions for that). Portfolio reads need only tier 1, so a live
+        // session means /portfolio/accounts returns at least one account.
         var baseUrl = _resolver.BaseUrl(credentialId);
-        var status = await _client.GetAuthStatusAsync(baseUrl, ct);
-        if (!status.Authenticated)
+        try
+        {
+            var accounts = await _client.GetAccountsAsync(baseUrl, ct);
+            if (accounts.Accounts.Count == 0)
+                throw new BrokerAuthException(
+                    "IBKR gateway has no active Portal session for this user. The IBeam "
+                        + "container may still be starting, or login/2FA has not completed.",
+                    "IBKR");
+        }
+        catch (HttpRequestException ex)
+        {
             throw new BrokerAuthException(
-                "IBKR gateway is not authenticated for this user. The IBeam container may still be starting or the stored credentials may be invalid.",
-                "IBKR");
+                "IBKR gateway is unreachable for this user. The IBeam container may still be starting.",
+                "IBKR", ex);
+        }
     }
 
     public async Task<string> GetAccountIdAsync(Guid credentialId, CancellationToken ct = default)

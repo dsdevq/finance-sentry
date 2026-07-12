@@ -10,44 +10,26 @@ namespace FinanceSentry.Modules.BrokerageSync.Infrastructure.IBKR;
 /// </summary>
 public sealed class IBKRGatewayClient(HttpClient http, ILogger<IBKRGatewayClient> logger)
 {
-    public async Task<IBKRAuthStatusResponse> GetAuthStatusAsync(Uri baseUrl, CancellationToken ct = default)
-    {
-        HttpResponseMessage response;
-        try
-        {
-            response = await http.GetAsync(new Uri(baseUrl, "/v1/api/iserver/auth/status"), ct);
-        }
-        catch (HttpRequestException ex)
-        {
-            logger.LogWarning("IBKR gateway {BaseUrl} unreachable: {Error}", baseUrl, ex.Message);
-            return new IBKRAuthStatusResponse(false, false);
-        }
-
-        var body = await response.Content.ReadAsStringAsync(ct);
-        logger.LogInformation("IBKR auth/status → HTTP {Status}, body: {Body}", (int)response.StatusCode, body);
-
-        if (!response.IsSuccessStatusCode)
-            return new IBKRAuthStatusResponse(false, false);
-
-        try
-        {
-            return System.Text.Json.JsonSerializer.Deserialize<IBKRAuthStatusResponse>(body)
-                ?? new IBKRAuthStatusResponse(false, false);
-        }
-        catch (System.Text.Json.JsonException ex)
-        {
-            logger.LogWarning("IBKR auth/status JSON parse failed: {Error}", ex.Message);
-            return new IBKRAuthStatusResponse(false, false);
-        }
-    }
-
     public async Task<IBKRAccountsResponse> GetAccountsAsync(Uri baseUrl, CancellationToken ct = default)
     {
-        var response = await http.GetAsync(new Uri(baseUrl, "/v1/api/iserver/accounts"), ct);
+        // /portfolio/accounts is served by the read-only Portal session (tier 1)
+        // and needs NO brokerage session — so it works for read-only IBKR users,
+        // unlike /iserver/accounts which requires a tier-2 /iserver session that
+        // demands trading permissions.
+        var response = await http.GetAsync(new Uri(baseUrl, "/v1/api/portfolio/accounts"), ct);
         response.EnsureSuccessStatusCode();
 
-        return await response.Content.ReadFromJsonAsync<IBKRAccountsResponse>(cancellationToken: ct)
-            ?? new IBKRAccountsResponse([]);
+        var accounts = await response.Content
+            .ReadFromJsonAsync<List<IBKRPortfolioAccountResponse>>(cancellationToken: ct) ?? [];
+
+        var accountIds = accounts
+            .Select(a => a.AccountId ?? a.Id)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Select(id => id!)
+            .ToList();
+
+        logger.LogInformation("IBKR portfolio/accounts → {Count} account(s)", accountIds.Count);
+        return new IBKRAccountsResponse(accountIds);
     }
 
     public async Task<IReadOnlyList<IBKRPositionResponse>> GetPositionsAsync(Uri baseUrl, string accountId, CancellationToken ct = default)
