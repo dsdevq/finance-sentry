@@ -1,5 +1,7 @@
 namespace FinanceSentry.Modules.Budgets.Domain;
 
+using FinanceSentry.Modules.Budgets.Domain.Exceptions;
+
 public class Budget
 {
     public Guid Id { get; private set; }
@@ -14,6 +16,13 @@ public class Budget
 
     public static Budget Create(Guid userId, string category, decimal monthlyLimit, string currency)
     {
+        if (string.IsNullOrWhiteSpace(category))
+            throw new ArgumentException("Category must not be empty.", nameof(category));
+        if (string.IsNullOrWhiteSpace(currency))
+            throw new ArgumentException("Currency must not be empty.", nameof(currency));
+        if (monthlyLimit <= 0)
+            throw new BudgetInvalidLimitException();
+
         return new Budget
         {
             Id = Guid.NewGuid(),
@@ -28,6 +37,9 @@ public class Budget
 
     public void UpdateLimit(decimal newLimit)
     {
+        if (newLimit <= 0)
+            throw new BudgetInvalidLimitException();
+
         MonthlyLimit = newLimit;
         UpdatedAt = DateTimeOffset.UtcNow;
     }
