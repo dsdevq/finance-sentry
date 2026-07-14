@@ -112,6 +112,7 @@
             Category
           </label>
           <cmn-select
+            id="budget-category"
             [ngModel]="newCategory()"
             (ngModelChange)="newCategory.set($event)"
             [options]="categorySelectOptions()"

@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component, inject, signal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, inject, signal} from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {Router} from '@angular/router';
 import {AlertComponent, CardComponent, SelectComponent, TagComponent} from '@dsdevq-common/ui';
@@ -40,7 +40,9 @@ export class BudgetsComponent {
   public readonly newLimit = signal('');
 
   public readonly categories = this.categoryStore.categories;
-  public readonly categorySelectOptions = this.categoryStore.filterOptions;
+  public readonly categorySelectOptions = computed(() =>
+    this.categories().map(c => ({value: c.key, label: c.label})),
+  );
 
   public categoryColor(category: string): string {
     return this.categoryStore.colorMap()[category] ?? CATEGORY_COLOR_FALLBACK;

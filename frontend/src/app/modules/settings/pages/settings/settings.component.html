@@ -76,6 +76,7 @@
               Base Currency
             </label>
             <cmn-select
+              id="s-currency"
               [ngModel]="profile.baseCurrency"
               (ngModelChange)="store.updateProfile({baseCurrency: $event})"
               [options]="currencyOptions"
@@ -89,6 +90,7 @@
               Theme
             </label>
             <cmn-select
+              id="s-theme"
               [ngModel]="profile.theme"
               (ngModelChange)="store.updateProfile({theme: $event})"
               [options]="themeOptions"
