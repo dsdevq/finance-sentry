@@ -31,6 +31,7 @@ export * from './components/institution-avatar/institution-avatar.component';
 export * from './components/line-chart/line-chart.component';
 export * from './components/menu/menu.component';
 export * from './components/password-strength/password-strength.component';
+export * from './components/select/select.component';
 export * from './components/selectable-card/selectable-card.component';
 export * from './components/sidebar-nav/sidebar-nav.component';
 export * from './components/skeleton/skeleton.component';
