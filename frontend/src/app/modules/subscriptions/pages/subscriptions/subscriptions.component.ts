@@ -1,9 +1,19 @@
 import {DatePipe, SlicePipe, UpperCasePipe} from '@angular/common';
-import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
-import {ButtonComponent, CardComponent, StatCardComponent} from '@dsdevq-common/ui';
+import {ChangeDetectionStrategy, Component, inject, ViewContainerRef} from '@angular/core';
+import {
+  ButtonComponent,
+  CardComponent,
+  CmnDialogService,
+  ConfirmDialogComponent,
+  StatCardComponent,
+} from '@dsdevq-common/ui';
+import {take} from 'rxjs';
 
 import {AppCurrencyPipe} from '../../../../core/pipes/app-currency.pipe';
-import {type SubscriptionSort} from '../../models/subscription/subscription.model';
+import {
+  type Subscription,
+  type SubscriptionSort,
+} from '../../models/subscription/subscription.model';
 import {MerchantColorPipe} from '../../pipes/merchant-color.pipe';
 import {SubscriptionsStore} from '../../store/subscriptions/subscriptions.store';
 
@@ -32,6 +42,9 @@ const SORT_OPTIONS: {value: SubscriptionSort; label: string}[] = [
   templateUrl: './subscriptions.component.html',
 })
 export class SubscriptionsComponent {
+  private readonly dialog = inject(CmnDialogService);
+  private readonly viewContainerRef = inject(ViewContainerRef);
+
   public readonly store = inject(SubscriptionsStore);
   public readonly sortOptions = SORT_OPTIONS;
 
@@ -43,11 +56,27 @@ export class SubscriptionsComponent {
     this.store.setSort(sort);
   }
 
-  public confirmDismiss(): void {
-    const id = this.store.dismissTargetId();
-    if (id) {
-      this.store.dismiss(id);
-    }
+  public dismiss(sub: Pick<Subscription, 'id' | 'merchantName'>): void {
+    const ref = this.dialog.open<boolean>(ConfirmDialogComponent, {
+      data: {
+        title: `Dismiss ${sub.merchantName}?`,
+        message: `This will hide ${sub.merchantName} from your subscriptions. It will survive future detection runs.`,
+        confirmLabel: 'Dismiss',
+        cancelLabel: 'Keep',
+        confirmVariant: 'destructive',
+      },
+      size: 'sm',
+      viewContainerRef: this.viewContainerRef,
+    });
+    ref
+      .afterClosed()
+      .pipe(take(1))
+      .subscribe(confirmed => {
+        if (confirmed !== true) {
+          return;
+        }
+        this.store.dismiss(sub.id);
+      });
   }
 
   public restore(id: string): void {

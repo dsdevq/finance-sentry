@@ -1,13 +1,15 @@
-import {ChangeDetectionStrategy, Component, inject, signal} from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject, signal, ViewContainerRef} from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {
   ButtonComponent,
-  CardComponent,
+  CmnDialogService,
+  ConfirmDialogComponent,
   FormFieldComponent,
   InputComponent,
   ToastService,
   ToggleComponent,
 } from '@dsdevq-common/ui';
+import {take} from 'rxjs';
 
 import {AuthStore} from '../../../auth/store/auth.store';
 import {type BaseCurrency, type ThemePreference} from '../../models/settings/settings.model';
@@ -31,21 +33,16 @@ const MIN_PASSWORD_LENGTH = 8;
 
 @Component({
   selector: 'fns-settings',
-  imports: [
-    ButtonComponent,
-    CardComponent,
-    FormFieldComponent,
-    FormsModule,
-    InputComponent,
-    ToggleComponent,
-  ],
+  imports: [ButtonComponent, FormFieldComponent, FormsModule, InputComponent, ToggleComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [SettingsStore],
   templateUrl: './settings.component.html',
 })
 export class SettingsComponent {
   private readonly authStore = inject(AuthStore);
+  private readonly dialog = inject(CmnDialogService);
   private readonly toast = inject(ToastService);
+  private readonly viewContainerRef = inject(ViewContainerRef);
 
   public readonly store = inject(SettingsStore);
   public readonly currencyOptions = CURRENCY_OPTIONS;
@@ -100,8 +97,27 @@ export class SettingsComponent {
     this.authStore.logout();
   }
 
-  public deleteAccount(): void {
-    this.store.setShowDeleteConfirm(false);
-    this.toast.show('Account deletion requested', 'warning');
+  public requestDeleteAccount(): void {
+    const ref = this.dialog.open<boolean>(ConfirmDialogComponent, {
+      data: {
+        title: 'Delete your account?',
+        message:
+          'All your connected accounts, transactions, and settings will be permanently erased. This action cannot be reversed.',
+        confirmLabel: 'Delete Forever',
+        cancelLabel: 'Cancel',
+        confirmVariant: 'destructive',
+      },
+      size: 'sm',
+      viewContainerRef: this.viewContainerRef,
+    });
+    ref
+      .afterClosed()
+      .pipe(take(1))
+      .subscribe(confirmed => {
+        if (confirmed !== true) {
+          return;
+        }
+        this.toast.show('Account deletion requested', 'warning');
+      });
   }
 }
