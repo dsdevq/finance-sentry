@@ -1,7 +1,7 @@
 import {ChangeDetectionStrategy, Component, inject, signal} from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {Router} from '@angular/router';
-import {AlertComponent, CardComponent, TagComponent} from '@dsdevq-common/ui';
+import {AlertComponent, CardComponent, SelectComponent, TagComponent} from '@dsdevq-common/ui';
 
 import {AppCurrencyPipe} from '../../../../core/pipes/app-currency.pipe';
 import {AppDecimalPipe} from '../../../../core/pipes/app-decimal.pipe';
@@ -20,9 +20,10 @@ const PCT_WARNING_THRESHOLD = 80;
     AlertComponent,
     AppCurrencyPipe,
     AppDecimalPipe,
-    TagComponent,
     CardComponent,
     FormsModule,
+    SelectComponent,
+    TagComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [BudgetsStore],
@@ -39,6 +40,7 @@ export class BudgetsComponent {
   public readonly newLimit = signal('');
 
   public readonly categories = this.categoryStore.categories;
+  public readonly categorySelectOptions = this.categoryStore.filterOptions;
 
   public categoryColor(category: string): string {
     return this.categoryStore.colorMap()[category] ?? CATEGORY_COLOR_FALLBACK;

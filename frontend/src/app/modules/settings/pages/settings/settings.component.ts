@@ -6,6 +6,7 @@ import {
   ConfirmDialogComponent,
   FormFieldComponent,
   InputComponent,
+  SelectComponent,
   ToastService,
   ToggleComponent,
 } from '@dsdevq-common/ui';
@@ -33,7 +34,14 @@ const MIN_PASSWORD_LENGTH = 8;
 
 @Component({
   selector: 'fns-settings',
-  imports: [ButtonComponent, FormFieldComponent, FormsModule, InputComponent, ToggleComponent],
+  imports: [
+    ButtonComponent,
+    FormFieldComponent,
+    FormsModule,
+    InputComponent,
+    SelectComponent,
+    ToggleComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [SettingsStore],
   templateUrl: './settings.component.html',
