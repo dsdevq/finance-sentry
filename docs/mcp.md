@@ -37,7 +37,7 @@ The current runtime surface contains 21 tools: 17 read-only and 4 mutating. Ther
 | `get_net_worth_history` | Read | Wealth | `userId?`, `fromDate?`, `toDate?` | Historical net worth snapshots |
 | `get_macro_calendar` | Read | Research | `from?`, `to?`, `regions?`, `minImportance?` | Scheduled macro events |
 | `get_news_for_ticker` | Read | Research | `ticker`, `since?`, `limit` | Recent ticker-specific news |
-| `get_quotes` | Read | Research | `tickers` | Current quotes for one or more tickers |
+| `get_quotes` | Read | Research | `tickers` | Current quotes for one or more tickers, including requested/resolved ticker identity and market-session freshness metadata |
 | `search_market_news` | Read | Research | `query?`, `tickers?`, `since?`, `limit` | Search ingested market news |
 | `list_watchlist` | Read | Research | `userId?` | Stored watchlist entries |
 | `list_theses` | Read | Research | `userId?` | Stored investment theses |

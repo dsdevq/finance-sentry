@@ -398,11 +398,40 @@ namespace FinanceSentry.Modules.Research.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
+                    b.Property<bool>("IsStale")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("MarketState")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("unknown");
+
                     b.Property<decimal?>("PreviousClose")
                         .HasColumnType("numeric(18,6)");
 
                     b.Property<decimal>("Price")
                         .HasColumnType("numeric(18,6)");
+
+                    b.Property<DateTimeOffset?>("RegularMarketTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ResolvedTicker")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Session")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("unknown");
+
+                    b.Property<DateTimeOffset?>("SourcePriceTime")
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Ticker");
 

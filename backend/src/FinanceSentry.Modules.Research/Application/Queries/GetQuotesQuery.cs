@@ -18,7 +18,19 @@ public class GetQuotesQueryHandler(IMarketDataService market)
                 var changePct = q.PreviousClose is > 0
                     ? (q.Price - q.PreviousClose.Value) / q.PreviousClose.Value * 100m
                     : (decimal?)null;
-                return new QuoteDto(q.Ticker, q.Price, q.PreviousClose, changePct, q.Currency, q.FetchedAt);
+                return new QuoteDto(
+                    q.Ticker,
+                    q.ResolvedTicker,
+                    q.Price,
+                    q.PreviousClose,
+                    changePct,
+                    q.Currency,
+                    q.FetchedAt,
+                    q.MarketState,
+                    q.Session,
+                    q.IsStale,
+                    q.SourcePriceTime,
+                    q.RegularMarketTime);
             })
             .ToList();
     }

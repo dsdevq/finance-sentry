@@ -112,10 +112,16 @@ public class ResearchDbContext(DbContextOptions<ResearchDbContext> options) : Db
         qb.ToTable("quote_cache");
         qb.HasKey(x => x.Ticker);
         qb.Property(x => x.Ticker).HasMaxLength(20);
+        qb.Property(x => x.ResolvedTicker).HasMaxLength(20);
         qb.Property(x => x.Price).HasColumnType("numeric(18,6)");
         qb.Property(x => x.PreviousClose).HasColumnType("numeric(18,6)");
         qb.Property(x => x.Currency).HasMaxLength(6).HasDefaultValue("USD");
         qb.Property(x => x.FetchedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+        qb.Property(x => x.MarketState).HasMaxLength(20).HasDefaultValue("unknown");
+        qb.Property(x => x.Session).HasMaxLength(20).HasDefaultValue("unknown");
+        qb.Property(x => x.IsStale).HasDefaultValue(false);
+        qb.Property(x => x.SourcePriceTime);
+        qb.Property(x => x.RegularMarketTime);
 
         var ib = modelBuilder.Entity<InvestmentPolicyStatement>();
         ib.ToTable("investment_policy_statements");
