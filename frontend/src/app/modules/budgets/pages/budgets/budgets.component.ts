@@ -41,7 +41,7 @@ export class BudgetsComponent {
 
   public readonly categories = this.categoryStore.categories;
   public readonly categorySelectOptions = computed(() =>
-    this.categories().map(c => ({value: c.key, label: c.label})),
+    this.categories().map(c => ({value: c.key, label: c.label}))
   );
 
   public categoryColor(category: string): string {
