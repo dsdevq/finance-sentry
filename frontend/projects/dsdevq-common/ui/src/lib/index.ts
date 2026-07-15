@@ -30,6 +30,7 @@ export * from './components/input/input.component';
 export * from './components/institution-avatar/institution-avatar.component';
 export * from './components/line-chart/line-chart.component';
 export * from './components/menu/menu.component';
+export * from './components/page-header/page-header.component';
 export * from './components/password-strength/password-strength.component';
 export * from './components/select/select.component';
 export * from './components/selectable-card/selectable-card.component';
