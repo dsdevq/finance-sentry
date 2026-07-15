@@ -123,7 +123,7 @@
             <!-- Actions -->
             <div class="flex shrink-0 gap-cmn-1">
               <cmn-button
-                (clicked)="store.setDismissTarget(sub.id)"
+                (clicked)="dismiss(sub)"
                 variant="secondary"
                 size="sm"
                 icon="X"
@@ -182,29 +182,5 @@
       </div>
     }
 
-    <!-- Dismiss confirm dialog (inline) -->
-    @if (store.dismissTarget()) {
-      <div
-        (click)="store.setDismissTarget(null)"
-        class="fixed inset-0 z-50 flex items-center justify-center p-cmn-4"
-      >
-        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
-        <cmn-card (click)="$event.stopPropagation()" class="relative z-10 w-full max-w-sm">
-          <h2 class="font-headline text-base font-semibold text-text-primary mb-cmn-2">
-            Dismiss {{ store.dismissTarget()!.merchantName }}?
-          </h2>
-          <p class="text-cmn-sm text-text-secondary mb-cmn-4">
-            This will hide {{ store.dismissTarget()!.merchantName }} from your subscriptions. It
-            will survive future detection runs.
-          </p>
-          <div class="flex justify-end gap-cmn-2">
-            <cmn-button (clicked)="store.setDismissTarget(null)" variant="secondary"
-              >Keep</cmn-button
-            >
-            <cmn-button (clicked)="confirmDismiss()" variant="destructive">Dismiss</cmn-button>
-          </div>
-        </cmn-card>
-      </div>
-    }
   </div>
 </div>
