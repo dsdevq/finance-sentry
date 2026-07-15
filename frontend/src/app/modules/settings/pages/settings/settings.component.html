@@ -75,16 +75,12 @@
             >
               Base Currency
             </label>
-            <select
+            <cmn-select
+              id="s-currency"
               [ngModel]="profile.baseCurrency"
               (ngModelChange)="store.updateProfile({baseCurrency: $event})"
-              id="s-currency"
-              class="w-full rounded-cmn-md border border-border-default bg-surface-card px-cmn-3 py-cmn-2 text-cmn-sm text-text-primary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-border-focus"
-            >
-              @for (opt of currencyOptions; track opt.value) {
-                <option [value]="opt.value">{{ opt.label }}</option>
-              }
-            </select>
+              [options]="currencyOptions"
+            />
           </div>
           <div>
             <label
@@ -93,16 +89,12 @@
             >
               Theme
             </label>
-            <select
+            <cmn-select
+              id="s-theme"
               [ngModel]="profile.theme"
               (ngModelChange)="store.updateProfile({theme: $event})"
-              id="s-theme"
-              class="w-full rounded-cmn-md border border-border-default bg-surface-card px-cmn-3 py-cmn-2 text-cmn-sm text-text-primary focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-border-focus"
-            >
-              @for (opt of themeOptions; track opt.value) {
-                <option [value]="opt.value">{{ opt.label }}</option>
-              }
-            </select>
+              [options]="themeOptions"
+            />
           </div>
         </div>
       </div>
