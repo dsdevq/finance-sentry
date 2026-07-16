@@ -52,17 +52,9 @@
         </span>
         <div class="flex gap-cmn-1">
           @for (opt of sortOptions; track opt.value) {
-            <button
-              [class.border-accent-default]="store.sort() === opt.value"
-              [class.bg-accent-subtle]="store.sort() === opt.value"
-              [class.text-accent-default]="store.sort() === opt.value"
-              [class.border-border-default]="store.sort() !== opt.value"
-              [class.text-text-secondary]="store.sort() !== opt.value"
-              (click)="setSort(opt.value)"
-              class="rounded-cmn-md border px-cmn-2 py-cmn-1 font-label text-cmn-xs font-medium transition-colors"
-            >
+            <cmn-chip [selected]="store.sort() === opt.value" (clicked)="setSort(opt.value)">
               {{ opt.label }}
-            </button>
+            </cmn-chip>
           }
         </div>
       </div>

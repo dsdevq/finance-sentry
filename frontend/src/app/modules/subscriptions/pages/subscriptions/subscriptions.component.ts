@@ -3,6 +3,7 @@ import {ChangeDetectionStrategy, Component, inject, ViewContainerRef} from '@ang
 import {
   ButtonComponent,
   CardComponent,
+  ChipComponent,
   CmnDialogService,
   ConfirmDialogComponent,
   PageHeaderComponent,
@@ -32,6 +33,7 @@ const SORT_OPTIONS: {value: SubscriptionSort; label: string}[] = [
     AppCurrencyPipe,
     ButtonComponent,
     CardComponent,
+    ChipComponent,
     DatePipe,
     MerchantColorPipe,
     PageHeaderComponent,
