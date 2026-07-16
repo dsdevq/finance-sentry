@@ -5,6 +5,7 @@ import {
   CardComponent,
   CmnDialogService,
   ConfirmDialogComponent,
+  PageHeaderComponent,
   StatCardComponent,
 } from '@dsdevq-common/ui';
 import {take} from 'rxjs';
@@ -33,6 +34,7 @@ const SORT_OPTIONS: {value: SubscriptionSort; label: string}[] = [
     CardComponent,
     DatePipe,
     MerchantColorPipe,
+    PageHeaderComponent,
     SlicePipe,
     StatCardComponent,
     UpperCasePipe,

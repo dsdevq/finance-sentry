@@ -1,14 +1,10 @@
 <div class="p-cmn-6">
   <div class="mx-auto max-w-screen-lg space-y-cmn-5">
     <!-- Header -->
-    <div class="flex items-center justify-between">
-      <div>
-        <h1 class="font-headline text-2xl font-bold text-text-primary">Subscriptions</h1>
-        <p class="mt-1 text-cmn-sm text-text-secondary">
-          Recurring charges detected from your transactions
-        </p>
-      </div>
-    </div>
+    <cmn-page-header
+      title="Subscriptions"
+      subtitle="Recurring charges detected from your transactions"
+    />
 
     <!-- Insufficient history banner -->
     @if (store.hasInsufficientHistory()) {
