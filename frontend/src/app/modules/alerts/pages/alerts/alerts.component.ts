@@ -4,6 +4,7 @@ import {
   AlertItemComponent,
   type AlertItemSeverity,
   CardComponent,
+  ChipComponent,
   IconComponent,
   type LucideIconName,
   PageHeaderComponent,
@@ -33,7 +34,7 @@ function severityFor(severity: AlertSeverity): AlertItemSeverity {
 
 @Component({
   selector: 'fns-alerts',
-  imports: [AlertItemComponent, CardComponent, IconComponent, PageHeaderComponent],
+  imports: [AlertItemComponent, CardComponent, ChipComponent, IconComponent, PageHeaderComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './alerts.component.html',
 })

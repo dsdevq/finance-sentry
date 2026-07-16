@@ -10,17 +10,9 @@
 
     <div class="flex flex-wrap gap-cmn-2">
       @for (opt of filterOptions; track opt.id) {
-        <button
-          [class.border-accent-default]="store.filter() === opt.id"
-          [class.bg-accent-subtle]="store.filter() === opt.id"
-          [class.text-accent-default]="store.filter() === opt.id"
-          [class.border-border-default]="store.filter() !== opt.id"
-          [class.text-text-secondary]="store.filter() !== opt.id"
-          (click)="store.setFilter(opt.id)"
-          class="rounded-full border px-cmn-3 py-cmn-1 font-label text-cmn-xs font-medium transition-colors"
-        >
+        <cmn-chip [selected]="store.filter() === opt.id" (clicked)="store.setFilter(opt.id)">
           {{ opt.label() }}
-        </button>
+        </cmn-chip>
       }
     </div>
 
