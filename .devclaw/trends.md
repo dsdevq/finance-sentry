@@ -16,4 +16,3 @@ observes; the human encodes.
 **Proposed action:** _(none — pattern noted, no action recommended)_
 
 ---
-
