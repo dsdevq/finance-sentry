@@ -2,7 +2,7 @@ import {type DialogRef} from '@angular/cdk/dialog';
 import {type Observable} from 'rxjs';
 
 export class CmnDialogRef<R = unknown, C = unknown> {
-  public constructor(private readonly cdkRef: DialogRef<R, C>) {}
+  constructor(private readonly cdkRef: DialogRef<R, C>) {}
 
   public get componentInstance(): C | null {
     return this.cdkRef.componentInstance;

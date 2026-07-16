@@ -47,7 +47,6 @@ export const AllVariants: Story = {
 
 export const NoTimestamp: Story = {
   render: () => ({
-    template:
-      '<cmn-status-indicator variant="success">Synced</cmn-status-indicator>',
+    template: '<cmn-status-indicator variant="success">Synced</cmn-status-indicator>',
   }),
 };

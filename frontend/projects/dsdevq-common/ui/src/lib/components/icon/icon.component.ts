@@ -1,8 +1,8 @@
 import {ChangeDetectionStrategy, Component, computed, inject, input} from '@angular/core';
 import {takeUntilDestroyed, toObservable, toSignal} from '@angular/core/rxjs-interop';
 import {type SafeHtml} from '@angular/platform-browser';
-import {of, switchMap} from 'rxjs';
 import {icons, LUCIDE_ICONS, LucideAngularModule, LucideIconProvider} from 'lucide-angular';
+import {of, switchMap} from 'rxjs';
 
 import {CmnIconRegistry} from '../../services/icon-registry/icon-registry.service';
 

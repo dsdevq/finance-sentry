@@ -1,8 +1,8 @@
 import {ChangeDetectionStrategy, Component, effect, inject} from '@angular/core';
 import {ActivatedRoute, Router} from '@angular/router';
 
-import {AppRoute} from '../../../../shared/enums/app-route/app-route.enum';
 import {environment} from '../../../../../environments/environment';
+import {AppRoute} from '../../../../shared/enums/app-route/app-route.enum';
 import {AuthStore} from '../../store/auth.store';
 
 @Component({
@@ -32,7 +32,7 @@ export class McpConnectComponent {
 
   protected message = 'Preparing Finance Sentry MCP authorization...';
 
-  public constructor() {
+  constructor() {
     effect(() => {
       const redirectUri = this.route.snapshot.queryParamMap.get('redirectUri');
       const state = this.route.snapshot.queryParamMap.get('state');
@@ -42,9 +42,11 @@ export class McpConnectComponent {
       }
 
       if (!this.authStore.isAuthenticated()) {
-        const returnUrl = this.router.createUrlTree([AppRoute.McpConnect], {
-          queryParams: {redirectUri, state},
-        }).toString();
+        const returnUrl = this.router
+          .createUrlTree([AppRoute.McpConnect], {
+            queryParams: {redirectUri, state},
+          })
+          .toString();
         void this.router.navigate([AppRoute.Login], {
           queryParams: {returnUrl},
         });

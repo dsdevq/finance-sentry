@@ -1,11 +1,5 @@
 import {computed, inject} from '@angular/core';
-import {
-  patchState,
-  signalStoreFeature,
-  withComputed,
-  withMethods,
-  withState,
-} from '@ngrx/signals';
+import {patchState, signalStoreFeature, withComputed, withMethods, withState} from '@ngrx/signals';
 
 import {ErrorMessageService} from '../errors/error-message.service';
 
@@ -23,7 +17,9 @@ export interface AsyncStatusConfig {
 const DEFAULT_ERROR_MESSAGE = 'Something went wrong. Please try again.';
 const INITIAL_STATE: AsyncStatusState = {status: 'idle', errorCode: null};
 
-export function withAsyncStatus({defaultErrorMessage = DEFAULT_ERROR_MESSAGE}: AsyncStatusConfig = {}) {
+export function withAsyncStatus({
+  defaultErrorMessage = DEFAULT_ERROR_MESSAGE,
+}: AsyncStatusConfig = {}) {
   return signalStoreFeature(
     withState(INITIAL_STATE),
     withComputed(store => {

@@ -10,18 +10,10 @@
 
     <!-- Tab bar -->
     <div class="flex gap-cmn-2 border-b border-border-default">
-      <button
-        [class]="tabClass('holdings')"
-        (click)="switchTab('holdings')"
-        type="button"
-      >
+      <button [class]="tabClass('holdings')" (click)="switchTab('holdings')" type="button">
         Allocation
       </button>
-      <button
-        [class]="tabClass('positions')"
-        (click)="switchTab('positions')"
-        type="button"
-      >
+      <button [class]="tabClass('positions')" (click)="switchTab('positions')" type="button">
         Positions
       </button>
     </div>
@@ -237,7 +229,9 @@
                         <td class="py-cmn-2 pr-cmn-3 text-right font-mono tabular-nums">
                           {{ row.currentPrice | currencyAmount }}
                         </td>
-                        <td class="py-cmn-2 pr-cmn-3 text-right font-mono tabular-nums font-semibold">
+                        <td
+                          class="py-cmn-2 pr-cmn-3 text-right font-mono tabular-nums font-semibold"
+                        >
                           {{ row.currentValue | currencyAmount }}
                         </td>
                         <td
@@ -246,7 +240,9 @@
                         >
                           {{ row.pnlPercent | number: '1.2-2' }}%
                         </td>
-                        <td class="py-cmn-2 pr-cmn-4 text-right font-mono tabular-nums text-text-secondary">
+                        <td
+                          class="py-cmn-2 pr-cmn-4 text-right font-mono tabular-nums text-text-secondary"
+                        >
                           {{ row.weightPercent | number: '1.1-1' }}%
                         </td>
                       </tr>

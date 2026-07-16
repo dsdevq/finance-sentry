@@ -2,8 +2,8 @@ import {Overlay} from '@angular/cdk/overlay';
 import {ComponentPortal, type ComponentType} from '@angular/cdk/portal';
 import {inject, Injectable, Injector} from '@angular/core';
 
-import {CmnDrawerContainerComponent} from '../../components/drawer/drawer-container.component';
 import {CMN_DRAWER_DATA, type CmnDrawerOpenConfig} from '../../components/drawer/drawer-config';
+import {CmnDrawerContainerComponent} from '../../components/drawer/drawer-container.component';
 import {CmnDrawerRef} from '../../components/drawer/drawer-ref';
 
 @Injectable({providedIn: 'root'})

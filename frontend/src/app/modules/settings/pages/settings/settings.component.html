@@ -76,10 +76,10 @@
               Base Currency
             </label>
             <cmn-select
-              id="s-currency"
               [ngModel]="profile.baseCurrency"
-              (ngModelChange)="store.updateProfile({baseCurrency: $event})"
               [options]="currencyOptions"
+              (ngModelChange)="store.updateProfile({baseCurrency: $event})"
+              id="s-currency"
             />
           </div>
           <div>
@@ -90,10 +90,10 @@
               Theme
             </label>
             <cmn-select
-              id="s-theme"
               [ngModel]="profile.theme"
-              (ngModelChange)="store.updateProfile({theme: $event})"
               [options]="themeOptions"
+              (ngModelChange)="store.updateProfile({theme: $event})"
+              id="s-theme"
             />
           </div>
         </div>
@@ -272,6 +272,5 @@
         <cmn-button (clicked)="signOut()" variant="secondary" icon="LogOut">Sign out</cmn-button>
       </div>
     }
-
   </div>
 </div>

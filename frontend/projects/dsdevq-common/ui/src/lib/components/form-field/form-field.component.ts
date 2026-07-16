@@ -70,9 +70,7 @@ export class FormFieldComponent implements ControlValueAccessor, AfterContentIni
 
   protected readonly inputChild = contentChild(InputComponent);
   protected readonly controlChanges = toSignal(
-    toObservable(this.control).pipe(
-      switchMap(ctrl => (ctrl ? ctrl.events : of(null)))
-    )
+    toObservable(this.control).pipe(switchMap(ctrl => (ctrl ? ctrl.events : of(null))))
   );
 
   protected readonly resolvedError = computed(() => {

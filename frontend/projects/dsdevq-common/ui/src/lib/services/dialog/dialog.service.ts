@@ -8,8 +8,8 @@ import {
   type ConfirmDialogData,
 } from '../../components/dialog/confirm-dialog.component';
 import {
-  CmnDialogConfig,
   CMN_DIALOG_DATA,
+  CmnDialogConfig,
   type CmnDialogOpenConfig,
 } from '../../components/dialog/dialog-config';
 import {CmnDialogContainerComponent} from '../../components/dialog/dialog-container.component';
@@ -31,7 +31,10 @@ export class CmnDialogService {
     cdkConfig.title = config.title;
     cdkConfig.size = config.size ?? 'md';
     cdkConfig.hasBackdrop = config.hasBackdrop ?? true;
-    cdkConfig.panelClass = config.panelClass ?? ['cmn-dialog-panel', `cmn-dialog-panel--${cdkConfig.size}`];
+    cdkConfig.panelClass = config.panelClass ?? [
+      'cmn-dialog-panel',
+      `cmn-dialog-panel--${cdkConfig.size}`,
+    ];
     cdkConfig.backdropClass = config.hasBackdrop === false ? '' : 'cmn-dialog-backdrop';
     cdkConfig.container = config.container ?? CmnDialogContainerComponent;
     cdkConfig.viewContainerRef = config.viewContainerRef;

@@ -45,9 +45,9 @@ export class CmnIconRegistry {
     if (!url) {
       return of(null);
     }
-    const cached = this.urlCache.get(name);
-    if (cached) {
-      return cached;
+    const cached$ = this.urlCache.get(name);
+    if (cached$) {
+      return cached$;
     }
     const stream$ = this.http.get(url, {responseType: 'text'}).pipe(
       map(svg => this.sanitizer.bypassSecurityTrustHtml(svg)),

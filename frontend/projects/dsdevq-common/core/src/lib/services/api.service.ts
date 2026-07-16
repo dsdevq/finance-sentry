@@ -8,8 +8,8 @@ export type QueryParams = Record<string, unknown>;
 
 @Injectable()
 export abstract class ApiService {
-  protected readonly http = inject(HttpClient);
   private readonly apiBaseUrl = inject(API_BASE_URL);
+  protected readonly http = inject(HttpClient);
 
   // eslint-disable-next-line @angular-eslint/prefer-inject
   protected constructor(private readonly subpath: string) {}

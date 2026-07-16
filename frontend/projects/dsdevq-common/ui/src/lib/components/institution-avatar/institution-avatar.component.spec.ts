@@ -1,4 +1,4 @@
-import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {type ComponentFixture, TestBed} from '@angular/core/testing';
 
 import {InstitutionAvatarComponent} from './institution-avatar.component';
 
@@ -16,7 +16,9 @@ describe('InstitutionAvatarComponent', () => {
   };
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({imports: [InstitutionAvatarComponent]}).compileComponents();
+    await TestBed.configureTestingModule({
+      imports: [InstitutionAvatarComponent],
+    }).compileComponents();
   });
 
   it('derives two-letter initials from a multi-word name', () => {

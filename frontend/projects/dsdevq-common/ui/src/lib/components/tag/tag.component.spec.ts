@@ -1,6 +1,6 @@
-import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {type ComponentFixture, TestBed} from '@angular/core/testing';
 
-import {TagComponent, TagVariant} from './tag.component';
+import {TagComponent, type TagVariant} from './tag.component';
 
 describe('TagComponent', () => {
   let fixture: ComponentFixture<TagComponent>;

@@ -25,6 +25,7 @@ export function createEslintConfig({
   directiveSelectorStyle = 'camelCase',
   ignores = [],
   extraConfigs = [],
+  tsconfigRootDir = process.cwd(),
 } = {}) {
   if (!selectorPrefix) {
     throw new Error('createEslintConfig: `selectorPrefix` is required');
@@ -39,6 +40,9 @@ export function createEslintConfig({
       languageOptions: {
         parserOptions: {
           projectService: true,
+          // Pin the root so the multi-project `ng lint` run doesn't hit
+          // "multiple candidate TSConfigRootDirs" and fail to parse.
+          tsconfigRootDir,
         },
       },
       extends: [
@@ -208,6 +212,13 @@ export function createEslintConfig({
         ],
         '@typescript-eslint/naming-convention': [
           'error',
+          {
+            // Quoted keys are binding syntax, not identifiers — e.g. Angular
+            // `host: { '(window:keydown)': ... }`, `'[class.x]'`, HTTP headers.
+            selector: 'objectLiteralProperty',
+            modifiers: ['requiresQuotes'],
+            format: null,
+          },
           {
             selector: 'objectLiteralProperty',
             format: ['UPPER_CASE', 'camelCase'],
@@ -388,11 +399,36 @@ export function createEslintConfig({
       },
     },
     {
-      files: ['**/*.spec.ts'],
+      // Test doubles and story args are intentionally loosely typed; the
+      // type-aware `no-unsafe-*` family is noise here, not a real defect.
+      files: ['**/*.spec.ts', '**/*.stories.ts'],
       rules: {
         'rxjs/finnish': 'off',
         'no-param-reassign': 'off',
         '@typescript-eslint/no-magic-numbers': 'off',
+        '@typescript-eslint/no-explicit-any': 'off',
+        '@typescript-eslint/no-unsafe-member-access': 'off',
+        '@typescript-eslint/no-unsafe-call': 'off',
+        '@typescript-eslint/no-unsafe-return': 'off',
+        '@typescript-eslint/no-unsafe-argument': 'off',
+        '@typescript-eslint/no-unsafe-assignment': 'off',
+      },
+    },
+    {
+      // Storybook stories are excluded from the lib tsconfigs, so the type-aware
+      // project service can't resolve them. They don't need type-checked linting;
+      // parse them program-free and drop the type-aware rules.
+      files: ['**/*.stories.ts'],
+      extends: [tsEslint.configs.disableTypeChecked],
+      languageOptions: {
+        parserOptions: {
+          projectService: false,
+        },
+      },
+      rules: {
+        // rxjs type-aware rules also need the program that stories don't have.
+        'rxjs/no-unsafe-takeuntil': 'off',
+        'rxjs/no-nested-subscribe': 'off',
       },
     },
     {

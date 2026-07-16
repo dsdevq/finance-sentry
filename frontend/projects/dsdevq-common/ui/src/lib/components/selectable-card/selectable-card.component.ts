@@ -22,11 +22,11 @@ const STATE_CLASSES = {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <button
-      type="button"
       [class]="classes()"
       [disabled]="disabled()"
       [attr.aria-pressed]="selected() ? true : null"
       (click)="clicked.emit()"
+      type="button"
     >
       <span class="cmn-selectable-card__leading flex-shrink-0">
         <ng-content select="[leading]" />

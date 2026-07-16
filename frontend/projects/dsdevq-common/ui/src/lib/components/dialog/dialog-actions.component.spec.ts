@@ -1,6 +1,6 @@
-import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {type ComponentFixture, TestBed} from '@angular/core/testing';
 
-import {DialogActionsComponent, type DialogActionsAlign} from './dialog-actions.component';
+import {type DialogActionsAlign, DialogActionsComponent} from './dialog-actions.component';
 
 describe('DialogActionsComponent', () => {
   let fixture: ComponentFixture<DialogActionsComponent>;

@@ -19,7 +19,15 @@ import {
   Tooltip,
 } from 'chart.js';
 
-Chart.register(CategoryScale, LinearScale, LineController, PointElement, LineElement, Tooltip, Filler);
+Chart.register(
+  CategoryScale,
+  LinearScale,
+  LineController,
+  PointElement,
+  LineElement,
+  Tooltip,
+  Filler
+);
 
 export interface ChartPoint {
   label: string;
@@ -115,8 +123,8 @@ export class LineChartComponent implements AfterViewInit, OnDestroy {
           legend: {display: false},
           tooltip: {
             callbacks: {
-              label: ctx => {
-                const val = ctx.parsed.y as number;
+              label: tooltipCtx => {
+                const val = tooltipCtx.parsed.y as number;
                 return new Intl.NumberFormat('en-US', {
                   style: 'currency',
                   currency,

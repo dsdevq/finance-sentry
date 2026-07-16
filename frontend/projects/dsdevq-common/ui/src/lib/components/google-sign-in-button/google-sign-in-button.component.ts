@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 import {
   AfterViewInit,
   ChangeDetectionStrategy,
@@ -39,7 +37,7 @@ export class GoogleSignInButtonComponent implements AfterViewInit, OnDestroy {
       // eslint-disable-next-line @typescript-eslint/naming-convention
       client_id: this.clientId(),
       callback: (r: google.accounts.id.CredentialResponse) =>
-        this.zone.run(() => this.credential.emit(r.credential as string)),
+        this.zone.run(() => this.credential.emit(r.credential)),
     });
     google.accounts.id.renderButton(this.btnRef().nativeElement, this.buttonConfiguration());
     google.accounts.id.prompt();

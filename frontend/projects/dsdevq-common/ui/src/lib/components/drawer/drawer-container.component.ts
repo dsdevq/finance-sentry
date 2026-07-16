@@ -1,10 +1,10 @@
 import {CdkPortalOutlet} from '@angular/cdk/portal';
 import {
+  AfterViewInit,
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
   DestroyRef,
-  HostBinding,
   inject,
   signal,
   viewChild,
@@ -20,6 +20,10 @@ type DrawerState = 'entering' | 'open' | 'closing';
   selector: 'cmn-drawer-container',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CdkPortalOutlet, IconComponent],
+  host: {
+    '[class.cmn-drawer--open]': 'isOpen',
+    '[class.cmn-drawer--closing]': 'isClosing',
+  },
   template: `
     <div class="flex h-full flex-col bg-surface-card" style="min-width: 0">
       <!-- Header -->
@@ -42,36 +46,32 @@ type DrawerState = 'entering' | 'open' | 'closing';
     </div>
   `,
 })
-export class CmnDrawerContainerComponent {
-  public readonly title = signal('');
-  public readonly drawerRef = inject(CmnDrawerRef);
-  public readonly portalOutlet = viewChild.required(CdkPortalOutlet);
-
+export class CmnDrawerContainerComponent implements AfterViewInit {
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly destroyRef = inject(DestroyRef);
   private state: DrawerState = 'entering';
 
-  @HostBinding('class.cmn-drawer--open')
-  get isOpen(): boolean {
+  public readonly title = signal('');
+  public readonly drawerRef = inject(CmnDrawerRef);
+  public readonly portalOutlet = viewChild.required(CdkPortalOutlet);
+
+  public get isOpen(): boolean {
     return this.state === 'open';
   }
 
-  @HostBinding('class.cmn-drawer--closing')
-  get isClosing(): boolean {
+  public get isClosing(): boolean {
     return this.state === 'closing';
   }
 
-  ngAfterViewInit(): void {
+  public ngAfterViewInit(): void {
     requestAnimationFrame(() => {
       this.state = 'open';
       this.cdr.markForCheck();
     });
 
-    this.drawerRef.beforeClose$
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => {
-        this.state = 'closing';
-        this.cdr.markForCheck();
-      });
+    this.drawerRef.beforeClose$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.state = 'closing';
+      this.cdr.markForCheck();
+    });
   }
 }

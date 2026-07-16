@@ -1,6 +1,6 @@
 import {ChangeDetectionStrategy, Component, computed, input, output} from '@angular/core';
 
-import {type LucideIconName, IconComponent} from '../icon/icon.component';
+import {IconComponent, type LucideIconName} from '../icon/icon.component';
 
 export type AlertVariant = 'info' | 'success' | 'warning' | 'error' | 'accent';
 
@@ -12,7 +12,10 @@ const VARIANT_CONTAINER_CLASSES: Record<AlertVariant, string> = {
   accent: 'bg-accent-subtle    border border-accent-default/20 text-accent-default',
 };
 
-const VARIANT_ICON_COLOR: Record<AlertVariant, `var(--color-status-${AlertVariant})` | `var(--color-accent-default)`> = {
+const VARIANT_ICON_COLOR: Record<
+  AlertVariant,
+  `var(--color-status-${AlertVariant})` | 'var(--color-accent-default)'
+> = {
   info: 'var(--color-status-info)',
   success: 'var(--color-status-success)',
   warning: 'var(--color-status-warning)',

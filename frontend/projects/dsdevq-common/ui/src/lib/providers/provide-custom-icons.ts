@@ -1,4 +1,9 @@
-import {type EnvironmentProviders, inject, makeEnvironmentProviders, provideAppInitializer} from '@angular/core';
+import {
+  type EnvironmentProviders,
+  inject,
+  makeEnvironmentProviders,
+  provideAppInitializer,
+} from '@angular/core';
 
 import {CmnIconRegistry} from '../services/icon-registry/icon-registry.service';
 
