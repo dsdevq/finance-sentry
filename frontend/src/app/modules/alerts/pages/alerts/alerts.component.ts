@@ -3,10 +3,10 @@ import {Router} from '@angular/router';
 import {
   AlertItemComponent,
   type AlertItemSeverity,
-  ButtonComponent,
   CardComponent,
   IconComponent,
   type LucideIconName,
+  PageHeaderComponent,
   ToastService,
 } from '@dsdevq-common/ui';
 
@@ -33,7 +33,7 @@ function severityFor(severity: AlertSeverity): AlertItemSeverity {
 
 @Component({
   selector: 'fns-alerts',
-  imports: [AlertItemComponent, ButtonComponent, CardComponent, IconComponent],
+  imports: [AlertItemComponent, CardComponent, IconComponent, PageHeaderComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './alerts.component.html',
 })
@@ -42,6 +42,14 @@ export class AlertsComponent {
   private readonly router = inject(Router);
 
   public readonly store = inject(AlertsStore);
+
+  public readonly alertsSubtitle = computed(() => {
+    const count = this.store.unreadCount();
+    if (count > 0) {
+      return `${count} unread ${count === 1 ? 'alert' : 'alerts'}`;
+    }
+    return 'All caught up';
+  });
 
   public readonly filtered = computed(() => {
     const f = this.store.filter();
