@@ -1,10 +1,10 @@
 <div class="p-cmn-8 max-w-[1200px] mx-auto">
   <div class="mb-cmn-8">
     <cmn-page-header
-      (actionClick)="connectAccount()"
       title="Account Inventory"
       subtitle="All connected financial accounts"
       actionLabel="Connect Account"
+      (actionClick)="connectAccount()"
     />
     @if (!store.isLoading() && store.totalNetWorth() !== 0) {
       <div class="mt-cmn-3 text-right">
