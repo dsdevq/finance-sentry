@@ -1,20 +1,19 @@
 <div class="p-cmn-8 max-w-[1200px] mx-auto">
-  <div class="flex items-center justify-between mb-cmn-8">
-    <div>
-      <h1 class="font-headline text-cmn-2xl font-bold text-text-primary">Account Inventory</h1>
-      <p class="text-cmn-sm text-text-secondary mt-cmn-1">All connected financial accounts</p>
-    </div>
-    <div class="flex items-center gap-cmn-6">
-      @if (!store.isLoading() && store.totalNetWorth() !== 0) {
-        <div class="text-right">
-          <p class="text-cmn-xs text-text-secondary uppercase tracking-wide">Total Net Worth</p>
-          <p class="font-mono text-cmn-2xl font-bold text-text-primary tabular-nums">
-            {{ store.baseCurrency() }} {{ store.totalNetWorth() | number: '1.2-2' }}
-          </p>
-        </div>
-      }
-      <cmn-button (clicked)="connectAccount()" variant="primary">Connect Account</cmn-button>
-    </div>
+  <div class="mb-cmn-8">
+    <cmn-page-header
+      title="Account Inventory"
+      subtitle="All connected financial accounts"
+      actionLabel="Connect Account"
+      (actionClick)="connectAccount()"
+    />
+    @if (!store.isLoading() && store.totalNetWorth() !== 0) {
+      <div class="mt-cmn-3 text-right">
+        <p class="text-cmn-xs text-text-secondary uppercase tracking-wide">Total Net Worth</p>
+        <p class="font-mono text-cmn-2xl font-bold text-text-primary tabular-nums">
+          {{ store.baseCurrency() }} {{ store.totalNetWorth() | number: '1.2-2' }}
+        </p>
+      </div>
+    }
   </div>
 
   @if (store.isLoading()) {
