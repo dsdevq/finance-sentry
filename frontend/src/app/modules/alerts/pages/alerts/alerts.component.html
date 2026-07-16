@@ -1,11 +1,11 @@
 <div class="p-cmn-6">
   <div class="mx-auto max-w-[860px] space-y-cmn-5">
     <cmn-page-header
-      title="Alerts"
       [subtitle]="alertsSubtitle()"
       [actionLabel]="store.unreadCount() > 0 ? 'Mark all read' : null"
-      actionIcon="CheckCheck"
       (actionClick)="markAllRead()"
+      title="Alerts"
+      actionIcon="CheckCheck"
     />
 
     <div class="flex flex-wrap gap-cmn-2">
