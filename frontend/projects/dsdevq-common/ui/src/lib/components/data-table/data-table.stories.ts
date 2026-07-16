@@ -1,9 +1,9 @@
 import type {Meta, StoryObj} from '@storybook/angular';
 import {moduleMetadata} from '@storybook/angular';
 
+import {DataTableComponent} from './data-table.component';
 import {CmnCellDirective, CmnHeaderCellDirective} from './data-table-cell.directive';
 import {CmnColumnComponent} from './data-table-column.component';
-import {DataTableComponent} from './data-table.component';
 
 interface Transaction {
   date: string;
@@ -14,11 +14,41 @@ interface Transaction {
 }
 
 const ROWS: Transaction[] = [
-  {date: 'Apr 24', description: 'Netflix', account: 'Chase Checking', amount: '-$15.99', status: 'Settled'},
-  {date: 'Apr 23', description: 'Salary', account: 'Chase Checking', amount: '+$5,000.00', status: 'Settled'},
-  {date: 'Apr 22', description: 'Whole Foods', account: 'Chase Checking', amount: '-$87.43', status: 'Pending'},
-  {date: 'Apr 21', description: 'Dividends', account: 'IBKR', amount: '+$124.50', status: 'Settled'},
-  {date: 'Apr 20', description: 'BTC Purchase', account: 'Binance', amount: '-$500.00', status: 'Settled'},
+  {
+    date: 'Apr 24',
+    description: 'Netflix',
+    account: 'Chase Checking',
+    amount: '-$15.99',
+    status: 'Settled',
+  },
+  {
+    date: 'Apr 23',
+    description: 'Salary',
+    account: 'Chase Checking',
+    amount: '+$5,000.00',
+    status: 'Settled',
+  },
+  {
+    date: 'Apr 22',
+    description: 'Whole Foods',
+    account: 'Chase Checking',
+    amount: '-$87.43',
+    status: 'Pending',
+  },
+  {
+    date: 'Apr 21',
+    description: 'Dividends',
+    account: 'IBKR',
+    amount: '+$124.50',
+    status: 'Settled',
+  },
+  {
+    date: 'Apr 20',
+    description: 'BTC Purchase',
+    account: 'Binance',
+    amount: '-$500.00',
+    status: 'Settled',
+  },
 ];
 
 const meta: Meta<DataTableComponent<Transaction>> = {

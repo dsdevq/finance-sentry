@@ -1,9 +1,9 @@
 import {ChangeDetectionStrategy, Component, input} from '@angular/core';
-import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {type ComponentFixture, TestBed} from '@angular/core/testing';
 
+import {DataTableComponent} from './data-table.component';
 import {CmnCellDirective, CmnHeaderCellDirective} from './data-table-cell.directive';
 import {CmnColumnComponent} from './data-table-column.component';
-import {DataTableComponent} from './data-table.component';
 
 interface Row {
   name: string;
@@ -11,22 +11,17 @@ interface Row {
 }
 
 @Component({
-  selector: 'test-host',
-  imports: [
-    CmnCellDirective,
-    CmnColumnComponent,
-    CmnHeaderCellDirective,
-    DataTableComponent,
-  ],
+  selector: 'cmn-test-host',
+  imports: [CmnCellDirective, CmnColumnComponent, CmnHeaderCellDirective, DataTableComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <cmn-data-table [rows]="rows()" [emptyMessage]="emptyMessage()">
       <cmn-column key="name" header="Name">
-        <ng-template cmnCell let-row>{{ row.name }}</ng-template>
+        <ng-template let-row cmnCell>{{ row.name }}</ng-template>
       </cmn-column>
       <cmn-column key="amount" align="right">
         <ng-template cmnHeaderCell>Amount</ng-template>
-        <ng-template cmnCell let-row>\${{ row.amount }}</ng-template>
+        <ng-template let-row cmnCell>\${{ row.amount }}</ng-template>
       </cmn-column>
     </cmn-data-table>
   `,

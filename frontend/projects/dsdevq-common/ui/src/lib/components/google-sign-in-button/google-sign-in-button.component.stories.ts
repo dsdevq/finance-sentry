@@ -32,7 +32,8 @@ export const Default: Story = {
 export const CustomWidth: Story = {
   render: args => ({
     props: args,
-    template: '<cmn-google-sign-in-button [clientId]="clientId" [buttonConfiguration]="buttonConfiguration" />',
+    template:
+      '<cmn-google-sign-in-button [clientId]="clientId" [buttonConfiguration]="buttonConfiguration" />',
   }),
   args: {
     clientId: 'your-google-client-id.apps.googleusercontent.com',

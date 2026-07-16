@@ -1,11 +1,5 @@
 import {computed} from '@angular/core';
-import {
-  patchState,
-  signalStoreFeature,
-  withComputed,
-  withMethods,
-  withState,
-} from '@ngrx/signals';
+import {patchState, signalStoreFeature, withComputed, withMethods, withState} from '@ngrx/signals';
 
 export interface PaginationState {
   totalCount: number;

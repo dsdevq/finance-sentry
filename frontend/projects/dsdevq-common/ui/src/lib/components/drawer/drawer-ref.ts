@@ -1,16 +1,16 @@
 import {type OverlayRef} from '@angular/cdk/overlay';
 import {Injectable} from '@angular/core';
-import {Subject, type Observable} from 'rxjs';
+import {type Observable, Subject} from 'rxjs';
 
 const CLOSE_ANIMATION_MS = 220;
 
 @Injectable()
 export class CmnDrawerRef<R = unknown> {
-  private readonly beforeCloseSub = new Subject<void>();
-  private readonly closedSub = new Subject<R | undefined>();
+  private readonly beforeCloseSubject$ = new Subject<void>();
+  private readonly closedSubject$ = new Subject<R | undefined>();
   private isClosed = false;
 
-  public readonly beforeClose$: Observable<void> = this.beforeCloseSub.asObservable();
+  public readonly beforeClose$: Observable<void> = this.beforeCloseSubject$.asObservable();
 
   public overlayRef!: OverlayRef;
 
@@ -19,16 +19,16 @@ export class CmnDrawerRef<R = unknown> {
       return;
     }
     this.isClosed = true;
-    this.beforeCloseSub.next();
-    this.beforeCloseSub.complete();
+    this.beforeCloseSubject$.next();
+    this.beforeCloseSubject$.complete();
     setTimeout(() => {
       this.overlayRef.dispose();
-      this.closedSub.next(result);
-      this.closedSub.complete();
+      this.closedSubject$.next(result);
+      this.closedSubject$.complete();
     }, CLOSE_ANIMATION_MS);
   }
 
   public afterClosed(): Observable<R | undefined> {
-    return this.closedSub.asObservable();
+    return this.closedSubject$.asObservable();
   }
 }

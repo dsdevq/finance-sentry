@@ -24,7 +24,13 @@ export const WithNegativeDelta: Story = {
 };
 
 export const WithIcon: Story = {
-  args: {label: 'Brokerage', value: '$924,521.67', delta: 1.8, deltaLabel: '+1.8%', icon: 'TrendingUp'},
+  args: {
+    label: 'Brokerage',
+    value: '$924,521.67',
+    delta: 1.8,
+    deltaLabel: '+1.8%',
+    icon: 'TrendingUp',
+  },
 };
 
 export const Loading: Story = {

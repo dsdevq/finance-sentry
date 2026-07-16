@@ -112,10 +112,10 @@
             Category
           </label>
           <cmn-select
-            id="budget-category"
             [ngModel]="newCategory()"
-            (ngModelChange)="newCategory.set($event)"
             [options]="categorySelectOptions()"
+            (ngModelChange)="newCategory.set($event)"
+            id="budget-category"
             placeholder="Select category…"
           />
         </div>

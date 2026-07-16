@@ -2,9 +2,8 @@ import {DialogRef} from '@angular/cdk/dialog';
 import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
 
 import {ButtonComponent, type ButtonVariant} from '../button/button.component';
-
-import {CMN_DIALOG_DATA} from './dialog-config';
 import {DialogActionsComponent} from './dialog-actions.component';
+import {CMN_DIALOG_DATA} from './dialog-config';
 
 export interface ConfirmDialogData {
   title?: string;
@@ -29,7 +28,7 @@ export interface ConfirmDialogData {
       <cmn-button (clicked)="cancel()" variant="secondary">
         {{ data.cancelLabel ?? 'Cancel' }}
       </cmn-button>
-      <cmn-button (clicked)="confirm()" [variant]="data.confirmVariant ?? 'primary'">
+      <cmn-button [variant]="data.confirmVariant ?? 'primary'" (clicked)="confirm()">
         {{ data.confirmLabel ?? 'Confirm' }}
       </cmn-button>
     </cmn-dialog-actions>

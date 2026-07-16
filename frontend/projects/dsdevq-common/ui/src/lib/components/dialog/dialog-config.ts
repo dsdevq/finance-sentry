@@ -1,7 +1,7 @@
-import {CdkDialogContainer} from '@angular/cdk/dialog';
+import {type CdkDialogContainer} from '@angular/cdk/dialog';
 import {DialogConfig} from '@angular/cdk/dialog';
 import {type ComponentType} from '@angular/cdk/portal';
-import {type Injector, InjectionToken, type ViewContainerRef} from '@angular/core';
+import {InjectionToken, type Injector, type ViewContainerRef} from '@angular/core';
 
 export type CmnDialogSize = 'sm' | 'md' | 'lg' | 'full';
 export type CmnDialogAutoFocus = 'first-tabbable' | 'first-heading' | 'dialog' | false;

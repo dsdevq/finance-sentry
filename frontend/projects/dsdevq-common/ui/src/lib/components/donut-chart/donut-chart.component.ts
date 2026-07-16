@@ -29,6 +29,8 @@ const DEFAULT_COLORS = [
   '#a78bfa',
 ];
 
+const PERCENT_MULTIPLIER = 100;
+
 @Component({
   selector: 'cmn-donut-chart',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -121,16 +123,16 @@ export class DonutChartComponent implements AfterViewInit, OnDestroy {
           },
           tooltip: {
             callbacks: {
-              label: ctx => {
-                const val = ctx.parsed;
+              label: tooltipCtx => {
+                const val = tooltipCtx.parsed;
                 const formatted = new Intl.NumberFormat('en-US', {
                   style: 'currency',
                   currency,
                   minimumFractionDigits: 0,
                   maximumFractionDigits: 0,
                 }).format(val);
-                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
-                const pct = total > 0 ? ((val / total) * 100).toFixed(1) : '0.0';
+                const total = tooltipCtx.dataset.data.reduce((a, b) => a + b, 0);
+                const pct = total > 0 ? ((val / total) * PERCENT_MULTIPLIER).toFixed(1) : '0.0';
                 return `${formatted} (${pct}%)`;
               },
             },

@@ -1,6 +1,6 @@
 import {ChangeDetectionStrategy, Component, computed, input, output} from '@angular/core';
 
-import {type LucideIconName, IconComponent} from '../icon/icon.component';
+import {IconComponent, type LucideIconName} from '../icon/icon.component';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'destructive';
 export type ButtonSize = 'sm' | 'md' | 'lg';
@@ -48,7 +48,7 @@ const DISABLED_CLASSES = 'opacity-50 pointer-events-none cursor-not-allowed';
     >
       @if (loading()) {
         <span class="animate-spin inline-flex">
-          <cmn-icon name="LoaderCircle" [size]="iconSize()" />
+          <cmn-icon [size]="iconSize()" name="LoaderCircle" />
         </span>
       } @else if (icon() && iconPosition() === 'prefix') {
         <cmn-icon [name]="icon()!" [size]="iconSize()" aria-hidden="true" />

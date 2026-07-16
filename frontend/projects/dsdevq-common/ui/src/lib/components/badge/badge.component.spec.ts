@@ -1,6 +1,6 @@
-import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {type ComponentFixture, TestBed} from '@angular/core/testing';
 
-import {BadgeComponent, BadgeStatus} from './badge.component';
+import {BadgeComponent, type BadgeStatus} from './badge.component';
 
 describe('BadgeComponent', () => {
   let fixture: ComponentFixture<BadgeComponent>;

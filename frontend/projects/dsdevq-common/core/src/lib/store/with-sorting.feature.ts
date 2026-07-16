@@ -9,7 +9,7 @@ export interface Sort<TField extends string = string> {
 
 export function withSorting<TField extends string>(defaultSort: Sort<TField>) {
   return signalStoreFeature(
-    withState({sort: defaultSort as Sort<TField>}),
+    withState({sort: defaultSort}),
     withMethods(store => ({
       setSort(sort: Sort<TField>): void {
         patchState(store, {sort});

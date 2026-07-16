@@ -1,6 +1,6 @@
 {
   "name": "finance-sentry",
-  "version": "0.11.0",
+  "version": "0.11.1",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
@@ -13,7 +13,7 @@
     "format": "prettier --write \"src/**/*.{ts,html,scss}\"",
     "format:check": "prettier --check \"src/**/*.{ts,html,scss}\"",
     "e2e": "ng e2e",
-    "prepare": "husky",
+    "prepare": "git -C .. config core.hooksPath .husky || true",
     "build:lib": "ng build @dsdevq-common/ui",
     "build:lib:watch": "ng build @dsdevq-common/ui --watch",
     "storybook": "ng run \"@dsdevq-common/ui:storybook\"",
@@ -22,11 +22,11 @@
     "test:vrt": "playwright test --config=projects/dsdevq-common/ui/playwright.config.ts"
   },
   "lint-staged": {
-    "src/**/*.ts": [
+    "{src,projects}/**/*.ts": [
       "eslint --fix",
       "prettier --write"
     ],
-    "src/**/*.{html,scss,css,json}": [
+    "{src,projects}/**/*.{html,scss,css,json}": [
       "prettier --write"
     ]
   },

@@ -12,7 +12,6 @@ import {
 
 import {ButtonComponent} from '../button/button.component';
 import {SkeletonComponent} from '../skeleton/skeleton.component';
-
 import {CmnColumnAlign, CmnColumnComponent} from './data-table-column.component';
 import {type CmnTablePagination} from './data-table-pagination.model';
 
@@ -88,33 +87,33 @@ const SKELETON_ROWS = 5;
 
     @if (!loading() && pagination(); as p) {
       @if (p.totalCount > 0) {
-      <div
-        class="flex items-center justify-between mt-cmn-4"
-        role="navigation"
-        aria-label="Pagination"
-      >
-        <cmn-button
-          [disabled]="p.offset <= 0"
-          (clicked)="previousPage.emit()"
-          variant="secondary"
-          size="sm"
-          aria-label="Previous page"
+        <div
+          class="flex items-center justify-between mt-cmn-4"
+          role="navigation"
+          aria-label="Pagination"
         >
-          Previous
-        </cmn-button>
-        <span class="text-cmn-sm text-text-secondary">
-          Page {{ currentPage(p) }} of {{ totalPages(p) }}
-        </span>
-        <cmn-button
-          [disabled]="!p.hasMore"
-          (clicked)="nextPage.emit()"
-          variant="secondary"
-          size="sm"
-          aria-label="Next page"
-        >
-          Next
-        </cmn-button>
-      </div>
+          <cmn-button
+            [disabled]="p.offset <= 0"
+            (clicked)="previousPage.emit()"
+            variant="secondary"
+            size="sm"
+            aria-label="Previous page"
+          >
+            Previous
+          </cmn-button>
+          <span class="text-cmn-sm text-text-secondary">
+            Page {{ currentPage(p) }} of {{ totalPages(p) }}
+          </span>
+          <cmn-button
+            [disabled]="!p.hasMore"
+            (clicked)="nextPage.emit()"
+            variant="secondary"
+            size="sm"
+            aria-label="Next page"
+          >
+            Next
+          </cmn-button>
+        </div>
       }
     }
   `,
@@ -153,7 +152,13 @@ export class DataTableComponent<T = Record<string, unknown>> {
 
   protected defaultCell(row: T, key: string): string {
     const value = (row as Record<string, unknown>)[key];
-    return value === null || value === undefined ? '' : String(value);
+    if (value === null || value === undefined) {
+      return '';
+    }
+    if (typeof value === 'object') {
+      return JSON.stringify(value);
+    }
+    return String(value as string | number | boolean | bigint | symbol);
   }
 
   private alignClass(align: CmnColumnAlign): string {

@@ -1,6 +1,6 @@
-import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {type ComponentFixture, TestBed} from '@angular/core/testing';
 
-import {SelectComponent, SelectValue} from './select.component';
+import {SelectComponent, type SelectValue} from './select.component';
 
 describe('SelectComponent', () => {
   let fixture: ComponentFixture<SelectComponent>;
@@ -36,14 +36,14 @@ describe('SelectComponent', () => {
     fixture.componentInstance.writeValue('eur');
     fixture.detectChanges();
 
-    expect(fixture.componentInstance['value']()).toBe('eur');
+    expect(fixture.componentInstance.value()).toBe('eur');
   });
 
   it('normalizes undefined form values to null', () => {
     fixture.componentInstance.writeValue(undefined);
     fixture.detectChanges();
 
-    expect(fixture.componentInstance['value']()).toBeNull();
+    expect(fixture.componentInstance.value()).toBeNull();
   });
 
   it('emits form changes when selection changes', () => {
@@ -52,10 +52,10 @@ describe('SelectComponent', () => {
       emitted = value;
     });
 
-    fixture.componentInstance['onValueChange']('usd');
+    fixture.componentInstance.onValueChange('usd');
 
     expect(emitted).toBe('usd');
-    expect(fixture.componentInstance['value']()).toBe('usd');
+    expect(fixture.componentInstance.value()).toBe('usd');
   });
 
   it('marks the control as touched on blur', () => {
@@ -64,7 +64,7 @@ describe('SelectComponent', () => {
       touched = true;
     });
 
-    fixture.componentInstance['onBlur']();
+    fixture.componentInstance.onBlur();
 
     expect(touched).toBe(true);
   });
@@ -73,6 +73,6 @@ describe('SelectComponent', () => {
     fixture.componentInstance.setDisabledState(true);
     fixture.detectChanges();
 
-    expect(fixture.componentInstance['disabled']()).toBe(true);
+    expect(fixture.componentInstance.disabled()).toBe(true);
   });
 });

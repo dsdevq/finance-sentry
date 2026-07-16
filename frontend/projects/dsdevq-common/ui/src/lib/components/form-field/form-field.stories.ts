@@ -1,5 +1,5 @@
 import {ChangeDetectionStrategy, Component} from '@angular/core';
-import {FormsModule, FormControl, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
+import {FormControl, FormGroup, FormsModule, ReactiveFormsModule, Validators} from '@angular/forms';
 import type {Meta, StoryObj} from '@storybook/angular';
 
 import {ButtonComponent} from '../button/button.component';
@@ -160,11 +160,7 @@ export const FullReactiveFormExample: Story = {
       <p class="text-cmn-sm text-text-secondary">
         No getter methods — errors auto-resolved from the registry via <code>[control]</code> input.
       </p>
-      <cmn-form-field
-        [required]="true"
-        [control]="form.get('email')"
-        label="Email"
-      >
+      <cmn-form-field [required]="true" [control]="form.get('email')" label="Email">
         <cmn-input formControlName="email" type="email" placeholder="you@example.com" />
       </cmn-form-field>
       <cmn-form-field [required]="true" [control]="form.get('password')" label="Password">

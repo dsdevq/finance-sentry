@@ -20,7 +20,9 @@ export const APP_ROUTES: Routes = [
   {
     path: AppRoute.McpConnect.slice(1),
     loadComponent: () =>
-      import('./modules/auth/pages/mcp-connect/mcp-connect.component').then(m => m.McpConnectComponent),
+      import('./modules/auth/pages/mcp-connect/mcp-connect.component').then(
+        m => m.McpConnectComponent
+      ),
   },
   {
     path: '',

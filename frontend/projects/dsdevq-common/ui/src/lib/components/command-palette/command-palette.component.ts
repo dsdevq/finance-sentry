@@ -2,18 +2,17 @@ import {DialogRef} from '@angular/cdk/dialog';
 import {
   ChangeDetectionStrategy,
   Component,
-  ElementRef,
-  HostListener,
   computed,
   effect,
+  ElementRef,
   inject,
   signal,
   viewChild,
 } from '@angular/core';
 
 import {CMN_DIALOG_DATA} from '../dialog/dialog-config';
-import {type PaletteResult, type CommandPaletteItem} from './command-palette-item.model';
 import {IconComponent} from '../icon/icon.component';
+import {type CommandPaletteItem, type PaletteResult} from './command-palette-item.model';
 
 interface PaletteGroup {
   group: string;
@@ -107,7 +106,9 @@ interface PaletteGroup {
                       class="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-cmn-md transition-colors duration-75"
                     >
                       <cmn-icon
-                        [color]="entry.idx === selectedIndex() ? 'white' : 'var(--color-text-secondary)'"
+                        [color]="
+                          entry.idx === selectedIndex() ? 'white' : 'var(--color-text-secondary)'
+                        "
                         [name]="entry.item.icon"
                         size="sm"
                       />
@@ -151,20 +152,20 @@ interface PaletteGroup {
   `,
   host: {
     '(window:keydown)': 'onKeyDown($event)',
-  }
+  },
 })
 export class CommandPaletteComponent {
-  protected readonly KEY_HINTS: [string, string][] = [
-    ['↑↓', 'Navigate'],
-    ['↵', 'Select'],
-    ['ESC', 'Close'],
-  ];
-
   private static readonly FOCUS_DELAY_MS = 30;
 
   private readonly dialogRef = inject<DialogRef<PaletteResult>>(DialogRef);
   private readonly items = inject<CommandPaletteItem[]>(CMN_DIALOG_DATA);
   private readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
+
+  protected readonly KEY_HINTS: [string, string][] = [
+    ['↑↓', 'Navigate'],
+    ['↵', 'Select'],
+    ['ESC', 'Close'],
+  ];
 
   protected readonly query = signal('');
   protected readonly selectedIndex = signal(0);
@@ -223,7 +224,9 @@ export class CommandPaletteComponent {
   }
 
   protected activate(item: CommandPaletteItem | undefined): void {
-    if (!item) { return; }
+    if (!item) {
+      return;
+    }
     this.dialogRef.close({
       type: item.id.startsWith('_') ? 'action' : 'navigate',
       id: item.id,

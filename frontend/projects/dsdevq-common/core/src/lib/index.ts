@@ -7,8 +7,8 @@ export * from './errors/extract-error-code';
 export * from './rxjs/poll';
 
 // Services
-export * from './services/api-base-url.token';
 export * from './services/api.service';
+export * from './services/api-base-url.token';
 
 // Store features
 export * from './store/with-async-status.feature';
