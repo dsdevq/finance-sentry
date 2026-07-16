@@ -1,7 +1,13 @@
 import {ChangeDetectionStrategy, Component, computed, inject, signal} from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {Router} from '@angular/router';
-import {AlertComponent, CardComponent, SelectComponent, TagComponent} from '@dsdevq-common/ui';
+import {
+  AlertComponent,
+  CardComponent,
+  PageHeaderComponent,
+  SelectComponent,
+  TagComponent,
+} from '@dsdevq-common/ui';
 
 import {AppCurrencyPipe} from '../../../../core/pipes/app-currency.pipe';
 import {AppDecimalPipe} from '../../../../core/pipes/app-decimal.pipe';
@@ -22,6 +28,7 @@ const PCT_WARNING_THRESHOLD = 80;
     AppDecimalPipe,
     CardComponent,
     FormsModule,
+    PageHeaderComponent,
     SelectComponent,
     TagComponent,
   ],
