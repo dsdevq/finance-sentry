@@ -19,6 +19,7 @@ export * from './components/dialog/dialog-bare-container.component';
 export * from './components/dialog/dialog-config';
 export * from './components/dialog/dialog-container.component';
 export * from './components/dialog/dialog-ref';
+export * from './components/disclosure-row/disclosure-row.component';
 export * from './components/donut-chart/donut-chart.component';
 export * from './components/drawer/drawer-config';
 export * from './components/drawer/drawer-container.component';
