@@ -3,6 +3,7 @@ using System;
 using FinanceSentry.Modules.Wealth.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FinanceSentry.Modules.Wealth.Migrations
 {
     [DbContext(typeof(WealthDbContext))]
-    partial class WealthDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260717115951_M002_AddStaleSleeves")]
+    partial class M002_AddStaleSleeves
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

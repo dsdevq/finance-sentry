@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <InvariantGlobalization>false</InvariantGlobalization>
-    <Version>0.11.0</Version> <!-- x-release-please-version -->
+    <Version>0.11.1</Version> <!-- x-release-please-version -->
     <AssemblyVersion>0.11.0</AssemblyVersion> <!-- x-release-please-version -->
     <FileVersion>0.11.0</FileVersion> <!-- x-release-please-version -->
   </PropertyGroup>

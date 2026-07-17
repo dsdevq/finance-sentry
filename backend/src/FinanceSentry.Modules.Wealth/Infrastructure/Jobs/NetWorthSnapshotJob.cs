@@ -32,17 +32,28 @@ public class NetWorthSnapshotJob(
     public async Task CaptureForUserAsync(Guid userId, DateOnly snapshotDate, CancellationToken ct = default)
         => await TakeSnapshotAsync(userId, snapshotDate, ct);
 
+    // A sleeve is only trusted if its freshest holding synced within this window; older
+    // than this (a disconnected provider, a stuck gateway, a failed sync) is treated as
+    // stale and carried forward rather than counted as the live number.
+    private static readonly TimeSpan StaleWindow = TimeSpan.FromHours(36);
+
     private async Task TakeSnapshotAsync(Guid userId, DateOnly snapshotDate, CancellationToken ct)
     {
+        var now = DateTime.UtcNow;
         var bankingTotal = await _bankingTotals.GetTotalUsdAsync(userId, ct);
 
         var cryptoHoldings = await _cryptoReader.GetHoldingsAsync(userId, ct);
         var cryptoTotal = cryptoHoldings.Sum(h => h.UsdValue);
+        var cryptoFresh = cryptoHoldings.Count > 0
+            && cryptoHoldings.Max(h => h.SyncedAt) >= now - StaleWindow;
 
         var brokerageHoldings = await _brokerageReader.GetHoldingsAsync(userId, ct);
         var brokerageTotal = brokerageHoldings.Sum(h => h.UsdValue);
+        var brokerageFresh = brokerageHoldings.Count > 0
+            && brokerageHoldings.Max(h => h.SyncedAt) >= now - StaleWindow;
 
         await _snapshotService.PersistSnapshotAsync(userId, new NetWorthSnapshotData(
-            snapshotDate, bankingTotal, brokerageTotal, cryptoTotal), ct);
+            snapshotDate, bankingTotal, brokerageTotal, cryptoTotal,
+            BrokerageFresh: brokerageFresh, CryptoFresh: cryptoFresh), ct);
     }
 }
