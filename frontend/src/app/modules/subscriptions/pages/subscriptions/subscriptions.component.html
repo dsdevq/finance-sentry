@@ -63,26 +63,15 @@
         @for (sub of store.sortedActive(); track sub.id) {
           @let days = daysUntil(sub.nextExpectedDate);
           @let soon = days <= 5;
-          <div
-            class="flex items-center gap-cmn-3 border-b border-border-default px-cmn-4 py-cmn-3 last:border-b-0 hover:bg-surface-bg transition-colors"
-          >
-            <!-- Logo -->
+          <cmn-list-item-row [label]="sub.merchantName || 'Unknown'">
             <div
               [style.background]="sub.merchantName | merchantColor"
+              avatar
               class="flex h-10 w-10 shrink-0 items-center justify-center rounded-cmn-md font-bold text-white"
             >
               {{ sub.merchantName || '?' | slice: 0 : 1 | uppercase }}
             </div>
-
-            <!-- Name -->
-            <div class="flex-1 min-w-0">
-              <div class="font-label text-cmn-sm font-medium text-text-primary truncate">
-                {{ sub.merchantName || 'Unknown' }}
-              </div>
-            </div>
-
-            <!-- Next charge -->
-            <div class="min-w-[100px] text-center">
+            <div meta class="min-w-[100px] text-center">
               <div
                 [class.text-status-warning]="soon"
                 [class.font-semibold]="soon"
@@ -99,20 +88,16 @@
                 {{ days <= 0 ? 'Today' : 'in ' + days + 'd' }}
               </div>
             </div>
-
-            <!-- Amount -->
-            <div class="min-w-[72px] text-right">
+            <div amount class="min-w-[72px] text-right">
               <div class="font-mono text-cmn-sm font-semibold text-text-primary">
                 {{ sub.monthlyEquivalent | appCurrency }}
               </div>
               <div class="text-[10px] text-text-disabled">/ mo</div>
             </div>
-
-            <!-- Actions -->
-            <div class="flex shrink-0 gap-cmn-1">
+            <div actions class="flex shrink-0 gap-cmn-1">
               <cmn-button (clicked)="dismiss(sub)" variant="secondary" size="sm" icon="X" />
             </div>
-          </div>
+          </cmn-list-item-row>
         }
         @if (store.activeSubscriptions().length === 0 && !store.hasInsufficientHistory()) {
           <div class="px-cmn-4 py-cmn-8 text-center text-cmn-sm text-text-secondary">
@@ -134,32 +119,26 @@
         </div>
         <cmn-card padding="none">
           @for (sub of store.sortedDismissed(); track sub.id) {
-            <div
-              class="flex items-center gap-cmn-3 border-b border-border-default px-cmn-4 py-cmn-3 last:border-b-0 opacity-55 hover:bg-surface-bg transition-colors"
-            >
+            <cmn-list-item-row [label]="sub.merchantName || 'Unknown'" [dimmed]="true">
               <div
                 [style.background]="sub.merchantName | merchantColor"
+                avatar
                 class="flex h-10 w-10 shrink-0 items-center justify-center rounded-cmn-md font-bold text-white"
               >
                 {{ sub.merchantName || '?' | slice: 0 : 1 | uppercase }}
               </div>
-              <div class="flex-1 min-w-0">
-                <div class="font-label text-cmn-sm font-medium text-text-primary truncate">
-                  {{ sub.merchantName || 'Unknown' }}
-                </div>
-              </div>
-              <div class="min-w-[72px] text-right">
+              <div amount class="min-w-[72px] text-right">
                 <div class="font-mono text-cmn-sm font-semibold text-text-primary">
                   {{ sub.monthlyEquivalent | appCurrency }}
                 </div>
                 <div class="text-[10px] text-text-disabled">/ mo</div>
               </div>
-              <div class="flex shrink-0 gap-cmn-1">
+              <div actions class="flex shrink-0 gap-cmn-1">
                 <cmn-button (clicked)="restore(sub.id)" variant="secondary" size="sm"
                   >Restore</cmn-button
                 >
               </div>
-            </div>
+            </cmn-list-item-row>
           }
         </cmn-card>
       </div>

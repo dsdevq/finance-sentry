@@ -2,6 +2,13 @@ import {type ComponentFixture, TestBed} from '@angular/core/testing';
 
 import {SelectComponent, type SelectValue} from './select.component';
 
+interface SelectInternals {
+  value(): SelectValue;
+  onValueChange(v: SelectValue): void;
+  onBlur(): void;
+  disabled(): boolean;
+}
+
 describe('SelectComponent', () => {
   let fixture: ComponentFixture<SelectComponent>;
 
@@ -12,6 +19,10 @@ describe('SelectComponent', () => {
 
   function selectElement(): HTMLElement | null {
     return fixture.nativeElement.querySelector('nz-select');
+  }
+
+  function internals(): SelectInternals {
+    return fixture.componentInstance as unknown as SelectInternals;
   }
 
   it('renders the configured select options', () => {
@@ -36,14 +47,14 @@ describe('SelectComponent', () => {
     fixture.componentInstance.writeValue('eur');
     fixture.detectChanges();
 
-    expect(fixture.componentInstance.value()).toBe('eur');
+    expect(internals().value()).toBe('eur');
   });
 
   it('normalizes undefined form values to null', () => {
     fixture.componentInstance.writeValue(undefined);
     fixture.detectChanges();
 
-    expect(fixture.componentInstance.value()).toBeNull();
+    expect(internals().value()).toBeNull();
   });
 
   it('emits form changes when selection changes', () => {
@@ -52,10 +63,10 @@ describe('SelectComponent', () => {
       emitted = value;
     });
 
-    fixture.componentInstance.onValueChange('usd');
+    internals().onValueChange('usd');
 
     expect(emitted).toBe('usd');
-    expect(fixture.componentInstance.value()).toBe('usd');
+    expect(internals().value()).toBe('usd');
   });
 
   it('marks the control as touched on blur', () => {
@@ -64,7 +75,7 @@ describe('SelectComponent', () => {
       touched = true;
     });
 
-    fixture.componentInstance.onBlur();
+    internals().onBlur();
 
     expect(touched).toBe(true);
   });
@@ -73,6 +84,6 @@ describe('SelectComponent', () => {
     fixture.componentInstance.setDisabledState(true);
     fixture.detectChanges();
 
-    expect(fixture.componentInstance.disabled()).toBe(true);
+    expect(internals().disabled()).toBe(true);
   });
 });
