@@ -7,6 +7,7 @@ using FinanceSentry.Modules.BrokerageSync.Application.Services;
 using FinanceSentry.Modules.BrokerageSync.Domain.Interfaces;
 using FinanceSentry.Modules.BrokerageSync.Domain.Repositories;
 using FinanceSentry.Modules.BrokerageSync.Infrastructure.IBKR;
+using FinanceSentry.Modules.BrokerageSync.Infrastructure.IBKR.OAuth;
 using FinanceSentry.Modules.BrokerageSync.Infrastructure.Jobs;
 using FinanceSentry.Modules.BrokerageSync.Infrastructure.Persistence;
 using FinanceSentry.Modules.BrokerageSync.Infrastructure.Persistence.Repositories;
@@ -29,10 +30,9 @@ public static class BrokerageSyncModule
         {
             var mgr = sp.GetRequiredService<IRecurringJobManager>();
             mgr.AddOrUpdate<IBKRSyncJob>("ibkr-sync", job => job.ExecuteAsync(), "*/15 * * * *");
-            mgr.AddOrUpdate<IBeamHealthCheckJob>(
-                "ibeam-health-check",
-                job => job.ExecuteAsync(CancellationToken.None),
-                "*/5 * * * *");
+            // The IBeam health-check job (per-user container reconcile) is
+            // obsolete under OAuth — remove any previously-scheduled instance.
+            mgr.RemoveIfExists("ibeam-health-check");
         }
     }
 
@@ -69,15 +69,18 @@ public static class BrokerageSyncModule
         // request CancellationToken (which triggers rollback in the connector).
         services.AddScoped<IIBKRConnector, IBKRConnector>();
 
-        services.AddScoped<IBrokerAdapter, IBKRAdapter>();
+        // IBKR access now runs over OAuth 1.0a: no per-user container, no
+        // password, no 2FA. Each user's stored keys are resolved and used to
+        // sign requests directly against IBKR's Web API.
+        services.Configure<IbkrOAuthOptions>(config.GetSection(IbkrOAuthOptions.SectionName));
+        services.AddScoped<IIbkrCredentialResolver, IbkrCredentialResolver>();
+        services.AddHttpClient<IbkrOAuthClient>();
+        services.AddScoped<IBrokerAdapter, IbkrOAuthAdapter>();
+
         services.AddScoped<IIBKRCredentialRepository, IBKRCredentialRepository>();
         services.AddScoped<IBrokerageHoldingRepository, BrokerageHoldingRepository>();
         services.AddScoped<IBrokerageHoldingsReader, BrokerageHoldingsReader>();
-        services.AddScoped<IIBeamReconciler, IBeamReconciler>();
         services.AddScoped<IBKRSyncJob>();
-        services.AddScoped<IBeamHealthCheckJob>();
-
-        services.AddHostedService<IBeamStartupReconcilerHostedService>();
 
         services.AddSingleton<IJobRegistrar, JobRegistrar>();
 

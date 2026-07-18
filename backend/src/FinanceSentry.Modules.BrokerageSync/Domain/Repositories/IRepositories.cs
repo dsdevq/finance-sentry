@@ -3,6 +3,7 @@ namespace FinanceSentry.Modules.BrokerageSync.Domain.Repositories;
 public interface IIBKRCredentialRepository
 {
     Task AddAsync(IBKRCredential credential, CancellationToken ct = default);
+    Task<IBKRCredential?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<IBKRCredential?> GetByUserIdAsync(Guid userId, CancellationToken ct = default);
     Task<IReadOnlyList<IBKRCredential>> GetAllActiveAsync(CancellationToken ct = default);
     void Update(IBKRCredential credential);

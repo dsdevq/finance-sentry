@@ -46,7 +46,9 @@ public class BrokerageControllerDisconnectContractTests : IClassFixture<Brokerag
     [Fact]
     public async Task Disconnect_ValidAccount_Returns204()
     {
-        var credential = new IBKRCredential(_factory.TestUserId, [1], [2], [3], [4], [5], [6], keyVersion: 1);
+        var credential = new IBKRCredential(
+            _factory.TestUserId, "FINSENTRY", "access-token", "dh-pem",
+            [1], [2], [3], [4], [5], [6], [7], [8], [9], keyVersion: 1);
         credential.UpdateAccountId("U1234567");
 
         _factory.CredentialRepoMock
