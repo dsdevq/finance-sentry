@@ -6,6 +6,7 @@ import {
   ChipComponent,
   CmnDialogService,
   ConfirmDialogComponent,
+  ListItemRowComponent,
   PageHeaderComponent,
   StatCardComponent,
 } from '@dsdevq-common/ui';
@@ -35,6 +36,7 @@ const SORT_OPTIONS: {value: SubscriptionSort; label: string}[] = [
     CardComponent,
     ChipComponent,
     DatePipe,
+    ListItemRowComponent,
     MerchantColorPipe,
     PageHeaderComponent,
     SlicePipe,

@@ -101,3 +101,12 @@ Verified 2026-06-27 via `dotnet test FinanceSentry.sln --filter 'Category!=Integ
 11. `get_net_worth_history`
 
 Full tool catalogue (input parameters, return schemas, real/stub): [`docs/mcp.md`](docs/mcp.md).
+
+## Frontend test environment gotcha
+
+`ng test @dsdevq-common/ui` and `ng test finance-sentry` both require Chromium (Playwright browser runner).
+The sandbox agent environment is missing `libXfixes.so.3` — the browser cannot launch.
+The test suite BUILDS without error (all TypeScript compiles); execution is blocked by the missing system lib.
+This is not an npm/node issue — `npm install` is fine; root access is needed for `apt-get install libxfixes3`.
+
+Workaround: run `npm run test:lib` on a machine with full browser deps. The pre-commit hook (lint + format, no tests) passes in the sandbox.
