@@ -24,6 +24,7 @@ export * from './components/donut-chart/donut-chart.component';
 export * from './components/drawer/drawer-config';
 export * from './components/drawer/drawer-container.component';
 export * from './components/drawer/drawer-ref';
+export * from './components/editable-field/editable-field.component';
 export * from './components/form-field/form-field.component';
 export * from './components/google-sign-in-button/google-sign-in-button.component';
 export * from './components/icon/icon.component';
