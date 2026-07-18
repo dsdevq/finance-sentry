@@ -102,6 +102,14 @@ Verified 2026-06-27 via `dotnet test FinanceSentry.sln --filter 'Category!=Integ
 
 Full tool catalogue (input parameters, return schemas, real/stub): [`docs/mcp.md`](docs/mcp.md).
 
+## Frontend UI primitives — ng-zorro-antd
+
+`ng-zorro-antd` **21.2.2** is a real, installed runtime dependency (`frontend/package.json` line 52; resolved entry in `frontend/package-lock.json`). It serves as the low-level widget primitive layer for `@dsdevq-common/ui` — library components wrap `nz-*` elements rather than building raw HTML widgets from scratch.
+
+**Reference usage:** `SelectComponent` (`frontend/projects/dsdevq-common/ui/src/lib/components/select/select.component.ts`) imports `NzSelectModule` from `ng-zorro-antd/select` and renders `<nz-select>` / `<nz-option>` in its template. This component has a passing Vitest spec that proves the dependency resolves and renders end-to-end in the test environment.
+
+Architecture direction: new `cmn-*` library components that need a complex interactive primitive (date-picker, tree-select, cascader, etc.) should prefer an `nz-*` base over hand-rolling the behaviour. Design token coexistence (`@dsdevq-common/config` Tailwind tokens vs `ng-zorro-antd` CSS vars) is a separate, deferred slice — do not resolve it implicitly when adding new components.
+
 ## Frontend test environment gotcha
 
 `ng test @dsdevq-common/ui` and `ng test finance-sentry` both require Chromium (Playwright browser runner).
