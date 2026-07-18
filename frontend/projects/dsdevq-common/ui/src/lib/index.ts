@@ -41,6 +41,7 @@ export * from './components/sidebar-nav/sidebar-nav.component';
 export * from './components/skeleton/skeleton.component';
 export * from './components/stat-card/stat-card.component';
 export * from './components/status-indicator/status-indicator.component';
+export * from './components/tab-group/tab-group.component';
 export * from './components/tag/tag.component';
 export * from './components/toast/toast.component';
 export * from './components/toast/toast.service';
