@@ -24,6 +24,7 @@ public sealed class CostBasisCalculatorTests
 
         result.CostBasisUsd.Should().Be(0m);
         result.AverageBuyPriceUsd.Should().Be(0m);
+        result.RemainingQuantity.Should().Be(0m);
         result.RealizedPnlUsd.Should().Be(0m);
         result.LastTradeAt.Should().BeNull();
         result.TradeCount.Should().Be(0);
@@ -36,6 +37,7 @@ public sealed class CostBasisCalculatorTests
 
         result.CostBasisUsd.Should().Be(20_000m);
         result.AverageBuyPriceUsd.Should().Be(20_000m);
+        result.RemainingQuantity.Should().Be(1m);
         result.RealizedPnlUsd.Should().Be(0m);
         result.LastTradeId.Should().Be(1);
         result.TradeCount.Should().Be(1);
@@ -65,7 +67,23 @@ public sealed class CostBasisCalculatorTests
         result.RealizedPnlUsd.Should().Be(5_000m);
         result.CostBasisUsd.Should().Be(10_000m);
         result.AverageBuyPriceUsd.Should().Be(10_000m);
+        result.RemainingQuantity.Should().Be(1m);
         result.TradeCount.Should().Be(2);
+    }
+
+    [Fact]
+    public void Compute_PartialSell_DoesNotReturnHistoricalBuyNotionalAsRemainingCostBasis()
+    {
+        var result = _sut.Compute([
+            Buy(qty: 100m, price: 10m, id: 1),
+            Buy(qty: 100m, price: 20m, id: 2),
+            Sell(qty: 170m, price: 25m, id: 3),
+        ]);
+
+        result.RemainingQuantity.Should().Be(30m);
+        result.AverageBuyPriceUsd.Should().Be(15m);
+        result.CostBasisUsd.Should().Be(450m);
+        result.CostBasisUsd.Should().NotBe(3_000m);
     }
 
     [Fact]
@@ -98,6 +116,7 @@ public sealed class CostBasisCalculatorTests
         var seed = new CostBasisResult(
             CostBasisUsd: 10_000m,
             AverageBuyPriceUsd: 10_000m,
+            RemainingQuantity: 1m,
             RealizedPnlUsd: 0m,
             LastTradeAt: new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
             LastTradeId: 1,

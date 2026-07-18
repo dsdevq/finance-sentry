@@ -15,6 +15,9 @@ public sealed record SyncBinanceHoldingsResult(int HoldingsCount, DateTime Synce
 
 public sealed class SyncBinanceHoldingsCommandHandler : ICommandHandler<SyncBinanceHoldingsCommand, SyncBinanceHoldingsResult>
 {
+    private const decimal QuantityTolerance = 0.01m;
+    private const decimal MaximumTrustedCostToValueRatio = 20m;
+
     private readonly IBinanceCredentialRepository _credentialRepository;
     private readonly ICryptoHoldingRepository _holdingRepository;
     private readonly ICryptoExchangeAdapter _adapter;
@@ -130,6 +133,9 @@ public sealed class SyncBinanceHoldingsCommandHandler : ICommandHandler<SyncBina
                 ? new CostBasisResult(
                     CostBasisUsd: holding.CostBasisUsd ?? 0m,
                     AverageBuyPriceUsd: holding.AverageBuyPriceUsd ?? 0m,
+                    RemainingQuantity: holding.AverageBuyPriceUsd is > 0m && holding.CostBasisUsd is not null
+                        ? holding.CostBasisUsd.Value / holding.AverageBuyPriceUsd.Value
+                        : 0m,
                     RealizedPnlUsd: holding.RealizedPnlUsd ?? 0m,
                     LastTradeAt: holding.LastTradeAt,
                     LastTradeId: holding.LastTradeId,
@@ -143,9 +149,12 @@ public sealed class SyncBinanceHoldingsCommandHandler : ICommandHandler<SyncBina
                 continue;
             }
 
+            var currentQuantity = holding.FreeQuantity + holding.LockedQuantity;
+            var costBasis = TrustCostBasisForCurrentPosition(result, currentQuantity, holding.UsdValue);
+
             holding.SetCostBasis(
-                result.CostBasisUsd,
-                result.AverageBuyPriceUsd,
+                costBasis,
+                costBasis is null ? null : result.AverageBuyPriceUsd,
                 result.RealizedPnlUsd,
                 result.LastTradeAt,
                 result.LastTradeId,
@@ -153,5 +162,45 @@ public sealed class SyncBinanceHoldingsCommandHandler : ICommandHandler<SyncBina
         }
 
         await _holdingRepository.SaveChangesAsync(ct);
+    }
+
+    private static decimal? TrustCostBasisForCurrentPosition(
+        CostBasisResult result,
+        decimal currentQuantity,
+        decimal currentValueUsd)
+    {
+        if (currentQuantity <= 0m)
+        {
+            return 0m;
+        }
+
+        if (result.AverageBuyPriceUsd <= 0m || result.RemainingQuantity <= 0m)
+        {
+            return null;
+        }
+
+        var quantityDelta = Math.Abs(result.RemainingQuantity - currentQuantity);
+        var tolerance = Math.Max(currentQuantity, result.RemainingQuantity) * QuantityTolerance;
+
+        decimal costBasis;
+        if (quantityDelta <= tolerance)
+        {
+            costBasis = result.CostBasisUsd;
+        }
+        else if (result.RemainingQuantity > currentQuantity)
+        {
+            costBasis = result.AverageBuyPriceUsd * currentQuantity;
+        }
+        else
+        {
+            return null;
+        }
+
+        if (currentValueUsd > 0m && costBasis / currentValueUsd > MaximumTrustedCostToValueRatio)
+        {
+            return null;
+        }
+
+        return Math.Round(costBasis, 4);
     }
 }

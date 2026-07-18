@@ -13,8 +13,18 @@ public class YahooMarketDataService(
     public const string HttpClientName = "yahoo-finance";
 
     private const int MaxConcurrentFetches = 6;
+    private const string RegularSession = "regular";
+    private const string PreMarketSession = "pre_market";
+    private const string PostMarketSession = "post_market";
+    private const string ClosedSession = "closed";
+    private const string UnknownSession = "unknown";
 
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
+    private static readonly IReadOnlyDictionary<string, string> YahooTickerAliases =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["MHPC"] = "MHPC.IL",
+        };
 
     public async Task<IReadOnlyDictionary<string, QuoteCacheEntry>> GetQuotesAsync(
         IReadOnlyCollection<string> tickers, CancellationToken ct = default)
@@ -87,7 +97,8 @@ public class YahooMarketDataService(
     private async Task<QuoteCacheEntry?> FetchOneAsync(string ticker, CancellationToken ct)
     {
         var client = httpFactory.CreateClient(HttpClientName);
-        var url = $"/v8/finance/chart/{Uri.EscapeDataString(ticker)}?interval=1d&range=5d";
+        var yahooTicker = ResolveYahooTicker(ticker);
+        var url = $"/v8/finance/chart/{Uri.EscapeDataString(yahooTicker)}?interval=1d&range=5d";
 
         try
         {
@@ -113,8 +124,19 @@ public class YahooMarketDataService(
             var symbol = meta.TryGetProperty("symbol", out var symbolProp)
                 ? symbolProp.GetString() ?? ticker
                 : ticker;
-            var price = ReadDecimal(meta, "regularMarketPrice");
-            if (price is null)
+            if (!IsExpectedYahooSymbol(ticker, yahooTicker, symbol))
+            {
+                return null;
+            }
+
+            var marketState = meta.TryGetProperty("marketState", out var marketStateProp)
+                ? marketStateProp.GetString() ?? "unknown"
+                : "unknown";
+            var regularMarketPrice = ReadDecimal(meta, "regularMarketPrice");
+            var preMarketPrice = ReadDecimal(meta, "preMarketPrice");
+            var postMarketPrice = ReadDecimal(meta, "postMarketPrice");
+            var selected = SelectSessionPrice(marketState, regularMarketPrice, preMarketPrice, postMarketPrice);
+            if (selected.Price is null)
             {
                 return null;
             }
@@ -123,14 +145,27 @@ public class YahooMarketDataService(
             var currency = meta.TryGetProperty("currency", out var currencyProp)
                 ? currencyProp.GetString() ?? "USD"
                 : "USD";
+            var regularMarketTime = ReadUnixTime(meta, "regularMarketTime");
+            var sourcePriceTime = selected.Session switch
+            {
+                PreMarketSession => ReadUnixTime(meta, "preMarketTime") ?? regularMarketTime,
+                PostMarketSession => ReadUnixTime(meta, "postMarketTime") ?? regularMarketTime,
+                _ => regularMarketTime,
+            };
 
             return new QuoteCacheEntry
             {
-                Ticker = symbol.ToUpperInvariant(),
-                Price = price.Value,
+                Ticker = ticker.ToUpperInvariant(),
+                ResolvedTicker = symbol.ToUpperInvariant(),
+                Price = selected.Price.Value,
                 PreviousClose = prev,
                 Currency = currency,
                 FetchedAt = DateTimeOffset.UtcNow,
+                MarketState = marketState,
+                Session = selected.Session,
+                IsStale = selected.IsStale,
+                SourcePriceTime = sourcePriceTime,
+                RegularMarketTime = regularMarketTime,
             };
         }
         catch (Exception ex)
@@ -240,5 +275,47 @@ public class YahooMarketDataService(
             JsonValueKind.Number => prop.TryGetDecimal(out var value) ? value : null,
             _ => null,
         };
+    }
+
+    private static string ResolveYahooTicker(string ticker)
+    {
+        return YahooTickerAliases.TryGetValue(ticker, out var alias)
+            ? alias
+            : ticker;
+    }
+
+    private static bool IsExpectedYahooSymbol(string requestedTicker, string yahooTicker, string resolvedSymbol)
+    {
+        return string.Equals(resolvedSymbol, yahooTicker, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(resolvedSymbol, requestedTicker, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static (decimal? Price, string Session, bool IsStale) SelectSessionPrice(
+        string marketState,
+        decimal? regularMarketPrice,
+        decimal? preMarketPrice,
+        decimal? postMarketPrice)
+    {
+        return marketState.ToUpperInvariant() switch
+        {
+            "PRE" or "PREPRE" when preMarketPrice is not null => (preMarketPrice, PreMarketSession, false),
+            "POST" or "POSTPOST" when postMarketPrice is not null => (postMarketPrice, PostMarketSession, false),
+            "REGULAR" when regularMarketPrice is not null => (regularMarketPrice, RegularSession, false),
+            "CLOSED" when regularMarketPrice is not null => (regularMarketPrice, ClosedSession, true),
+            _ when regularMarketPrice is not null => (regularMarketPrice, UnknownSession, true),
+            _ => (null, UnknownSession, true),
+        };
+    }
+
+    private static DateTimeOffset? ReadUnixTime(JsonElement element, string property)
+    {
+        if (!element.TryGetProperty(property, out var prop) ||
+            prop.ValueKind is not JsonValueKind.Number ||
+            !prop.TryGetInt64(out var value))
+        {
+            return null;
+        }
+
+        return DateTimeOffset.FromUnixTimeSeconds(value);
     }
 }

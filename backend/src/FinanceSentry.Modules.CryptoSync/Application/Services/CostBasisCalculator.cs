@@ -5,6 +5,7 @@ namespace FinanceSentry.Modules.CryptoSync.Application.Services;
 public sealed record CostBasisResult(
     decimal CostBasisUsd,
     decimal AverageBuyPriceUsd,
+    decimal RemainingQuantity,
     decimal RealizedPnlUsd,
     DateTime? LastTradeAt,
     long LastTradeId,
@@ -66,6 +67,7 @@ public sealed class CostBasisCalculator
         return new CostBasisResult(
             CostBasisUsd: Math.Round(runningCostUsd, 4),
             AverageBuyPriceUsd: Math.Round(avgBuyPrice, 8),
+            RemainingQuantity: Math.Round(runningQty, 12),
             RealizedPnlUsd: Math.Round(realizedPnl, 4),
             LastTradeAt: lastAt,
             LastTradeId: lastId,
