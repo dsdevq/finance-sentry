@@ -23,7 +23,9 @@ public class IBKRSyncJobTests
 
     private static IBKRCredential MakeCredential(Guid userId)
     {
-        var c = new IBKRCredential(userId, [1], [2], [3], [4], [5], [6], keyVersion: 1);
+        var c = new IBKRCredential(
+            userId, "FINSENTRY", "access-token", "dh-pem",
+            [1], [2], [3], [4], [5], [6], [7], [8], [9], keyVersion: 1);
         c.UpdateAccountId("U1234567");
         return c;
     }

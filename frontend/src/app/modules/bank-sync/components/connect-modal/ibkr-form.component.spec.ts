@@ -8,6 +8,15 @@ import {type ConnectStrategy} from '../../strategies/connect-strategy';
 import {CONNECT_STRATEGY} from '../../strategies/connect-strategy.token';
 import {IbkrFormComponent} from './ibkr-form.component';
 
+const VALID_FORM = {
+  consumerKey: 'finsentry',
+  accessToken: '  token-abc  ',
+  accessTokenSecret: 'secret-xyz',
+  signatureKey: '-----BEGIN PRIVATE KEY-----sig-----END PRIVATE KEY-----',
+  encryptionKey: '-----BEGIN PRIVATE KEY-----enc-----END PRIVATE KEY-----',
+  dhParam: '-----BEGIN DH PARAMETERS-----dh-----END DH PARAMETERS-----',
+};
+
 function buildConnectStore(errorCode: Nullable<string> = null) {
   return {
     errorCode: signal<Nullable<string>>(errorCode),
@@ -50,20 +59,27 @@ describe('IbkrFormComponent', () => {
     TestBed.resetTestingModule();
   });
 
-  it('submit() dispatches store.connect with the trimmed credentials', () => {
+  it('submit() dispatches store.connect with trimmed, upper-cased OAuth artifacts', () => {
     const store = buildConnectStore();
     const strategy = buildStrategy();
     configure(store, buildAccountsStore(), strategy);
 
     const fixture = TestBed.createComponent(IbkrFormComponent);
     const cmp = fixture.componentInstance;
-    cmp.form.setValue({username: '  ibkr-user  ', password: 'ibkr-pass'});
+    cmp.form.setValue(VALID_FORM);
 
     cmp.submit();
 
     expect(store.connect).toHaveBeenCalledWith({
       strategy,
-      payload: {username: 'ibkr-user', password: 'ibkr-pass'},
+      payload: {
+        consumerKey: 'FINSENTRY',
+        accessToken: 'token-abc',
+        accessTokenSecret: 'secret-xyz',
+        signatureKey: VALID_FORM.signatureKey,
+        encryptionKey: VALID_FORM.encryptionKey,
+        dhParam: VALID_FORM.dhParam,
+      },
     });
   });
 
@@ -75,7 +91,21 @@ describe('IbkrFormComponent', () => {
     fixture.componentInstance.submit();
 
     expect(store.connect).not.toHaveBeenCalled();
-    expect(fixture.componentInstance.form.controls.username.touched).toBe(true);
+    expect(fixture.componentInstance.form.controls.consumerKey.touched).toBe(true);
+  });
+
+  it('rejects a consumer key that is not exactly 9 characters', () => {
+    const store = buildConnectStore();
+    configure(store, buildAccountsStore(), buildStrategy());
+
+    const fixture = TestBed.createComponent(IbkrFormComponent);
+    const cmp = fixture.componentInstance;
+    cmp.form.setValue({...VALID_FORM, consumerKey: 'SHORT'});
+
+    cmp.submit();
+
+    expect(store.connect).not.toHaveBeenCalled();
+    expect(cmp.form.controls.consumerKey.valid).toBe(false);
   });
 
   it('isDuplicateError flips when error code is IBKR_DUPLICATE', () => {
@@ -93,13 +123,13 @@ describe('IbkrFormComponent', () => {
 
     const fixture = TestBed.createComponent(IbkrFormComponent);
     const cmp = fixture.componentInstance;
-    cmp.form.setValue({username: 'x', password: 'y'});
+    cmp.form.setValue(VALID_FORM);
 
     cmp.disconnectExisting();
 
     expect(accounts.disconnectIBKR).toHaveBeenCalledOnce();
     expect(store.resetError).toHaveBeenCalledOnce();
-    expect(cmp.form.controls.username.value).toBe('');
-    expect(cmp.form.controls.password.value).toBe('');
+    expect(cmp.form.controls.consumerKey.value).toBe('');
+    expect(cmp.form.controls.accessTokenSecret.value).toBe('');
   });
 });

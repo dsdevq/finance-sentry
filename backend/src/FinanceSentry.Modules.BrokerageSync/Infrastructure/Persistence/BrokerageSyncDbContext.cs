@@ -27,12 +27,18 @@ public sealed class BrokerageSyncDbContext : DbContext
             entity.Property(e => e.IsActive).IsRequired();
             entity.Property(e => e.CreatedAt).IsRequired();
             entity.Property(e => e.LastSyncError).HasMaxLength(1000);
-            entity.Property(e => e.EncryptedUsername).IsRequired().HasColumnType("bytea");
-            entity.Property(e => e.UsernameIv).IsRequired().HasColumnType("bytea");
-            entity.Property(e => e.UsernameAuthTag).IsRequired().HasColumnType("bytea");
-            entity.Property(e => e.EncryptedPassword).IsRequired().HasColumnType("bytea");
-            entity.Property(e => e.PasswordIv).IsRequired().HasColumnType("bytea");
-            entity.Property(e => e.PasswordAuthTag).IsRequired().HasColumnType("bytea");
+            entity.Property(e => e.ConsumerKey).IsRequired().HasMaxLength(9);
+            entity.Property(e => e.AccessToken).IsRequired().HasMaxLength(256);
+            entity.Property(e => e.DhParam).IsRequired().HasColumnType("text");
+            entity.Property(e => e.EncryptedAccessTokenSecret).IsRequired().HasColumnType("bytea");
+            entity.Property(e => e.AccessTokenSecretIv).IsRequired().HasColumnType("bytea");
+            entity.Property(e => e.AccessTokenSecretAuthTag).IsRequired().HasColumnType("bytea");
+            entity.Property(e => e.EncryptedSignatureKey).IsRequired().HasColumnType("bytea");
+            entity.Property(e => e.SignatureKeyIv).IsRequired().HasColumnType("bytea");
+            entity.Property(e => e.SignatureKeyAuthTag).IsRequired().HasColumnType("bytea");
+            entity.Property(e => e.EncryptedEncryptionKey).IsRequired().HasColumnType("bytea");
+            entity.Property(e => e.EncryptionKeyIv).IsRequired().HasColumnType("bytea");
+            entity.Property(e => e.EncryptionKeyAuthTag).IsRequired().HasColumnType("bytea");
             entity.Property(e => e.KeyVersion).IsRequired().HasDefaultValue(1);
         });
 

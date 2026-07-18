@@ -23,6 +23,7 @@ public class WealthDbContext(DbContextOptions<WealthDbContext> options) : DbCont
         e.Property(s => s.TotalNetWorth).HasColumnType("numeric(18,2)").IsRequired();
         e.Property(s => s.Currency).IsRequired().HasMaxLength(3);
         e.Property(s => s.TakenAt).HasDefaultValueSql("now()");
+        e.Property(s => s.StaleSleeves).HasColumnName("stale_sleeves").HasMaxLength(64);
 
         e.HasIndex(s => new { s.UserId, s.SnapshotDate })
             .IsDescending(false, true)

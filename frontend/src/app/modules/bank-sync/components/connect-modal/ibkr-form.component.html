@@ -1,23 +1,68 @@
 <form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-cmn-6">
   <cmn-form-field
-    [control]="form.controls.username"
-    label="IBKR username"
-    hint="The IBKR Client Portal username. Use a paper-trading or read-only account whenever possible."
+    [control]="form.controls.consumerKey"
+    label="Consumer key"
+    hint="The 9-character key you chose on IBKR's self-service OAuth portal."
   >
+    <cmn-input formControlName="consumerKey" type="text" placeholder="e.g. FINSENTRY" />
+  </cmn-form-field>
+
+  <cmn-form-field [control]="form.controls.accessToken" label="Access token">
     <cmn-input
-      formControlName="username"
+      formControlName="accessToken"
       type="text"
-      autocomplete="username"
-      placeholder="IBKR username"
+      placeholder="Access token from the portal"
     />
   </cmn-form-field>
 
-  <cmn-form-field [control]="form.controls.password" label="IBKR password">
+  <cmn-form-field
+    [control]="form.controls.accessTokenSecret"
+    label="Access token secret"
+    hint="Shown only once on the portal. Stored encrypted at rest."
+  >
     <cmn-input
-      formControlName="password"
+      formControlName="accessTokenSecret"
       type="password"
-      autocomplete="current-password"
-      placeholder="IBKR password"
+      placeholder="Access token secret"
+    />
+  </cmn-form-field>
+
+  <cmn-form-field
+    [control]="form.controls.signatureKey"
+    label="Signature key (private_signature.pem)"
+    hint="RSA key that signs the daily session-token request."
+  >
+    <input
+      (change)="onFileSelected($event, 'signatureKey')"
+      type="file"
+      accept=".pem"
+      class="text-cmn-sm file:mr-cmn-3 file:rounded-cmn-md file:border-0 file:bg-cmn-surface-raised file:px-cmn-3 file:py-cmn-1"
+    />
+  </cmn-form-field>
+
+  <cmn-form-field
+    [control]="form.controls.encryptionKey"
+    label="Encryption key (private_encryption.pem)"
+    hint="RSA key that decrypts the access token secret."
+  >
+    <input
+      (change)="onFileSelected($event, 'encryptionKey')"
+      type="file"
+      accept=".pem"
+      class="text-cmn-sm file:mr-cmn-3 file:rounded-cmn-md file:border-0 file:bg-cmn-surface-raised file:px-cmn-3 file:py-cmn-1"
+    />
+  </cmn-form-field>
+
+  <cmn-form-field
+    [control]="form.controls.dhParam"
+    label="DH parameters (dhparam.pem)"
+    hint="Diffie-Hellman parameters seeding the session-token exchange."
+  >
+    <input
+      (change)="onFileSelected($event, 'dhParam')"
+      type="file"
+      accept=".pem"
+      class="text-cmn-sm file:mr-cmn-3 file:rounded-cmn-md file:border-0 file:bg-cmn-surface-raised file:px-cmn-3 file:py-cmn-1"
     />
   </cmn-form-field>
 
@@ -34,9 +79,9 @@
     <cmn-alert variant="error">{{ store.errorMessage() }}</cmn-alert>
   }
 
-  <cmn-alert variant="accent" icon="ShieldCheck" title="Per-user gateway">
-    Credentials are encrypted at rest (AES-256-GCM). A dedicated IBeam gateway container is spawned
-    for your account and holds the IBKR session privately.
+  <cmn-alert variant="accent" icon="ShieldCheck" title="Signed OAuth session">
+    Your keys are encrypted at rest (AES-256-GCM) and used to sign each IBKR request. No password,
+    no 2FA prompts, and no session conflict with the IBKR mobile app.
   </cmn-alert>
 
   <cmn-dialog-actions align="between">

@@ -18,6 +18,12 @@ public sealed class IBKRCredentialRepository : IIBKRCredentialRepository
         await _context.IBKRCredentials.AddAsync(credential, ct);
     }
 
+    public async Task<IBKRCredential?> GetByIdAsync(Guid id, CancellationToken ct = default)
+    {
+        return await _context.IBKRCredentials
+            .FirstOrDefaultAsync(c => c.Id == id, ct);
+    }
+
     public async Task<IBKRCredential?> GetByUserIdAsync(Guid userId, CancellationToken ct = default)
     {
         return await _context.IBKRCredentials

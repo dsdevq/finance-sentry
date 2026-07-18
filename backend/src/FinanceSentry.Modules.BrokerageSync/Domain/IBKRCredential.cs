@@ -1,13 +1,17 @@
 namespace FinanceSentry.Modules.BrokerageSync.Domain;
 
 /// <summary>
-/// Represents a single user's link to an IBKR account.
+/// Represents a single user's link to an IBKR account via OAuth 1.0a
+/// self-service.
 ///
-/// Per-user IBeam model: each connected user has their IBKR username + password
-/// stored encrypted at rest (AES-256-GCM). On connect, the backend spawns a
-/// dedicated IBeam container for the user using the decrypted credentials; the
-/// container name is derived from <see cref="Id"/> so the API can address the
-/// per-user gateway by DNS on the compose network.
+/// Each user registers their own consumer key + access token on IBKR's
+/// self-service OAuth portal and generates three PEM artifacts locally. The two
+/// RSA private keys and the access token secret are stored encrypted at rest
+/// (AES-256-GCM); the consumer key, access token, and (public) Diffie-Hellman
+/// parameters are stored in the clear. The backend derives a daily live session
+/// token from these and signs every IBKR request — no username/password, no
+/// IBeam container, no 2FA prompt, and no session conflict with the IBKR mobile
+/// app.
 /// </summary>
 public sealed class IBKRCredential
 {
@@ -19,36 +23,63 @@ public sealed class IBKRCredential
     public string? LastSyncError { get; private set; }
     public DateTime CreatedAt { get; private set; }
 
-    public byte[] EncryptedUsername { get; private set; } = [];
-    public byte[] UsernameIv { get; private set; } = [];
-    public byte[] UsernameAuthTag { get; private set; } = [];
-    public byte[] EncryptedPassword { get; private set; } = [];
-    public byte[] PasswordIv { get; private set; } = [];
-    public byte[] PasswordAuthTag { get; private set; } = [];
+    /// <summary>The 9-character consumer key registered on the IBKR portal (identifier, not secret).</summary>
+    public string ConsumerKey { get; private set; } = string.Empty;
+
+    /// <summary>The OAuth access token (identifier, not secret).</summary>
+    public string AccessToken { get; private set; } = string.Empty;
+
+    /// <summary>Diffie-Hellman parameters (public) seeding the live-session-token exchange.</summary>
+    public string DhParam { get; private set; } = string.Empty;
+
+    public byte[] EncryptedAccessTokenSecret { get; private set; } = [];
+    public byte[] AccessTokenSecretIv { get; private set; } = [];
+    public byte[] AccessTokenSecretAuthTag { get; private set; } = [];
+
+    public byte[] EncryptedSignatureKey { get; private set; } = [];
+    public byte[] SignatureKeyIv { get; private set; } = [];
+    public byte[] SignatureKeyAuthTag { get; private set; } = [];
+
+    public byte[] EncryptedEncryptionKey { get; private set; } = [];
+    public byte[] EncryptionKeyIv { get; private set; } = [];
+    public byte[] EncryptionKeyAuthTag { get; private set; } = [];
+
     public int KeyVersion { get; private set; } = 1;
 
     private IBKRCredential() { }
 
     public IBKRCredential(
         Guid userId,
-        byte[] encryptedUsername,
-        byte[] usernameIv,
-        byte[] usernameAuthTag,
-        byte[] encryptedPassword,
-        byte[] passwordIv,
-        byte[] passwordAuthTag,
+        string consumerKey,
+        string accessToken,
+        string dhParam,
+        byte[] encryptedAccessTokenSecret,
+        byte[] accessTokenSecretIv,
+        byte[] accessTokenSecretAuthTag,
+        byte[] encryptedSignatureKey,
+        byte[] signatureKeyIv,
+        byte[] signatureKeyAuthTag,
+        byte[] encryptedEncryptionKey,
+        byte[] encryptionKeyIv,
+        byte[] encryptionKeyAuthTag,
         int keyVersion)
     {
         Id = Guid.NewGuid();
         UserId = userId;
         IsActive = true;
         CreatedAt = DateTime.UtcNow;
-        EncryptedUsername = encryptedUsername;
-        UsernameIv = usernameIv;
-        UsernameAuthTag = usernameAuthTag;
-        EncryptedPassword = encryptedPassword;
-        PasswordIv = passwordIv;
-        PasswordAuthTag = passwordAuthTag;
+        ConsumerKey = consumerKey;
+        AccessToken = accessToken;
+        DhParam = dhParam;
+        EncryptedAccessTokenSecret = encryptedAccessTokenSecret;
+        AccessTokenSecretIv = accessTokenSecretIv;
+        AccessTokenSecretAuthTag = accessTokenSecretAuthTag;
+        EncryptedSignatureKey = encryptedSignatureKey;
+        SignatureKeyIv = signatureKeyIv;
+        SignatureKeyAuthTag = signatureKeyAuthTag;
+        EncryptedEncryptionKey = encryptedEncryptionKey;
+        EncryptionKeyIv = encryptionKeyIv;
+        EncryptionKeyAuthTag = encryptionKeyAuthTag;
         KeyVersion = keyVersion;
     }
 
@@ -65,24 +96,36 @@ public sealed class IBKRCredential
     public void Deactivate() => IsActive = false;
 
     public void Reactivate(
-        byte[] encryptedUsername,
-        byte[] usernameIv,
-        byte[] usernameAuthTag,
-        byte[] encryptedPassword,
-        byte[] passwordIv,
-        byte[] passwordAuthTag,
+        string consumerKey,
+        string accessToken,
+        string dhParam,
+        byte[] encryptedAccessTokenSecret,
+        byte[] accessTokenSecretIv,
+        byte[] accessTokenSecretAuthTag,
+        byte[] encryptedSignatureKey,
+        byte[] signatureKeyIv,
+        byte[] signatureKeyAuthTag,
+        byte[] encryptedEncryptionKey,
+        byte[] encryptionKeyIv,
+        byte[] encryptionKeyAuthTag,
         int keyVersion)
     {
         IsActive = true;
         AccountId = null;
         LastSyncAt = null;
         LastSyncError = null;
-        EncryptedUsername = encryptedUsername;
-        UsernameIv = usernameIv;
-        UsernameAuthTag = usernameAuthTag;
-        EncryptedPassword = encryptedPassword;
-        PasswordIv = passwordIv;
-        PasswordAuthTag = passwordAuthTag;
+        ConsumerKey = consumerKey;
+        AccessToken = accessToken;
+        DhParam = dhParam;
+        EncryptedAccessTokenSecret = encryptedAccessTokenSecret;
+        AccessTokenSecretIv = accessTokenSecretIv;
+        AccessTokenSecretAuthTag = accessTokenSecretAuthTag;
+        EncryptedSignatureKey = encryptedSignatureKey;
+        SignatureKeyIv = signatureKeyIv;
+        SignatureKeyAuthTag = signatureKeyAuthTag;
+        EncryptedEncryptionKey = encryptedEncryptionKey;
+        EncryptionKeyIv = encryptionKeyIv;
+        EncryptionKeyAuthTag = encryptionKeyAuthTag;
         KeyVersion = keyVersion;
     }
 }

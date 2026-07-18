@@ -7,7 +7,13 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace FinanceSentry.Modules.BrokerageSync.API.Controllers;
 
-public sealed record ConnectIBKRRequest(string Username, string Password);
+public sealed record ConnectIBKRRequest(
+    string ConsumerKey,
+    string AccessToken,
+    string AccessTokenSecret,
+    string SignatureKey,
+    string EncryptionKey,
+    string DhParam);
 
 [ApiController]
 [Route("brokerage")]
@@ -17,19 +23,23 @@ public sealed class BrokerageController(
     IQueryHandler<GetBrokerageHoldingsQuery, BrokerageHoldingsResponse> holdingsHandler) : ControllerBase
 {
     /// <summary>
-    /// Blocking connect: awaits credentials persist → per-user IBeam spawn →
-    /// CPG auth (including 2FA push tap) → initial holdings sync. Typical
-    /// end-to-end latency is 20–60s. Client disconnect is honoured — the
-    /// request's CancellationToken tears the container down and rolls the
-    /// credential row back so no half-applied state leaks.
+    /// Persists the user's IBKR OAuth 1.0a artifacts (encrypting the secret
+    /// material at rest). Live-session-token derivation and the initial holdings
+    /// sync run out of band once the consumer key activates on IBKR's side.
     /// </summary>
     [HttpPost("ibkr/connect")]
     public async Task<IActionResult> Connect([FromBody] ConnectIBKRRequest request, CancellationToken ct)
     {
         try
         {
-            var result = await connector.ConnectAsync(
-                User.RequireUserId(), request.Username, request.Password, ct);
+            var artifacts = new ConnectIBKRArtifacts(
+                request.ConsumerKey,
+                request.AccessToken,
+                request.AccessTokenSecret,
+                request.SignatureKey,
+                request.EncryptionKey,
+                request.DhParam);
+            var result = await connector.ConnectAsync(User.RequireUserId(), artifacts, ct);
             return Ok(result);
         }
         catch (IBKRConnectException ex)
