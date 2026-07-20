@@ -90,6 +90,10 @@ internal sealed class FakeMarketStructureReader(MarketStructureSnapshot? snapsho
     public Task<IReadOnlyList<PairwiseCorrelation>> GetPairwiseCorrelationsAsync(
         IReadOnlyCollection<string> tickers, CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<PairwiseCorrelation>>([]);
+
+    public Task<IReadOnlyList<UniverseStructureEntry>> GetUniverseStructuresAsync(CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<UniverseStructureEntry>>(
+            snapshot is null ? [] : [new UniverseStructureEntry(snapshot.Ticker, false, snapshot)]);
 }
 
 internal sealed class FakeSecEdgarService(IReadOnlyList<FundamentalFact>? facts = null) : ISecEdgarService
@@ -116,6 +120,9 @@ internal sealed class FakeIpsRepository(InvestmentPolicyStatement? ips = null) :
 
     public Task AddVersionAsync(InvestmentPolicyStatement statement, CancellationToken ct = default)
         => Task.CompletedTask;
+
+    public Task<IReadOnlyList<Guid>> GetUserIdsWithCurrentIpsAsync(CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<Guid>>(ips is null ? [] : [ips.UserId]);
 }
 
 internal sealed class FakeBrokerageHoldingsReader(IReadOnlyList<BrokerageHoldingSummary>? holdings = null)

@@ -10,6 +10,7 @@ using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 public static class ResearchModule
 {
@@ -54,6 +55,12 @@ public static class ResearchModule
                 "opportunity-candidate-expiry",
                 job => job.ExecuteAsync(CancellationToken.None),
                 Cron.Daily());
+
+            var opportunity = sp.GetRequiredService<IOptions<OpportunityOptions>>().Value;
+            mgr.AddOrUpdate<OpportunityScanJob>(
+                "opportunity-scan",
+                job => job.ExecuteAsync(CancellationToken.None),
+                Cron.Daily(opportunity.ScanHourUtc));
         }
     }
 
@@ -142,6 +149,7 @@ public static class ResearchModule
         services.AddScoped<ThesisMonitorJob>();
         services.AddScoped<ThesisTrackRecordSnapshotJob>();
         services.AddScoped<CandidateExpiryJob>();
+        services.AddScoped<OpportunityScanJob>();
 
         services.AddSingleton<IJobRegistrar, JobRegistrar>();
 

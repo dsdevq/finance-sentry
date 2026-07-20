@@ -9,7 +9,12 @@ using FinanceSentry.Modules.Research.Domain.Scoring;
 using FinanceSentry.Modules.Research.Domain;
 using Microsoft.Extensions.Options;
 
-public record ScoreCandidateCommand(Guid UserId, string Ticker, string? DecisionNote = null) : ICommand<ScoreCandidateResult>;
+public record ScoreCandidateCommand(
+    Guid UserId,
+    string Ticker,
+    string? DecisionNote = null,
+    CandidateSource Source = CandidateSource.User,
+    IReadOnlyList<string>? NominationReasons = null) : ICommand<ScoreCandidateResult>;
 
 public sealed record ScoreCandidateResult(
     Guid CandidateId,
@@ -45,11 +50,15 @@ public sealed class ScoreCandidateCommandHandler(
         var ticker = command.Ticker.Trim().ToUpperInvariant();
 
         var (candidate, isNew) = await candidateRepo.UpsertActiveAsync(
-            command.UserId, ticker, CandidateSource.User, TimeSpan.FromDays(_options.CandidateTtlDays), ct);
+            command.UserId, ticker, command.Source, TimeSpan.FromDays(_options.CandidateTtlDays), ct);
 
-        if (isNew)
+        IReadOnlyList<string> incomingReasons = command.NominationReasons is { Count: > 0 }
+            ? command.NominationReasons
+            : [DefaultNominationReason];
+        var newReasons = incomingReasons.Where(r => !candidate.NominationReasons.Contains(r, StringComparer.OrdinalIgnoreCase)).ToList();
+        if (newReasons.Count > 0)
         {
-            candidate.NominationReasons = [DefaultNominationReason];
+            candidate.NominationReasons.AddRange(newReasons);
             await candidateRepo.UpdateAsync(candidate, ct);
         }
 

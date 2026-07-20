@@ -34,4 +34,22 @@ public sealed class OpportunityOptions
 
     /// <summary>Bumped whenever the scoring normalization rules change, so old scorecards stay honest (FR-002).</summary>
     public int FormulaVersion { get; set; } = 1;
+
+    /// <summary>Sector rotation ranks 1..N qualify as "top rotating" for scan rule (a) (FR-008a).</summary>
+    public int ScanTopRotatingSectors { get; set; } = 2;
+
+    /// <summary>Universe RS percentile at/above this is "top-quartile" for scan rule (a).</summary>
+    public int ScanTopQuartileRsPercentile { get; set; } = 75;
+
+    /// <summary>Universe RS percentile at/above this is "top-decile" for scan rule (b) (FR-008b).</summary>
+    public int ScanTopDecileRsPercentile { get; set; } = 90;
+
+    /// <summary>Volume ratio at/above this counts as above-average for the breakout rule (c) (FR-008c).</summary>
+    public decimal ScanBreakoutVolumeRatioMin { get; set; } = 1.2m;
+
+    /// <summary>Most nominations a single scan run may score; excess is logged and dropped (alert-flood guard).</summary>
+    public int ScanMaxNominationsPerRun { get; set; } = 5;
+
+    /// <summary>Hour (UTC) the daily opportunity scan runs — after Radar's 23:00 UTC compute job has refreshed structure.</summary>
+    public int ScanHourUtc { get; set; } = 0;
 }

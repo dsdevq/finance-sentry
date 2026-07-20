@@ -16,6 +16,13 @@ public class IpsRepository(ResearchDbContext db) : IIpsRepository
             .OrderByDescending(x => x.Version)
             .ToListAsync(ct);
 
+    public async Task<IReadOnlyList<Guid>> GetUserIdsWithCurrentIpsAsync(CancellationToken ct = default)
+        => await db.PolicyStatements.AsNoTracking()
+            .Where(x => x.IsCurrent)
+            .Select(x => x.UserId)
+            .Distinct()
+            .ToListAsync(ct);
+
     public async Task<int> GetMaxVersionAsync(Guid userId, CancellationToken ct = default)
         => await db.PolicyStatements
             .Where(x => x.UserId == userId)
