@@ -41,21 +41,6 @@ services:
       TrueLayer__FrontendRedirectBase: ${TRUELAYER_FRONTEND_REDIRECT_BASE:-https://lifekit-vps.tail1cb676.ts.net:4200}
       TrueLayer__CallbackPath: /api/v1/accounts/truelayer/callback
       TrueLayer__Scopes: "info accounts balance transactions cards offline_access"
-      # Per-user IBeam orchestration. On this VPS the compose network is named
-      # "finance-sentry" (no compose prefix — see networks: block at the bottom).
-      # Image is our custom build (Dockerfile.ibeam) with a widened conf.yaml
-      # ips.allow — upstream voyz/ibeam only permits 172.17.0.* and silently
-      # 404s cross-container calls from any other Docker subnet.
-      IBeam__Image: "finance-sentry/ibeam:local"
-      IBeam__Network: "${IBEAM_NETWORK:-finance-sentry}"
-      IBeam__ContainerNamePrefix: "finance-sentry-ibkr"
-      IBeam__SpawnTimeoutSeconds: "300"
-      IBeam__DockerEndpoint: "unix:///var/run/docker.sock"
-      # 2FA method IBeam clicks when the account has multiple second-factor
-      # devices enrolled and IBKR shows the selector screen. Must match the
-      # option text on the login page exactly ("IB Key" or "IBKR Mobile"
-      # depending on page version) — override via .env if the default stalls.
-      IBeam__TwoFaSelectTarget: "${IBEAM_TWO_FA_SELECT_TARGET:-IB Key}"
     ports:
       - "127.0.0.1:${API_PORT:-5001}:5000"
     depends_on:
@@ -72,14 +57,6 @@ services:
       start_period: 40s
     volumes:
       - api_logs:/app/logs
-      # Docker socket for per-user IBeam container orchestration
-      - /var/run/docker.sock:/var/run/docker.sock
-    # The image runs as `nobody` (Dockerfile hardening). To let the API talk to
-    # /var/run/docker.sock (root:docker on the host), we add the host's docker
-    # gid as a supplementary group. deploy.sh exports DOCKER_GID from
-    # `stat -c '%g' /var/run/docker.sock`. Default 999 covers common Linux hosts.
-    group_add:
-      - "${DOCKER_GID:-999}"
     logging:
       driver: json-file
       options: { max-size: "10m", max-file: "3" }
@@ -155,25 +132,6 @@ services:
     logging:
       driver: json-file
       options: { max-size: "10m", max-file: "3" }
-
-  # Per-user IBeam gateway containers are spawned dynamically by the API via
-  # the Docker socket (mounted above). No shared single-tenant ibkr-gateway
-  # service — connect via POST /api/v1/brokerage/ibkr/connect to spin one up
-  # under the name finance-sentry-ibkr-{shortId}.
-  #
-  # The image itself (our custom variant of voyz/ibeam with a wider
-  # ips.allow: 172.* in conf.yaml) is built once on deploy via this phantom
-  # service. It runs `/bin/true` and exits immediately — its only job is to
-  # give compose a build target so `docker compose up -d --build` produces the
-  # `finance-sentry/ibeam:local` tag the API references at spawn time.
-  ibeam-image:
-    image: finance-sentry/ibeam:local
-    build:
-      context: .
-      dockerfile: Dockerfile.ibeam
-      platforms: [linux/arm64]
-    entrypoint: ["/bin/true"]
-    restart: "no"
 
 volumes:
   postgres_data:

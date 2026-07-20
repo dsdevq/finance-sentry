@@ -4,7 +4,6 @@ using System.Security.Claims;
 using FinanceSentry.Modules.BrokerageSync.Domain;
 using FinanceSentry.Modules.BrokerageSync.Domain.Interfaces;
 using FinanceSentry.Modules.BrokerageSync.Domain.Repositories;
-using FinanceSentry.Modules.BrokerageSync.Infrastructure.IBKR;
 using FinanceSentry.Modules.BrokerageSync.Infrastructure.Persistence;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
@@ -107,7 +106,6 @@ public class BrokerageApiFactory : WebApplicationFactory<Program>
     public Mock<IIBKRCredentialRepository> CredentialRepoMock { get; } = new(MockBehavior.Loose);
     public Mock<IBrokerageHoldingRepository> HoldingRepoMock { get; } = new(MockBehavior.Loose);
     public Mock<IBrokerAdapter> AdapterMock { get; } = new(MockBehavior.Loose);
-    public Mock<IIBeamContainerManager> ContainerManagerMock { get; } = new(MockBehavior.Loose);
 
     public Guid TestUserId { get; } = Guid.NewGuid();
 
@@ -118,7 +116,6 @@ public class BrokerageApiFactory : WebApplicationFactory<Program>
             ReplaceService(services, CredentialRepoMock.Object);
             ReplaceService(services, HoldingRepoMock.Object);
             ReplaceService<IBrokerAdapter>(services, AdapterMock.Object);
-            ReplaceService(services, ContainerManagerMock.Object);
 
             ReplaceDbContextWithInMemory<FinanceSentry.Modules.BankSync.Infrastructure.Persistence.BankSyncDbContext>(
                 services, $"BrokerageTestBankSync_{Guid.NewGuid()}");

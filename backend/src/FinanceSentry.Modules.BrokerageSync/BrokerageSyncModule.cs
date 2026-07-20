@@ -1,12 +1,10 @@
 namespace FinanceSentry.Modules.BrokerageSync;
 
-using Docker.DotNet;
 using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Modules.BrokerageSync.Application.Connect;
 using FinanceSentry.Modules.BrokerageSync.Application.Services;
 using FinanceSentry.Modules.BrokerageSync.Domain.Interfaces;
 using FinanceSentry.Modules.BrokerageSync.Domain.Repositories;
-using FinanceSentry.Modules.BrokerageSync.Infrastructure.IBKR;
 using FinanceSentry.Modules.BrokerageSync.Infrastructure.IBKR.OAuth;
 using FinanceSentry.Modules.BrokerageSync.Infrastructure.Jobs;
 using FinanceSentry.Modules.BrokerageSync.Infrastructure.Persistence;
@@ -41,27 +39,6 @@ public static class BrokerageSyncModule
     {
         services.AddDbContext<BrokerageSyncDbContext>(
             o => o.UseNpgsql(config.GetConnectionString("Default")!, b => b.MigrationsHistoryTable("__EFMigrationsHistory", "public")));
-
-        services.Configure<IBeamOptions>(config.GetSection(IBeamOptions.SectionName));
-
-        services.AddHttpClient<IBKRGatewayClient>(client =>
-                client.DefaultRequestHeaders.UserAgent.ParseAdd("FinanceSentry/1.0"))
-            .ConfigurePrimaryHttpMessageHandler(_ => new HttpClientHandler
-            {
-                UseCookies = false,
-                // IBeam serves a self-signed cert; trust is anchored on the
-                // private Docker network the API and gateway share.
-                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
-            });
-
-        services.AddSingleton<IDockerClient>(sp =>
-        {
-            var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<IBeamOptions>>().Value;
-            return new DockerClientConfiguration(new Uri(options.DockerEndpoint)).CreateClient();
-        });
-
-        services.AddSingleton<IIBeamGatewayResolver, IBeamGatewayResolver>();
-        services.AddSingleton<IIBeamContainerManager, IBeamContainerManager>();
 
         // Blocking connect: request-scoped, awaited by the controller. No
         // session store, no polling — the HTTP request itself is the state

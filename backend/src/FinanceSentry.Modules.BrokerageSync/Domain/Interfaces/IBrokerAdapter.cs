@@ -4,9 +4,8 @@ namespace FinanceSentry.Modules.BrokerageSync.Domain.Interfaces;
 /// Abstraction over a brokerage adapter.
 ///
 /// Each method takes the id of the calling user's <c>IBKRCredential</c> so the
-/// adapter can resolve the per-user IBeam gateway URL. Under the per-user
-/// container model (stage 2) each user gets their own IBeam and the API talks
-/// to it by DNS name on the shared Docker network.
+/// adapter can resolve that user's stored OAuth artifacts and sign requests
+/// against the broker's Web API on their behalf.
 /// </summary>
 public interface IBrokerAdapter
 {

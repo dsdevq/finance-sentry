@@ -50,8 +50,6 @@
     <PackageVersion Include="Serilog.Enrichers.Context" Version="4.6.0" />
     <PackageVersion Include="Serilog.Enrichers.Environment" Version="2.3.0" />
 
-    <!-- Docker.DotNet — per-user IBeam container orchestration -->
-    <PackageVersion Include="Docker.DotNet" Version="3.125.15" />
 
     <!-- Polly / HTTP / JSON -->
     <PackageVersion Include="Polly" Version="8.2.0" />

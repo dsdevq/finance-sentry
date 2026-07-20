@@ -41,16 +41,6 @@ services:
       Jwt__Issuer: "https://finance-sentry.local"
       Deduplication__MasterKeyBase64: dGVzdC1kZWR1cGxpY2F0aW9uLWtleS1jaGFuZ2UtaW4tcHJvZHVjdGlvbg==
       GOOGLEOAUTH__CLIENTID: "${GOOGLE_CLIENT_ID:-}"
-      # Per-user IBeam orchestration.
-      # Image is our custom build (Dockerfile.ibeam) that bakes in a conf.yaml
-      # allowlisting the wider `172.*` range; upstream `voyz/ibeam:latest` only
-      # permits `172.17.0.*` (the default bridge subnet) and blocks all API
-      # traffic from other compose networks with a silent 404.
-      IBeam__Image: "finance-sentry/ibeam:local"
-      IBeam__Network: "docker_finance-sentry-network"
-      IBeam__ContainerNamePrefix: "finance-sentry-ibkr"
-      IBeam__SpawnTimeoutSeconds: "300"
-      IBeam__DockerEndpoint: "unix:///var/run/docker.sock"
     ports:
       - "5001:5000"
     depends_on:
@@ -65,14 +55,6 @@ services:
       retries: 5
     volumes:
       - ./logs:/app/logs
-      # Docker socket for per-user IBeam container orchestration
-      - /var/run/docker.sock:/var/run/docker.sock
-    # The image runs as `nobody` (Dockerfile hardening). To let the API talk to
-    # /var/run/docker.sock (root:docker on the host), add the host's docker gid
-    # as a supplementary group. Populate DOCKER_GID in docker/.env from
-    # `stat -c '%g' /var/run/docker.sock`. Default 999 covers common Linux hosts.
-    group_add:
-      - "${DOCKER_GID:-999}"
 
   mcp:
     build:
@@ -95,23 +77,6 @@ services:
         condition: service_healthy
     networks:
       - finance-sentry-network
-
-  # Per-user IBeam gateway containers are spawned dynamically by the API via
-  # Docker socket (mounted above). No shared single-tenant ibkr-gateway
-  # service — connect via POST /api/v1/brokerage/ibkr/connect to spin one up.
-  #
-  # The image itself (our custom variant of voyz/ibeam with a wider
-  # ips.allow: 172.* in conf.yaml) is built once by the compose stack via this
-  # phantom service. It runs `/bin/true` and exits immediately; its only job is
-  # to give compose a build target so `docker compose up -d --build` produces
-  # the `finance-sentry/ibeam:local` tag the API references at spawn time.
-  ibeam-image:
-    image: finance-sentry/ibeam:local
-    build:
-      context: .
-      dockerfile: Dockerfile.ibeam
-    entrypoint: ["/bin/true"]
-    restart: "no"
 
   postgres:
     image: postgres:14-alpine
