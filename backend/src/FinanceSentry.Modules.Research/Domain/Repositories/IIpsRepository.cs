@@ -13,4 +13,7 @@ public interface IIpsRepository
 
     /// <summary>Persists a new IPS version, demoting any prior current version.</summary>
     Task AddVersionAsync(InvestmentPolicyStatement ips, CancellationToken ct = default);
+
+    /// <summary>Users with a current IPS on file — the books the opportunity scan nominates for.</summary>
+    Task<IReadOnlyList<Guid>> GetUserIdsWithCurrentIpsAsync(CancellationToken ct = default);
 }

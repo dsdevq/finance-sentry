@@ -14,9 +14,18 @@ public interface IMarketStructureReader
     /// </summary>
     Task<IReadOnlyList<PairwiseCorrelation>> GetPairwiseCorrelationsAsync(
         IReadOnlyCollection<string> tickers, CancellationToken ct = default);
+
+    /// <summary>
+    /// Structure snapshots for every active universe member (019 US2 scan input). Members whose
+    /// bars are missing are omitted. <see cref="UniverseStructureEntry.IsEtfLens"/> marks
+    /// benchmark/sector/industry ETFs — lenses, never auto-nominated as candidates.
+    /// </summary>
+    Task<IReadOnlyList<UniverseStructureEntry>> GetUniverseStructuresAsync(CancellationToken ct = default);
 }
 
 public sealed record PairwiseCorrelation(string TickerA, string TickerB, decimal Correlation);
+
+public sealed record UniverseStructureEntry(string Ticker, bool IsEtfLens, MarketStructureSnapshot Snapshot);
 
 /// <summary>
 /// Projection of Radar's <c>TickerStructure</c> across the module boundary, plus the 019 FR-003

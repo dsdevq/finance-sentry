@@ -47,6 +47,23 @@ public sealed class MarketStructureReader(
             DistanceFrom63dHigh(series));
     }
 
+    public async Task<IReadOnlyList<UniverseStructureEntry>> GetUniverseStructuresAsync(CancellationToken ct = default)
+    {
+        var members = await universe.ListActiveAsync(ct);
+        var entries = new List<UniverseStructureEntry>(members.Count);
+        foreach (var member in members)
+        {
+            var snapshot = await GetStructureAsync(member.Ticker, ct);
+            if (snapshot is not null)
+            {
+                var isEtfLens = member.Kind is UniverseKind.Benchmark or UniverseKind.Sector or UniverseKind.Industry;
+                entries.Add(new UniverseStructureEntry(snapshot.Ticker, isEtfLens, snapshot));
+            }
+        }
+
+        return entries;
+    }
+
     public async Task<IReadOnlyList<PairwiseCorrelation>> GetPairwiseCorrelationsAsync(
         IReadOnlyCollection<string> tickers, CancellationToken ct = default)
     {
