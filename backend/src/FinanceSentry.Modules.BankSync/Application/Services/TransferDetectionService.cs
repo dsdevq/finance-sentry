@@ -77,8 +77,9 @@ public class TransferDetectionService : ITransferDetectionService
         foreach (var tx in transactions)
         {
             if (tx.IsPending || !tx.IsActive) continue;
-            if (tx.TransactionType == "debit") debits.Add(tx);
-            else if (tx.TransactionType == "credit") credits.Add(tx);
+            var txType = tx.TransactionType?.Trim();
+            if (txType?.Equals("debit", StringComparison.OrdinalIgnoreCase) == true) debits.Add(tx);
+            else if (txType?.Equals("credit", StringComparison.OrdinalIgnoreCase) == true) credits.Add(tx);
         }
 
         if (debits.Count == 0 || credits.Count == 0)
