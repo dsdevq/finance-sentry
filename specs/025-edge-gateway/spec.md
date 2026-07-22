@@ -2,7 +2,7 @@
 
 **Feature Branch**: `025-edge-gateway`
 **Created**: 2026-07-09
-**Status**: Draft
+**Status**: Roadmap — spec only, not yet planned or implemented
 **Input**: User description: "Edge gateway: single reverse-proxy entrypoint in front of frontend, API and MCP with routing, TLS termination, rate limiting and health-based routing"
 
 ## User Scenarios & Testing *(mandatory)*

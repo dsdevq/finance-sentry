@@ -2,7 +2,7 @@
 
 **Feature Branch**: `003-auth-flow`  
 **Created**: 2026-04-11  
-**Status**: Draft  
+**Status**: Implemented
 **Input**: User description: "Auth flow — login and register pages, JWT token storage, HTTP interceptor to attach Bearer token to all API requests, route guards to protect authenticated pages."
 
 ## User Scenarios & Testing *(mandatory)*

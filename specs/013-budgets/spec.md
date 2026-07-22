@@ -2,7 +2,7 @@
 
 **Feature Branch**: `013-budgets`
 **Created**: 2026-05-02
-**Status**: Draft
+**Status**: Implemented
 **Input**: User description: "Needs budget CRUD + spending-vs-budget calculation by joining transaction categories. Category data from Plaid/Monobank needs to be reliable enough to aggregate against."
 
 ## User Scenarios & Testing *(mandatory)*

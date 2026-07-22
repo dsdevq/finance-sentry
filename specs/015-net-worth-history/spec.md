@@ -2,7 +2,7 @@
 
 **Feature Branch**: `015-net-worth-history`
 **Created**: 2026-05-02
-**Status**: Draft
+**Status**: Implemented
 **Input**: User description: "Dashboard net worth history chart. Currently 13 hardcoded monthly data points. Need to decide: periodic Hangfire snapshots vs on-demand aggregation from existing data. This decision shapes the schema entirely."
 
 ## User Scenarios & Testing *(mandatory)*

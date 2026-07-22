@@ -2,7 +2,7 @@
 
 **Feature Branch**: `011-connect-providers`
 **Created**: 2026-04-25
-**Status**: Draft
+**Status**: Implemented
 **Input**: User description: "I want you to implement connect feature of banks(plaid, monobank, etc), ibkr and binance. Design has been implemented by stitch"
 
 ## User Scenarios & Testing *(mandatory)*

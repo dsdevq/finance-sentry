@@ -2,7 +2,7 @@
 
 **Feature Branch**: `014-subscriptions`
 **Created**: 2026-05-02
-**Status**: Draft
+**Status**: Implemented
 **Input**: User description: "Most complex. Requires recurring-transaction detection algorithm (same merchant, ~same amount, ~30-day cadence). Need to decide: run on-demand vs scheduled, how to handle edge cases (annual subscriptions, variable amounts), and confidence threshold."
 
 ## User Scenarios & Testing *(mandatory)*

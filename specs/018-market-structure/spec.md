@@ -2,7 +2,7 @@
 
 **Feature Branch**: `018-market-structure`
 **Created**: 2026-07-07
-**Status**: Draft
+**Status**: Implemented
 **Input**: The "eyes" of the Radar (see `specs/ROADMAP.md`): daily price-history ingestion for a configurable universe, deterministic market-structure computations (relative strength, sector rotation, breadth, unusual moves, extension), and the shared append-only **signal log** that all Radar scanners write to.
 
 ## Why this spec exists

@@ -18,9 +18,9 @@
 
 **Purpose**: Domain types and persistence must exist before any capture or query logic.
 
-- [ ] T001 [P] Create `ThesisSubjectType` enum (`Thesis`, `Candidate`) in `backend/src/FinanceSentry.Modules.Research/Domain/ThesisSubjectType.cs`
-- [ ] T002 [P] Create `ThesisEventType` enum (`Created`, `Broken`, `Unbroken`, `Closed`, `Promoted`, `Rejected`, `Expired`, `Snapshot`) in `backend/src/FinanceSentry.Modules.Research/Domain/ThesisEventType.cs`
-- [ ] T003 Create `ThesisEvent` domain entity (fields per data-model.md: `Id`, `UserId`, `SubjectType`, `SubjectId`, `Ticker`, `EventType`, `Timestamp`, `SubjectPrice?`, `BenchmarkPrice?`, `BenchmarkTicker`, `PricesPending`, `DecisionNote?`) in `backend/src/FinanceSentry.Modules.Research/Domain/ThesisEvent.cs`
+- [X] T001 [P] Create `ThesisSubjectType` enum (`Thesis`, `Candidate`) in `backend/src/FinanceSentry.Modules.Research/Domain/ThesisSubjectType.cs`
+- [X] T002 [P] Create `ThesisEventType` enum (`Created`, `Broken`, `Unbroken`, `Closed`, `Promoted`, `Rejected`, `Expired`, `Snapshot`) in `backend/src/FinanceSentry.Modules.Research/Domain/ThesisEventType.cs`
+- [X] T003 Create `ThesisEvent` domain entity (fields per data-model.md: `Id`, `UserId`, `SubjectType`, `SubjectId`, `Ticker`, `EventType`, `Timestamp`, `SubjectPrice?`, `BenchmarkPrice?`, `BenchmarkTicker`, `PricesPending`, `DecisionNote?`) in `backend/src/FinanceSentry.Modules.Research/Domain/ThesisEvent.cs`
 
 ---
 
@@ -30,15 +30,15 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T004 [P] Create `IThesisEventRepository` (`AppendAsync`, `ListAsync(subjectId?)`, `ListPendingAsync`, `ListForPeriodAsync(userId, from, to)`, `GetLatestForSubjectAsync`) in `backend/src/FinanceSentry.Modules.Research/Domain/Repositories/IThesisEventRepository.cs`
-- [ ] T005 Add `DbSet<ThesisEvent>` and entity configuration (table `thesis_events`; composite index `(SubjectType, SubjectId, Timestamp)`; index `(UserId, PricesPending)`; index `(UserId, EventType, Timestamp)`) to `backend/src/FinanceSentry.Modules.Research/Infrastructure/Persistence/ResearchDbContext.cs`
-- [ ] T006 Run EF migration `M004_ThesisEvents` for the `thesis_events` table with the three indexes above under `backend/src/FinanceSentry.Modules.Research/Migrations/`
-- [ ] T007 Implement `ThesisEventRepository` in `backend/src/FinanceSentry.Modules.Research/Infrastructure/Persistence/Repositories/ThesisEventRepository.cs`
-- [ ] T008 [P] Create `IThesisEventRecorder` (`RecordAsync(userId, subjectType, subjectId, ticker, eventType, decisionNote = null, cancellationToken)`) in `backend/src/FinanceSentry.Modules.Research/Application/Services/IThesisEventRecorder.cs`
-- [ ] T009 Implement `ThesisEventRecorder` (resolves subject + SPY quotes via `IMarketDataService`; on any quote exception, appends with `PricesPending = true` and null prices instead of throwing; guards against a duplicate `Created` per `(SubjectType, SubjectId)` via `IThesisEventRepository.GetLatestForSubjectAsync`) in `backend/src/FinanceSentry.Modules.Research/Application/Services/ThesisEventRecorder.cs`
-- [ ] T010 [P] Unit test: `ThesisEventRecorder` never throws when `IMarketDataService` throws — asserts `PricesPending = true`, null prices, event still appended — in `backend/tests/FinanceSentry.Modules.Research.Tests/Unit/ThesisEventRecorderTests.cs`
-- [ ] T011 [P] Unit test: `ThesisEventRecorder` appends exactly one `Created` event per subject even if `RecordAsync(Created)` is called twice (idempotency, FR edge case) in same test file as T010
-- [ ] T012 Register `IThesisEventRepository`, `IThesisEventRecorder` (scoped) in `backend/src/FinanceSentry.Modules.Research/ResearchModule.cs`
+- [X] T004 [P] Create `IThesisEventRepository` (`AppendAsync`, `ListAsync(subjectId?)`, `ListPendingAsync`, `ListForPeriodAsync(userId, from, to)`, `GetLatestForSubjectAsync`) in `backend/src/FinanceSentry.Modules.Research/Domain/Repositories/IThesisEventRepository.cs`
+- [X] T005 Add `DbSet<ThesisEvent>` and entity configuration (table `thesis_events`; composite index `(SubjectType, SubjectId, Timestamp)`; index `(UserId, PricesPending)`; index `(UserId, EventType, Timestamp)`) to `backend/src/FinanceSentry.Modules.Research/Infrastructure/Persistence/ResearchDbContext.cs`
+- [X] T006 Run EF migration `M004_ThesisEvents` for the `thesis_events` table with the three indexes above under `backend/src/FinanceSentry.Modules.Research/Migrations/`
+- [X] T007 Implement `ThesisEventRepository` in `backend/src/FinanceSentry.Modules.Research/Infrastructure/Persistence/Repositories/ThesisEventRepository.cs`
+- [X] T008 [P] Create `IThesisEventRecorder` (`RecordAsync(userId, subjectType, subjectId, ticker, eventType, decisionNote = null, cancellationToken)`) in `backend/src/FinanceSentry.Modules.Research/Application/Services/IThesisEventRecorder.cs`
+- [X] T009 Implement `ThesisEventRecorder` (resolves subject + SPY quotes via `IMarketDataService`; on any quote exception, appends with `PricesPending = true` and null prices instead of throwing; guards against a duplicate `Created` per `(SubjectType, SubjectId)` via `IThesisEventRepository.GetLatestForSubjectAsync`) in `backend/src/FinanceSentry.Modules.Research/Application/Services/ThesisEventRecorder.cs`
+- [X] T010 [P] Unit test: `ThesisEventRecorder` never throws when `IMarketDataService` throws — asserts `PricesPending = true`, null prices, event still appended — in `backend/tests/FinanceSentry.Modules.Research.Tests/Unit/ThesisEventRecorderTests.cs`
+- [X] T011 [P] Unit test: `ThesisEventRecorder` appends exactly one `Created` event per subject even if `RecordAsync(Created)` is called twice (idempotency, FR edge case) in same test file as T010
+- [X] T012 Register `IThesisEventRepository`, `IThesisEventRecorder` (scoped) in `backend/src/FinanceSentry.Modules.Research/ResearchModule.cs`
 
 **Checkpoint**: `dotnet build backend/` passes with zero warnings; `thesis_events` table created on migration; recorder is unit-tested in isolation.
 
@@ -50,15 +50,15 @@
 
 **Independent Test**: Create a thesis via `save_thesis`; assert a `Created` event exists with ticker price and SPY price via `list_thesis_events`.
 
-- [ ] T013 [US1] Wire `SaveThesisCommand`'s handler to call `IThesisEventRecorder.RecordAsync(..., ThesisEventType.Created)` immediately after persisting a *new* thesis (only when `id` was null on input — never on update) in `backend/src/FinanceSentry.Modules.Research/Application/Commands/SaveThesisCommand.cs`
-- [ ] T014 [P] [US1] Create `ThesisEventDto` (SubjectType, SubjectId, Ticker, EventType, Timestamp, SubjectPrice, BenchmarkPrice, BenchmarkTicker, PricesPending, DecisionNote) in `backend/src/FinanceSentry.Modules.Research/API/Responses/ThesisEventDto.cs`
-- [ ] T015 [US1] Create `ListThesisEventsQuery` (UserId, SubjectId?) + handler (delegates to `IThesisEventRepository.ListAsync`, maps to DTOs, scoped by UserId) in `backend/src/FinanceSentry.Modules.Research/Application/Queries/ListThesisEventsQuery.cs`
-- [ ] T016 [US1] Create `ListThesisEventsTool` MCP tool (`list_thesis_events`; resolves `userId` via `IIdentityResolver` like `SaveThesisTool`) in `backend/src/FinanceSentry.Mcp/Tools/ListThesisEventsTool.cs`
-- [ ] T017 [P] [US1] Contract test: `list_thesis_events` tool is discoverable and named correctly (extend/verify existing reflection-based `ToolNameContractTests` picks it up) in `backend/tests/FinanceSentry.Mcp.Tests/ContractTests/ToolNameContractTests.cs`
-- [ ] T018 [P] [US1] Integration/unit test: creating a thesis via `SaveThesisCommand` handler produces exactly one `Created` `ThesisEvent` with non-null prices when `IMarketDataService` succeeds, in `backend/tests/FinanceSentry.Modules.Research.Tests/Unit/SaveThesisCommandEventCaptureTests.cs`
-- [ ] T019 [US1] Implement `ThesisTrackRecordSnapshotJob`: (a) find all `ThesisEvent` rows with `PricesPending = true`, re-attempt quote lookup, update in place on success; (b) for every thesis without a terminal event, append a `Snapshot` event with current prices — in `backend/src/FinanceSentry.Modules.Research/Infrastructure/Jobs/ThesisTrackRecordSnapshotJob.cs`
-- [ ] T020 [US1] Register `thesis-track-record-snapshot` weekly recurring Hangfire job in the `JobRegistrar` in `backend/src/FinanceSentry.Modules.Research/ResearchModule.cs`
-- [ ] T021 [P] [US1] Unit test: `ThesisTrackRecordSnapshotJob` backfills a pending event's prices and appends a `Snapshot` event for an active thesis with no terminal event, in `backend/tests/FinanceSentry.Modules.Research.Tests/Jobs/ThesisTrackRecordSnapshotJobTests.cs`
+- [X] T013 [US1] Wire `SaveThesisCommand`'s handler to call `IThesisEventRecorder.RecordAsync(..., ThesisEventType.Created)` immediately after persisting a *new* thesis (only when `id` was null on input — never on update) in `backend/src/FinanceSentry.Modules.Research/Application/Commands/SaveThesisCommand.cs`
+- [X] T014 [P] [US1] Create `ThesisEventDto` (SubjectType, SubjectId, Ticker, EventType, Timestamp, SubjectPrice, BenchmarkPrice, BenchmarkTicker, PricesPending, DecisionNote) in `backend/src/FinanceSentry.Modules.Research/API/Responses/ThesisEventDto.cs`
+- [X] T015 [US1] Create `ListThesisEventsQuery` (UserId, SubjectId?) + handler (delegates to `IThesisEventRepository.ListAsync`, maps to DTOs, scoped by UserId) in `backend/src/FinanceSentry.Modules.Research/Application/Queries/ListThesisEventsQuery.cs`
+- [X] T016 [US1] Create `ListThesisEventsTool` MCP tool (`list_thesis_events`; resolves `userId` via `IIdentityResolver` like `SaveThesisTool`) in `backend/src/FinanceSentry.Mcp/Tools/ListThesisEventsTool.cs`
+- [X] T017 [P] [US1] Contract test: `list_thesis_events` tool is discoverable and named correctly (extend/verify existing reflection-based `ToolNameContractTests` picks it up) in `backend/tests/FinanceSentry.Mcp.Tests/ContractTests/ToolNameContractTests.cs`
+- [X] T018 [P] [US1] Integration/unit test: creating a thesis via `SaveThesisCommand` handler produces exactly one `Created` `ThesisEvent` with non-null prices when `IMarketDataService` succeeds, in `backend/tests/FinanceSentry.Modules.Research.Tests/Unit/SaveThesisCommandEventCaptureTests.cs`
+- [X] T019 [US1] Implement `ThesisTrackRecordSnapshotJob`: (a) find all `ThesisEvent` rows with `PricesPending = true`, re-attempt quote lookup, update in place on success; (b) for every thesis without a terminal event, append a `Snapshot` event with current prices — in `backend/src/FinanceSentry.Modules.Research/Infrastructure/Jobs/ThesisTrackRecordSnapshotJob.cs`
+- [X] T020 [US1] Register `thesis-track-record-snapshot` weekly recurring Hangfire job in the `JobRegistrar` in `backend/src/FinanceSentry.Modules.Research/ResearchModule.cs`
+- [X] T021 [P] [US1] Unit test: `ThesisTrackRecordSnapshotJob` backfills a pending event's prices and appends a `Snapshot` event for an active thesis with no terminal event, in `backend/tests/FinanceSentry.Modules.Research.Tests/Jobs/ThesisTrackRecordSnapshotJobTests.cs`
 
 **Checkpoint**: Creating a thesis in a live stack produces a complete, correctly priced `Created` event with zero manual steps (SC-002); a simulated quote outage still records the event as pending and the weekly job backfills it.
 
@@ -70,13 +70,13 @@
 
 **Independent Test**: Seed a `Created` event at price 100 (SPY 500) and a later quote at 120 (SPY 510); assert return +20%, benchmark +2%, excess +18%.
 
-- [ ] T022 [P] [US2] Create `IThesisPerformanceCalculator` (`Calculate(fromEvent, toEventOrLatestPrice, frictionConfig) -> ThesisPerformanceResult`) — pure, no I/O — in `backend/src/FinanceSentry.Modules.Research/Application/Services/IThesisPerformanceCalculator.cs`
-- [ ] T023 [US2] Implement `ThesisPerformanceCalculator`: absolute/benchmark/excess return between two priced events or event→latest quote; `NotEvaluable` result when neither ticker nor `proxyTicker` (017 field — not yet on `InvestmentThesis`, branch present but unreachable until 017 adds it, per research.md R6) is quotable in `backend/src/FinanceSentry.Modules.Research/Application/Services/ThesisPerformanceCalculator.cs`
-- [ ] T024 [US2] Add `FrictionConfig` (per-trade cost bps, short/long-term capital-gains rates, holding-period boundary days) bound from `appsettings.json` section `ThesisTrackRecord:Friction`, applied in `ThesisPerformanceCalculator` to compute `NetAbsoluteReturnPct`/`NetExcessReturnPct` per FR-007b, in `backend/src/FinanceSentry.Modules.Research/Application/Services/FrictionConfig.cs`
-- [ ] T025 [P] [US2] Unit test: SC-001 determinism — identical inputs produce identical outputs; gross vs net return math with configured friction; not-evaluable path when no quote available, in `backend/tests/FinanceSentry.Modules.Research.Tests/Unit/ThesisPerformanceCalculatorTests.cs`
-- [ ] T026 [US2] Create `GetThesisPerformanceQuery` (UserId, Id?, Ticker?) + handler (resolves subject via `IThesisEventRepository`, calls `IThesisPerformanceCalculator` for create→latest) in `backend/src/FinanceSentry.Modules.Research/Application/Queries/GetThesisPerformanceQuery.cs`
-- [ ] T027 [US2] Create `GetThesisPerformanceTool` MCP tool (`get_thesis_performance`; accepts `id` or `ticker`, resolves `userId` via `IIdentityResolver`) in `backend/src/FinanceSentry.Mcp/Tools/GetThesisPerformanceTool.cs`
-- [ ] T028 [P] [US2] Contract test: `get_thesis_performance` tool discoverable/named correctly (`ToolNameContractTests`) and returns `null`/handles gracefully when neither `id` nor `ticker` resolves, in `backend/tests/FinanceSentry.Mcp.Tests/GetThesisPerformanceToolTests.cs`
+- [X] T022 [P] [US2] Create `IThesisPerformanceCalculator` (`Calculate(fromEvent, toEventOrLatestPrice, frictionConfig) -> ThesisPerformanceResult`) — pure, no I/O — in `backend/src/FinanceSentry.Modules.Research/Application/Services/IThesisPerformanceCalculator.cs`
+- [X] T023 [US2] Implement `ThesisPerformanceCalculator`: absolute/benchmark/excess return between two priced events or event→latest quote; `NotEvaluable` result when neither ticker nor `proxyTicker` (017 field — not yet on `InvestmentThesis`, branch present but unreachable until 017 adds it, per research.md R6) is quotable in `backend/src/FinanceSentry.Modules.Research/Application/Services/ThesisPerformanceCalculator.cs`
+- [X] T024 [US2] Add `FrictionConfig` (per-trade cost bps, short/long-term capital-gains rates, holding-period boundary days) bound from `appsettings.json` section `ThesisTrackRecord:Friction`, applied in `ThesisPerformanceCalculator` to compute `NetAbsoluteReturnPct`/`NetExcessReturnPct` per FR-007b, in `backend/src/FinanceSentry.Modules.Research/Application/Services/FrictionConfig.cs`
+- [X] T025 [P] [US2] Unit test: SC-001 determinism — identical inputs produce identical outputs; gross vs net return math with configured friction; not-evaluable path when no quote available, in `backend/tests/FinanceSentry.Modules.Research.Tests/Unit/ThesisPerformanceCalculatorTests.cs`
+- [X] T026 [US2] Create `GetThesisPerformanceQuery` (UserId, Id?, Ticker?) + handler (resolves subject via `IThesisEventRepository`, calls `IThesisPerformanceCalculator` for create→latest) in `backend/src/FinanceSentry.Modules.Research/Application/Queries/GetThesisPerformanceQuery.cs`
+- [X] T027 [US2] Create `GetThesisPerformanceTool` MCP tool (`get_thesis_performance`; accepts `id` or `ticker`, resolves `userId` via `IIdentityResolver`) in `backend/src/FinanceSentry.Mcp/Tools/GetThesisPerformanceTool.cs`
+- [X] T028 [P] [US2] Contract test: `get_thesis_performance` tool discoverable/named correctly (`ToolNameContractTests`) and returns `null`/handles gracefully when neither `id` nor `ticker` resolves, in `backend/tests/FinanceSentry.Mcp.Tests/GetThesisPerformanceToolTests.cs`
 
 **Checkpoint**: `get_thesis_performance` returns correct absolute/benchmark/excess return (gross and net) for a live thesis; not-evaluable path never throws.
 
@@ -88,10 +88,10 @@
 
 **Independent Test**: Given a mix of active/broken/promoted/rejected records, `get_track_record` returns counts, hit rate, average/median excess return, split by source and status, with a low-sample caveat below 30 closed records.
 
-- [ ] T029 [US3] Create `GetTrackRecordQuery` (UserId, Source?, Status?) + handler: fetches all subjects' event histories via `IThesisEventRepository`, computes per-subject performance via `IThesisPerformanceCalculator`, aggregates counts/hit rates/avg/median/best/worst, splits by source (`User`/`Scan`) and status, sets `LowSampleCaveat` when `ClosedCount < 30` (constant `MinimumClosedSampleSize`) in `backend/src/FinanceSentry.Modules.Research/Application/Queries/GetTrackRecordQuery.cs`
-- [ ] T030 [US3] Create `GetTrackRecordTool` MCP tool (`get_track_record`) in `backend/src/FinanceSentry.Mcp/Tools/GetTrackRecordTool.cs`
-- [ ] T031 [P] [US3] Unit test: `GetTrackRecordQuery` handler — separate `TerminalHitRate`/`ActiveHitRate` (never blended per research.md R4); `LowSampleCaveat = true` below 30 closed records, `false` at/above; excluded (`NotEvaluable`) subjects counted in `ExcludedCount`, not in hit-rate denominators, in `backend/tests/FinanceSentry.Modules.Research.Tests/Unit/GetTrackRecordQueryTests.cs`
-- [ ] T032 [P] [US3] Contract test: `get_track_record` tool discoverable/named correctly, in `backend/tests/FinanceSentry.Mcp.Tests/GetTrackRecordToolTests.cs`
+- [X] T029 [US3] Create `GetTrackRecordQuery` (UserId, Source?, Status?) + handler: fetches all subjects' event histories via `IThesisEventRepository`, computes per-subject performance via `IThesisPerformanceCalculator`, aggregates counts/hit rates/avg/median/best/worst, splits by source (`User`/`Scan`) and status, sets `LowSampleCaveat` when `ClosedCount < 30` (constant `MinimumClosedSampleSize`) in `backend/src/FinanceSentry.Modules.Research/Application/Queries/GetTrackRecordQuery.cs`
+- [X] T030 [US3] Create `GetTrackRecordTool` MCP tool (`get_track_record`) in `backend/src/FinanceSentry.Mcp/Tools/GetTrackRecordTool.cs`
+- [X] T031 [P] [US3] Unit test: `GetTrackRecordQuery` handler — separate `TerminalHitRate`/`ActiveHitRate` (never blended per research.md R4); `LowSampleCaveat = true` below 30 closed records, `false` at/above; excluded (`NotEvaluable`) subjects counted in `ExcludedCount`, not in hit-rate denominators, in `backend/tests/FinanceSentry.Modules.Research.Tests/Unit/GetTrackRecordQueryTests.cs`
+- [X] T032 [P] [US3] Contract test: `get_track_record` tool discoverable/named correctly, in `backend/tests/FinanceSentry.Mcp.Tests/GetTrackRecordToolTests.cs`
 
 **Checkpoint**: `get_track_record` answers "is this earning money" in one call (SC-003); rejected candidates' counterfactual performance is queryable once candidates exist (SC-004 — verifiable in full once 019 ships).
 
@@ -101,12 +101,12 @@
 
 **Goal**: Capture contemporaneous reasoning per event and compile a period post-mortem packet for Denys's periodic review.
 
-- [ ] T033 [US1] Confirm `DecisionNote` optional parameter flows end-to-end: `IThesisEventRecorder.RecordAsync` already accepts it (T008/T009) — expose it on `SaveThesisCommand`/`SaveThesisTool` as an optional `decisionNote` parameter so callers can supply reasoning at creation time, in `backend/src/FinanceSentry.Modules.Research/Application/Commands/SaveThesisCommand.cs` and `backend/src/FinanceSentry.Mcp/Tools/SaveThesisTool.cs`
-- [ ] T034 Create `PostmortemEntry` and `PostmortemPacket` response records (per data-model.md) in `backend/src/FinanceSentry.Modules.Research/API/Responses/PostmortemPacketDto.cs`
-- [ ] T035 Create `GetPostmortemPacketQuery` (UserId, PeriodStart, PeriodEnd) + handler: fetches all terminal events in the period via `IThesisEventRepository.ListForPeriodAsync`, pairs each with its `Created` event's `DecisionNote`, computes excess return per entry via `IThesisPerformanceCalculator`, includes rejected-candidate counterfactuals in the same period, in `backend/src/FinanceSentry.Modules.Research/Application/Queries/GetPostmortemPacketQuery.cs`
-- [ ] T036 Create `GetPostmortemPacketTool` MCP tool (`get_postmortem_packet`) in `backend/src/FinanceSentry.Mcp/Tools/GetPostmortemPacketTool.cs`
-- [ ] T037 [P] Unit test: `GetPostmortemPacketQuery` returns empty `Entries`/`CounterfactualEntries` (no error) when no terminal events exist in the period; correctly pairs `Created`→terminal decision notes when they do, in `backend/tests/FinanceSentry.Modules.Research.Tests/Unit/GetPostmortemPacketQueryTests.cs`
-- [ ] T038 [P] Contract test: `get_postmortem_packet` tool discoverable/named correctly, in `backend/tests/FinanceSentry.Mcp.Tests/GetPostmortemPacketToolTests.cs`
+- [X] T033 [US1] Confirm `DecisionNote` optional parameter flows end-to-end: `IThesisEventRecorder.RecordAsync` already accepts it (T008/T009) — expose it on `SaveThesisCommand`/`SaveThesisTool` as an optional `decisionNote` parameter so callers can supply reasoning at creation time, in `backend/src/FinanceSentry.Modules.Research/Application/Commands/SaveThesisCommand.cs` and `backend/src/FinanceSentry.Mcp/Tools/SaveThesisTool.cs`
+- [X] T034 Create `PostmortemEntry` and `PostmortemPacket` response records (per data-model.md) in `backend/src/FinanceSentry.Modules.Research/API/Responses/PostmortemPacketDto.cs`
+- [X] T035 Create `GetPostmortemPacketQuery` (UserId, PeriodStart, PeriodEnd) + handler: fetches all terminal events in the period via `IThesisEventRepository.ListForPeriodAsync`, pairs each with its `Created` event's `DecisionNote`, computes excess return per entry via `IThesisPerformanceCalculator`, includes rejected-candidate counterfactuals in the same period, in `backend/src/FinanceSentry.Modules.Research/Application/Queries/GetPostmortemPacketQuery.cs`
+- [X] T036 Create `GetPostmortemPacketTool` MCP tool (`get_postmortem_packet`) in `backend/src/FinanceSentry.Mcp/Tools/GetPostmortemPacketTool.cs`
+- [X] T037 [P] Unit test: `GetPostmortemPacketQuery` returns empty `Entries`/`CounterfactualEntries` (no error) when no terminal events exist in the period; correctly pairs `Created`→terminal decision notes when they do, in `backend/tests/FinanceSentry.Modules.Research.Tests/Unit/GetPostmortemPacketQueryTests.cs`
+- [X] T038 [P] Contract test: `get_postmortem_packet` tool discoverable/named correctly, in `backend/tests/FinanceSentry.Mcp.Tests/GetPostmortemPacketToolTests.cs`
 
 **Checkpoint**: A full period's terminal events, decision notes, and counterfactuals are compiled in one call; the system compiles, it does not judge (per spec's explicit non-goal).
 
@@ -114,8 +114,8 @@
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T039 [P] Bump backend version `0.9.0` → `0.10.0` in `backend/src/FinanceSentry.API/FinanceSentry.API.csproj`
-- [ ] T040 Run quickstart.md manual QA: create a thesis, verify priced `Created` event; simulate a quote outage, verify pending event + job backfill; query all four MCP tools; confirm zero `dotnet build` warnings
+- [X] T039 [P] Bump backend version `0.9.0` → `0.10.0` in `backend/src/FinanceSentry.API/FinanceSentry.API.csproj`
+- [X] T040 Run quickstart.md manual QA: create a thesis, verify priced `Created` event; simulate a quote outage, verify pending event + job backfill; query all four MCP tools; confirm zero `dotnet build` warnings
 
 ---
 

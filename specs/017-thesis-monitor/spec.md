@@ -2,7 +2,7 @@
 
 **Feature Branch**: `017-thesis-monitor`
 **Created**: 2026-07-06
-**Status**: Ready for implementation
+**Status**: Implemented
 **Input**: The deterministic **monitoring half** of Thesis Radar (`016-thesis-radar`), carved out as a bounded backend service. The discovery/candidate-generation half of the radar is explicitly **deferred** to a separate feature.
 
 ## Why this spec exists (design-pass reconciliation)

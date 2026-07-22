@@ -2,7 +2,7 @@
 
 **Feature Branch**: `008-wealth-aggregation-api`  
 **Created**: 2026-04-19  
-**Status**: Draft  
+**Status**: Implemented
 **Input**: User description: "Financial aggregation API that answers questions like what is my total net worth across all providers, what do I have across all banks, what have I spent this month, show me all crypto holdings. The API should support flexible grouping and filtering by provider category (bank, crypto, broker), by specific provider (monobank, plaid, binance), by currency, and by time window for transaction-based metrics like expenses and income. Users should be able to get a unified financial snapshot or drill down into a specific slice."
 
 ## User Scenarios & Testing *(mandatory)*

@@ -2,7 +2,7 @@
 
 **Feature Branch**: `020-thesis-track-record`
 **Created**: 2026-07-07
-**Status**: Draft
+**Status**: Implemented
 **Input**: The "honesty layer" of the Radar (see `specs/ROADMAP.md`): price-stamped lifecycle logging for every thesis and opportunity candidate, and performance measurement vs benchmark — so the system's (and Denys's) edge is measured, not assumed.
 
 ## Why this spec exists

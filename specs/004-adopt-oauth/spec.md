@@ -3,7 +3,7 @@
 **Feature Branch**: `004-adopt-oauth`
 **Created**: 2026-04-15
 **Revised**: 2026-04-18
-**Status**: Draft
+**Status**: Implemented
 **Input**: Switch Google OAuth from server-side Authorization Code flow to Google Identity Services (GSI) client-side credential flow.
 
 ## User Scenarios & Testing *(mandatory)*
