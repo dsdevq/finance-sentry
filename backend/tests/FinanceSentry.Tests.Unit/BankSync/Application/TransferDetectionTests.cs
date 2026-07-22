@@ -106,4 +106,52 @@ public class TransferDetectionTests
 
         result.Should().BeEmpty();
     }
+
+    [Theory]
+    [InlineData("Debit",  "Credit")]
+    [InlineData("DEBIT",  "CREDIT")]
+    [InlineData("debit",  "CREDIT")]
+    [InlineData("DEBIT",  "credit")]
+    [InlineData(" debit", " credit")]   // leading whitespace should be trimmed
+    [InlineData("debit ", "credit ")]   // trailing whitespace
+    public void DetectTransferTransactionIds_MixedCaseAndWhitespaceTypes_AreMatchedCorrectly(
+        string debitType, string creditType)
+    {
+        var accountA = Guid.NewGuid();
+        var accountB = Guid.NewGuid();
+        var date = new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc);
+
+        var debit  = MakeTx(accountA, 500m, debitType,  date);
+        var credit = MakeTx(accountB, 500m, creditType, date);
+
+        var sut = new TransferDetectionService();
+
+        var result = sut.DetectTransferTransactionIds([debit, credit]);
+
+        result.Should().BeEquivalentTo(new[] { debit.Id, credit.Id },
+            because: $"debit type '{debitType}' and credit type '{creditType}' should be bucketed case-insensitively");
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("unknown")]
+    [InlineData("transfer")]
+    public void DetectTransferTransactionIds_NonDebitCreditType_NotBucketed(string? txType)
+    {
+        // Rows with a type that is neither "debit" nor "credit" (regardless of case)
+        // must not end up in either bucket and therefore never produce a matched pair.
+        var accountA = Guid.NewGuid();
+        var accountB = Guid.NewGuid();
+        var date = new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc);
+
+        // Two rows with the same non-debit/credit type — no valid debit+credit pair exists.
+        var tx1 = MakeTx(accountA, 500m, txType!, date);
+        var tx2 = MakeTx(accountB, 500m, txType!, date);
+
+        var sut = new TransferDetectionService();
+
+        var result = sut.DetectTransferTransactionIds([tx1, tx2]);
+
+        result.Should().BeEmpty(because: $"type '{txType}' is not a debit or credit bucket");
+    }
 }
