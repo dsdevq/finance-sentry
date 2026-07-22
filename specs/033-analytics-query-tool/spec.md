@@ -2,7 +2,7 @@
 
 **Feature Branch**: `033-analytics-query-tool`
 **Created**: 2026-07-22
-**Status**: Planned — ready to implement
+**Status**: Implemented
 **Input**: User description: "Give the agent one guarded read-only query tool so it can answer novel structured questions by querying curated per-user views directly, instead of needing a bespoke tool per question — without ever being able to write, read another user's data, or run away with an expensive query."
 
 ## Overview
