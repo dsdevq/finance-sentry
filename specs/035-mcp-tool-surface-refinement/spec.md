@@ -49,15 +49,15 @@ No tool that appears in the catalog fails at runtime. A tool that errors on invo
 
 A small number of tools that are *always called together*, or that are homogeneous CRUD over a *single* resource with a tiny closed action set, are merged — reducing selection friction without hiding heterogeneous behavior behind a mega-switch.
 
-**Why this priority**: Real friction, but narrower than the count suggests. Valuable after US1/US2 because description quality and correctness matter more than the merges. Each merge must preserve every existing capability.
+**Why this priority**: Real friction, but narrower than the count suggests. Valuable after US1/US2 because description quality and correctness matter more than the merges. Each change must preserve every existing capability. **Scope (decided):** exactly one true merge — watchlist CRUD (`list`/`add`/`remove`) → one action tool (57→55) — plus one enrichment — `run_thesis_monitor` also returns breaks, with `list_thesis_breaks` kept. The companion cluster is excluded (two n=2 read/write pairs).
 
 **Independent Test**: For each merged tool, confirm the pre-merge capabilities are all still reachable and the old always-paired two-call dance is now one call; confirm the tool-name contract test reflects the new surface exactly.
 
 **Acceptance Scenarios**:
 
-1. **Given** the monitor-then-list-breaks pair that the agent always calls back-to-back, **When** merged, **Then** a single tool runs the monitor and returns the breaks in one call, with no capability lost.
+1. **Given** the monitor-then-list-breaks pair that the agent always calls back-to-back, **When** `run_thesis_monitor` is enriched to also return the resulting breaks, **Then** the common case is one call — and `list_thesis_breaks` remains available as the side-effect-free read (no capability lost, boundary preserved).
 2. **Given** watchlist read/add/remove over the one watchlist resource, **When** collapsed into one tool with an action parameter, **Then** all three operations remain available and the action set is small, closed, and unambiguous.
-3. **Given** the companion notification cluster, **When** it is genuinely one resource, **Then** its operations are collapsed the same way; where an operation is a distinct concern, it stays separate.
+3. **Given** the companion notification cluster (`get`/`set_notification_mode` and `get_pending`/`acknowledge_companion_events`), **When** evaluated, **Then** it is left UNMERGED — it is two read/write pairs (n=2 each), not homogeneous CRUD on one resource, so the same rule that keeps IPS/risk separate applies.
 4. **Given** the merges are applied, **When** the surface is inspected, **Then** the tool-name contract test matches the new set exactly (no more, no fewer) and no capability regressed.
 
 ---
@@ -78,9 +78,9 @@ A small number of tools that are *always called together*, or that are homogeneo
 - **FR-002**: Workflow/call-order guidance that currently lives only in agent-side prose MUST be relocated into the relevant tool descriptions, and the now-redundant prose MUST be removable without behavior loss.
 - **FR-003**: Every tool in the catalog MUST return a well-formed response when invoked with a valid identity and representative arguments; no tool may fail due to missing handler registration or process wiring.
 - **FR-004**: The fix for the observed `get_pending_companion_events` failure MUST be verified against the deployed server; the full surface MUST be swept for any other invocation-time failure, and each finding fixed within this feature.
-- **FR-005**: The always-paired monitor + list-breaks tools MUST be merged into a single tool that performs the run and returns the breaks in one call, preserving all prior outputs.
-- **FR-006**: Homogeneous CRUD over a single resource with a small closed action set (watchlist; and the companion notification cluster where it is one resource) MAY be collapsed into one tool with an action parameter, provided every prior operation remains reachable and the action set is small and unambiguous.
-- **FR-007**: Read/write tool pairs that constitute a safety boundary MUST NOT be merged. Specifically, `get_ips`/`save_ips` and `get_risk_rules`/`save_risk_rules` MUST remain separate tools so "this tool never mutates" stays true at the tool boundary.
+- **FR-005**: The always-paired monitor→breaks two-call dance MUST collapse to one call by **enriching** `run_thesis_monitor` to also return the resulting breaks. The pure-read `list_thesis_breaks` MUST be KEPT (it re-evaluates nothing and fires no alerts) — the read/write boundary is preserved, per the same rule as FR-007. This is an enrichment, not a removal; it does not reduce tool count.
+- **FR-006**: Homogeneous CRUD over a single resource with a small closed action set — specifically the watchlist (`list`/`add`/`remove`, 3 ops on one resource) — MAY be collapsed into one tool with an action parameter, provided every prior operation remains reachable and the action set is small and unambiguous.
+- **FR-007**: Read/write tool pairs (n=2) that split a safe read from a mutation MUST NOT be merged. This covers `get_ips`/`save_ips`, `get_risk_rules`/`save_risk_rules`, AND the companion cluster's two pairs — `get_notification_mode`/`set_notification_mode` and `get_pending_companion_events`/`acknowledge_companion_events` — so "this tool never mutates" stays true at the tool boundary. n=2 read/write pairs are not sprawl.
 - **FR-008**: The Radar entry-point-plus-drill-downs group MUST NOT be merged; one broad entry tool plus focused drill-downs is the intended shape.
 - **FR-009**: No merge or rename may reduce expressiveness — every capability available before this feature MUST remain available after it.
 - **FR-010**: The tool-name contract test MUST be updated in the same change to match the resulting surface exactly (no more, no fewer), and MUST continue to pass.
@@ -116,10 +116,12 @@ A small number of tools that are *always called together*, or that are homogeneo
 
 - **[DECISION] Shape over count**: The guiding principle is that a tool is well-shaped when its name predicts exactly one behavior and its parameters carry no hidden mode switch. Merges are justified only when the union is tiny, closed, and over one resource. Count is explicitly a vanity metric (FR-011).
 - **[DECISION] Preserve read/write boundaries**: `get_*`/`save_*` pairs that split a safe read from a mutation stay separate (FR-007) — the same read-vs-write axis feature 033 is built on. n=2 pairs are not sprawl.
+- **[DECISION] Companion cluster stays unmerged (2026-07-22)**: Applying the n=2 rule consistently, the four companion tools are two read/write pairs (mode get/set; events get/acknowledge), not homogeneous CRUD on one resource — so they are NOT merged, same as IPS/risk.
+- **[DECISION] Thesis: enrich, don't merge (2026-07-22)**: `run_thesis_monitor` (a write with alert side effects) is enriched to also return the resulting breaks so Ledger's back-to-back dance is one call; `list_thesis_breaks` (pure read, no re-eval, no alerts) is KEPT. Forcing every "what's broken?" through the write would spam alert state and lose the read — so the boundary is preserved, consistent with the companion/IPS/risk decisions. Net: the only count reduction is the watchlist merge (57→55).
 - **[DECISION] Descriptions carry workflow**: Call-order belongs in the tool, not the prompt (FR-001/FR-002). This is the primary win of the feature; the merges are secondary.
 - **[DECISION] Broken beats extra**: One invocation-time failure costs more trust than many extra working tools, so the runtime sweep (US2) is P1 alongside descriptions, ahead of the merges (P2).
 - **[OUT OF SCOPE] Fat union-param "god tools"**: Collapsing heterogeneous resources/actions behind a single mega-switch is explicitly rejected — it degrades call-correctness.
 - **[OUT OF SCOPE] Radar consolidation**: The Radar entry + five drill-downs stay as-is (FR-008).
 - **[DEFERRED] Natural-language tool router**: Any auto-routing/meta-tool that picks tools for the agent is a separate future idea, not part of this feature.
-- **Expected surface delta**: roughly 57 → ~51 after the merges; the exact number falls out of the merges, it is not a target.
+- **Expected surface delta**: 57 → 55 (watchlist 3→1 is the only merge; the thesis change is an enrichment that keeps both tools). The number falls out of the change; it is not a target.
 - **Delivery**: intended to be handed to DevClaw as one workstream, sequenced (1) verify/fix broken endpoint → (2) rewrite descriptions for call-order → (3) surgical merges + contract-test update.
