@@ -2,7 +2,7 @@
 
 **Feature Branch**: `022-risk-rules`
 **Created**: 2026-07-07
-**Status**: Draft
+**Status**: Implemented
 **Input**: The practitioner layer identified as the biggest omission by the 2026-07-07 independent review: written, machine-checked position policy. "For a concentrated book, sizing rules are worth more than every scanner combined." Small feature, big leverage: deterministic checks of the live book against explicit rules, violations surfaced as signals/alerts, and a hard gate on 019's promote flow.
 
 ## Why this spec exists

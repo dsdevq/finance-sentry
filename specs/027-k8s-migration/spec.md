@@ -2,7 +2,7 @@
 
 **Feature Branch**: `027-k8s-migration`
 **Created**: 2026-07-09
-**Status**: Draft
+**Status**: Roadmap — spec only, not yet planned or implemented
 **Input**: User description: "Kubernetes production migration: replace docker-compose production deployment with a lightweight single-node Kubernetes cluster on the VPS — declarative manifests, health probes, rolling zero-downtime deploys, secrets management, and the ability to scale API replicas"
 
 ## User Scenarios & Testing *(mandatory)*

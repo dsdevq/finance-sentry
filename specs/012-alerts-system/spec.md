@@ -2,7 +2,7 @@
 
 **Feature Branch**: `012-alerts-system`
 **Created**: 2026-05-02
-**Status**: Draft
+**Status**: Implemented
 **Input**: User description: "Full new feature. Triggers: sync failure, low balance threshold breach, unusual spend pattern. DB schema, dismiss/read flow, event-driven or Hangfire generation."
 
 ## User Scenarios & Testing *(mandatory)*

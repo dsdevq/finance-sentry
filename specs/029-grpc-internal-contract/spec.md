@@ -2,7 +2,7 @@
 
 **Feature Branch**: `029-grpc-internal-contract`
 **Created**: 2026-07-09
-**Status**: Draft
+**Status**: Roadmap — spec only, not yet planned or implemented
 **Input**: User description: "Convert one internal synchronous service-to-service call (monolith to market-data service query) to a contract-first binary RPC protocol, coexisting with the HTTP contract, to practice schema-first internal APIs, deadlines, and generated typed clients"
 
 ## User Scenarios & Testing *(mandatory)*

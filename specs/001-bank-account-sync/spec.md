@@ -2,7 +2,7 @@
 
 **Feature Branch**: `001-bank-account-sync`  
 **Created**: 2026-03-21  
-**Status**: Draft  
+**Status**: Implemented
 **Input**: User description: "Bank account aggregation and sync - accumulate all bank accounts in one place with statistics for overall money flow"
 
 ## User Scenarios & Testing *(mandatory)*

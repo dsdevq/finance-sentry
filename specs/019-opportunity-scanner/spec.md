@@ -2,7 +2,7 @@
 
 **Feature Branch**: `019-opportunity-scanner`
 **Created**: 2026-07-07
-**Status**: Draft
+**Status**: Implemented
 **Input**: The "offense" of the Radar (see `specs/ROADMAP.md`): deterministic scoring of opportunity candidates from two entry paths — Denys's own convictions and machine scans of market structure — with a promote flow that turns a strong candidate into a monitored `InvestmentThesis` (017). Successor to the deterministic parts of Ledger's `016-thesis-radar` discovery draft; the free-form LLM "find underhyped trends" idea stays in Ledger.
 
 ## Why this spec exists

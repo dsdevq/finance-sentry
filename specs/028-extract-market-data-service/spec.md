@@ -2,7 +2,7 @@
 
 **Feature Branch**: `028-extract-market-data-service`
 **Created**: 2026-07-09
-**Status**: Draft
+**Status**: Roadmap — spec only, not yet planned or implemented
 **Input**: User description: "Extract market data ingestion (radar daily bars and signals) into a standalone service: own deployable, own database schema, consumes and publishes domain events over the message bus, synchronous queries stay available to the monolith, deployed behind the gateway on the cluster"
 
 ## User Scenarios & Testing *(mandatory)*

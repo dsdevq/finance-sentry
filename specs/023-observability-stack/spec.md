@@ -2,7 +2,7 @@
 
 **Feature Branch**: `023-observability-stack`
 **Created**: 2026-07-09
-**Status**: Draft
+**Status**: Roadmap — spec only, not yet planned or implemented
 **Input**: User description: "Observability stack: OpenTelemetry metrics in the ASP.NET Core API exposed via /metrics, Prometheus + Grafana + Loki containers on the VPS, Serilog shipping to Loki, dashboards for sync jobs, HTTP latency/errors, Hangfire job health"
 
 ## User Scenarios & Testing *(mandatory)*
