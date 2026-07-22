@@ -23,6 +23,7 @@
     <ProjectReference Include="..\FinanceSentry.Modules.Research\FinanceSentry.Modules.Research.csproj" />
     <ProjectReference Include="..\FinanceSentry.Modules.Radar\FinanceSentry.Modules.Radar.csproj" />
     <ProjectReference Include="..\FinanceSentry.Modules.Risk\FinanceSentry.Modules.Risk.csproj" />
+    <ProjectReference Include="..\FinanceSentry.Modules.Companion\FinanceSentry.Modules.Companion.csproj" />
   </ItemGroup>
 
   <ItemGroup>

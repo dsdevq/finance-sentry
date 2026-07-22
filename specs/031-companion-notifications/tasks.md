@@ -21,9 +21,9 @@ description: "Task list for Companion Notification Modes + Event-Driven Push"
 
 ## Phase 1: Setup
 
-- [ ] T001 Create `backend/src/FinanceSentry.Modules.Companion/FinanceSentry.Modules.Companion.csproj` (net9.0, refs to `FinanceSentry.Core`; mirror `FinanceSentry.Modules.Risk.csproj`) and add it to `backend/FinanceSentry.sln`
-- [ ] T002 Create test project `backend/tests/FinanceSentry.Modules.Companion.Tests/FinanceSentry.Modules.Companion.Tests.csproj` (xUnit + FluentAssertions + `Microsoft.EntityFrameworkCore.InMemory`; mirror the Research test csproj) and add to the solution
-- [ ] T003 Register the module in `backend/src/FinanceSentry.API/Program.cs` (CQRS assembly scan for the Companion assembly + `AddCompanionModule`), mirroring how Risk/Research are registered
+- [X] T001 Create `backend/src/FinanceSentry.Modules.Companion/FinanceSentry.Modules.Companion.csproj` (net9.0, refs to `FinanceSentry.Core`; mirror `FinanceSentry.Modules.Risk.csproj`) and add it to `backend/FinanceSentry.sln`
+- [X] T002 Create test project `backend/tests/FinanceSentry.Modules.Companion.Tests/FinanceSentry.Modules.Companion.Tests.csproj` (xUnit + FluentAssertions + `Microsoft.EntityFrameworkCore.InMemory`; mirror the Research test csproj) and add to the solution
+- [X] T003 Register the module in `backend/src/FinanceSentry.API/Program.cs` (CQRS assembly scan for the Companion assembly + `AddCompanionModule`), mirroring how Risk/Research are registered
 
 ---
 
@@ -32,21 +32,21 @@ description: "Task list for Companion Notification Modes + Event-Driven Push"
 **⚠️ Migration MUST ship with its `.Designer.cs` (M007/M008 lesson).**
 
 ### Domain
-- [ ] T004 [P] Create `NotificationMode` enum (`Quiet|Digest|Scan|Realtime`) in `Domain/NotificationMode.cs`
-- [ ] T005 [P] Create `CompanionEventKind` (`RiskViolation|SyncFailure|UnusualSpend|Opportunity|ThesisBreak|AnalystAction`) and `EventDisposition` (`Pending|Dispatched|HeldForDigest|Delivered|SuppressedByMode|SuppressedByDedup|SuppressedByRateLimit|DeferredQuietHours|Failed`) in `Domain/CompanionEventKind.cs` and `Domain/EventDisposition.cs`
-- [ ] T006 [P] Create `CompanionNotificationSetting` entity in `Domain/CompanionNotificationSetting.cs` (per data-model)
-- [ ] T007 [P] Create `CompanionEvent` entity in `Domain/CompanionEvent.cs` (per data-model)
-- [ ] T008 [P] Create `CompanionCaptureState` entity (`Source` PK, `Watermark`) in `Domain/CompanionCaptureState.cs`
+- [X] T004 [P] Create `NotificationMode` enum (`Quiet|Digest|Scan|Realtime`) in `Domain/NotificationMode.cs`
+- [X] T005 [P] Create `CompanionEventKind` (`RiskViolation|SyncFailure|UnusualSpend|Opportunity|ThesisBreak|AnalystAction`) and `EventDisposition` (`Pending|Dispatched|HeldForDigest|Delivered|SuppressedByMode|SuppressedByDedup|SuppressedByRateLimit|DeferredQuietHours|Failed`) in `Domain/CompanionEventKind.cs` and `Domain/EventDisposition.cs`
+- [X] T006 [P] Create `CompanionNotificationSetting` entity in `Domain/CompanionNotificationSetting.cs` (per data-model)
+- [X] T007 [P] Create `CompanionEvent` entity in `Domain/CompanionEvent.cs` (per data-model)
+- [X] T008 [P] Create `CompanionCaptureState` entity (`Source` PK, `Watermark`) in `Domain/CompanionCaptureState.cs`
 
 ### Repositories
-- [ ] T009 [P] Create `INotificationSettingRepository` (`GetOrDefaultAsync(userId)`, `UpsertAsync`) in `Domain/Repositories/` + impl in `Infrastructure/Persistence/Repositories/NotificationSettingRepository.cs`
-- [ ] T010 [P] Create `ICompanionEventRepository` (`InsertIfNewAsync` dedup-by-key, `ListByDispositionAsync(userId, dispositions, limit)`, `MarkAsync(ids, disposition, fields)`, `ListRealtimePendingAsync`) in `Domain/Repositories/` + impl in `Infrastructure/Persistence/Repositories/CompanionEventRepository.cs`
-- [ ] T011 [P] Create `ICompanionCaptureStateRepository` (`GetWatermarkAsync(source)`, `SetWatermarkAsync`) + impl
+- [X] T009 [P] Create `INotificationSettingRepository` (`GetOrDefaultAsync(userId)`, `UpsertAsync`) in `Domain/Repositories/` + impl in `Infrastructure/Persistence/Repositories/NotificationSettingRepository.cs`
+- [X] T010 [P] Create `ICompanionEventRepository` (`InsertIfNewAsync` dedup-by-key, `ListByDispositionAsync(userId, dispositions, limit)`, `MarkAsync(ids, disposition, fields)`, `ListRealtimePendingAsync`) in `Domain/Repositories/` + impl in `Infrastructure/Persistence/Repositories/CompanionEventRepository.cs`
+- [X] T011 [P] Create `ICompanionCaptureStateRepository` (`GetWatermarkAsync(source)`, `SetWatermarkAsync`) + impl
 
 ### DbContext + migration (sequential — same files)
-- [ ] T012 Create `Infrastructure/Persistence/CompanionDbContext.cs` (schema `companion`; DbSets; unique index on `CompanionNotificationSetting.UserId`; unique `CompanionEvent.DedupKey`; indexes `(UserId,Disposition,OccurredAt)`; enum-as-string conversions) and `CompanionDbContextFactory.cs` (mirror `RiskDbContextFactory`, history table `__ef_migrations_history_companion`)
-- [ ] T013 Generate migration **M001_InitialSchema** WITH its `.Designer.cs` via `dotnet ef migrations add M001_InitialSchema` (creates `companion_notification_settings`, `companion_events`, `companion_capture_state`); verify snapshot + Designer present, and the M001 chain applies clean against a throwaway Postgres
-- [ ] T014 Create `CompanionModule.cs` — `AddCompanionModule` (DbContext with `MigrationsHistoryTable`, repositories) + `IJobRegistrar` stub (jobs registered in later phases); wire DI
+- [X] T012 Create `Infrastructure/Persistence/CompanionDbContext.cs` (schema `companion`; DbSets; unique index on `CompanionNotificationSetting.UserId`; unique `CompanionEvent.DedupKey`; indexes `(UserId,Disposition,OccurredAt)`; enum-as-string conversions) and `CompanionDbContextFactory.cs` (mirror `RiskDbContextFactory`, history table `__ef_migrations_history_companion`)
+- [X] T013 Generate migration **M001_InitialSchema** WITH its `.Designer.cs` via `dotnet ef migrations add M001_InitialSchema` (creates `companion_notification_settings`, `companion_events`, `companion_capture_state`); verify snapshot + Designer present, and the M001 chain applies clean against a throwaway Postgres
+- [X] T014 Create `CompanionModule.cs` — `AddCompanionModule` (DbContext with `MigrationsHistoryTable`, repositories) + `IJobRegistrar` stub (jobs registered in later phases); wire DI
 
 **Checkpoint**: `dotnet build backend/` zero warnings; migration discoverable.
 
@@ -58,12 +58,12 @@ description: "Task list for Companion Notification Modes + Event-Driven Push"
 
 **Independent Test**: `get_notification_mode` → default `scan`; `set_notification_mode {"mode":"quiet"}` persists; invalid mode rejected; change needs no redeploy.
 
-- [ ] T015 [P] [US1] Unit test for `SetNotificationModeCommand` (valid set persists; invalid mode rejected, previous unchanged) in `.../SetNotificationModeTests.cs`
-- [ ] T016 [P] [US1] Create `GetNotificationModeQuery` + handler (returns effective settings, defaults if no row) in `Application/Queries/GetNotificationModeQuery.cs` + `NotificationModeDto` in `API/Responses/`
-- [ ] T017 [US1] Create `SetNotificationModeCommand` + handler (parse/validate mode, upsert) in `Application/Commands/SetNotificationModeCommand.cs`
-- [ ] T018 [P] [US1] Implement `get_notification_mode` MCP tool in `backend/src/FinanceSentry.Mcp/Tools/GetNotificationModeTool.cs`
-- [ ] T019 [P] [US1] Implement `set_notification_mode` MCP tool in `backend/src/FinanceSentry.Mcp/Tools/SetNotificationModeTool.cs`
-- [ ] T020 [US1] Update `ToolNameContractTests` agreed surface in `backend/tests/FinanceSentry.Mcp.Tests/ContractTests/ToolNameContractTests.cs` (add the 2 US1 tools)
+- [X] T015 [P] [US1] Unit test for `SetNotificationModeCommand` (valid set persists; invalid mode rejected, previous unchanged) in `.../SetNotificationModeTests.cs`
+- [X] T016 [P] [US1] Create `GetNotificationModeQuery` + handler (returns effective settings, defaults if no row) in `Application/Queries/GetNotificationModeQuery.cs` + `NotificationModeDto` in `API/Responses/`
+- [X] T017 [US1] Create `SetNotificationModeCommand` + handler (parse/validate mode, upsert) in `Application/Commands/SetNotificationModeCommand.cs`
+- [X] T018 [P] [US1] Implement `get_notification_mode` MCP tool in `backend/src/FinanceSentry.Mcp/Tools/GetNotificationModeTool.cs`
+- [X] T019 [P] [US1] Implement `set_notification_mode` MCP tool in `backend/src/FinanceSentry.Mcp/Tools/SetNotificationModeTool.cs`
+- [X] T020 [US1] Update `ToolNameContractTests` agreed surface in `backend/tests/FinanceSentry.Mcp.Tests/ContractTests/ToolNameContractTests.cs` (add the 2 US1 tools)
 
 **Checkpoint**: US1 shippable — mode get/set works end-to-end via MCP.
 
@@ -84,7 +84,7 @@ description: "Task list for Companion Notification Modes + Event-Driven Push"
 - [ ] T024 [P] [US2] Unit test for mode→disposition mapping (quiet→SuppressedByMode, digest→HeldForDigest, scan/realtime→Pending) in `.../DispositionTests.cs`
 - [ ] T025 [US2] Create `IMaterialityPolicy` + `MaterialityPolicy` (classify + dedup key) in `Application/Services/`
 - [ ] T026 [US2] Create `ICompanionEventCapture` + `CompanionEventCapture` (read sources via watermark, filter held tickers via `IBrokerageHoldingsReader`, apply materiality + dedup, compute disposition from current mode, insert-if-new, advance watermark) in `Application/Services/`
-- [ ] T027 [US2] Create `CompanionOptions` (AgentTriggerUrl, quiet-hours defaults, MaxProactivePerHour, DigestHourLocal, TimeZoneId) in `Application/Services/CompanionOptions.cs`; bind in `AddCompanionModule`
+- [X] T027 [US2] Create `CompanionOptions` (AgentTriggerUrl, quiet-hours defaults, MaxProactivePerHour, DigestHourLocal, TimeZoneId) in `Application/Services/CompanionOptions.cs`; bind in `AddCompanionModule`
 
 ### Dispatch
 - [ ] T028 [P] [US2] Unit test for the outbound wake payload (ids/refs only, no secrets/detail) in `.../WebhookPayloadTests.cs`
