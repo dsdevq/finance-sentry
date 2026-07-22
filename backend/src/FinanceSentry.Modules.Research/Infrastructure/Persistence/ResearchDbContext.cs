@@ -26,6 +26,14 @@ public class ResearchDbContext(DbContextOptions<ResearchDbContext> options) : Db
 
     public DbSet<CandidateScore> CandidateScores { get; set; } = null!;
 
+    public DbSet<AnalystAction> AnalystActions { get; set; } = null!;
+
+    public DbSet<AnalystUniverseMember> AnalystUniverseMembers { get; set; } = null!;
+
+    public DbSet<NewsSource> NewsSources { get; set; } = null!;
+
+    public DbSet<ValuationSnapshot> ValuationSnapshots { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema("research");
@@ -92,6 +100,12 @@ public class ResearchDbContext(DbContextOptions<ResearchDbContext> options) : Db
             .HasConversion(
                 v => JsonSerializer.Serialize(v, jsonOptions),
                 v => JsonSerializer.Deserialize<List<string>>(v, jsonOptions) ?? new());
+        nb.Property(x => x.ThesisIds)
+            .HasColumnType("jsonb")
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, jsonOptions),
+                v => JsonSerializer.Deserialize<List<Guid>>(v, jsonOptions) ?? new())
+            .Metadata.SetValueComparer(GuidListComparer);
         nb.HasIndex(x => x.ContentHash).IsUnique().HasDatabaseName("idx_news_hash");
         nb.HasIndex(x => x.PublishedAt).IsDescending().HasDatabaseName("idx_news_published");
 
@@ -231,11 +245,85 @@ public class ResearchDbContext(DbContextOptions<ResearchDbContext> options) : Db
                 v => JsonSerializer.Deserialize<ScoreEvidence>(v, jsonOptions) ?? ScoreEvidence.Empty)
             .Metadata.SetValueComparer(ScoreEvidenceComparer);
         csb.HasIndex(x => new { x.CandidateId, x.ScoredAt }).HasDatabaseName("idx_candidate_scores_candidate_scored");
+
+        var aab = modelBuilder.Entity<AnalystAction>();
+        aab.ToTable("analyst_actions");
+        aab.HasKey(x => x.Id);
+        aab.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
+        aab.Property(x => x.Ticker).IsRequired().HasMaxLength(12);
+        aab.Property(x => x.Firm).IsRequired().HasMaxLength(120);
+        aab.Property(x => x.ActionType).IsRequired().HasConversion<string>().HasMaxLength(20);
+        aab.Property(x => x.PriorRating).HasMaxLength(40);
+        aab.Property(x => x.NewRating).HasMaxLength(40);
+        aab.Property(x => x.PriorTarget).HasColumnType("numeric(18,4)");
+        aab.Property(x => x.NewTarget).HasColumnType("numeric(18,4)");
+        aab.Property(x => x.ActionDate).IsRequired();
+        aab.Property(x => x.Source).IsRequired().HasMaxLength(40);
+        aab.Property(x => x.SourceUrl);
+        aab.Property(x => x.IngestedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+        aab.HasIndex(x => new { x.Ticker, x.Firm, x.ActionDate, x.ActionType })
+            .IsUnique().HasDatabaseName("idx_analyst_actions_dedup");
+        aab.HasIndex(x => x.ActionDate).IsDescending().HasDatabaseName("idx_analyst_actions_date");
+        aab.HasIndex(x => new { x.Ticker, x.ActionDate }).HasDatabaseName("idx_analyst_actions_ticker_date");
+
+        var aumb = modelBuilder.Entity<AnalystUniverseMember>();
+        aumb.ToTable("analyst_universe_members");
+        aumb.HasKey(x => x.Id);
+        aumb.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
+        aumb.Property(x => x.Ticker).IsRequired().HasMaxLength(12);
+        aumb.Property(x => x.Reason).IsRequired().HasConversion<string>().HasMaxLength(20);
+        aumb.Property(x => x.Active).IsRequired();
+        aumb.Property(x => x.AddedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+        aumb.HasIndex(x => x.Ticker).IsUnique().HasDatabaseName("idx_analyst_universe_ticker");
+
+        var nsb = modelBuilder.Entity<NewsSource>();
+        nsb.ToTable("news_sources");
+        nsb.HasKey(x => x.Id);
+        nsb.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
+        nsb.Property(x => x.Name).IsRequired().HasMaxLength(80);
+        nsb.Property(x => x.Kind).IsRequired().HasConversion<string>().HasMaxLength(10);
+        nsb.Property(x => x.Url).IsRequired();
+        nsb.Property(x => x.Keywords)
+            .HasColumnType("jsonb")
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, jsonOptions),
+                v => JsonSerializer.Deserialize<List<string>>(v, jsonOptions) ?? new())
+            .Metadata.SetValueComparer(StringListComparer);
+        nsb.Property(x => x.ThesisId);
+        nsb.Property(x => x.Enabled).IsRequired();
+        nsb.Property(x => x.ConsecutiveFailures).IsRequired();
+        nsb.Property(x => x.LastSuccessAt);
+        nsb.Property(x => x.LastFailureReason);
+        nsb.Property(x => x.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+        nsb.HasOne<InvestmentThesis>().WithMany().HasForeignKey(x => x.ThesisId)
+            .OnDelete(DeleteBehavior.SetNull);
+        nsb.HasIndex(x => x.Url).IsUnique().HasDatabaseName("idx_news_sources_url");
+        nsb.HasIndex(x => x.ThesisId).HasDatabaseName("idx_news_sources_thesis");
+
+        var vsb = modelBuilder.Entity<ValuationSnapshot>();
+        vsb.ToTable("valuation_snapshots");
+        vsb.HasKey(x => x.Id);
+        vsb.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
+        vsb.Property(x => x.Ticker).IsRequired().HasMaxLength(12);
+        vsb.Property(x => x.CapturedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+        vsb.Property(x => x.Price).HasColumnType("numeric(18,4)");
+        vsb.Property(x => x.TrailingPe).HasColumnType("numeric(12,4)");
+        vsb.Property(x => x.ForwardPe).HasColumnType("numeric(12,4)");
+        vsb.Property(x => x.EvToEbitda).HasColumnType("numeric(12,4)");
+        vsb.Property(x => x.DividendYield).HasColumnType("numeric(8,6)");
+        vsb.Property(x => x.ConsensusTarget).HasColumnType("numeric(18,4)");
+        vsb.Property(x => x.IsStale).IsRequired();
+        vsb.HasIndex(x => new { x.Ticker, x.CapturedAt }).HasDatabaseName("idx_valuation_snapshots_ticker_captured");
     }
 
     private static readonly ValueComparer<List<string>> StringListComparer = new(
         (a, b) => (a ?? new()).SequenceEqual(b ?? new()),
         v => v.Aggregate(0, (hash, s) => HashCode.Combine(hash, s.GetHashCode())),
+        v => v.ToList());
+
+    private static readonly ValueComparer<List<Guid>> GuidListComparer = new(
+        (a, b) => (a ?? new()).SequenceEqual(b ?? new()),
+        v => v.Aggregate(0, (hash, g) => HashCode.Combine(hash, g.GetHashCode())),
         v => v.ToList());
 
     private static readonly ValueComparer<IpsFitFacts> IpsFitFactsComparer = new(

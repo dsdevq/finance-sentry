@@ -39,7 +39,7 @@ public class RssMarketNewsService(
         return await repo.InsertNewAsync(articles, ct);
     }
 
-    private async Task<List<NewsArticle>> FetchYahooTickerAsync(string ticker, CancellationToken ct)
+    private async Task<IReadOnlyList<NewsArticle>> FetchYahooTickerAsync(string ticker, CancellationToken ct)
     {
         var upper = ticker.Trim().ToUpperInvariant();
         var url = $"https://feeds.finance.yahoo.com/rss/2.0/headline?s={Uri.EscapeDataString(upper)}&region=US&lang=en-US";
@@ -55,54 +55,68 @@ public class RssMarketNewsService(
         return articles;
     }
 
-    private async Task<List<NewsArticle>> FetchFeedAsync(string url, string sourceLabel, CancellationToken ct)
+    private async Task<IReadOnlyList<NewsArticle>> FetchFeedAsync(string url, string sourceLabel, CancellationToken ct)
     {
-        var client = httpFactory.CreateClient(HttpClientName);
         try
         {
-            using var response = await client.GetAsync(url, ct);
-            response.EnsureSuccessStatusCode();
-            var xml = await response.Content.ReadAsStringAsync(ct);
-            var doc = XDocument.Parse(xml);
-
-            var items = doc.Descendants("item").ToList();
-            var result = new List<NewsArticle>(items.Count);
-
-            foreach (var item in items)
-            {
-                var title = item.Element("title")?.Value?.Trim();
-                var link = item.Element("link")?.Value?.Trim();
-                var description = item.Element("description")?.Value?.Trim();
-                var pubDate = item.Element("pubDate")?.Value?.Trim();
-
-                if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(link))
-                {
-                    continue;
-                }
-
-                if (!DateTimeOffset.TryParse(pubDate, out var published))
-                {
-                    published = DateTimeOffset.UtcNow;
-                }
-
-                result.Add(new NewsArticle
-                {
-                    Source = sourceLabel,
-                    Title = TrimTo(title, 500),
-                    Url = TrimTo(link, 2000),
-                    Summary = description is null ? null : TrimTo(description, 4000),
-                    PublishedAt = published,
-                    ContentHash = HashContent(link, title),
-                });
-            }
-
-            return result;
+            return await FetchFeedOrThrowAsync(url, sourceLabel, ct);
         }
         catch (Exception ex)
         {
             logger.LogWarning(ex, "RSS fetch failed for {Url}", url);
             return [];
         }
+    }
+
+    /// <summary>
+    /// Registered-source ingestion path: fetches + parses a feed and lets network/parse failures
+    /// PROPAGATE so the caller can count consecutive failures (feature 030, FR-009).
+    /// </summary>
+    public Task<IReadOnlyList<NewsArticle>> FetchFeedArticlesAsync(
+        string url, string sourceLabel, CancellationToken ct = default)
+        => FetchFeedOrThrowAsync(url, sourceLabel, ct);
+
+    private async Task<IReadOnlyList<NewsArticle>> FetchFeedOrThrowAsync(
+        string url, string sourceLabel, CancellationToken ct)
+    {
+        var client = httpFactory.CreateClient(HttpClientName);
+        using var response = await client.GetAsync(url, ct);
+        response.EnsureSuccessStatusCode();
+        var xml = await response.Content.ReadAsStringAsync(ct);
+        var doc = XDocument.Parse(xml);
+
+        var items = doc.Descendants("item").ToList();
+        var result = new List<NewsArticle>(items.Count);
+
+        foreach (var item in items)
+        {
+            var title = item.Element("title")?.Value?.Trim();
+            var link = item.Element("link")?.Value?.Trim();
+            var description = item.Element("description")?.Value?.Trim();
+            var pubDate = item.Element("pubDate")?.Value?.Trim();
+
+            if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(link))
+            {
+                continue;
+            }
+
+            if (!DateTimeOffset.TryParse(pubDate, out var published))
+            {
+                published = DateTimeOffset.UtcNow;
+            }
+
+            result.Add(new NewsArticle
+            {
+                Source = sourceLabel,
+                Title = TrimTo(title, 500),
+                Url = TrimTo(link, 2000),
+                Summary = description is null ? null : TrimTo(description, 4000),
+                PublishedAt = published,
+                ContentHash = HashContent(link, title),
+            });
+        }
+
+        return result;
     }
 
     private static string HashContent(string url, string title)

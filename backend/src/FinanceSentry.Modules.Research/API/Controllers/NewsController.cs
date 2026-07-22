@@ -15,6 +15,7 @@ public class NewsController(
     public async Task<IActionResult> Search(
         [FromQuery] string? q,
         [FromQuery] string? tickers,
+        [FromQuery] Guid? thesisId,
         [FromQuery] DateTimeOffset? since,
         [FromQuery] int limit = 25,
         CancellationToken ct = default)
@@ -23,7 +24,7 @@ public class NewsController(
             ? null
             : tickers.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 
-        var result = await search.Handle(new SearchMarketNewsQuery(q, tickerList, since, limit), ct);
+        var result = await search.Handle(new SearchMarketNewsQuery(q, tickerList, thesisId, since, limit), ct);
         return Ok(result);
     }
 

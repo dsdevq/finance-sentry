@@ -5,6 +5,7 @@ public interface INewsRepository
     Task<IReadOnlyList<NewsArticle>> SearchAsync(
         string? query,
         IReadOnlyCollection<string>? tickers,
+        Guid? thesisId,
         DateTimeOffset? since,
         int limit,
         CancellationToken ct = default);
