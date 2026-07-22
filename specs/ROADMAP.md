@@ -11,7 +11,8 @@
 
 | Spec | Kind | Depends on | Note |
 |---|---|---|---|
-| `031-companion-notifications` | Feature | — | In review (PR #294) — FS-owned notification modes + event push |
+| `033-analytics-query-tool` | Feature | — | **Planned — ready to implement.** Guarded read-only query tool (escape-hatch for the long tail; relieves tool sprawl) |
+| `034-research-rag` | Feature | — | Spec + **research done**; ready to plan/implement. Semantic search over the text corpus (news/filings/notes); complements 033 (prose vs numbers) |
 | `032-agent-as-code` | Architecture | 031 (proves the pattern) | Draft — agent definition in the repo, CI-deployed to the runtime |
 | `023-observability-stack` | Platform | — | Don't orchestrate what you can't observe — do this rung first |
 | `024-data-retention` | Platform | 023 | Retention policies + verified off-host backups |
