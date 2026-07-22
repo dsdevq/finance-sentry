@@ -7,6 +7,7 @@ using FinanceSentry.Modules.Research.Domain.Repositories;
 public record SearchMarketNewsQuery(
     string? Query,
     IReadOnlyList<string>? Tickers,
+    Guid? ThesisId,
     DateTimeOffset? Since,
     int Limit) : IQuery<IReadOnlyList<NewsArticleDto>>;
 
@@ -18,6 +19,7 @@ public class SearchMarketNewsQueryHandler(INewsRepository repo)
         var items = await repo.SearchAsync(
             query.Query,
             query.Tickers,
+            query.ThesisId,
             query.Since,
             query.Limit <= 0 ? 25 : query.Limit,
             ct);

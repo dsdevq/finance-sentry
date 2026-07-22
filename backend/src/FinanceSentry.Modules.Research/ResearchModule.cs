@@ -5,6 +5,7 @@ using FinanceSentry.Modules.Research.Application.Services;
 using FinanceSentry.Modules.Research.Domain.Repositories;
 using FinanceSentry.Modules.Research.Infrastructure.Jobs;
 using FinanceSentry.Modules.Research.Infrastructure.Persistence;
+using FinanceSentry.Modules.Research.Infrastructure.Sources;
 using FinanceSentry.Modules.Research.Infrastructure.Persistence.Repositories;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
@@ -41,6 +42,12 @@ public static class ResearchModule
                 job => job.ExecuteAsync(CancellationToken.None),
                 Cron.Daily(3));
 
+            // Seed market-wide default feeds + TrendForce→DRAM page source (feature 030). Idempotent.
+            mgr.AddOrUpdate<NewsSourceSeedJob>(
+                "research-news-sources-seed",
+                job => job.ExecuteAsync(CancellationToken.None),
+                Cron.Daily(2));
+
             mgr.AddOrUpdate<ThesisMonitorJob>(
                 "thesis-monitor",
                 job => job.ExecuteAsync(CancellationToken.None),
@@ -61,6 +68,12 @@ public static class ResearchModule
                 "opportunity-scan",
                 job => job.ExecuteAsync(CancellationToken.None),
                 Cron.Daily(opportunity.ScanHourUtc));
+
+            // Nightly analyst-actions ingestion (feature 030), 01:00 UTC — after opportunity-scan (00:00).
+            mgr.AddOrUpdate<AnalystActionsIngestionJob>(
+                "analyst-actions-ingestion",
+                job => job.ExecuteAsync(CancellationToken.None),
+                Cron.Daily(1));
         }
     }
 
@@ -83,6 +96,10 @@ public static class ResearchModule
         services.AddScoped<IThesisEventRepository, ThesisEventRepository>();
         services.AddScoped<ICandidateRepository, CandidateRepository>();
         services.AddScoped<ICandidateScoreRepository, CandidateScoreRepository>();
+        services.AddScoped<IAnalystActionRepository, AnalystActionRepository>();
+        services.AddScoped<IAnalystUniverseRepository, AnalystUniverseRepository>();
+        services.AddScoped<INewsSourceRepository, NewsSourceRepository>();
+        services.AddScoped<IValuationSnapshotRepository, ValuationSnapshotRepository>();
         services.Configure<OpportunityOptions>(config.GetSection(OpportunityOptions.SectionName));
 
         services.AddHttpClient(YahooMarketDataService.HttpClientName, client =>
@@ -131,6 +148,53 @@ public static class ResearchModule
             AutomaticDecompression = System.Net.DecompressionMethods.All,
         });
 
+        // MarketBeat daily ratings page (analyst actions market-wide sweep). A browser-like UA is
+        // required or the page returns a challenge instead of the table.
+        services.AddHttpClient(MarketBeatAnalystActionsSource.HttpClientName, client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(20);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+        })
+        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+        {
+            AutomaticDecompression = System.Net.DecompressionMethods.All,
+        });
+
+        // Yahoo quoteSummary/upgradeDowngradeHistory (per-ticker analyst actions) — same crumb + cookie
+        // dance as the earnings client, with its own CookieContainer so its crumb/cookies are isolated.
+        var yahooAnalystCookies = new System.Net.CookieContainer();
+        services.AddHttpClient(YahooAnalystActionsSource.HttpClientName, client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(12);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+        })
+        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+        {
+            CookieContainer = yahooAnalystCookies,
+            UseCookies = true,
+            AutomaticDecompression = System.Net.DecompressionMethods.All,
+        })
+        .SetHandlerLifetime(TimeSpan.FromHours(2));
+
+        // Yahoo quoteSummary valuation modules (feature 030, US2) — same crumb + cookie dance with its
+        // own isolated CookieContainer so its crumb/cookies don't collide with the analyst client.
+        var yahooValuationCookies = new System.Net.CookieContainer();
+        services.AddHttpClient(YahooValuationDataService.HttpClientName, client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(12);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+        })
+        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+        {
+            CookieContainer = yahooValuationCookies,
+            UseCookies = true,
+            AutomaticDecompression = System.Net.DecompressionMethods.All,
+        })
+        .SetHandlerLifetime(TimeSpan.FromHours(2));
+
         services.AddScoped<IMarketDataService, YahooMarketDataService>();
         services.AddScoped<IMarketNewsService, RssMarketNewsService>();
         services.AddScoped<IMacroCalendarService, MacroCalendarService>();
@@ -144,7 +208,40 @@ public static class ResearchModule
         // Singleton: caches the ticker->CIK map + per-ticker EDGAR results across requests.
         services.AddSingleton<ISecEdgarService, SecEdgarService>();
 
+        // Analyst-actions sources (feature 030). Both singletons: MarketBeat is stateless; Yahoo caches
+        // its crumb. Registered under IAnalystActionsSource so the job resolves them as IEnumerable.
+        services.AddSingleton<MarketBeatAnalystActionsSource>();
+        services.AddSingleton<YahooAnalystActionsSource>();
+        services.AddSingleton<IAnalystActionsSource>(sp => sp.GetRequiredService<MarketBeatAnalystActionsSource>());
+        services.AddSingleton<IAnalystActionsSource>(sp => sp.GetRequiredService<YahooAnalystActionsSource>());
+        services.AddSingleton<IAnalystSourceHealth, AnalystSourceHealth>();
+        services.AddScoped<IAnalystUniverseService, AnalystUniverseService>();
+
+        // Valuation snapshot services (feature 030, US2). Both scoped: the valuation service depends on
+        // the scoped IMarketDataService for price/staleness, and its crumb still caches within each
+        // request/job scope (where the ticker and all its peers are resolved on one instance).
+        services.AddScoped<IValuationDataService, YahooValuationDataService>();
+        services.AddScoped<IValuationHistoryService, ValuationHistoryService>();
+
+        // TrendForce press-center page source (feature 030, US3). A browser-like UA is required or the
+        // page returns a challenge instead of the article list. Registered under INewsPageSource so the
+        // news job resolves page sources as an IEnumerable.
+        services.AddHttpClient(TrendForcePageSource.HttpClientName, client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(20);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+        })
+        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+        {
+            AutomaticDecompression = System.Net.DecompressionMethods.All,
+        });
+
+        services.AddScoped<INewsPageSource, TrendForcePageSource>();
+
         services.AddScoped<NewsIngestionJob>();
+        services.AddScoped<NewsSourceSeedJob>();
+        services.AddScoped<AnalystActionsIngestionJob>();
         services.AddScoped<MacroCalendarSeedJob>();
         services.AddScoped<ThesisMonitorJob>();
         services.AddScoped<ThesisTrackRecordSnapshotJob>();

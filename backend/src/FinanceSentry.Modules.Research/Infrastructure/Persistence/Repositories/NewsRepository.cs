@@ -13,6 +13,7 @@ public class NewsRepository(ResearchDbContext db) : INewsRepository
     public async Task<IReadOnlyList<NewsArticle>> SearchAsync(
         string? query,
         IReadOnlyCollection<string>? tickers,
+        Guid? thesisId,
         DateTimeOffset? since,
         int limit,
         CancellationToken ct = default)
@@ -31,14 +32,17 @@ public class NewsRepository(ResearchDbContext db) : INewsRepository
             q = q.Where(a => EF.Functions.ILike(a.Title, like) || EF.Functions.ILike(a.Summary ?? string.Empty, like));
         }
 
-        if (tickers is { Count: > 0 })
+        // Ticker and thesis tags are jsonb collections — prefilter recent rows in SQL, then match the
+        // tags in memory (same pattern as ticker search) since jsonb Contains does not translate.
+        if (tickers is { Count: > 0 } || thesisId is not null)
         {
-            var upper = tickers.Select(t => t.ToUpperInvariant()).ToHashSet(StringComparer.Ordinal);
+            var upper = tickers?.Select(t => t.ToUpperInvariant()).ToHashSet(StringComparer.Ordinal);
             var candidates = await q.OrderByDescending(a => a.PublishedAt)
                 .Take(effective * PrefilterMultiplier)
                 .ToListAsync(ct);
             return candidates
-                .Where(a => a.Tickers.Any(upper.Contains))
+                .Where(a => (upper is null || a.Tickers.Any(upper.Contains))
+                    && (thesisId is not { } tid || a.ThesisIds.Contains(tid)))
                 .Take(effective)
                 .ToList();
         }
