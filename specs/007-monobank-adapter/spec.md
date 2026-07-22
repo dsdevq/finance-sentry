@@ -2,7 +2,7 @@
 
 **Feature Branch**: `007-monobank-adapter`  
 **Created**: 2026-04-19  
-**Status**: Draft  
+**Status**: Implemented
 **Input**: User description: "I want to create a monobank adapter, since it is not available through plaid"
 
 ## User Scenarios & Testing *(mandatory)*

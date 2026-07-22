@@ -2,7 +2,7 @@
 
 **Feature Branch**: `010-ibkr-integration`
 **Created**: 2026-04-22
-**Status**: Draft
+**Status**: Implemented
 **Input**: User description: "make ibkr integration"
 
 ## User Scenarios & Testing *(mandatory)*

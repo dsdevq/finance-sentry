@@ -2,7 +2,7 @@
 
 **Feature Branch**: `030-companion-data-layer`
 **Created**: 2026-07-21
-**Status**: Draft
+**Status**: Implemented
 **Input**: User description: "Companion-mode data layer for Ledger: analyst actions ingestion (upgrades/downgrades/price targets from free public sources, market-wide universe), valuation snapshot MCP tool (fundamentals vs 5-year history and peers), and market-wide news ingestion breadth with source-per-thesis registration (e.g. TrendForce for the DRAM thesis). Backend + MCP only; consumed by the Ledger OpenClaw agent for a weekly advisor letter and conversational use; ideas flow into the existing opportunity candidates pipeline."
 
 ## Context

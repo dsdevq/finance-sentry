@@ -2,7 +2,7 @@
 
 **Feature Branch**: `002-investment-tracking`  
 **Created**: 2026-03-21  
-**Status**: Draft  
+**Status**: Superseded — delivered under 008 (wealth) / 009 (binance) / 010 (ibkr) + the research suite
 **Input**: User description: "Multi-source investment tracking for Binance and Interactive Brokers with AI-powered analytics"
 
 ## User Scenarios & Testing *(mandatory)*

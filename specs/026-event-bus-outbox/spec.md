@@ -2,7 +2,7 @@
 
 **Feature Branch**: `026-event-bus-outbox`
 **Created**: 2026-07-09
-**Status**: Draft
+**Status**: Roadmap — spec only, not yet planned or implemented
 **Input**: User description: "In-monolith event bus: modules publish and consume domain events through a message broker with a transactional outbox, replacing direct cross-module calls for event-shaped interactions (e.g. alerts reacting to completed transaction syncs), with idempotent consumers and dead-letter handling"
 
 ## User Scenarios & Testing *(mandatory)*
