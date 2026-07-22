@@ -216,6 +216,7 @@ public static class ResearchModule
         services.AddSingleton<IAnalystActionsSource>(sp => sp.GetRequiredService<YahooAnalystActionsSource>());
         services.AddSingleton<IAnalystSourceHealth, AnalystSourceHealth>();
         services.AddScoped<IAnalystUniverseService, AnalystUniverseService>();
+        services.AddScoped<Core.Interfaces.IAnalystActionFeedReader, Infrastructure.Persistence.AnalystActionFeedReader>();
 
         // Valuation snapshot services (feature 030, US2). Both scoped: the valuation service depends on
         // the scoped IMarketDataService for price/staleness, and its crumb still caches within each

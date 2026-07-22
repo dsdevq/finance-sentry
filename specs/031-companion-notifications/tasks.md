@@ -76,27 +76,27 @@ description: "Task list for Companion Notification Modes + Event-Driven Push"
 **Independent Test**: realtime → material event captured + dispatched ≤60s exactly once; quiet → recorded `SuppressedByMode`, no push; duplicate → one row; unreachable URL → retried not lost.
 
 ### Cross-module read contracts
-- [ ] T021 [P] [US2] Create `IMaterialAlertReader` in `backend/src/FinanceSentry.Core/Interfaces/IMaterialAlertReader.cs` + impl in the Alerts module (`GetNewSinceAsync(watermark)`)
-- [ ] T022 [P] [US2] Create `IThesisBreakReader` + `IAnalystActionFeedReader` in `Core/Interfaces/` + impls in the Research module (new since watermark)
+- [X] T021 [P] [US2] Create `IMaterialAlertReader` in `backend/src/FinanceSentry.Core/Interfaces/IMaterialAlertReader.cs` + impl in the Alerts module (`GetNewSinceAsync(watermark)`)
+- [X] T022 [P] [US2] Create `IThesisBreakReader` + `IAnalystActionFeedReader` in `Core/Interfaces/` + impls in the Research module (new since watermark)
 
 ### Materiality + capture
-- [ ] T023 [P] [US2] Unit test for `MaterialityPolicy` (which kinds are material; analyst action only on held ticker; dedup-key construction) in `.../MaterialityPolicyTests.cs`
-- [ ] T024 [P] [US2] Unit test for mode→disposition mapping (quiet→SuppressedByMode, digest→HeldForDigest, scan/realtime→Pending) in `.../DispositionTests.cs`
-- [ ] T025 [US2] Create `IMaterialityPolicy` + `MaterialityPolicy` (classify + dedup key) in `Application/Services/`
-- [ ] T026 [US2] Create `ICompanionEventCapture` + `CompanionEventCapture` (read sources via watermark, filter held tickers via `IBrokerageHoldingsReader`, apply materiality + dedup, compute disposition from current mode, insert-if-new, advance watermark) in `Application/Services/`
+- [X] T023 [P] [US2] Unit test for `MaterialityPolicy` (which kinds are material; analyst action only on held ticker; dedup-key construction) in `.../MaterialityPolicyTests.cs`
+- [X] T024 [P] [US2] Unit test for mode→disposition mapping (quiet→SuppressedByMode, digest→HeldForDigest, scan/realtime→Pending) in `.../DispositionTests.cs`
+- [X] T025 [US2] Create `IMaterialityPolicy` + `MaterialityPolicy` (classify + dedup key) in `Application/Services/`
+- [X] T026 [US2] Create `ICompanionEventCapture` + `CompanionEventCapture` (read sources via watermark, filter held tickers via `IBrokerageHoldingsReader`, apply materiality + dedup, compute disposition from current mode, insert-if-new, advance watermark) in `Application/Services/`
 - [X] T027 [US2] Create `CompanionOptions` (AgentTriggerUrl, quiet-hours defaults, MaxProactivePerHour, DigestHourLocal, TimeZoneId) in `Application/Services/CompanionOptions.cs`; bind in `AddCompanionModule`
 
 ### Dispatch
-- [ ] T028 [P] [US2] Unit test for the outbound wake payload (ids/refs only, no secrets/detail) in `.../WebhookPayloadTests.cs`
-- [ ] T029 [US2] Create `IAgentWakeDispatcher` + `WebhookAgentWakeDispatcher` (POST minimal payload to `AgentTriggerUrl`; no-op when unset; return success/failure) in `Application/Services/` + named HttpClient in `AddCompanionModule`
-- [ ] T030 [US2] Create `CompanionCaptureJob` (`[DisableConcurrentExecution]`) and `CompanionDispatchJob` (realtime relay: honor quiet-hours + rate-limit → `DeferredQuietHours`/`SuppressedByRateLimit`; POST → `Dispatched`/`Failed` with `Attempts`/`LastError`) in `Infrastructure/Jobs/`
+- [X] T028 [P] [US2] Unit test for the outbound wake payload (ids/refs only, no secrets/detail) in `.../WebhookPayloadTests.cs`
+- [X] T029 [US2] Create `IAgentWakeDispatcher` + `WebhookAgentWakeDispatcher` (POST minimal payload to `AgentTriggerUrl`; no-op when unset; return success/failure) in `Application/Services/` + named HttpClient in `AddCompanionModule`
+- [X] T030 [US2] Create `CompanionCaptureJob` (`[DisableConcurrentExecution]`) and `CompanionDispatchJob` (realtime relay: honor quiet-hours + rate-limit → `DeferredQuietHours`/`SuppressedByRateLimit`; POST → `Dispatched`/`Failed` with `Attempts`/`LastError`) in `Infrastructure/Jobs/`
 
 ### Query surface
-- [ ] T031 [P] [US2] Create `GetPendingCompanionEventsQuery` + handler (pending/dispatched, optional held-for-digest) in `Application/Queries/` + `CompanionEventDto` in `API/Responses/`
-- [ ] T032 [US2] Create `AcknowledgeCompanionEventsCommand` + handler (mark `Delivered`) in `Application/Commands/`
-- [ ] T033 [P] [US2] Implement `get_pending_companion_events` MCP tool in `backend/src/FinanceSentry.Mcp/Tools/GetPendingCompanionEventsTool.cs`
-- [ ] T034 [P] [US2] Implement `acknowledge_companion_events` MCP tool in `backend/src/FinanceSentry.Mcp/Tools/AcknowledgeCompanionEventsTool.cs`
-- [ ] T035 [US2] Register `companion-capture` (every 1 min) + `companion-dispatch` (every 1 min) recurring jobs in `CompanionModule.cs`; add the 2 tools to `ToolNameContractTests`
+- [X] T031 [P] [US2] Create `GetPendingCompanionEventsQuery` + handler (pending/dispatched, optional held-for-digest) in `Application/Queries/` + `CompanionEventDto` in `API/Responses/`
+- [X] T032 [US2] Create `AcknowledgeCompanionEventsCommand` + handler (mark `Delivered`) in `Application/Commands/`
+- [X] T033 [P] [US2] Implement `get_pending_companion_events` MCP tool in `backend/src/FinanceSentry.Mcp/Tools/GetPendingCompanionEventsTool.cs`
+- [X] T034 [P] [US2] Implement `acknowledge_companion_events` MCP tool in `backend/src/FinanceSentry.Mcp/Tools/AcknowledgeCompanionEventsTool.cs`
+- [X] T035 [US2] Register `companion-capture` (every 1 min) + `companion-dispatch` (every 1 min) recurring jobs in `CompanionModule.cs`; add the 2 tools to `ToolNameContractTests`
 
 **Checkpoint**: US2 works — capture + realtime dispatch + pull/ack.
 
@@ -108,9 +108,9 @@ description: "Task list for Companion Notification Modes + Event-Driven Push"
 
 **Independent Test**: digest mode → events `HeldForDigest`, none dispatched immediately; digest run surfaces the day's set once; empty day → no forced message.
 
-- [ ] T036 [P] [US3] Unit test for digest consolidation (collects `HeldForDigest` for the user, one batch, no repeat after delivery/ack; empty → nothing) in `.../DigestConsolidationTests.cs`
-- [ ] T037 [US3] Create `CompanionDigestJob` (`[DisableConcurrentExecution]`, daily at `DigestHourLocal`): for `digest`-mode users, expose the day's `HeldForDigest` events for the agent to pull via `get_pending_companion_events {includeHeldForDigest:true}`; mark surfaced set so it isn't repeated in `Infrastructure/Jobs/CompanionDigestJob.cs`
-- [ ] T038 [US3] Register `companion-digest` recurring job (daily) in `CompanionModule.cs`
+- [X] T036 [P] [US3] Unit test for digest consolidation (collects `HeldForDigest` for the user, one batch, no repeat after delivery/ack; empty → nothing) in `.../DigestConsolidationTests.cs`
+- [X] T037 [US3] Create `CompanionDigestJob` (`[DisableConcurrentExecution]`, daily at `DigestHourLocal`): for `digest`-mode users, expose the day's `HeldForDigest` events for the agent to pull via `get_pending_companion_events {includeHeldForDigest:true}`; mark surfaced set so it isn't repeated in `Infrastructure/Jobs/CompanionDigestJob.cs`
+- [X] T038 [US3] Register `companion-digest` recurring job (daily) in `CompanionModule.cs`
 
 **Checkpoint**: All three stories functional.
 
@@ -118,10 +118,10 @@ description: "Task list for Companion Notification Modes + Event-Driven Push"
 
 ## Phase 6: Polish & Cross-Cutting
 
-- [ ] T039 `/csharp-quality` sweep across all new files; `dotnet build backend/` zero warnings
-- [ ] T040 Add `Companion` config section to `backend/src/FinanceSentry.API/appsettings.json` (defaults; `AgentTriggerUrl` empty = pull-only) and document it
-- [ ] T041 Bump backend `<Version>` in `backend/src/FinanceSentry.API/FinanceSentry.API.csproj`
-- [ ] T042 Run `quickstart.md` verification (US1/US2/US3 + boundary) against the Docker stack; confirm M001 in `__ef_migrations_history_companion`
+- [X] T039 `/csharp-quality` sweep across all new files; `dotnet build backend/` zero warnings
+- [X] T040 Add `Companion` config section to `backend/src/FinanceSentry.API/appsettings.json` (defaults; `AgentTriggerUrl` empty = pull-only) and document it
+- [X] T041 Bump backend `<Version>` in `backend/src/FinanceSentry.API/FinanceSentry.API.csproj`
+- [X] T042 Run `quickstart.md` verification (US1/US2/US3 + boundary) against the Docker stack; confirm M001 in `__ef_migrations_history_companion`
 
 ---
 

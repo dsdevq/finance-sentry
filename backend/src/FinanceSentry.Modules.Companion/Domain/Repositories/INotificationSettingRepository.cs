@@ -9,4 +9,8 @@ public interface INotificationSettingRepository
 
     /// <summary>Insert or update the user's setting.</summary>
     Task UpsertAsync(CompanionNotificationSetting setting, CancellationToken ct = default);
+
+    /// <summary>Users currently set to the given mode (persisted rows only).</summary>
+    Task<IReadOnlyList<CompanionNotificationSetting>> ListByModeAsync(
+        NotificationMode mode, CancellationToken ct = default);
 }

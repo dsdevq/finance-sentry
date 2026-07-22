@@ -32,6 +32,10 @@ public class NotificationSettingRepository(CompanionDbContext db, IOptions<Compa
         };
     }
 
+    public async Task<IReadOnlyList<CompanionNotificationSetting>> ListByModeAsync(
+        NotificationMode mode, CancellationToken ct = default)
+        => await db.NotificationSettings.AsNoTracking().Where(s => s.Mode == mode).ToListAsync(ct);
+
     public async Task UpsertAsync(CompanionNotificationSetting setting, CancellationToken ct = default)
     {
         var existing = await db.NotificationSettings.FirstOrDefaultAsync(s => s.UserId == setting.UserId, ct);

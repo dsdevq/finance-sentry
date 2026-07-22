@@ -36,6 +36,7 @@ public static class AlertsModule
 
         services.AddScoped<IAlertRepository, AlertRepository>();
         services.AddScoped<IAlertGeneratorService, AlertGeneratorService>();
+        services.AddScoped<IMaterialAlertReader, Infrastructure.Persistence.MaterialAlertReader>();
         services.AddScoped<AlertPurgeJob>();
 
         services.AddSingleton<IJobRegistrar, JobRegistrar>();
