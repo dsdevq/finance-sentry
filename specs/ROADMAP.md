@@ -5,6 +5,24 @@
 **Owner**: Denys
 **Origin**: Ledger conversation 2026-07-07 (memory-sector rotation miss → "opportunity radar + thesis radar" proposal), reconciled with the existing `017-thesis-monitor` design pass, then widened per Denys's direction: *"not just a radar for theses — a huge radar that checks status, checks market, checks a lot of stuff."*
 
+## Backlog — specs not yet implemented
+
+> **Single source of truth for *done-or-not* is each spec's `Status:` line** (flipped to `Implemented` at merge). This table only orders what's left and why — it holds priority/sequencing, not status. If a spec here has flipped to `Implemented`, drop it from this list.
+
+| Spec | Kind | Depends on | Note |
+|---|---|---|---|
+| `031-companion-notifications` | Feature | — | In review (PR #294) — FS-owned notification modes + event push |
+| `032-agent-as-code` | Architecture | 031 (proves the pattern) | Draft — agent definition in the repo, CI-deployed to the runtime |
+| `023-observability-stack` | Platform | — | Don't orchestrate what you can't observe — do this rung first |
+| `024-data-retention` | Platform | 023 | Retention policies + verified off-host backups |
+| `025-edge-gateway` | Platform | — | Single reverse-proxy entrypoint, TLS, rate limits |
+| `026-event-bus-outbox` | Platform | 023 | In-monolith broker + transactional outbox (031 is a focused precursor) |
+| `027-k8s-migration` | Platform | 025; 023/024 advised | Single-node cluster replaces compose in prod |
+| `028-extract-market-data-service` | Platform | 026, 025, radar stable | First module extracted to its own service |
+| `029-grpc-internal-contract` | Platform | 028 | One internal call goes contract-first RPC |
+
+*(`002-investment-tracking` is `Superseded` — delivered under 008/009/010 + the research suite — not backlog.)*
+
 ## Goal
 
 **Earn a decent amount of money, with Ledger taking care of the watching.** Concretely: a financial agent that briefs Denys concisely on what matters (and stays silent otherwise), tracks and analyzes the market on professional-grade inputs, reasons over accumulated data, and helps accumulate wealth — finding opportunities early, amplifying Denys's own convictions with evidence, protecting held positions, and **measurably** beating the benchmark — while every recommendation is judged against Denys's own strategy (the IPS). The 2026-07-07 DRAM/rotation episode is the motivating failure: Ledger explained a single-name catalyst while missing the sector-wide rotation, because Finance Sentry has no market-structure data and no accumulated signal history.
