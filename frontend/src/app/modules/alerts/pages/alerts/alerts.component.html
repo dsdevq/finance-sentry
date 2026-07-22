@@ -17,21 +17,12 @@
     </div>
 
     @if (filtered().length === 0) {
-      <cmn-card>
-        <div class="flex flex-col items-center py-cmn-12 text-center">
-          <cmn-icon name="CheckCircle2" size="lg" class="mb-cmn-3 text-status-success" />
-          <div class="font-label text-cmn-sm font-semibold text-text-primary mb-1">
-            {{ store.filter() === 'all' ? 'No alerts' : 'No ' + store.filter() + ' alerts' }}
-          </div>
-          <div class="text-cmn-xs text-text-secondary">
-            {{
-              store.filter() === 'all'
-                ? 'All your accounts are healthy.'
-                : 'Try a different filter.'
-            }}
-          </div>
-        </div>
-      </cmn-card>
+      <cmn-empty-state
+        [message]="emptyTitle()"
+        [subMessage]="emptySubtext()"
+        icon="CheckCircle2"
+        iconClass="text-status-success"
+      />
     } @else {
       <div class="space-y-cmn-2">
         @for (alert of filtered(); track alert.id) {

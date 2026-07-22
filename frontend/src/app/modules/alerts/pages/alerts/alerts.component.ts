@@ -3,9 +3,8 @@ import {Router} from '@angular/router';
 import {
   AlertItemComponent,
   type AlertItemSeverity,
-  CardComponent,
   ChipComponent,
-  IconComponent,
+  EmptyStateComponent,
   type LucideIconName,
   PageHeaderComponent,
   ToastService,
@@ -34,7 +33,7 @@ function severityFor(severity: AlertSeverity): AlertItemSeverity {
 
 @Component({
   selector: 'fns-alerts',
-  imports: [AlertItemComponent, CardComponent, ChipComponent, IconComponent, PageHeaderComponent],
+  imports: [AlertItemComponent, ChipComponent, EmptyStateComponent, PageHeaderComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './alerts.component.html',
 })
@@ -51,6 +50,14 @@ export class AlertsComponent {
     }
     return 'All caught up';
   });
+
+  public readonly emptyTitle = computed(() =>
+    this.store.filter() === 'all' ? 'No alerts' : `No ${this.store.filter()} alerts`
+  );
+
+  public readonly emptySubtext = computed(() =>
+    this.store.filter() === 'all' ? 'All your accounts are healthy.' : 'Try a different filter.'
+  );
 
   public readonly filtered = computed(() => {
     const f = this.store.filter();
