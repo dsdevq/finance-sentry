@@ -2,7 +2,7 @@
 
 **Feature Branch**: `035-mcp-tool-surface-refinement`
 **Created**: 2026-07-22
-**Status**: Draft
+**Status**: Implemented
 **Input**: User description: "MCP tool surface refinement — shape over count. Encode call-order into tool descriptions, verify/fix runtime-broken tools, and make a few surgical merges while preserving read/write boundaries and narrow tool shape."
 
 ## Overview

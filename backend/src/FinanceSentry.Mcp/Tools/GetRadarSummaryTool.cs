@@ -13,7 +13,7 @@ public sealed class GetRadarSummaryTool(
     IIdentityResolver identity)
 {
     [McpServerTool(Name = "get_radar_summary")]
-    [Description("One-call Radar snapshot for narration: today's sector leaders/laggards with rank deltas, universe breadth, and today's notable+ signals, plus a stale flag when computed over stale bars. Reads persisted bars only — never triggers ingestion.")]
+    [Description("START HERE for any market/narration question. One-call Radar snapshot: today's sector leaders/laggards with rank deltas, universe breadth, and today's notable+ signals, plus a stale flag when computed over stale bars. After this overview, drill down with get_market_structure (one ticker), get_relative_strength, get_sector_rotation, or get_market_breadth. Reads persisted bars only — never triggers ingestion.")]
     public async Task<RadarSummary> ExecuteAsync(
         [Description("Optional user GUID. Defaults to the authenticated MCP identity.")] Guid? userId = null,
         CancellationToken cancellationToken = default)
