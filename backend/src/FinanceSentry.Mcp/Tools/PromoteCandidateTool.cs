@@ -13,7 +13,7 @@ public sealed class PromoteCandidateTool(
     IIdentityResolver identity)
 {
     [McpServerTool(Name = "promote_candidate")]
-    [Description("Promotes an active candidate into a monitored InvestmentThesis. Always runs the 022 risk gate first: if the proposed position is Refused, no thesis is created and the verdict (named rule + max compliant size) is returned — unless overrideRisk is true, which records the override as a signal. Invalidation triggers default to the deterministic prefill from the candidate's fundamentals; pass triggers to override. Returns the thesis id (when created) and the gate verdict.")]
+    [Description("Promotes an active candidate into a monitored InvestmentThesis. Always runs the 022 risk gate (check_risk_rules) first: if the proposed position is Refused, no thesis is created and the verdict (named rule + max compliant size) is returned — unless overrideRisk is true, which records the override as a signal. Invalidation triggers default to the deterministic prefill from the candidate's fundamentals; pass triggers to override. Returns the thesis id (when created) and the gate verdict.")]
     public async Task<PromoteCandidateResult?> ExecuteAsync(
         [Description("Candidate id to promote.")] Guid id,
         [Description("Optional invalidation triggers to override the deterministic prefill.")] IReadOnlyList<ThesisInvalidationTrigger>? triggers = null,

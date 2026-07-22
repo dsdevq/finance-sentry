@@ -13,7 +13,7 @@ public sealed class GetMarketStructureTool(
     IIdentityResolver identity)
 {
     [McpServerTool(Name = "get_market_structure")]
-    [Description("Returns market-structure metrics for one ticker: returns/RS vs SPY over 21/63/126/252 trading days, MA20/50/200, extension from the 50-day MA, 63-day volatility, today's z-score, volume ratio, and a stale flag. Windows with insufficient history are null (not evaluable). Reads persisted bars only — never triggers ingestion.")]
+    [Description("Drill-down for one ticker — call get_radar_summary first for the market overview. Returns market-structure metrics for one ticker: returns/RS vs SPY over 21/63/126/252 trading days, MA20/50/200, extension from the 50-day MA, 63-day volatility, today's z-score, volume ratio, and a stale flag. Windows with insufficient history are null (not evaluable). Reads persisted bars only — never triggers ingestion.")]
     public async Task<TickerStructure?> ExecuteAsync(
         [Description("Ticker symbol, e.g. NVDA.")] string ticker,
         [Description("Optional user GUID. Defaults to the authenticated MCP identity.")] Guid? userId = null,

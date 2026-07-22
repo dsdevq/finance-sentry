@@ -13,7 +13,7 @@ public sealed class GetRelativeStrengthTool(
     IIdentityResolver identity)
 {
     [McpServerTool(Name = "get_relative_strength")]
-    [Description("Returns relative-strength-vs-SPY structure for a set of tickers (default = the full Radar universe), ordered by 63-day RS descending. Reads persisted bars only — never triggers ingestion.")]
+    [Description("Drill-down — call get_radar_summary first for the market overview. Returns relative-strength-vs-SPY structure for a set of tickers (default = the full Radar universe), ordered by 63-day RS descending. Reads persisted bars only — never triggers ingestion.")]
     public async Task<IReadOnlyList<TickerStructure>> ExecuteAsync(
         [Description("Optional tickers. Defaults to the full Radar universe.")] IReadOnlyList<string>? tickers = null,
         [Description("Optional user GUID. Defaults to the authenticated MCP identity.")] Guid? userId = null,

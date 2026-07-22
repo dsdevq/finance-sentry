@@ -701,11 +701,13 @@ public sealed class ToolParityTests
         await researchDb.SaveChangesAsync();
 
         var runTool = svc.GetRequiredService<RunThesisMonitorTool>();
-        var summary = await runTool.ExecuteAsync(userId);
+        var result = await runTool.ExecuteAsync(userId);
 
-        summary.Should().NotBeNull();
-        summary!.ThesesEvaluated.Should().Be(1);
-        summary.BreaksRaised.Should().Be(1);
+        result.Should().NotBeNull();
+        result!.Summary.ThesesEvaluated.Should().Be(1);
+        result.Summary.BreaksRaised.Should().Be(1);
+        // 035: run_thesis_monitor is enriched to also return the resulting breaks in the same call.
+        result.Breaks.Should().ContainSingle(b => b.Ticker == "MU");
 
         var listTool = svc.GetRequiredService<ListThesisBreaksTool>();
         var breaks = await listTool.ExecuteAsync(userId);

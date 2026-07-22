@@ -13,7 +13,7 @@ public sealed class GetSectorRotationTool(
     IIdentityResolver identity)
 {
     [McpServerTool(Name = "get_sector_rotation")]
-    [Description("Ranks the 11 SPDR sector ETFs by relative strength per window and reports each sector's rank plus its rank delta vs 21 trading days prior (rotation). Reads persisted bars only — never triggers ingestion.")]
+    [Description("Drill-down — call get_radar_summary first for the market overview (it already includes today's sector leaders/laggards). Ranks the 11 SPDR sector ETFs by relative strength per window and reports each sector's rank plus its rank delta vs 21 trading days prior (rotation). Reads persisted bars only — never triggers ingestion.")]
     public async Task<IReadOnlyList<SectorRotationRow>> ExecuteAsync(
         [Description("Optional user GUID. Defaults to the authenticated MCP identity.")] Guid? userId = null,
         CancellationToken cancellationToken = default)

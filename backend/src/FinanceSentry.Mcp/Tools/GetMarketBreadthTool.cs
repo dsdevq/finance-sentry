@@ -13,7 +13,7 @@ public sealed class GetMarketBreadthTool(
     IIdentityResolver identity)
 {
     [McpServerTool(Name = "get_market_breadth")]
-    [Description("Returns Radar universe breadth: the percentage of tickers trading above their 20/50/200-day moving averages, plus the evaluated count. Reads persisted bars only — never triggers ingestion.")]
+    [Description("Drill-down — call get_radar_summary first for the market overview (it already includes breadth). Returns Radar universe breadth: the percentage of tickers trading above their 20/50/200-day moving averages, plus the evaluated count. Reads persisted bars only — never triggers ingestion.")]
     public async Task<BreadthResult> ExecuteAsync(
         [Description("Optional user GUID. Defaults to the authenticated MCP identity.")] Guid? userId = null,
         CancellationToken cancellationToken = default)
