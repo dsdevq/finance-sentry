@@ -2,7 +2,7 @@
 
 **Feature Branch**: `031-companion-notifications`
 **Created**: 2026-07-22
-**Status**: In planning
+**Status**: Implemented
 **Input**: User description: "Companion notification modes + event-driven push. Finance Sentry owns the policy (materiality, mode preference, dedup/rate-limit/quiet-hours) and dispatches material events to the companion agent; the agent triages and delivers. No new push channels in FS."
 
 ## Overview
