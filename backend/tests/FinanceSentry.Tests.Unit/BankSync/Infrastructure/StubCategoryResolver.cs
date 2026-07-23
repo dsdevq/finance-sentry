@@ -18,7 +18,7 @@ internal sealed class StubCategoryResolver : ICategoryResolver
     public string ResolvePlaidPrimary(string? primary)
         => string.IsNullOrWhiteSpace(primary) ? CategoryKeys.Uncategorized : primary.Trim().ToUpperInvariant();
 
-    // Minimal keyword set so adapter/service tests can exercise the description fallback.
+    // Minimal keyword set + transfer prefix so adapter/service tests can exercise the fallback.
     public string ResolveDescription(string? description)
     {
         if (string.IsNullOrWhiteSpace(description))
@@ -28,7 +28,7 @@ internal sealed class StubCategoryResolver : ICategoryResolver
             return CategoryKeys.FoodAndDrink;
         if (h.Contains("amazon"))
             return CategoryKeys.GeneralMerchandise;
-        return CategoryKeys.Uncategorized;
+        return TransferDescriptionClassifier.Resolve(description) ?? CategoryKeys.Uncategorized;
     }
 
     public void Refresh()

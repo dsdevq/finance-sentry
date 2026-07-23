@@ -45,7 +45,14 @@ public sealed class CategoryResolver(IServiceScopeFactory scopeFactory) : ICateg
     public string ResolveDescription(string? description)
     {
         EnsureLoaded();
-        return MerchantKeywordMatcher.Resolve(description, _merchantKeywords!);
+
+        // Prefer a specific merchant match ("To Go Sushi" -> food), then fall back to the
+        // directional-transfer prefix ("To Mario Scalas" -> transfer out).
+        var byKeyword = MerchantKeywordMatcher.Resolve(description, _merchantKeywords!);
+        if (byKeyword != CategoryKeys.Uncategorized)
+            return byKeyword;
+
+        return TransferDescriptionClassifier.Resolve(description) ?? CategoryKeys.Uncategorized;
     }
 
     public void Refresh()
