@@ -84,6 +84,12 @@ if (args.Length > 0 && args[0] == RecategorizationCommand.Verb)
     return;
 }
 
+if (args.Length > 0 && args[0] == SubscriptionDetectionCommand.Verb)
+{
+    await SubscriptionDetectionCommand.RunAsync(app.Services, args);
+    return;
+}
+
 app.UseSerilogRequestLogging();
 app.UseCors("Frontend");
 app.UseMiddleware<ErrorHandlingMiddleware>();
