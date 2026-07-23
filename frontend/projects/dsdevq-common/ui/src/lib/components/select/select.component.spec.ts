@@ -4,7 +4,6 @@ import {SelectComponent, type SelectValue} from './select.component';
 
 interface SelectInternals {
   value(): SelectValue;
-  onValueChange(v: SelectValue): void;
   onBlur(): void;
   disabled(): boolean;
 }
@@ -17,30 +16,32 @@ describe('SelectComponent', () => {
     fixture = TestBed.createComponent(SelectComponent);
   });
 
-  function selectElement(): HTMLElement | null {
-    return fixture.nativeElement.querySelector('nz-select');
+  function nativeSelect(): HTMLSelectElement | null {
+    return fixture.nativeElement.querySelector('select');
   }
 
   function internals(): SelectInternals {
     return fixture.componentInstance as unknown as SelectInternals;
   }
 
-  it('renders the configured select options', () => {
+  it('renders the configured options as native <option> elements', () => {
     fixture.componentRef.setInput('options', [
       {label: 'Euro', value: 'eur'},
       {label: 'US Dollar', value: 'usd', disabled: true},
     ]);
     fixture.detectChanges();
 
-    expect(fixture.componentInstance.options()).toHaveLength(2);
-    expect(selectElement()).not.toBeNull();
+    const options = fixture.nativeElement.querySelectorAll('select option');
+    // options + the placeholder option
+    expect(options.length).toBe(3);
+    expect(nativeSelect()).not.toBeNull();
   });
 
   it('applies size classes', () => {
     fixture.componentRef.setInput('size', 'lg');
     fixture.detectChanges();
 
-    expect(selectElement()?.className).toContain('cmn-select--lg');
+    expect(nativeSelect()?.className).toContain('text-cmn-base');
   });
 
   it('writes external form values', () => {
@@ -57,13 +58,21 @@ describe('SelectComponent', () => {
     expect(internals().value()).toBeNull();
   });
 
-  it('emits form changes when selection changes', () => {
+  it('emits form changes when the native selection changes', () => {
+    fixture.componentRef.setInput('options', [
+      {label: 'Euro', value: 'eur'},
+      {label: 'US Dollar', value: 'usd'},
+    ]);
+    fixture.detectChanges();
+
     let emitted: SelectValue = null;
     fixture.componentInstance.registerOnChange(value => {
       emitted = value;
     });
 
-    internals().onValueChange('usd');
+    const el = fixture.nativeElement.querySelector('select') as HTMLSelectElement;
+    el.value = 'usd';
+    el.dispatchEvent(new Event('change'));
 
     expect(emitted).toBe('usd');
     expect(internals().value()).toBe('usd');

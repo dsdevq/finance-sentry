@@ -22,6 +22,12 @@ const COMPACT_FORMATTER = new Intl.NumberFormat('en-US', {
 });
 
 const MONTH_FORMATTER = new Intl.DateTimeFormat('en-US', {month: 'short', year: '2-digit'});
+const DAY_FORMATTER = new Intl.DateTimeFormat('en-US', {month: 'short', day: 'numeric'});
+
+// Below this span the snapshots are effectively daily, so month-year labels ("Jul 26")
+// collapse to a single repeated value — use day-level labels ("Jul 5") instead.
+const SHORT_SPAN_DAYS = 92;
+const MS_PER_DAY = 86_400_000;
 
 const MONTH_KEY_PAD = 2;
 
@@ -84,12 +90,19 @@ export function dashboardComputed(store: StateSignals) {
       }))
     ),
 
-    netWorthHistoryData: computed((): ChartPoint[] =>
-      store.netWorthHistory().map(s => ({
-        label: MONTH_FORMATTER.format(new Date(s.snapshotDate)),
+    netWorthHistoryData: computed((): ChartPoint[] => {
+      const history = store.netWorthHistory();
+      if (history.length === 0) {
+        return [];
+      }
+      const times = history.map(s => new Date(s.snapshotDate).getTime());
+      const spanDays = (Math.max(...times) - Math.min(...times)) / MS_PER_DAY;
+      const formatter = spanDays <= SHORT_SPAN_DAYS ? DAY_FORMATTER : MONTH_FORMATTER;
+      return history.map(s => ({
+        label: formatter.format(new Date(s.snapshotDate)),
         value: s.totalNetWorth,
-      }))
-    ),
+      }));
+    }),
 
     isHistoryLoading: computed(() => store.historyLoading()),
     historyErrorMessage: computed(() => store.historyError()),

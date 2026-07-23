@@ -6,8 +6,9 @@ import {
   input,
   signal,
 } from '@angular/core';
-import {ControlValueAccessor, FormsModule, NG_VALUE_ACCESSOR} from '@angular/forms';
-import {NzSelectModule} from 'ng-zorro-antd/select';
+import {ControlValueAccessor, NG_VALUE_ACCESSOR} from '@angular/forms';
+
+import {IconComponent} from '../icon/icon.component';
 
 export type SelectSize = 'sm' | 'md' | 'lg';
 export type SelectMode = 'default' | 'multiple';
@@ -20,23 +21,26 @@ export interface SelectOption {
   disabled?: boolean;
 }
 
-const BASE_CLASSES = 'cmn-select block w-full';
-
 const SIZE_CLASSES: Record<SelectSize, string> = {
-  sm: 'cmn-select--sm',
-  md: 'cmn-select--md',
-  lg: 'cmn-select--lg',
+  sm: 'py-1 text-cmn-xs',
+  md: 'py-1.5 text-cmn-sm',
+  lg: 'py-2 text-cmn-base',
 };
 
-const NZ_SIZE: Record<SelectSize, 'small' | 'default' | 'large'> = {
-  sm: 'small',
-  md: 'default',
-  lg: 'large',
+const ICON_SIZE: Record<SelectSize, 'sm' | 'md' | 'lg'> = {
+  sm: 'sm',
+  md: 'sm',
+  lg: 'md',
 };
 
+/**
+ * Native-backed select. Deliberately built on a plain <select> + design tokens rather than a
+ * third-party widget: it needs no external stylesheet or icon registration, stays consistent
+ * with the app's Tailwind theme, and gets accessibility + keyboard type-ahead for free.
+ */
 @Component({
   selector: 'cmn-select',
-  imports: [FormsModule, NzSelectModule],
+  imports: [IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [
     {
@@ -46,27 +50,39 @@ const NZ_SIZE: Record<SelectSize, 'small' | 'default' | 'large'> = {
     },
   ],
   template: `
-    <nz-select
-      [ngModel]="value()"
-      [nzAllowClear]="allowClear()"
-      [nzDisabled]="disabled()"
-      [nzMode]="mode()"
-      [nzPlaceHolder]="placeholder()"
-      [nzShowSearch]="showSearch()"
-      [nzSize]="nzSize()"
-      [nzStatus]="hasError() ? 'error' : ''"
-      [class]="classes()"
-      (ngModelChange)="onValueChange($event)"
-      (nzBlur)="onBlur()"
-    >
-      @for (option of options(); track option.value) {
-        <nz-option
-          [nzDisabled]="option.disabled ?? false"
-          [nzLabel]="option.label"
-          [nzValue]="option.value"
+    <div class="cmn-select relative w-full">
+      <select
+        #native
+        [class]="selectClasses()"
+        [disabled]="disabled()"
+        [multiple]="mode() === 'multiple'"
+        [attr.aria-invalid]="hasError() ? 'true' : null"
+        (change)="onNativeChange($event)"
+        (blur)="onBlur()"
+      >
+        @if (mode() !== 'multiple') {
+          <option [selected]="isEmpty()" [disabled]="!allowClear()" value="">
+            {{ placeholder() || 'Select…' }}
+          </option>
+        }
+        @for (option of options(); track option.value) {
+          <option
+            [value]="option.value"
+            [selected]="isSelected(option.value)"
+            [disabled]="option.disabled ?? false"
+          >
+            {{ option.label }}
+          </option>
+        }
+      </select>
+      @if (mode() !== 'multiple') {
+        <cmn-icon
+          [size]="iconSize()"
+          name="ChevronDown"
+          class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-text-secondary"
         />
       }
-    </nz-select>
+    </div>
   `,
 })
 export class SelectComponent implements ControlValueAccessor {
@@ -75,17 +91,30 @@ export class SelectComponent implements ControlValueAccessor {
   public readonly size = input<SelectSize>('md');
   public readonly mode = input<SelectMode>('default');
   public readonly allowClear = input<boolean>(false);
+  // Kept for API compatibility; native selects have built-in keyboard type-ahead.
   public readonly showSearch = input<boolean>(false);
   public readonly hasError = input<boolean>(false);
 
-  public readonly classes = computed(() => [BASE_CLASSES, SIZE_CLASSES[this.size()]].join(' '));
-  public readonly nzSize = computed(() => NZ_SIZE[this.size()]);
+  public readonly iconSize = computed(() => ICON_SIZE[this.size()]);
+  public readonly selectClasses = computed(() =>
+    [
+      'block w-full appearance-none rounded border bg-surface-bg pl-cmn-2 pr-8',
+      'text-text-primary outline-none transition-colors',
+      'focus:border-accent-default disabled:cursor-not-allowed disabled:opacity-60',
+      this.hasError() ? 'border-error-default' : 'border-surface-raised',
+      SIZE_CLASSES[this.size()],
+      this.mode() === 'multiple' ? 'pr-cmn-2' : '',
+    ].join(' ')
+  );
 
   protected readonly value = signal<SelectValue>(null);
   protected readonly disabled = signal<boolean>(false);
+  protected readonly isEmpty = computed(() => {
+    const v = this.value();
+    return v === null || v === undefined || v === '';
+  });
 
   private onChange: (value: SelectValue) => void = (_: SelectValue) => void 0;
-
   private onTouched: () => void = () => void 0;
 
   public writeValue(value: SelectValue | undefined): void {
@@ -104,9 +133,21 @@ export class SelectComponent implements ControlValueAccessor {
     this.disabled.set(isDisabled);
   }
 
-  protected onValueChange(value: SelectValue): void {
-    this.value.set(value);
-    this.onChange(value);
+  protected isSelected(optionValue: SelectOptionValue): boolean {
+    const v = this.value();
+    return Array.isArray(v) ? v.includes(optionValue) : v === optionValue;
+  }
+
+  protected onNativeChange(event: Event): void {
+    const target = event.target as HTMLSelectElement;
+    let next: SelectValue;
+    if (this.mode() === 'multiple') {
+      next = Array.from(target.selectedOptions).map(o => o.value);
+    } else {
+      next = target.value === '' ? null : target.value;
+    }
+    this.value.set(next);
+    this.onChange(next);
   }
 
   protected onBlur(): void {

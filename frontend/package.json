@@ -49,7 +49,6 @@
     "chart.js": "^4.5.1",
     "chroma-js": "^3.2.0",
     "lucide-angular": "^1.0.0",
-    "ng-zorro-antd": "21.2.2",
     "rxjs": "^7.8.0",
     "tslib": "^2.6.0",
     "zone.js": "^0.16.0"
