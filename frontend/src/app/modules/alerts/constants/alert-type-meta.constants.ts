@@ -24,4 +24,24 @@ export const ALERT_TYPE_META_REGISTRY = {
     label: 'unusual spend',
     description: 'This category is spending faster than usual.',
   },
+  ['PolicyViolation']: {
+    icon: 'ShieldAlert',
+    label: 'policy violation',
+    description: 'A holding breached one of your risk-policy rules.',
+  },
+  ['Opportunity']: {
+    icon: 'Lightbulb',
+    label: 'opportunity',
+    description: 'A potential opportunity surfaced from the research scan.',
+  },
 } satisfies Record<AlertType, AlertTypeMeta>;
+
+/**
+ * Fallback for alert types the backend may add before the frontend registry catches up —
+ * keeps the alerts page from crashing on an unmapped type.
+ */
+export const DEFAULT_ALERT_TYPE_META: AlertTypeMeta = {
+  icon: 'Bell',
+  label: 'alert',
+  description: 'You have a new alert.',
+};
