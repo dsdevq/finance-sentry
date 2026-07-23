@@ -18,6 +18,13 @@ public interface ICategoryResolver
     /// </summary>
     string ResolvePlaidPrimary(string? primary);
 
+    /// <summary>
+    /// Resolves a category from a free-text transaction description via the runtime-editable
+    /// <c>merchant_keywords</c> table (longest keyword wins). Used as a fallback for providers
+    /// that return no MCC or category name. Returns UNCATEGORIZED when nothing matches.
+    /// </summary>
+    string ResolveDescription(string? description);
+
     /// <summary>Drops the in-memory cache so the next resolve reloads from the database.</summary>
     void Refresh();
 }

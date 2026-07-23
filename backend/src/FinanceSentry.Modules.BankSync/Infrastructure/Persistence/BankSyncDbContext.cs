@@ -14,6 +14,7 @@ public class BankSyncDbContext(DbContextOptions<BankSyncDbContext> options) : Db
     public DbSet<TrueLayerConnection> TrueLayerConnections { get; set; } = null!;
     public DbSet<Category> Categories { get; set; } = null!;
     public DbSet<MccCategory> MccCategories { get; set; } = null!;
+    public DbSet<MerchantKeyword> MerchantKeywords { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -103,6 +104,15 @@ public class BankSyncDbContext(DbContextOptions<BankSyncDbContext> options) : Db
         mccb.Property(mc => mc.Description).IsRequired().HasMaxLength(255);
         mccb.HasIndex(mc => mc.CategoryKey).HasDatabaseName("idx_mcc_category_category_key");
         mccb.HasOne<Category>().WithMany().HasForeignKey(mc => mc.CategoryKey).OnDelete(DeleteBehavior.Restrict);
+
+        var mkb = modelBuilder.Entity<MerchantKeyword>();
+        mkb.ToTable("merchant_keywords");
+        mkb.HasKey(mk => mk.Id);
+        mkb.Property(mk => mk.Keyword).IsRequired().HasMaxLength(100);
+        mkb.Property(mk => mk.CategoryKey).IsRequired().HasMaxLength(100);
+        mkb.HasIndex(mk => mk.Keyword).IsUnique().HasDatabaseName("idx_merchant_keyword_keyword_unique");
+        mkb.HasIndex(mk => mk.CategoryKey).HasDatabaseName("idx_merchant_keyword_category_key");
+        mkb.HasOne<Category>().WithMany().HasForeignKey(mk => mk.CategoryKey).OnDelete(DeleteBehavior.Restrict);
 
         var sjb = modelBuilder.Entity<SyncJob>();
         sjb.HasKey(sj => sj.Id);
