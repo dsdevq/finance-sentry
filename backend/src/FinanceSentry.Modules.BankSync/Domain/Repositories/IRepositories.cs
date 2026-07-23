@@ -180,6 +180,15 @@ public interface ISyncJobRepository
     Task<SyncJob?> GetLatestSuccessfulByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// The completion time of the most recent <b>successful</b> sync per account for the user
+    /// (accountId → CompletedAt). Accounts that have never synced successfully are absent.
+    /// Distinct from an account's last sync <i>attempt</i> — used to surface how stale the data
+    /// really is when recent attempts have been failing.
+    /// </summary>
+    Task<IReadOnlyDictionary<Guid, DateTime>> GetLastSuccessfulSyncTimesByUserAsync(
+        Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Save changes to database.
     /// </summary>
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

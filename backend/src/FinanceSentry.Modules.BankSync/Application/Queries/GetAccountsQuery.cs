@@ -39,6 +39,7 @@ public record BankAccountDto(
     decimal? AvailableBalance,
     string SyncStatus,
     DateTime? LastSyncTimestamp,
+    DateTime? LastSuccessfulSyncTimestamp,
     DateTime CreatedAt,
     string Provider
 );
@@ -47,14 +48,19 @@ public record BankAccountDto(
 // Handler
 // ──────────────────────────────────────────────
 
-public class GetAccountsQueryHandler(IBankAccountRepository accounts) : IQueryHandler<GetAccountsQuery, GetAccountsResult>
+public class GetAccountsQueryHandler(
+    IBankAccountRepository accounts,
+    ISyncJobRepository syncJobs) : IQueryHandler<GetAccountsQuery, GetAccountsResult>
 {
     private readonly IBankAccountRepository _accounts = accounts;
+    private readonly ISyncJobRepository _syncJobs = syncJobs;
 
     public async Task<GetAccountsResult> Handle(
           GetAccountsQuery request, CancellationToken cancellationToken)
     {
         var accounts = await _accounts.GetByUserIdAsync(request.UserId, cancellationToken);
+        var lastSuccessful = await _syncJobs.GetLastSuccessfulSyncTimesByUserAsync(
+            request.UserId, cancellationToken);
 
         // Apply optional filters
         IEnumerable<BankAccount> filtered = accounts;
@@ -77,6 +83,7 @@ public class GetAccountsQueryHandler(IBankAccountRepository accounts) : IQueryHa
             null,
             a.SyncStatus,
             a.UpdatedAt,
+            lastSuccessful.TryGetValue(a.Id, out var lastOk) ? lastOk : null,
             a.CreatedAt,
             a.Provider
         )).ToList();

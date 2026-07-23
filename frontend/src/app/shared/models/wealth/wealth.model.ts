@@ -27,6 +27,7 @@ export interface Institution {
   totalInBaseCurrency: number;
   syncStatus: SyncStatus;
   lastSyncTimestamp: Nullable<string>;
+  lastSuccessfulSyncTimestamp: Nullable<string>;
   accounts: AccountBalanceItem[];
 }
 
