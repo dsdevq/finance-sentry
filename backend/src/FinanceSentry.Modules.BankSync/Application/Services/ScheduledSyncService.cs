@@ -200,15 +200,7 @@ public class ScheduledSyncService(
         var (candidates, nextCursor) = await _plaid.SyncTransactionsAsync(
             accessToken, account.Id, account.UserId, cred.PlaidSyncCursor, ct);
 
-        var existing = (await _transactions.GetByAccountIdAsync(account.Id, ct))
-            .Select(t => t.UniqueHash)
-            .ToHashSet();
-
-        var newCandidates = _dedup.FilterDuplicates(candidates, existing);
-        var entities = newCandidates.Select(_dedup.ToEntity).ToList();
-
-        if (entities.Count > 0)
-            await _transactions.AddRangeAsync(entities, ct);
+        var entities = await PersistAndReconcileAsync(account.Id, candidates, ct);
 
         cred.PlaidSyncCursor = nextCursor;
         cred.UpdateLastUsedAt();
@@ -252,15 +244,7 @@ public class ScheduledSyncService(
         var (candidates, _) = await provider.SyncTransactionsAsync(
             plainToken, account.ExternalAccountId, account.Id, account.UserId, since, ct);
 
-        var existing = (await _transactions.GetByAccountIdAsync(account.Id, ct))
-            .Select(t => t.UniqueHash)
-            .ToHashSet();
-
-        var newCandidates = _dedup.FilterDuplicates(candidates, existing);
-        var entities = newCandidates.Select(_dedup.ToEntity).ToList();
-
-        if (entities.Count > 0)
-            await _transactions.AddRangeAsync(entities, ct);
+        var entities = await PersistAndReconcileAsync(account.Id, candidates, ct);
 
         // T031: update last sync timestamp on credential
         cred.LastSyncAt = DateTime.UtcNow;
@@ -335,15 +319,7 @@ public class ScheduledSyncService(
         var (candidates, _) = await provider.SyncTransactionsAsync(
             tokenSet.AccessToken, account.ExternalAccountId, account.Id, account.UserId, since, ct);
 
-        var existing = (await _transactions.GetByAccountIdAsync(account.Id, ct))
-            .Select(t => t.UniqueHash)
-            .ToHashSet();
-
-        var newCandidates = _dedup.FilterDuplicates(candidates, existing);
-        var entities = newCandidates.Select(_dedup.ToEntity).ToList();
-
-        if (entities.Count > 0)
-            await _transactions.AddRangeAsync(entities, ct);
+        var entities = await PersistAndReconcileAsync(account.Id, candidates, ct);
 
         connection.LastSyncAt = DateTime.UtcNow;
         await _truelayerConnections.UpdateAsync(connection, ct);
@@ -409,5 +385,37 @@ public class ScheduledSyncService(
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Persists newly-synced candidates (deduplicated) and then retires any existing pending
+    /// row that now has a settled/posted twin, so pending transactions don't linger as stale
+    /// duplicates once they clear. See <see cref="PendingReconciler"/>.
+    /// </summary>
+    private async Task<IReadOnlyList<Domain.Transaction>> PersistAndReconcileAsync(
+        Guid accountId, IEnumerable<TransactionCandidate> candidates, CancellationToken ct)
+    {
+        var existingRows = (await _transactions.GetByAccountIdAsync(accountId, ct)).ToList();
+        var existingHashes = existingRows.Select(t => t.UniqueHash).ToHashSet();
+
+        var entities = _dedup.FilterDuplicates(candidates, existingHashes)
+            .Select(_dedup.ToEntity)
+            .ToList();
+        if (entities.Count > 0)
+            await _transactions.AddRangeAsync(entities, ct);
+
+        var stale = PendingReconciler.SelectStalePending(existingRows, entities);
+        if (stale.Count > 0)
+        {
+            var now = DateTime.UtcNow;
+            foreach (var t in stale)
+            {
+                t.IsActive = false;
+                t.DeletedAt = now;
+            }
+            await _transactions.SaveChangesAsync(ct);
+        }
+
+        return entities;
     }
 }
