@@ -119,9 +119,15 @@ export class LineChartComponent implements AfterViewInit, OnDestroy {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        // Points are hidden (pointRadius: 0); with Chart.js's default intersect:true the
+        // tooltip would only fire when hovering exactly on an invisible point, so it never
+        // showed. Index mode surfaces the nearest point for the hovered x-position.
+        interaction: {mode: 'index', intersect: false},
         plugins: {
           legend: {display: false},
           tooltip: {
+            mode: 'index',
+            intersect: false,
             callbacks: {
               label: tooltipCtx => {
                 const val = tooltipCtx.parsed.y as number;
