@@ -2,13 +2,12 @@ import {DecimalPipe} from '@angular/common';
 import {ChangeDetectionStrategy, Component, inject, OnInit, ViewContainerRef} from '@angular/core';
 import {ActivatedRoute, Router} from '@angular/router';
 import {
-  AlertComponent,
+  AsyncStateComponent,
   ButtonComponent,
   CardComponent,
   CmnDialogService,
   InstitutionAvatarComponent,
   PageHeaderComponent,
-  SkeletonComponent,
   StatusIndicatorComponent,
   ToastService,
 } from '@dsdevq-common/ui';
@@ -25,20 +24,17 @@ import {AccountBalancePipe} from '../../pipes/account-balance.pipe';
 import {AccountsStore} from '../../store/accounts/accounts.store';
 import {ConnectStore} from '../../store/connect/connect.store';
 
-const SKELETON_ROWS = 5;
-
 @Component({
   selector: 'fns-accounts-list',
   imports: [
     AccountBalancePipe,
-    AlertComponent,
+    AsyncStateComponent,
     ButtonComponent,
     CardComponent,
     DecimalPipe,
     InstitutionAvatarComponent,
     PageHeaderComponent,
     RelativeTimePipe,
-    SkeletonComponent,
     StatusIndicatorComponent,
     SyncStatusLabelPipe,
     SyncStatusVariantPipe,
@@ -56,7 +52,6 @@ export class AccountsListComponent implements OnInit {
   private readonly toast = inject(ToastService);
 
   public readonly store = inject(AccountsStore);
-  public readonly skeletonRows = Array.from({length: SKELETON_ROWS});
 
   public ngOnInit(): void {
     const params = this.route.snapshot.queryParamMap;

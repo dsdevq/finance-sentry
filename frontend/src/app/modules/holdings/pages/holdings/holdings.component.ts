@@ -1,7 +1,7 @@
 import {DecimalPipe} from '@angular/common';
 import {ChangeDetectionStrategy, Component, inject, signal, ViewContainerRef} from '@angular/core';
 import {
-  AlertComponent,
+  AsyncStateComponent,
   ButtonComponent,
   CardComponent,
   CmnDialogService,
@@ -32,7 +32,7 @@ export type HoldingsTab = 'holdings' | 'positions';
 @Component({
   selector: 'fns-holdings',
   imports: [
-    AlertComponent,
+    AsyncStateComponent,
     ButtonComponent,
     CardComponent,
     CategoryLabelPipe,

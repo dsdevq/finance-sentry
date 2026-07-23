@@ -3,12 +3,11 @@ import {ChangeDetectionStrategy, Component, computed, inject} from '@angular/cor
 import {toSignal} from '@angular/core/rxjs-interop';
 import {ActivatedRoute, Router} from '@angular/router';
 import {
-  AlertComponent,
+  AsyncStateComponent,
   ButtonComponent,
   CardComponent,
   CmnDrawerService,
   IconComponent,
-  SkeletonComponent,
   StatCardComponent,
   TagComponent,
 } from '@dsdevq-common/ui';
@@ -22,12 +21,10 @@ import {TransactionAmountPipe} from '../../pipes/transaction-amount.pipe';
 import {TransactionAmountClassPipe} from '../../pipes/transaction-amount-class.pipe';
 import {TransactionLedgerStore} from '../../store/transaction-ledger/transaction-ledger.store';
 
-const SKELETON_ROWS = 8;
-
 @Component({
   selector: 'fns-transaction-ledger',
   imports: [
-    AlertComponent,
+    AsyncStateComponent,
     TagComponent,
     ButtonComponent,
     CardComponent,
@@ -35,7 +32,6 @@ const SKELETON_ROWS = 8;
     DecimalPipe,
     IconComponent,
     MerchantCategoryPipe,
-    SkeletonComponent,
     StatCardComponent,
     TransactionAmountClassPipe,
     TransactionAmountPipe,
@@ -50,7 +46,6 @@ export class TransactionLedgerComponent {
   private readonly router = inject(Router);
 
   public readonly store = inject(TransactionLedgerStore);
-  public readonly skeletonRows = Array.from({length: SKELETON_ROWS});
 
   public readonly activeCategory = toSignal(
     this.route.queryParamMap.pipe(map(p => p.get('category'))),
