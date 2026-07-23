@@ -11,7 +11,11 @@ import {
 } from '@dsdevq-common/ui';
 
 import {AppRoute} from '../../../../shared/enums/app-route/app-route.enum';
-import {ALERT_TYPE_META_REGISTRY} from '../../constants/alert-type-meta.constants';
+import {
+  ALERT_TYPE_META_REGISTRY,
+  type AlertTypeMeta,
+  DEFAULT_ALERT_TYPE_META,
+} from '../../constants/alert-type-meta.constants';
 import {
   type Alert,
   type AlertFilter,
@@ -86,15 +90,22 @@ export class AlertsComponent {
   ];
 
   public iconFor(type: AlertType): LucideIconName {
-    return ALERT_TYPE_META_REGISTRY[type].icon;
+    return this.metaFor(type).icon;
   }
 
   public typeLabel(type: AlertType): string {
-    return ALERT_TYPE_META_REGISTRY[type].label;
+    return this.metaFor(type).label;
   }
 
   public typeDescription(type: AlertType): string {
-    return ALERT_TYPE_META_REGISTRY[type].description;
+    return this.metaFor(type).description;
+  }
+
+  // Tolerate alert types the backend added before this registry did (e.g. PolicyViolation,
+  // Opportunity) — an unmapped type must not crash the whole alerts page.
+  private metaFor(type: AlertType): AlertTypeMeta {
+    const registry = ALERT_TYPE_META_REGISTRY as Record<string, AlertTypeMeta | undefined>;
+    return registry[type] ?? DEFAULT_ALERT_TYPE_META;
   }
 
   public severityFor(severity: AlertSeverity): AlertItemSeverity {
