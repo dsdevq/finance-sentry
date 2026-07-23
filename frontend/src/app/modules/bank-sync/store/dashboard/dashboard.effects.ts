@@ -1,5 +1,6 @@
 import {inject, type Signal, untracked} from '@angular/core';
 import {toObservable} from '@angular/core/rxjs-interop';
+import {ActivatedRoute, Router} from '@angular/router';
 import {extractErrorCode} from '@dsdevq-common/core';
 import {rxMethod} from '@ngrx/signals/rxjs-interop';
 import {catchError, EMPTY, pipe, switchMap, tap, timer} from 'rxjs';
@@ -76,16 +77,42 @@ export function dashboardEffects(store: EffectsStore) {
 interface HookStore extends EffectsStore {
   load: () => void;
   loadNetWorthHistory: (range: HistoryRange) => void;
+  setHistoryRange: (range: HistoryRange) => void;
+}
+
+const HISTORY_RANGE_VALUES: readonly HistoryRange[] = ['3m', '6m', '1y', 'all'];
+
+function isHistoryRange(value: string | null): value is HistoryRange {
+  return value !== null && (HISTORY_RANGE_VALUES as readonly string[]).includes(value);
 }
 
 export function dashboardHooks(store: HookStore): void {
   const bankSyncService = inject(BankSyncService);
+  const router = inject(Router);
+  const route = inject(ActivatedRoute);
+
+  // Restore the selected window from the URL so a refresh / deep-link keeps it.
+  const urlRange = route.snapshot.queryParamMap.get('range');
+  if (isHistoryRange(urlRange)) {
+    store.setHistoryRange(urlRange);
+  }
 
   store.load();
-  store.loadNetWorthHistory(store.historyRange());
 
+  // Keep the URL in sync with the selected range (replaceUrl so range clicks don't
+  // pollute browser history), and reload history whenever it changes.
   toObservable(store.historyRange)
-    .pipe(tap(range => untracked(() => store.loadNetWorthHistory(range))))
+    .pipe(
+      tap(range => {
+        void router.navigate([], {
+          relativeTo: route,
+          queryParams: {range},
+          queryParamsHandling: 'merge',
+          replaceUrl: true,
+        });
+        untracked(() => store.loadNetWorthHistory(range));
+      })
+    )
     .subscribe();
 
   rxMethod<void>(
