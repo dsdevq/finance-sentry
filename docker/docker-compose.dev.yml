@@ -14,7 +14,12 @@ services:
       - finance-sentry-network
     volumes:
       - ../frontend:/app
+      # Keep container-generated build artifacts OFF the host bind mount. ng serve runs as root
+      # in this container, so without these anonymous volumes it writes root-owned node_modules/
+      # and .angular/cache/ files back onto the host repo — which then break a host-side `ng serve`
+      # (EACCES on vite dep re-optimization, unremovable without sudo).
       - /app/node_modules
+      - /app/.angular
 
   api:
     build:
