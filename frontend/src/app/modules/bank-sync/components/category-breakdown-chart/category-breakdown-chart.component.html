@@ -1,6 +1,6 @@
 <div class="category-chart">
   @if (topCategoriesData().length === 0) {
-    <div class="no-data">No spending data available</div>
+    <cmn-empty-state variant="bare" message="No spending data available" />
   }
   @if (topCategoriesData().length > 0) {
     <div class="category-list">

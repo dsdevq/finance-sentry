@@ -1,10 +1,11 @@
 import {CommonModule} from '@angular/common';
 import {ChangeDetectionStrategy, Component, input} from '@angular/core';
+import {EmptyStateComponent} from '@dsdevq-common/ui';
 import {CategoryStat} from '@modules/bank-sync/models/dashboard/dashboard.model';
 
 @Component({
   selector: 'fns-category-breakdown-chart',
-  imports: [CommonModule],
+  imports: [CommonModule, EmptyStateComponent],
   templateUrl: './category-breakdown-chart.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

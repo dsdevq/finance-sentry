@@ -1,6 +1,6 @@
 <div class="money-flow-chart">
   @if (monthlyFlowData().length === 0) {
-    <div class="no-data">No data available</div>
+    <cmn-empty-state variant="bare" message="No data available" />
   }
   @if (monthlyFlowData().length > 0) {
     <div class="chart-container">

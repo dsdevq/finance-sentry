@@ -118,3 +118,11 @@ The test suite BUILDS without error (all TypeScript compiles); execution is bloc
 This is not an npm/node issue — `npm install` is fine; root access is needed for `apt-get install libxfixes3`.
 
 Workaround: run `npm run test:lib` on a machine with full browser deps. The pre-commit hook (lint + format, no tests) passes in the sandbox.
+
+## Frontend pre-commit version-bump gate
+
+The pre-commit hook enforces a version bump in `frontend/package.json` whenever frontend source files change. Increment MINOR (0.12.0 → 0.13.0) for new features/components, PATCH for bug fixes. If you forget, the commit is rejected with "Frontend source files changed but frontend/package.json version was not updated."
+
+## Frontend attribute ordering
+
+Angular ESLint enforces `@angular-eslint/template/attributes-order`. The expected order is: bound properties `[prop]` first, then plain attribute strings (`icon`, `variant`), then event bindings `(event)`. Structural slot markers (like `cta`, `leading`, `trailing` on projected children) come after event bindings. Run `ng lint` or let lint-staged auto-fix before committing.
