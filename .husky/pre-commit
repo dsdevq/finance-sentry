@@ -5,7 +5,13 @@
 #   1. Auto-fix + format staged frontend files (lint-staged)
 #   2. Full frontend lint across ALL projects (app + @dsdevq-common libraries)
 #   3. Prettier format check
-#   4. Version bumping when frontend/backend code changes
+#
+# Versioning is intentionally NOT enforced here: release-please owns the version
+# for both frontend/package.json and FinanceSentry.API.csproj, deriving bumps
+# from Conventional Commit messages on merge to main. A manual pre-commit gate
+# duplicated that job and actively fought it — every code change was forced to
+# hand-bump a version release-please would then bump again, so committers (and
+# automated agents) routed around the constraint. Removed; let release-please do it.
 #
 # NOTE: this repo's git root is one level above the npm package (frontend/),
 # so husky's own installer can't wire it. `frontend`'s `prepare` script sets
@@ -29,26 +35,6 @@ if echo "$STAGED_FILES" | grep -qE "^frontend/(src|projects)/"; then
   FRONTEND_LINT_NEEDED=true
 fi
 
-# Version-bump policy only tracks app source (unchanged from before).
-FRONTEND_CODE_CHANGED=false
-FRONTEND_VERSION_CHANGED=false
-if echo "$STAGED_FILES" | grep -q "^frontend/src/"; then
-  FRONTEND_CODE_CHANGED=true
-fi
-if echo "$STAGED_FILES" | grep -q "^frontend/package.json"; then
-  FRONTEND_VERSION_CHANGED=true
-fi
-
-# Check if backend code changed
-BACKEND_CODE_CHANGED=false
-BACKEND_VERSION_CHANGED=false
-if echo "$STAGED_FILES" | grep -q "^backend/src/.*\.cs$" || echo "$STAGED_FILES" | grep -q "^backend/.*\.csproj$"; then
-  BACKEND_CODE_CHANGED=true
-fi
-if echo "$STAGED_FILES" | grep -q "^backend/.*FinanceSentry.API.csproj"; then
-  BACKEND_VERSION_CHANGED=true
-fi
-
 # Frontend lint + format gate (mirrors the Frontend CI `lint-build-test` job)
 if [ "$FRONTEND_LINT_NEEDED" = true ]; then
   echo "📝 Auto-fixing staged files (lint-staged)..."
@@ -65,40 +51,6 @@ if [ "$FRONTEND_LINT_NEEDED" = true ]; then
     echo -e "${RED}❌ ERROR: formatting check failed. Run 'npm run format' in frontend/.${NC}"
     exit 1
   fi
-fi
-
-# Validate frontend version bump
-if [ "$FRONTEND_CODE_CHANGED" = true ] && [ "$FRONTEND_VERSION_CHANGED" = false ]; then
-  echo -e "${RED}❌ ERROR: Frontend code changed but version was not bumped!${NC}"
-  echo ""
-  echo "Frontend source files changed but frontend/package.json version was not updated."
-  echo ""
-  echo "Instructions:"
-  echo "  1. Update frontend/package.json version field"
-  echo "  2. Choose bump type:"
-  echo "     - MAJOR: breaking UI changes"
-  echo "     - MINOR: new components/features"
-  echo "     - PATCH: bug fixes"
-  echo "  3. Stage the package.json change"
-  echo "  4. Try commit again"
-  exit 1
-fi
-
-# Validate backend version bump
-if [ "$BACKEND_CODE_CHANGED" = true ] && [ "$BACKEND_VERSION_CHANGED" = false ]; then
-  echo -e "${RED}❌ ERROR: Backend code changed but API version was not bumped!${NC}"
-  echo ""
-  echo "Backend source files changed but FinanceSentry.API.csproj version was not updated."
-  echo ""
-  echo "Instructions:"
-  echo "  1. Update backend/src/FinanceSentry.API/FinanceSentry.API.csproj <Version>"
-  echo "  2. Choose bump type:"
-  echo "     - MAJOR: breaking API changes"
-  echo "     - MINOR: new endpoints or optional parameters"
-  echo "     - PATCH: bug fixes"
-  echo "  3. Stage the .csproj change"
-  echo "  4. Try commit again"
-  exit 1
 fi
 
 echo -e "${GREEN}✅ All pre-commit checks passed!${NC}"
