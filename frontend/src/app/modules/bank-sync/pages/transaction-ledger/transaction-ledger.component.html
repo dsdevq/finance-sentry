@@ -7,10 +7,7 @@
   </div>
 
   @if (activeCategoryLabel(); as label) {
-    <div class="mb-cmn-6 flex items-center gap-cmn-2">
-      <span class="text-cmn-xs font-semibold uppercase tracking-widest text-text-secondary"
-        >Filter</span
-      >
+    <cmn-section-header label="Filter" labelAs="span" align="start" class="mb-cmn-6">
       <button
         (click)="clearCategory()"
         type="button"
@@ -19,7 +16,7 @@
         Category: {{ label }}
         <cmn-icon name="X" size="sm" />
       </button>
-    </div>
+    </cmn-section-header>
   }
 
   <div class="grid grid-cols-3 gap-cmn-4 mb-cmn-8">

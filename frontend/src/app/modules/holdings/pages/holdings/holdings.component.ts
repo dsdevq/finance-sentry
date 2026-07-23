@@ -6,6 +6,7 @@ import {
   CardComponent,
   CmnDialogService,
   PageHeaderComponent,
+  SectionHeaderComponent,
   StatCardComponent,
   TagComponent,
 } from '@dsdevq-common/ui';
@@ -40,6 +41,7 @@ export type HoldingsTab = 'holdings' | 'positions';
     DecimalPipe,
     HoldingBalancePipe,
     PageHeaderComponent,
+    SectionHeaderComponent,
     StatCardComponent,
     SyncStatusLabelPipe,
     SyncStatusVariantPipe,

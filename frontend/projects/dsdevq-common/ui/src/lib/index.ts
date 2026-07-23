@@ -36,6 +36,7 @@ export * from './components/menu/menu.component';
 export * from './components/page-container/page-container.component';
 export * from './components/page-header/page-header.component';
 export * from './components/password-strength/password-strength.component';
+export * from './components/section-header/section-header.component';
 export * from './components/select/select.component';
 export * from './components/selectable-card/selectable-card.component';
 export * from './components/sidebar-nav/sidebar-nav.component';

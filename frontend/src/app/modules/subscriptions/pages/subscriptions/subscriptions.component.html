@@ -44,12 +44,11 @@
 
     <!-- Sort controls + active list -->
     <div>
-      <div class="mb-cmn-3 flex items-center justify-between">
-        <span
-          class="font-label text-cmn-xs font-semibold uppercase tracking-widest text-text-secondary"
-        >
-          Active · {{ store.activeSubscriptions().length }}
-        </span>
+      <cmn-section-header
+        [label]="'Active · ' + store.activeSubscriptions().length"
+        labelAs="span"
+        class="mb-cmn-3"
+      >
         <div class="flex gap-cmn-1">
           @for (opt of sortOptions; track opt.value) {
             <cmn-chip [selected]="store.sort() === opt.value" (clicked)="setSort(opt.value)">
@@ -57,7 +56,7 @@
             </cmn-chip>
           }
         </div>
-      </div>
+      </cmn-section-header>
 
       <cmn-card padding="none">
         @for (sub of store.sortedActive(); track sub.id) {
@@ -110,13 +109,11 @@
     <!-- Dismissed list -->
     @if (store.dismissedSubscriptions().length > 0) {
       <div>
-        <div class="mb-cmn-3">
-          <span
-            class="font-label text-cmn-xs font-semibold uppercase tracking-widest text-text-secondary"
-          >
-            Dismissed · {{ store.dismissedSubscriptions().length }}
-          </span>
-        </div>
+        <cmn-section-header
+          [label]="'Dismissed · ' + store.dismissedSubscriptions().length"
+          labelAs="span"
+          class="mb-cmn-3"
+        />
         <cmn-card padding="none">
           @for (sub of store.sortedDismissed(); track sub.id) {
             <cmn-list-item-row [label]="sub.merchantName || 'Unknown'" [dimmed]="true">

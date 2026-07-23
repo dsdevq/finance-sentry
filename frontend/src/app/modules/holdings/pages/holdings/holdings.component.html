@@ -72,9 +72,7 @@
 
       <!-- Detailed Holdings table -->
       <cmn-card class="grid gap-4">
-        <h2 class="text-sm font-semibold uppercase tracking-wider text-neutral-500 mb-4">
-          Detailed Holdings
-        </h2>
+        <cmn-section-header label="Detailed Holdings" class="mb-4" />
 
         @if (store.allInstitutions().length === 0) {
           <div class="py-12 text-center text-neutral-400 text-sm">

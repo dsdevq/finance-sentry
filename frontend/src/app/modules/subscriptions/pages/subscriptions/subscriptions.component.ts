@@ -8,6 +8,7 @@ import {
   ConfirmDialogComponent,
   ListItemRowComponent,
   PageHeaderComponent,
+  SectionHeaderComponent,
   StatCardComponent,
 } from '@dsdevq-common/ui';
 import {take} from 'rxjs';
@@ -39,6 +40,7 @@ const SORT_OPTIONS: {value: SubscriptionSort; label: string}[] = [
     ListItemRowComponent,
     MerchantColorPipe,
     PageHeaderComponent,
+    SectionHeaderComponent,
     SlicePipe,
     StatCardComponent,
     UpperCasePipe,
