@@ -174,5 +174,21 @@ public static class MerchantKeywordSeedData
         ("b&q", CategoryKeys.HomeImprovement),
         ("homebase", CategoryKeys.HomeImprovement),
         ("hardware", CategoryKeys.HomeImprovement),
+
+        // --- Second-pass coverage (from observed uncategorized TrueLayer merchants) ---
+        ("apple.com", CategoryKeys.GeneralServices),
+        ("hetzner", CategoryKeys.GeneralServices),
+        ("top-up", CategoryKeys.RentAndUtilities),   // mobile top-up
+        ("gymbeam", CategoryKeys.GeneralMerchandise), // sports-nutrition shop; must beat "gym"
+        ("gym", CategoryKeys.Medical),
+        ("cafe", CategoryKeys.FoodAndDrink),
+        ("boojum", CategoryKeys.FoodAndDrink),
+        ("beshoffs", CategoryKeys.FoodAndDrink),
+        ("dublinbikes", CategoryKeys.Transportation),
+        ("bleeper", CategoryKeys.Transportation),
+        ("ticketmaster", CategoryKeys.Entertainment), // longer than "klarna", so it wins
+        ("klarna", CategoryKeys.GeneralMerchandise),
+        ("carrolls irish", CategoryKeys.GeneralMerchandise),
+        ("fee-qtr", CategoryKeys.BankFees),
     ];
 }

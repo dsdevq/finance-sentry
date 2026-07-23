@@ -26,6 +26,13 @@ public class MerchantKeywordSeedDataTests
     [InlineData("Leap Card App", CategoryKeys.Transportation)]
     [InlineData("Fitzmaurice Chemists", CategoryKeys.Medical)]
     [InlineData("East Wall Medical Cent", CategoryKeys.Medical)]
+    [InlineData("apple.com/bill", CategoryKeys.GeneralServices)]
+    [InlineData("Hetzner Online Gmbh", CategoryKeys.GeneralServices)]
+    [InlineData("Feel Fit Gym", CategoryKeys.Medical)]
+    [InlineData("Dublinbikes Internet", CategoryKeys.Transportation)]
+    [InlineData("Sq *olives Room Cafe 1", CategoryKeys.FoodAndDrink)]
+    [InlineData("*MOBI TOP-UP 0857860057", CategoryKeys.RentAndUtilities)]
+    [InlineData("Klarna*mstore.ie", CategoryKeys.GeneralMerchandise)]
     public void Resolve_KnownMerchantDescriptions_MapToExpectedCategory(string description, string expected)
     {
         MerchantKeywordMatcher.Resolve(description, Prepared).Should().Be(expected);
@@ -36,6 +43,19 @@ public class MerchantKeywordSeedDataTests
     {
         MerchantKeywordMatcher.Resolve("UBER EATS Amsterdam", Prepared).Should().Be(CategoryKeys.FoodAndDrink);
         MerchantKeywordMatcher.Resolve("Uber trip Dublin", Prepared).Should().Be(CategoryKeys.Transportation);
+    }
+
+    [Fact]
+    public void Resolve_LongerKeywordWins_GymbeamIsMerchandiseNotGym()
+    {
+        MerchantKeywordMatcher.Resolve("Gymbeam Italy S.r.l.", Prepared).Should().Be(CategoryKeys.GeneralMerchandise);
+        MerchantKeywordMatcher.Resolve("Feel Fit Gym", Prepared).Should().Be(CategoryKeys.Medical);
+    }
+
+    [Fact]
+    public void Resolve_LongerKeywordWins_TicketmasterViaKlarnaIsEntertainment()
+    {
+        MerchantKeywordMatcher.Resolve("Klarna* Ticketmaster.", Prepared).Should().Be(CategoryKeys.Entertainment);
     }
 
     [Theory]
