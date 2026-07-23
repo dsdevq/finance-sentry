@@ -14,7 +14,8 @@ public class TrueLayerAdapterTests
     private const string ExternalAccountId = "tl-acct-1234abcd";
 
     private readonly Mock<ITrueLayerClient> _clientMock = new(MockBehavior.Strict);
-    private TrueLayerAdapter CreateSut() => new(_clientMock.Object, new TrueLayerCategoryMapper());
+    private TrueLayerAdapter CreateSut() =>
+        new(_clientMock.Object, new TrueLayerCategoryMapper(), StubCategoryResolver.Instance);
 
     [Fact]
     public void ProviderName_IsTrueLayer()
@@ -153,6 +154,39 @@ public class TrueLayerAdapterTests
         credit.TransactionType.Should().Be("credit");
         credit.IsPending.Should().BeTrue();
         credit.PostedDate.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task SyncTransactionsAsync_EmptyClassification_FallsBackToDescriptionKeyword()
+    {
+        // Many EU banks return no classification; the merchant name is only in the description.
+        var booked = new TrueLayerTransaction(
+            TransactionId: "tx-9",
+            Timestamp: new DateTime(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc),
+            Amount: -12.34m,
+            Currency: "EUR",
+            Description: "Lidl Ireland Ltd",
+            MerchantName: null,
+            TransactionType: "debit",
+            IsPending: false,
+            Classification: []);
+
+        _clientMock
+            .Setup(c => c.GetTransactionsAsync(AccessToken, ExternalAccountId, It.IsAny<DateOnly?>(), It.IsAny<DateOnly?>(), default))
+            .ReturnsAsync([booked]);
+        _clientMock
+            .Setup(c => c.GetPendingTransactionsAsync(AccessToken, ExternalAccountId, default))
+            .ReturnsAsync([]);
+
+        var (candidates, _) = await CreateSut().SyncTransactionsAsync(
+            credential: AccessToken,
+            externalAccountId: ExternalAccountId,
+            accountId: AccountId,
+            userId: UserId,
+            since: null);
+
+        candidates.Should().ContainSingle();
+        candidates[0].MerchantCategory.Should().Be("FOOD_AND_DRINK");
     }
 
     [Fact]

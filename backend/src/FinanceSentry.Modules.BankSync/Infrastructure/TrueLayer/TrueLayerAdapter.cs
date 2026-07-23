@@ -2,6 +2,7 @@ namespace FinanceSentry.Modules.BankSync.Infrastructure.TrueLayer;
 
 using FinanceSentry.Modules.BankSync.Application.Services;
 using FinanceSentry.Modules.BankSync.Application.Services.CategoryMapping;
+using FinanceSentry.Modules.BankSync.Domain;
 using FinanceSentry.Modules.BankSync.Domain.Interfaces;
 
 /// <summary>
@@ -10,11 +11,15 @@ using FinanceSentry.Modules.BankSync.Domain.Interfaces;
 /// exchanging the per-connection refresh_token for a fresh access_token before
 /// invoking this adapter.
 /// </summary>
-public class TrueLayerAdapter(ITrueLayerClient client, TrueLayerCategoryMapper categoryMapper) : IBankProvider
+public class TrueLayerAdapter(
+    ITrueLayerClient client,
+    TrueLayerCategoryMapper categoryMapper,
+    ICategoryResolver categoryResolver) : IBankProvider
 {
     private const int InitialSyncWindowDays = 90;
 
     private readonly TrueLayerCategoryMapper _categoryMapper = categoryMapper;
+    private readonly ICategoryResolver _categoryResolver = categoryResolver;
 
     public string ProviderName => "truelayer";
 
@@ -63,31 +68,43 @@ public class TrueLayerAdapter(ITrueLayerClient client, TrueLayerCategoryMapper c
 
         var candidates = booked
             .Concat(pending)
-            .Select(t => MapTransaction(t, accountId, userId, _categoryMapper))
+            .Select(MapTransaction)
             .ToList();
 
         return (candidates, DateTime.UtcNow);
+
+        TransactionCandidate MapTransaction(TrueLayerTransaction t)
+        {
+            var amount = Math.Abs(t.Amount);
+            var txType = t.Amount < 0 || t.TransactionType == "debit" ? "debit" : "credit";
+
+            // Prefer TrueLayer's own classification; many EU banks return it empty, so fall
+            // back to matching the free-text description against the merchant-keyword table.
+            var category = _categoryMapper.Map(t.Classification);
+            if (category == CategoryKeys.Uncategorized)
+                category = _categoryResolver.ResolveDescription(t.Description);
+
+            // Persist the raw classification (when present) so a later re-map is traceable.
+            var sourceCategory = t.Classification is { Count: > 0 }
+                ? string.Join(" > ", t.Classification)
+                : null;
+
+            return new TransactionCandidate(
+                AccountId: accountId,
+                UserId: userId,
+                Amount: amount,
+                TransactionDate: t.Timestamp,
+                PostedDate: t.IsPending ? null : t.Timestamp,
+                Description: t.Description,
+                IsPending: t.IsPending,
+                TransactionType: txType,
+                MerchantName: t.MerchantName,
+                MerchantCategory: category,
+                PlaidTransactionId: null,
+                SourceCategory: sourceCategory);
+        }
     }
 
     public Task DisconnectAsync(string credential, CancellationToken ct = default)
         => Task.CompletedTask;
-
-    private static TransactionCandidate MapTransaction(TrueLayerTransaction t, Guid accountId, Guid userId, TrueLayerCategoryMapper categoryMapper)
-    {
-        var amount = Math.Abs(t.Amount);
-        var txType = t.Amount < 0 || t.TransactionType == "debit" ? "debit" : "credit";
-
-        return new TransactionCandidate(
-            AccountId: accountId,
-            UserId: userId,
-            Amount: amount,
-            TransactionDate: t.Timestamp,
-            PostedDate: t.IsPending ? null : t.Timestamp,
-            Description: t.Description,
-            IsPending: t.IsPending,
-            TransactionType: txType,
-            MerchantName: t.MerchantName,
-            MerchantCategory: categoryMapper.Map(t.Classification),
-            PlaidTransactionId: null);
-    }
 }

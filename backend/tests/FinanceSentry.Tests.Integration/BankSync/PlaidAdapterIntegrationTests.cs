@@ -30,6 +30,8 @@ file sealed class PassthroughCategoryResolver : ICategoryResolver
     public string ResolvePlaidPrimary(string? primary)
         => string.IsNullOrWhiteSpace(primary) ? CategoryKeys.Uncategorized : primary.Trim().ToUpperInvariant();
 
+    public string ResolveDescription(string? description) => CategoryKeys.Uncategorized;
+
     public void Refresh()
     {
     }

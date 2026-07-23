@@ -20,6 +20,22 @@ public static class CategorySeeder
     {
         SeedCategories(db);
         SeedMccCategories(db);
+        SeedMerchantKeywords(db);
+    }
+
+    private static void SeedMerchantKeywords(BankSyncDbContext db)
+    {
+        var existing = db.MerchantKeywords.Select(m => m.Keyword).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var toAdd = MerchantKeywordSeedData.Keywords
+            .Where(k => !existing.Contains(k.Keyword))
+            .Select(k => new MerchantKeyword { Keyword = k.Keyword, CategoryKey = k.CategoryKey })
+            .ToList();
+
+        if (toAdd.Count == 0)
+            return;
+
+        db.MerchantKeywords.AddRange(toAdd);
+        db.SaveChanges();
     }
 
     private static void SeedCategories(BankSyncDbContext db)

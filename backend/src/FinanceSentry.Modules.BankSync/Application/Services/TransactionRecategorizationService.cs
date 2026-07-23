@@ -108,8 +108,11 @@ public class TransactionRecategorizationService(
     private async Task<int> ReFetchMissingSignalAsync(
         IReadOnlyList<BankAccount> userAccounts, IReadOnlyList<Transaction> txns, CancellationToken ct)
     {
+        // Rows still lacking any structured signal AND not rescued by description matching in
+        // pass 1. Description-matched rows already carry a real category, so skip the re-fetch.
         var missingByAccount = txns
             .Where(t => t.Mcc is null && string.IsNullOrWhiteSpace(t.SourceCategory))
+            .Where(t => t.MerchantCategory is null || t.MerchantCategory == CategoryKeys.Uncategorized)
             .GroupBy(t => t.AccountId)
             .ToDictionary(g => g.Key, g => g.ToList());
 
@@ -156,7 +159,11 @@ public class TransactionRecategorizationService(
             return _categoryResolver.ResolveMcc(t.Mcc);
         if (!string.IsNullOrWhiteSpace(t.SourceCategory))
             return _categoryResolver.ResolvePlaidPrimary(t.SourceCategory);
-        return null;
+
+        // No structured signal (e.g. TrueLayer): recover from the free-text description.
+        // A miss returns null so the row stays eligible for a provider re-fetch (pass 2).
+        var byDescription = _categoryResolver.ResolveDescription(t.Description);
+        return byDescription == CategoryKeys.Uncategorized ? null : byDescription;
     }
 
     private async Task<IReadOnlyList<TransactionCandidate>> FetchCandidatesAsync(
