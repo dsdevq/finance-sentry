@@ -16,7 +16,10 @@ public sealed class SubscriptionDetectionJob(
     ILogger<SubscriptionDetectionJob> logger)
 {
     private const int LookbackMonths = 13;
-    private const int MinOccurrences = 4;
+    // Three consistent monthly charges is enough signal — newer open-banking connections
+    // often only have a few months of history, so requiring 4 hid real subscriptions
+    // (Netcup, OpenAI, Claude) whose window only holds 3 charges.
+    private const int MinOccurrences = 3;
     private const double MaxAmountCv = 0.10;
     private const int MonthlyMinDays = 28;
     private const int MonthlyMaxDays = 35;
@@ -200,7 +203,11 @@ public sealed class SubscriptionDetectionJob(
                     var lastChargeDate = DateOnly.FromDateTime(lastTransaction.TransactionDate);
                     var nextExpectedDate = lastChargeDate.AddDays((int)median);
 
-                    var displayName = MerchantNameNormalizer.GetDisplayName(sorted.Select(t => t.MerchantName));
+                    // Fall back to the description for the display name too — TrueLayer (and other
+                    // open-banking) transactions carry the merchant only in the description, so using
+                    // MerchantName alone rendered every detected subscription as "unknown".
+                    var displayName = MerchantNameNormalizer.GetDisplayName(
+                        sorted.Select(t => t.MerchantName ?? t.Description));
                     var topCategory = sorted
                         .Select(t => t.MerchantCategory)
                         .Where(c => c != null)

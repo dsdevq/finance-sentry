@@ -78,6 +78,11 @@
                 <cmn-status-indicator
                   [variant]="inst.syncStatus | syncStatusVariant"
                   [timestampLabel]="inst.lastSyncTimestamp | relativeTime"
+                  [title]="
+                    inst.lastSuccessfulSyncTimestamp
+                      ? 'Last successful sync ' + (inst.lastSuccessfulSyncTimestamp | relativeTime)
+                      : 'No successful sync yet'
+                  "
                 >
                   {{ inst.syncStatus | syncStatusLabel }}
                 </cmn-status-indicator>
@@ -177,6 +182,11 @@
                 <cmn-status-indicator
                   [variant]="inst.syncStatus | syncStatusVariant"
                   [timestampLabel]="inst.lastSyncTimestamp | relativeTime"
+                  [title]="
+                    inst.lastSuccessfulSyncTimestamp
+                      ? 'Last successful sync ' + (inst.lastSuccessfulSyncTimestamp | relativeTime)
+                      : 'No successful sync yet'
+                  "
                 >
                   {{ inst.syncStatus | syncStatusLabel }}
                 </cmn-status-indicator>
@@ -270,6 +280,11 @@
                 <cmn-status-indicator
                   [variant]="inst.syncStatus | syncStatusVariant"
                   [timestampLabel]="inst.lastSyncTimestamp | relativeTime"
+                  [title]="
+                    inst.lastSuccessfulSyncTimestamp
+                      ? 'Last successful sync ' + (inst.lastSuccessfulSyncTimestamp | relativeTime)
+                      : 'No successful sync yet'
+                  "
                 >
                   {{ inst.syncStatus | syncStatusLabel }}
                 </cmn-status-indicator>

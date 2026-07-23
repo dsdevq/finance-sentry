@@ -35,6 +35,7 @@ public record InstitutionDto(
     decimal TotalInBaseCurrency,
     string SyncStatus,
     DateTime? LastSyncTimestamp,
+    DateTime? LastSuccessfulSyncTimestamp,
     IReadOnlyList<AccountBalanceDto> Accounts);
 
 public record CategorySummaryDto(

@@ -200,53 +200,53 @@
                 </span>
               </div>
 
-              <div class="overflow-x-auto -mx-cmn-4">
-                <table class="w-full text-cmn-sm">
-                  <thead>
-                    <tr class="text-left text-text-secondary uppercase text-cmn-xs tracking-wide">
-                      <th class="py-cmn-2 pl-cmn-4 pr-cmn-3">Symbol</th>
-                      <th class="py-cmn-2 pr-cmn-3">Provider</th>
-                      <th class="py-cmn-2 pr-cmn-3 text-right">Quantity</th>
-                      <th class="py-cmn-2 pr-cmn-3 text-right">Price</th>
-                      <th class="py-cmn-2 pr-cmn-3 text-right">Value</th>
-                      <th class="py-cmn-2 pr-cmn-3 text-right">P&amp;L %</th>
-                      <th class="py-cmn-2 pr-cmn-4 text-right">Weight</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @for (row of group.rows; track row.symbol + row.provider) {
-                      <tr class="border-t border-border-default">
-                        <td class="py-cmn-2 pl-cmn-4 pr-cmn-3 font-semibold text-text-primary">
-                          {{ row.symbol }}
-                        </td>
-                        <td class="py-cmn-2 pr-cmn-3 text-text-secondary">{{ row.provider }}</td>
-                        <td class="py-cmn-2 pr-cmn-3 text-right font-mono tabular-nums">
-                          {{ row.quantity | number: '1.0-8' }}
-                        </td>
-                        <td class="py-cmn-2 pr-cmn-3 text-right font-mono tabular-nums">
-                          {{ row.currentPrice | currencyAmount }}
-                        </td>
-                        <td
-                          class="py-cmn-2 pr-cmn-3 text-right font-mono tabular-nums font-semibold"
-                        >
-                          {{ row.currentValue | currencyAmount }}
-                        </td>
-                        <td
-                          [class]="row.pnlPercent >= 0 ? pnlPositiveClass : pnlNegativeClass"
-                          class="py-cmn-2 pr-cmn-3 text-right font-mono tabular-nums"
-                        >
-                          {{ row.pnlPercent | number: '1.2-2' }}%
-                        </td>
-                        <td
-                          class="py-cmn-2 pr-cmn-4 text-right font-mono tabular-nums text-text-secondary"
-                        >
-                          {{ row.weightPercent | number: '1.1-1' }}%
-                        </td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
-              </div>
+              <cmn-data-table [rows]="group.rows">
+                <cmn-column key="symbol" header="Symbol">
+                  <ng-template let-row cmnCell>
+                    <span class="font-semibold text-text-primary">{{ row.symbol }}</span>
+                  </ng-template>
+                </cmn-column>
+                <cmn-column key="provider" header="Provider">
+                  <ng-template let-row cmnCell>
+                    <span class="text-text-secondary">{{ row.provider }}</span>
+                  </ng-template>
+                </cmn-column>
+                <cmn-column key="quantity" header="Quantity" align="right">
+                  <ng-template let-row cmnCell>
+                    <span class="font-mono tabular-nums">{{ row.quantity | number: '1.0-8' }}</span>
+                  </ng-template>
+                </cmn-column>
+                <cmn-column key="price" header="Price" align="right">
+                  <ng-template let-row cmnCell>
+                    <span class="font-mono tabular-nums">{{
+                      row.currentPrice | currencyAmount
+                    }}</span>
+                  </ng-template>
+                </cmn-column>
+                <cmn-column key="value" header="Value" align="right">
+                  <ng-template let-row cmnCell>
+                    <span class="font-mono tabular-nums font-semibold">{{
+                      row.currentValue | currencyAmount
+                    }}</span>
+                  </ng-template>
+                </cmn-column>
+                <cmn-column key="pnl" header="P&L %" align="right">
+                  <ng-template let-row cmnCell>
+                    <span
+                      [class]="row.pnlPercent >= 0 ? pnlPositiveClass : pnlNegativeClass"
+                      class="font-mono tabular-nums"
+                      >{{ row.pnlPercent | number: '1.2-2' }}%</span
+                    >
+                  </ng-template>
+                </cmn-column>
+                <cmn-column key="weight" header="Weight" align="right">
+                  <ng-template let-row cmnCell>
+                    <span class="font-mono tabular-nums text-text-secondary"
+                      >{{ row.weightPercent | number: '1.1-1' }}%</span
+                    >
+                  </ng-template>
+                </cmn-column>
+              </cmn-data-table>
             </cmn-card>
           }
         }

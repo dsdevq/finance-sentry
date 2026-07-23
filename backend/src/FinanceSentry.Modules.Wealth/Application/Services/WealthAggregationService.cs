@@ -82,6 +82,7 @@ public class WealthAggregationService(
                         TotalInBaseCurrency: pg.Sum(h => h.UsdValue),
                         SyncStatus: "synced",
                         LastSyncTimestamp: pg.Max(h => (DateTime?)h.SyncedAt),
+                        LastSuccessfulSyncTimestamp: pg.Max(h => (DateTime?)h.SyncedAt),
                         Accounts: accounts.Where(a => string.Equals(a.Provider, pg.Key, StringComparison.OrdinalIgnoreCase)).ToList()))
                     .ToList();
 
@@ -111,6 +112,7 @@ public class WealthAggregationService(
                         TotalInBaseCurrency: pg.Sum(h => h.UsdValue),
                         SyncStatus: DateTime.UtcNow - pg.Max(h => h.SyncedAt) > StaleThreshold ? "stale" : "synced",
                         LastSyncTimestamp: pg.Max(h => (DateTime?)h.SyncedAt),
+                        LastSuccessfulSyncTimestamp: pg.Max(h => (DateTime?)h.SyncedAt),
                         Accounts: accounts.Where(a => string.Equals(a.Provider, pg.Key, StringComparison.OrdinalIgnoreCase)).ToList()))
                     .ToList();
 
@@ -154,6 +156,7 @@ public class WealthAggregationService(
                 TotalInBaseCurrency: accountDtos.Sum(a => a.BalanceInBaseCurrency ?? 0m),
                 SyncStatus: WorstSyncStatus(list.Select(a => a.SyncStatus)),
                 LastSyncTimestamp: list.Max(a => a.LastSyncTimestamp),
+                LastSuccessfulSyncTimestamp: list.Max(a => a.LastSuccessfulSyncTimestamp),
                 Accounts: accountDtos);
         }).OrderByDescending(i => i.TotalInBaseCurrency)];
     }

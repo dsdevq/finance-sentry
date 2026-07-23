@@ -288,6 +288,18 @@ public class SyncJobRepository(BankSyncDbContext context) : ISyncJobRepository
             .FirstOrDefaultAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyDictionary<Guid, DateTime>> GetLastSuccessfulSyncTimesByUserAsync(
+        Guid userId, CancellationToken cancellationToken = default)
+    {
+        var rows = await _context.SyncJobs
+            .Where(sj => sj.UserId == userId && sj.Status == "success" && sj.CompletedAt != null)
+            .GroupBy(sj => sj.AccountId)
+            .Select(g => new {AccountId = g.Key, LastSuccess = g.Max(sj => sj.CompletedAt)})
+            .ToListAsync(cancellationToken);
+
+        return rows.ToDictionary(r => r.AccountId, r => r.LastSuccess!.Value);
+    }
+
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         return await _context.SaveChangesAsync(cancellationToken);
