@@ -67,6 +67,17 @@ public class ScheduledSyncService(
     private readonly IAlertGeneratorService _alerts = alerts;
     private readonly IUserAlertPreferencesReader _userPreferences = userPreferences;
 
+    /// <summary>
+    /// Error codes that represent a transient, self-healing condition (provider rate-limit /
+    /// 429). These must not mark the account failed or fire a SyncFailure alert — the next
+    /// scheduled cycle retries and clears the state on its own.
+    /// </summary>
+    private static readonly HashSet<string> TransientErrorCodes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "MONOBANK_RATE_LIMITED",
+        "RATE_LIMIT_EXCEEDED",
+    };
+
     /// <inheritdoc />
     public async Task<SyncResult> PerformFullSyncAsync(
           Guid accountId,
@@ -110,6 +121,7 @@ public class ScheduledSyncService(
         catch (Exception ex)
         {
             var errorCode = ExtractErrorCode(ex.Message, account.Provider);
+            var isTransient = errorCode is not null && TransientErrorCodes.Contains(errorCode);
 
             job.MarkFailed(ex.Message, errorCode);
             await _syncJobs.UpdateAsync(job, ct);
@@ -121,6 +133,8 @@ public class ScheduledSyncService(
                 {
                     if (errorCode is "ITEM_LOGIN_REQUIRED" or "MONOBANK_TOKEN_INVALID")
                         freshAccount.MarkReauthRequired();
+                    else if (isTransient && freshAccount.SyncStatus == "syncing")
+                        freshAccount.MarkTransientRetry();
                     else if (freshAccount.SyncStatus == "syncing")
                         freshAccount.MarkFailed(errorCode);
 
@@ -135,7 +149,11 @@ public class ScheduledSyncService(
             _logger.SyncFailed(job.CorrelationId ?? job.Id.ToString(), accountId,
                 errorCode ?? "UNKNOWN", ex.Message, job.RetryCount);
 
-            await EvaluateSyncFailureAlertAsync(account, errorCode, ct);
+            // Transient throttling (provider 429) is self-healing — the next scheduled
+            // cycle retries. Surfacing a "reconnect your credentials" alert here would be
+            // a false alarm, so we skip it. A genuine failure still alerts the user.
+            if (!isTransient)
+                await EvaluateSyncFailureAlertAsync(account, errorCode, ct);
 
             return new SyncResult(false, 0, 0, errorCode, ex.Message);
         }

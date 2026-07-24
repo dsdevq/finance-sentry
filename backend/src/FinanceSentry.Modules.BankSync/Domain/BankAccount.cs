@@ -90,6 +90,22 @@ public class BankAccount : Entity
         UpdatedAt = DateTime.UtcNow;
     }
 
+    /// <summary>
+    /// Restores a syncing account to active after a transient, self-healing failure
+    /// (e.g. a provider rate-limit / 429). Unlike <see cref="MarkFailed"/> this leaves
+    /// no error state and raises no user-facing alert — the connection is valid and the
+    /// next scheduled cycle will retry. Balance is left untouched.
+    /// </summary>
+    public void MarkTransientRetry()
+    {
+        if (SyncStatus != "syncing")
+            throw new InvalidOperationException(
+                $"Cannot mark account transient-retry from status '{SyncStatus}'.");
+        SyncStatus = "active";
+        LastSyncError = null;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     public void BeginSync()
     {
         if (SyncStatus == "syncing")
