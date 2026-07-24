@@ -19,7 +19,12 @@ public sealed class TrendForcePageSource(
     private const string Host = "trendforce.com";
 
     private static readonly string[] ArticleSelectors =
-        ["article", ".press-item", "li.item", "div.item", ".list li"];
+    [
+        ".press-news-list .list-items > .list-item",
+        ".list-items > .list-item",
+        "article",
+        ".press-item"
+    ];
 
     public bool CanHandle(string url) =>
         Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
@@ -61,7 +66,7 @@ public sealed class TrendForcePageSource(
 
         foreach (var node in nodes)
         {
-            var anchor = node.QuerySelector("a[href]");
+            var anchor = node.QuerySelector("a.title-link[href], h3 a[href], a[href]");
             if (anchor is null)
             {
                 continue;
@@ -108,7 +113,7 @@ public sealed class TrendForcePageSource(
 
     private static string? ExtractTitle(IElement node, IElement anchor)
     {
-        var heading = node.QuerySelector("h1, h2, h3, h4, .title");
+        var heading = node.QuerySelector("h1, h2, h3, .title, a.title-link");
         var text = heading?.TextContent ?? anchor.TextContent;
         return string.IsNullOrWhiteSpace(text) ? null : text.Trim();
     }
@@ -117,7 +122,7 @@ public sealed class TrendForcePageSource(
     {
         var timeEl = node.QuerySelector("time[datetime]");
         var raw = timeEl?.GetAttribute("datetime")
-            ?? node.QuerySelector("time, .date, .time")?.TextContent;
+            ?? node.QuerySelector("time, .date, .time, h4.color-green")?.TextContent;
 
         return DateTimeOffset.TryParse(raw, out var parsed) ? parsed : DateTimeOffset.UtcNow;
     }

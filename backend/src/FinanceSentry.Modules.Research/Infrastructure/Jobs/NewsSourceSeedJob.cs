@@ -17,7 +17,7 @@ public sealed class NewsSourceSeedJob(
     ResearchDbContext research,
     ILogger<NewsSourceSeedJob> logger)
 {
-    private const string TrendForceUrl = "https://www.trendforce.com/presscenter/";
+    private const string TrendForceUrl = "https://www.trendforce.com/presscenter/news";
 
     private static readonly (string Name, string Url)[] MarketWideRssDefaults =
     [

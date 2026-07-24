@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 [ApiController]
 [Route("research/news")]
 public class NewsController(
-    IQueryHandler<SearchMarketNewsQuery, IReadOnlyList<NewsArticleDto>> search,
+    IQueryHandler<SearchMarketNewsQuery, SearchMarketNewsResult> search,
     IQueryHandler<GetNewsForTickerQuery, IReadOnlyList<NewsArticleDto>> forTicker) : ControllerBase
 {
     [HttpGet]
@@ -25,7 +25,7 @@ public class NewsController(
             : tickers.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 
         var result = await search.Handle(new SearchMarketNewsQuery(q, tickerList, thesisId, since, limit), ct);
-        return Ok(result);
+        return Ok(result.Articles);
     }
 
     [HttpGet("{ticker}")]

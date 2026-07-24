@@ -11,7 +11,7 @@ using Xunit;
 /// </summary>
 public sealed class TrendForcePageContractTests
 {
-    private const string PageUrl = "https://www.trendforce.com/presscenter/";
+    private const string PageUrl = "https://www.trendforce.com/presscenter/news";
 
     private const string Fixture = """
     <html><body>
@@ -26,6 +26,25 @@ public sealed class TrendForcePageContractTests
           <time datetime="2026-07-20">Jul 20, 2026</time>
         </article>
       </div>
+    </body></html>
+    """;
+
+    private const string CurrentShapeFixture = """
+    <html><body>
+      <div class="navbar navbar-inner press-news-list">
+        <div class="list-items text-left">
+          <div class="list-item">
+            <div class="row">
+              <div class="col-md-12 margin-t-20 padding-l-r-15">
+                <h3 class="font-size-18"><a class="title-link" href="/presscenter/news/20260709-13140.html"><strong>Long-Term Agreements Cap Price Increases; Server DRAM Contract Prices Expected to Rise 13-18% QoQ in 3Q26, Says TrendForce</strong></a></h3>
+                <h4 class="font-size-16 color-green margin-t-10"><strong>9 July 2026</strong></h4>
+                <p class="font-size-16">TrendForce's latest memory pricing survey indicates expected price hikes.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <ul class="list"><li><a href="/presscenter/news/Semiconductors">Semiconductors</a></li></ul>
     </body></html>
     """;
 
@@ -55,6 +74,18 @@ public sealed class TrendForcePageContractTests
         var act = async () => await TrendForcePageSource.ParseAsync(drifted, PageUrl);
 
         await act.Should().ThrowAsync<NewsSourceParseException>();
+    }
+
+    [Fact]
+    public async Task Parse_extracts_current_press_news_list_shape()
+    {
+        var articles = await TrendForcePageSource.ParseAsync(CurrentShapeFixture, PageUrl);
+
+        articles.Should().ContainSingle();
+        articles[0].Title.Should().Contain("Server DRAM Contract Prices");
+        articles[0].Url.Should().Be("https://www.trendforce.com/presscenter/news/20260709-13140.html");
+        articles[0].PublishedAt.Should().Be(DateTimeOffset.Parse("9 July 2026"));
+        articles[0].Summary.Should().Contain("memory pricing");
     }
 
     [Fact(Skip = "Live network smoke test — run manually to confirm TrendForce markup still parses.")]

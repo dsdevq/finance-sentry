@@ -13,7 +13,8 @@ public record GetAnalystActionsQuery(
     string? Ticker,
     DateOnly Since,
     string? ActionType,
-    int Limit) : IQuery<AnalystActionsResult>;
+    int Limit,
+    Guid? ReferenceId = null) : IQuery<AnalystActionsResult>;
 
 public class GetAnalystActionsQueryHandler(
     IAnalystActionRepository actions,
@@ -22,6 +23,13 @@ public class GetAnalystActionsQueryHandler(
 {
     public async Task<AnalystActionsResult> Handle(GetAnalystActionsQuery query, CancellationToken ct)
     {
+        if (query.ReferenceId is { } referenceId)
+        {
+            var action = await actions.GetByIdAsync(referenceId, ct);
+            var referenceRows = action is null ? [] : new[] { action };
+            return new AnalystActionsResult(Project(referenceRows), "reference", DateTimeOffset.UtcNow);
+        }
+
         AnalystActionType? typeFilter = null;
         if (!string.IsNullOrWhiteSpace(query.ActionType)
             && Enum.TryParse<AnalystActionType>(query.ActionType, ignoreCase: true, out var parsed))
@@ -37,13 +45,16 @@ public class GetAnalystActionsQueryHandler(
             coverage = await universe.IsInUniverseAsync(query.Ticker, ct) ? "inUniverse" : "notInUniverse";
         }
 
-        var dtos = rows
+        return new AnalystActionsResult(Project(rows), coverage, DateTimeOffset.UtcNow);
+    }
+
+    private static List<AnalystActionDto> Project(IEnumerable<AnalystAction> rows)
+    {
+        return rows
             .Select(a => new AnalystActionDto(
                 a.Ticker, a.Firm, a.ActionType.ToString(),
                 a.PriorRating, a.NewRating, a.PriorTarget, a.NewTarget,
                 a.ActionDate, a.Source, a.SourceUrl, a.IngestedAt))
             .ToList();
-
-        return new AnalystActionsResult(dtos, coverage, DateTimeOffset.UtcNow);
     }
 }
