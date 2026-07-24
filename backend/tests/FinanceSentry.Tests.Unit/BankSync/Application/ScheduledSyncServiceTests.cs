@@ -47,7 +47,9 @@ public class ScheduledSyncServiceTests
              Mock<ICredentialEncryptionService> encryption,
              Mock<IPlaidAdapterInterface> plaid,
              Mock<ITransactionDeduplicationService> dedup,
-             Mock<IBankSyncLogger> logger) BuildSut()
+             Mock<IBankSyncLogger> logger) BuildSut(
+        Mock<FinanceSentry.Core.Interfaces.IAlertGeneratorService>? alertGen = null,
+        Mock<FinanceSentry.Core.Interfaces.IUserAlertPreferencesReader>? userPrefs = null)
     {
         var accountRepo = new Mock<IBankAccountRepository>();
         var txRepo = new Mock<ITransactionRepository>();
@@ -63,8 +65,8 @@ public class ScheduledSyncServiceTests
         var truelayerConnections = new Mock<ITrueLayerConnectionRepository>();
         var truelayerClient = new Mock<FinanceSentry.Modules.BankSync.Infrastructure.TrueLayer.ITrueLayerClient>();
         var monobankBalanceCache = new FinanceSentry.Modules.BankSync.Infrastructure.Monobank.MonobankBalanceCache();
-        var alertGen = new Mock<FinanceSentry.Core.Interfaces.IAlertGeneratorService>();
-        var userPrefs = new Mock<FinanceSentry.Core.Interfaces.IUserAlertPreferencesReader>();
+        alertGen ??= new Mock<FinanceSentry.Core.Interfaces.IAlertGeneratorService>();
+        userPrefs ??= new Mock<FinanceSentry.Core.Interfaces.IUserAlertPreferencesReader>();
 
         var sut = new ScheduledSyncService(
             accountRepo.Object, txRepo.Object, jobRepo.Object, credRepo.Object,
@@ -228,12 +230,64 @@ public class ScheduledSyncServiceTests
         result.TransactionCountDeduped.Should().Be(1);  // 1 new after dedup
     }
 
-    // ── T313-4: Exception during sync marks job failed ──────────────────────
+    // ── T313-4: Hard failure during sync marks job + account failed and alerts ──
 
     [Fact]
-    public async Task PerformFullSyncAsync_PlaidThrows_MarksJobAndAccountFailed()
+    public async Task PerformFullSyncAsync_PlaidThrowsHardError_MarksFailedAndFiresAlert()
     {
-        var (sut, accountRepo, txRepo, jobRepo, credRepo, encryption, plaid, dedup, logger) = BuildSut();
+        var alertGen = new Mock<FinanceSentry.Core.Interfaces.IAlertGeneratorService>();
+        var userPrefs = new Mock<FinanceSentry.Core.Interfaces.IUserAlertPreferencesReader>();
+        userPrefs.Setup(p => p.GetAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+                 .ReturnsAsync(new FinanceSentry.Core.Interfaces.UserAlertPreferences(false, 0m, true));
+
+        var (sut, accountRepo, txRepo, jobRepo, credRepo, encryption, plaid, _, _) =
+            BuildSut(alertGen, userPrefs);
+
+        var account = MakeActiveAccount();
+        var credential = MakeCredential(AccountId);
+
+        accountRepo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), default)).ReturnsAsync(account);
+        accountRepo.Setup(r => r.UpdateAsync(It.IsAny<BankAccount>(), default)).ReturnsAsync(account);
+        jobRepo.Setup(r => r.AddAsync(It.IsAny<SyncJob>(), default))
+               .ReturnsAsync((SyncJob j, CancellationToken _) => j);
+        jobRepo.Setup(r => r.UpdateAsync(It.IsAny<SyncJob>(), default))
+               .ReturnsAsync((SyncJob j, CancellationToken _) => j);
+        jobRepo.Setup(r => r.GetLatestByAccountIdAsync(It.IsAny<Guid>(), default))
+               .ReturnsAsync((SyncJob?)null);
+        credRepo.Setup(r => r.GetByAccountIdAsync(It.IsAny<Guid>(), default)).ReturnsAsync(credential);
+        encryption.Setup(e => e.Decrypt(It.IsAny<byte[]>(), It.IsAny<byte[]>(), It.IsAny<byte[]>(), It.IsAny<int>()))
+                  .Returns("access-sandbox-token");
+        txRepo.Setup(r => r.GetByAccountIdAsync(It.IsAny<Guid>(), default))
+              .ReturnsAsync([]);
+
+        plaid.Setup(p => p.SyncTransactionsAsync(
+                It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<Guid>(),
+                It.IsAny<string?>(), default))
+             .ThrowsAsync(new HttpRequestException("INVALID_CREDENTIALS: bad token"));
+
+        var result = await sut.PerformFullSyncAsync(AccountId);
+
+        result.Success.Should().BeFalse();
+        result.ErrorCode.Should().Be("INVALID_CREDENTIALS");
+        jobRepo.Verify(r => r.UpdateAsync(It.Is<SyncJob>(j => j.Status == "failed"), default), Times.Once);
+        account.SyncStatus.Should().Be("failed");
+        alertGen.Verify(a => a.GenerateSyncFailureAlertAsync(
+            It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<Guid?>(),
+            It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    // ── T313-4b: Transient throttle (429) does not fail the account or alert ────
+
+    [Fact]
+    public async Task PerformFullSyncAsync_RateLimited_KeepsAccountActiveAndSkipsAlert()
+    {
+        var alertGen = new Mock<FinanceSentry.Core.Interfaces.IAlertGeneratorService>();
+        var userPrefs = new Mock<FinanceSentry.Core.Interfaces.IUserAlertPreferencesReader>();
+        userPrefs.Setup(p => p.GetAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+                 .ReturnsAsync(new FinanceSentry.Core.Interfaces.UserAlertPreferences(false, 0m, true));
+
+        var (sut, accountRepo, txRepo, jobRepo, credRepo, encryption, plaid, _, _) =
+            BuildSut(alertGen, userPrefs);
 
         var account = MakeActiveAccount();
         var credential = MakeCredential(AccountId);
@@ -261,7 +315,14 @@ public class ScheduledSyncServiceTests
 
         result.Success.Should().BeFalse();
         result.ErrorCode.Should().Be("RATE_LIMIT_EXCEEDED");
+        // Job still records the failure for observability...
         jobRepo.Verify(r => r.UpdateAsync(It.Is<SyncJob>(j => j.Status == "failed"), default), Times.Once);
+        // ...but the account self-heals to active and no false alarm is raised.
+        account.SyncStatus.Should().Be("active");
+        account.LastSyncError.Should().BeNull();
+        alertGen.Verify(a => a.GenerateSyncFailureAlertAsync(
+            It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<Guid?>(),
+            It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     // ── T313-5: Idempotency — coordinator blocks concurrent runs ────────────
