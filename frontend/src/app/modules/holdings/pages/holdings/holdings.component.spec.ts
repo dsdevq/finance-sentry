@@ -1,3 +1,4 @@
+import {DecimalPipe} from '@angular/common';
 import {signal} from '@angular/core';
 import {TestBed} from '@angular/core/testing';
 import {By} from '@angular/platform-browser';
@@ -34,6 +35,7 @@ const MOCK_INSTITUTION: Institution = {
   totalInBaseCurrency: 12345.67,
   syncStatus: 'synced',
   lastSyncTimestamp: null,
+  lastSuccessfulSyncTimestamp: null,
   accounts: [MOCK_ACCOUNT],
 };
 
@@ -77,7 +79,12 @@ describe('HoldingsComponent — cmn-disclosure-row projected slots', () => {
 
     await TestBed.configureTestingModule({
       imports: [HoldingsComponent],
-      providers: [{provide: CmnDialogService, useValue: {open: vi.fn()}}],
+      providers: [
+        {provide: CmnDialogService, useValue: {open: vi.fn()}},
+        // Mirrors provideDecimalPipe() from app.config — holding-balance /
+        // currency-amount pipes inject DecimalPipe, provided app-wide at runtime.
+        DecimalPipe,
+      ],
     })
       .overrideComponent(HoldingsComponent, {
         set: {
@@ -99,7 +106,44 @@ describe('HoldingsComponent — cmn-disclosure-row projected slots', () => {
 
     const rows = fixture.debugElement.queryAll(By.css('cmn-disclosure-row'));
     expect(rows).toHaveLength(1);
-    expect(fixture.debugElement.query(By.css('details.group'))).toBeNull();
+
+    // Holdings renders no raw <details> of its own — every <details> on the page
+    // belongs to a cmn-disclosure-row (the component owns its internal one).
+    const details = fixture.debugElement.queryAll(By.css('details'));
+    details.forEach(d =>
+      expect((d.nativeElement as HTMLElement).closest('cmn-disclosure-row')).not.toBeNull()
+    );
+  });
+
+  it('renders each institution open by default, matching the original <details open>', () => {
+    const fixture = TestBed.createComponent(HoldingsComponent);
+    fixture.detectChanges();
+
+    const details = fixture.nativeElement.querySelector(
+      'cmn-disclosure-row details'
+    ) as HTMLDetailsElement;
+    expect(details).not.toBeNull();
+    expect(details.open).toBe(true);
+  });
+
+  it('keeps a row collapsed after the user closes it — the [open] binding does not force it back', () => {
+    const fixture = TestBed.createComponent(HoldingsComponent);
+    fixture.detectChanges();
+
+    const details = fixture.nativeElement.querySelector(
+      'cmn-disclosure-row details'
+    ) as HTMLDetailsElement;
+
+    // Simulate the user collapsing the row (native <details> owns toggle state).
+    details.open = false;
+    details.dispatchEvent(new Event('toggle'));
+
+    // A subsequent change-detection pass must not re-open it. Angular's
+    // dirty-checking skips re-writing an unchanged [open]="true" binding, so
+    // the user's collapse is preserved.
+    fixture.detectChanges();
+
+    expect(details.open).toBe(false);
   });
 
   it('[status] slot projects sync-status tag inside the disclosure row', () => {
