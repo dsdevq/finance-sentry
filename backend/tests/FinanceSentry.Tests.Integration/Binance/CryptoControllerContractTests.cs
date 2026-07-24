@@ -295,6 +295,9 @@ public class CryptoApiFactory : WebApplicationFactory<Program>
             .Setup(r => r.UpsertRangeAsync(It.IsAny<IReadOnlyList<CryptoHolding>>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
         HoldingRepoMock
+            .Setup(r => r.GetByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        HoldingRepoMock
             .Setup(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
     }
