@@ -94,6 +94,9 @@ internal sealed class FakeAnalystActionRepository : IAnalystActionRepository
         return Task.FromResult<IReadOnlyList<AnalystAction>>(
             q.OrderByDescending(a => a.ActionDate).Take(limit).ToList());
     }
+
+    public Task<AnalystAction?> GetByIdAsync(Guid id, CancellationToken ct = default)
+        => Task.FromResult(Actions.FirstOrDefault(a => a.Id == id));
 }
 
 internal sealed class FakeBankingTotalsReader(params Guid[] userIds) : IBankingTotalsReader

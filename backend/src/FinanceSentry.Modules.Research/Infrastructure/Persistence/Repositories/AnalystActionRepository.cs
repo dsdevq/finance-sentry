@@ -84,6 +84,9 @@ public class AnalystActionRepository(ResearchDbContext db) : IAnalystActionRepos
             .ToListAsync(ct);
     }
 
+    public async Task<AnalystAction?> GetByIdAsync(Guid id, CancellationToken ct = default)
+        => await db.AnalystActions.AsNoTracking().FirstOrDefaultAsync(a => a.Id == id, ct);
+
     // Fill NULL target/rating fields on <paramref name="target"/> from <paramref name="source"/>;
     // never overwrite an already-populated field (keep the richer record — FR-003).
     private static void Merge(AnalystAction target, AnalystAction source)

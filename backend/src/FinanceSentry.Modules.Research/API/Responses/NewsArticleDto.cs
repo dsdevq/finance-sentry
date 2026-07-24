@@ -9,3 +9,18 @@ public record NewsArticleDto(
     IReadOnlyList<string> Tickers,
     IReadOnlyList<string> Categories,
     DateTimeOffset PublishedAt);
+
+public record NewsSourceHealthDto(
+    Guid SourceId,
+    string Name,
+    string Url,
+    int ConsecutiveFailures,
+    DateTimeOffset? LastSuccessAt,
+    string? LastFailureReason,
+    string Status);
+
+public record SearchMarketNewsResult(
+    IReadOnlyList<NewsArticleDto> Articles,
+    IReadOnlyList<NewsSourceHealthDto> SourceHealth,
+    string Coverage,
+    DateTimeOffset RetrievedAt);

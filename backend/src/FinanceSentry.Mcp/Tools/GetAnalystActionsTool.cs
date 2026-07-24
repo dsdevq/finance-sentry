@@ -20,6 +20,7 @@ public sealed class GetAnalystActionsTool(
         [Description("Optional ticker filter (e.g. MU). Omit for a whole-universe query.")] string? ticker = null,
         [Description("Optional ISO-8601 cutoff date. Only actions on/after this date are returned. Default: 30 days ago.")] DateTimeOffset? since = null,
         [Description("Optional action-type filter: Upgrade | Downgrade | Initiate | TargetChange | Reiterate | TopIdea.")] string? actionType = null,
+        [Description("Optional companion-event reference id. When provided, resolves the exact analyst action row and ignores ticker/since/actionType filters.")] Guid? referenceId = null,
         [Description("Max results, default 50, max 200.")] int limit = DefaultLimit,
         CancellationToken cancellationToken = default)
     {
@@ -30,6 +31,6 @@ public sealed class GetAnalystActionsTool(
         var effectiveLimit = limit <= 0 ? DefaultLimit : Math.Min(limit, MaxLimit);
 
         return await handler.Handle(
-            new GetAnalystActionsQuery(ticker, sinceDate, actionType, effectiveLimit), cancellationToken);
+            new GetAnalystActionsQuery(ticker, sinceDate, actionType, effectiveLimit, referenceId), cancellationToken);
     }
 }

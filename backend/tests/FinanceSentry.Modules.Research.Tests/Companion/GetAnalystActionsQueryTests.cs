@@ -75,4 +75,30 @@ public sealed class GetAnalystActionsQueryTests
         result.Actions[0].ActionType.Should().Be("Upgrade");
         result.Actions[0].Source.Should().Be("marketbeat");
     }
+
+    [Fact]
+    public async Task ReferenceId_resolves_exact_source_row()
+    {
+        var id = Guid.NewGuid();
+        var actions = new FakeAnalystActionRepository();
+        actions.Actions.Add(new AnalystAction
+        {
+            Id = id,
+            Ticker = "GRAB",
+            Firm = "Barclays",
+            ActionType = AnalystActionType.Reiterate,
+            NewRating = "Overweight",
+            ActionDate = new DateOnly(2026, 7, 23),
+            Source = "marketbeat",
+            SourceUrl = "https://www.marketbeat.com/ratings/",
+        });
+
+        var result = await new GetAnalystActionsQueryHandler(actions, new FakeAnalystUniverseRepository())
+            .Handle(new GetAnalystActionsQuery("NVDA", Since, null, 50, id), default);
+
+        result.Coverage.Should().Be("reference");
+        result.Actions.Should().ContainSingle();
+        result.Actions[0].Ticker.Should().Be("GRAB");
+        result.Actions[0].SourceUrl.Should().Be("https://www.marketbeat.com/ratings/");
+    }
 }

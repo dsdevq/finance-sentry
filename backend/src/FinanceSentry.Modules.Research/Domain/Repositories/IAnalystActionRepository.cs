@@ -20,4 +20,7 @@ public interface IAnalystActionRepository
         AnalystActionType? actionType,
         int limit,
         CancellationToken ct = default);
+
+    /// <summary>Resolve a companion event reference back to its exact source-carrying action row.</summary>
+    Task<AnalystAction?> GetByIdAsync(Guid id, CancellationToken ct = default);
 }
