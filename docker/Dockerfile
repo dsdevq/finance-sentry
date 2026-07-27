@@ -3,7 +3,7 @@
 # Build context: repository root
 
 # Stage 1: Build
-FROM mcr.microsoft.com/dotnet/sdk:9.0-alpine AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
 WORKDIR /src
 
 COPY backend/ backend/
@@ -21,7 +21,7 @@ RUN --mount=type=cache,target=/root/.nuget/packages \
     dotnet publish src/FinanceSentry.API/FinanceSentry.API.csproj -c Release -o /app/publish --no-build
 
 # Stage 2: Runtime
-FROM mcr.microsoft.com/dotnet/aspnet:9.0-alpine AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS runtime
 WORKDIR /app
 
 RUN apk add --no-cache curl tzdata
