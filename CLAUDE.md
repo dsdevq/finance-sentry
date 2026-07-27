@@ -14,7 +14,7 @@ Sole developer: Denys. Spec-driven development via the **speckit** toolchain (co
 
 | Layer | Technology |
 |---|---|
-| Backend | ASP.NET Core 9, EF Core, PostgreSQL 14, MediatR (CQRS), Hangfire, Serilog |
+| Backend | ASP.NET Core 10 (.NET 10, C# 14), EF Core 10, PostgreSQL 14, hand-rolled CQRS (`FinanceSentry.Core.Cqrs`), Hangfire, Serilog |
 | Frontend | Angular 21.2, TypeScript strict, standalone components, NgRx SignalStore (`@ngrx/signals`), lazy-loaded modules |
 | UI library | `@dsdevq-common/ui` (local, ng-packagr) — components, `ToastService`, `ErrorMessageService`, `ThemeService` |
 | Auth | Custom `JwtAuthenticationMiddleware` (backend) + `AuthStore` signal store + functional `authInterceptor` (frontend). Access token lives **in memory only** (store signal); refresh token is an httpOnly/Secure/SameSite=Strict cookie set by the backend. Silent refresh fires on app init. |
