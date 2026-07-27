@@ -28,6 +28,7 @@ using FinanceSentry.Modules.Research.Domain.Opportunity;
 using FinanceSentry.Modules.Research.Domain.Repositories;
 using FinanceSentry.Modules.Research.Infrastructure.Persistence;
 using FinanceSentry.Modules.Research.Infrastructure.Persistence.Repositories;
+using FinanceSentry.Modules.Research.Infrastructure.Services;
 using FinanceSentry.Modules.CryptoSync.Domain;
 using FinanceSentry.Modules.CryptoSync.Domain.Repositories;
 using FinanceSentry.Modules.CryptoSync.Infrastructure.Persistence;
@@ -103,6 +104,7 @@ public sealed class ToolParityTests
         // Repositories — real implementations backed by the in-memory contexts above.
         services.AddScoped<IBankAccountRepository, BankAccountRepository>();
         services.AddScoped<ITransactionRepository, TransactionRepository>();
+        services.AddScoped<ISyncJobRepository, SyncJobRepository>();
         services.AddScoped<ICryptoHoldingRepository, CryptoHoldingRepository>();
         services.AddScoped<IBrokerageHoldingRepository, BrokerageHoldingRepository>();
         services.AddScoped<IAlertRepository, AlertRepository>();
@@ -140,6 +142,18 @@ public sealed class ToolParityTests
         services.Configure<OpportunityOptions>(_ => { });
         services.AddScoped<IMarketStructureReader, MarketStructureReader>();
         services.AddScoped<IRiskPolicyGate, RiskPolicyGate>();
+
+        // Research retrieval (036): real repos/chunker/retriever over the in-memory Research
+        // context; embeddings stay disabled (default options) so ranking is lexical-only here.
+        services.AddHttpClient();
+        services.AddScoped<IResearchDocumentRepository, ResearchDocumentRepository>();
+        services.AddScoped<IResearchRetrievalRepository, ResearchRetrievalRepository>();
+        services.AddSingleton<IResearchChunker, ResearchChunker>();
+        services.AddSingleton<IEmbeddingService, ConfiguredEmbeddingService>();
+        services.AddScoped<IResearchCorpusSourceReader, ResearchCorpusSourceReader>();
+        services.AddScoped<IResearchIndexer, ResearchIndexer>();
+        services.AddScoped<IResearchRetriever, ResearchRetriever>();
+        services.Configure<ResearchRetrievalOptions>(_ => { });
 
         // Cross-provider readers used by several tools.
         services.AddScoped<IBankingAccountsReader, BankingAccountsReader>();
@@ -1159,5 +1173,106 @@ public sealed class ToolParityTests
         var listTool = svc.GetRequiredService<ListCandidatesTool>();
         var listed = await listTool.ExecuteAsync(status: CandidateStatus.Rejected, userId: userId);
         listed.Should().ContainSingle(c => c.Ticker == "INTC" && c.RejectedReason == "valuation too rich");
+    }
+
+    // ── Research retrieval (036) ─────────────────────────────────────────────
+    // These tools take no userId parameter by contract, so each fact constructs the tool over the
+    // real handler graph with an identity-bearing FakeIdentityResolver instead of resolving it.
+
+    private static async Task<Guid> SeedIndexedResearchDocumentAsync(
+        ResearchDbContext researchDb,
+        Guid? ownerUserId,
+        string title,
+        string text,
+        string ticker)
+    {
+        var document = new ResearchDocument
+        {
+            SourceType = ResearchDocumentSourceType.NewsArticle,
+            SourceId = Guid.NewGuid().ToString(),
+            UserId = ownerUserId,
+            Title = title,
+            Text = text,
+            ContentHash = FinanceSentry.Modules.Research.Application.Services.ResearchChunker
+                .ComputeContentHash($"{title}\n{text}"),
+            Tickers = [ticker],
+            IndexStatus = ResearchIndexStatus.Indexed,
+            PublishedAt = DateTimeOffset.UtcNow.AddHours(-2),
+        };
+        researchDb.ResearchDocuments.Add(document);
+        researchDb.ResearchChunks.Add(new ResearchChunk
+        {
+            DocumentId = document.Id,
+            Ordinal = 0,
+            Text = text,
+            ContentHash = FinanceSentry.Modules.Research.Application.Services.ResearchChunker
+                .ComputeContentHash(text),
+            TokenEstimate = text.Length / 4,
+        });
+        await researchDb.SaveChangesAsync();
+        return document.Id;
+    }
+
+    [Fact]
+    public async Task SearchResearchCorpus_ReturnsCitedChunks_AndHidesOtherUsersPrivateDocs()
+    {
+        var userId = Guid.NewGuid();
+        var strangerId = Guid.NewGuid();
+        await using var sp = BuildProvider(Guid.NewGuid().ToString("N"));
+        await using var scope = sp.CreateAsyncScope();
+        var svc = scope.ServiceProvider;
+
+        var researchDb = svc.GetRequiredService<ResearchDbContext>();
+        var globalDocId = await SeedIndexedResearchDocumentAsync(
+            researchDb, null, "DRAM contract prices recover",
+            "Contract pricing improved for another quarter across memory suppliers.", "MU");
+        await SeedIndexedResearchDocumentAsync(
+            researchDb, strangerId, "Private MU note",
+            "Private conviction notes about memory pricing.", "MU");
+
+        var tool = new SearchResearchCorpusTool(
+            svc.GetRequiredService<IQueryHandler<
+                FinanceSentry.Modules.Research.Application.Queries.SearchResearchCorpusQuery,
+                FinanceSentry.Modules.Research.API.Responses.ResearchSearchResultDto>>(),
+            new FakeIdentityResolver { ResolvedUserId = userId });
+
+        var result = await tool.ExecuteAsync("memory contract pricing", tickers: ["MU"]);
+
+        result.Results.Should().NotBeEmpty();
+        result.Results.Should().OnlyContain(r => r.DocumentId == globalDocId);
+        result.Results[0].SourceType.Should().Be("NewsArticle");
+        result.Results[0].ChunkId.Should().NotBeEmpty();
+        result.Results[0].Snippet.Should().NotBeNullOrEmpty();
+        result.Results[0].CombinedScore.Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task GetResearchContext_ReturnsGroupedCitedPacket_ForTicker()
+    {
+        var userId = Guid.NewGuid();
+        await using var sp = BuildProvider(Guid.NewGuid().ToString("N"));
+        await using var scope = sp.CreateAsyncScope();
+        var svc = scope.ServiceProvider;
+
+        var researchDb = svc.GetRequiredService<ResearchDbContext>();
+        await SeedIndexedResearchDocumentAsync(
+            researchDb, null, "MU research evidence roundup",
+            "Fresh research evidence on MU covering recent developments in memory pricing.", "MU");
+
+        var tool = new GetResearchContextTool(
+            svc.GetRequiredService<IQueryHandler<
+                FinanceSentry.Modules.Research.Application.Queries.GetResearchContextQuery,
+                FinanceSentry.Modules.Research.API.Responses.ResearchContextPacketDto>>(),
+            new FakeIdentityResolver { ResolvedUserId = userId });
+
+        var packet = await tool.ExecuteAsync(ticker: "MU");
+
+        packet.Should().NotBeNull();
+        packet!.SubjectType.Should().Be("Ticker");
+        packet.Ticker.Should().Be("MU");
+        packet.Thesis.Should().BeNull("no thesis is seeded for the ticker");
+        packet.Groups.Should().ContainSingle(g => g.Name == "recent_news");
+        packet.Groups.SelectMany(g => g.Items)
+            .Should().OnlyContain(i => i.DocumentId != Guid.Empty && i.ChunkId != Guid.Empty);
     }
 }

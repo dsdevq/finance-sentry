@@ -5,6 +5,7 @@ using FinanceSentry.Modules.Research.Application.Services;
 using FinanceSentry.Modules.Research.Domain.Repositories;
 using FinanceSentry.Modules.Research.Infrastructure.Jobs;
 using FinanceSentry.Modules.Research.Infrastructure.Persistence;
+using FinanceSentry.Modules.Research.Infrastructure.Services;
 using FinanceSentry.Modules.Research.Infrastructure.Sources;
 using FinanceSentry.Modules.Research.Infrastructure.Persistence.Repositories;
 using Hangfire;
@@ -74,6 +75,13 @@ public static class ResearchModule
                 "analyst-actions-ingestion",
                 job => job.ExecuteAsync(CancellationToken.None),
                 Cron.Daily(1));
+
+            // Research retrieval indexing (feature 036), offset 15 min from the */30 news ingestion
+            // so freshly ingested articles are chunked/embedded shortly after they land.
+            mgr.AddOrUpdate<ResearchIndexingJob>(
+                "research-retrieval-indexing",
+                job => job.ExecuteAsync(CancellationToken.None),
+                "15,45 * * * *");
         }
     }
 
@@ -100,7 +108,10 @@ public static class ResearchModule
         services.AddScoped<IAnalystUniverseRepository, AnalystUniverseRepository>();
         services.AddScoped<INewsSourceRepository, NewsSourceRepository>();
         services.AddScoped<IValuationSnapshotRepository, ValuationSnapshotRepository>();
+        services.AddScoped<IResearchDocumentRepository, ResearchDocumentRepository>();
+        services.AddScoped<IResearchRetrievalRepository, ResearchRetrievalRepository>();
         services.Configure<OpportunityOptions>(config.GetSection(OpportunityOptions.SectionName));
+        services.Configure<ResearchRetrievalOptions>(config.GetSection(ResearchRetrievalOptions.SectionName));
 
         services.AddHttpClient(YahooMarketDataService.HttpClientName, client =>
         {
@@ -240,6 +251,22 @@ public static class ResearchModule
 
         services.AddScoped<INewsPageSource, TrendForcePageSource>();
 
+        // Research retrieval (feature 036). Embeddings go through a configurable OpenAI-compatible
+        // endpoint; when disabled (default), indexing still stores chunks for lexical-only search.
+        var retrievalOptions = config.GetSection(ResearchRetrievalOptions.SectionName)
+            .Get<ResearchRetrievalOptions>() ?? new ResearchRetrievalOptions();
+        services.AddHttpClient(ConfiguredEmbeddingService.HttpClientName, client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(Math.Max(1, retrievalOptions.Embedding.TimeoutSeconds));
+            client.DefaultRequestHeaders.UserAgent.ParseAdd(
+                "Mozilla/5.0 (compatible; FinanceSentry/1.0; +https://finance-sentry.local)");
+        });
+        services.AddSingleton<IEmbeddingService, ConfiguredEmbeddingService>();
+        services.AddSingleton<IResearchChunker, ResearchChunker>();
+        services.AddScoped<IResearchCorpusSourceReader, ResearchCorpusSourceReader>();
+        services.AddScoped<IResearchIndexer, ResearchIndexer>();
+        services.AddScoped<IResearchRetriever, ResearchRetriever>();
+
         services.AddScoped<NewsIngestionJob>();
         services.AddScoped<NewsSourceSeedJob>();
         services.AddScoped<AnalystActionsIngestionJob>();
@@ -248,6 +275,7 @@ public static class ResearchModule
         services.AddScoped<ThesisTrackRecordSnapshotJob>();
         services.AddScoped<CandidateExpiryJob>();
         services.AddScoped<OpportunityScanJob>();
+        services.AddScoped<ResearchIndexingJob>();
 
         services.AddSingleton<IJobRegistrar, JobRegistrar>();
 
