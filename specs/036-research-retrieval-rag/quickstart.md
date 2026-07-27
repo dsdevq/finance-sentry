@@ -8,7 +8,7 @@ dotnet restore FinanceSentry.sln
 dotnet build FinanceSentry.sln --no-restore -c Release
 ```
 
-PostgreSQL must support the selected vector storage. If using `pgvector`, verify the extension is available in the Research database before applying `M009_ResearchRetrieval`.
+No Postgres extension is required: embeddings are stored as plain `real[]` columns and similarity is ranked in-app (see research.md Decision 5 implementation resolution). `M009_ResearchRetrieval` applies to stock `postgres:14-alpine`.
 
 ## Local Verification
 
@@ -42,11 +42,13 @@ cd backend
 dotnet test FinanceSentry.sln --no-build -c Release --filter "Category!=Integration"
 ```
 
-5. Run the retrieval integration tests that require PostgreSQL/vector support.
+5. Retrieval behavior tests (chunking, hybrid ranking, user isolation, idempotent indexing) live in
+   `tests/FinanceSentry.Modules.Research.Tests/Retrieval/` and run on EF InMemory — ranking is
+   in-app, so no PostgreSQL-specific retrieval harness is required.
 
 ```bash
 cd backend
-dotnet test tests/FinanceSentry.Modules.Research.Tests/FinanceSentry.Modules.Research.Tests.csproj -c Release --filter "Category=RetrievalIntegration"
+dotnet test tests/FinanceSentry.Modules.Research.Tests/FinanceSentry.Modules.Research.Tests.csproj
 ```
 
 ## MCP Smoke Test

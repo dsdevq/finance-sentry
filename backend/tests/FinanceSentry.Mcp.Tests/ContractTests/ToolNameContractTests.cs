@@ -31,6 +31,7 @@ public sealed class ToolNameContractTests
         "get_quotes",
         "get_radar_summary",
         "get_recent_filings",
+        "get_research_context",
         "get_risk_rules",
         "get_sync_health",
         "get_tax_lots",
@@ -60,6 +61,7 @@ public sealed class ToolNameContractTests
         "save_risk_rules",
         "save_thesis",
         "search_market_news",
+        "search_research_corpus",
         "set_notification_mode",
         "watchlist",
     };
@@ -71,6 +73,6 @@ public sealed class ToolNameContractTests
 
         actual.Should().BeEquivalentTo(
             AgreedToolSurface,
-            because: "the MCP tool surface must match the agreed 55-tool contract — no more, no fewer");
+            because: "the MCP tool surface must match the agreed 57-tool contract — no more, no fewer");
     }
 }

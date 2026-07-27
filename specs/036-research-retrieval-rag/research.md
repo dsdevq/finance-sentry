@@ -37,6 +37,8 @@
 
 **Risk**: Production Postgres must have the vector extension installed. The quickstart must include an explicit extension check.
 
+**Implementation resolution (2026-07-27)**: All four compose/CI files run plain `postgres:14-alpine` with no pgvector support, and no pgvector-capable image or NuGet reference exists anywhere in the repo. To avoid coupling a prod DB image swap to this feature, the MVP stores embeddings as `float[]` (`real[]` on Npgsql — no extension required), narrows candidates structurally in SQL, and ranks (cosine + lexical) in-app over a bounded candidate set (`MaxSearchCandidates`). At personal corpus scale this is equivalent in result quality. `pgvector` + ANN indexing remains the documented upgrade path if the corpus grows; migrating is a self-contained migration plus a repository swap behind `IResearchRetrievalRepository`.
+
 ## Decision 6: Provider interface for embeddings
 
 **Decision**: Define `IEmbeddingService` in Application and implement provider-specific calls in Infrastructure.

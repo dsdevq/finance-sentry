@@ -34,6 +34,12 @@ public class ResearchDbContext(DbContextOptions<ResearchDbContext> options) : Db
 
     public DbSet<ValuationSnapshot> ValuationSnapshots { get; set; } = null!;
 
+    public DbSet<ResearchDocument> ResearchDocuments { get; set; } = null!;
+
+    public DbSet<ResearchChunk> ResearchChunks { get; set; } = null!;
+
+    public DbSet<ResearchEmbedding> ResearchEmbeddings { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema("research");
@@ -314,6 +320,63 @@ public class ResearchDbContext(DbContextOptions<ResearchDbContext> options) : Db
         vsb.Property(x => x.ConsensusTarget).HasColumnType("numeric(18,4)");
         vsb.Property(x => x.IsStale).IsRequired();
         vsb.HasIndex(x => new { x.Ticker, x.CapturedAt }).HasDatabaseName("idx_valuation_snapshots_ticker_captured");
+
+        var rdb = modelBuilder.Entity<ResearchDocument>();
+        rdb.ToTable("research_documents");
+        rdb.HasKey(x => x.Id);
+        rdb.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
+        rdb.Property(x => x.SourceType).IsRequired().HasConversion<string>().HasMaxLength(40);
+        rdb.Property(x => x.SourceId).IsRequired().HasMaxLength(80);
+        rdb.Property(x => x.Title).IsRequired().HasMaxLength(500);
+        rdb.Property(x => x.SourceName).HasMaxLength(160);
+        rdb.Property(x => x.ContentHash).IsRequired().HasMaxLength(128);
+        rdb.Property(x => x.Text).IsRequired();
+        rdb.Property(x => x.CapturedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+        rdb.Property(x => x.IndexStatus).IsRequired().HasConversion<string>().HasMaxLength(30);
+        rdb.Property(x => x.Tickers)
+            .HasColumnType("jsonb")
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, jsonOptions),
+                v => JsonSerializer.Deserialize<List<string>>(v, jsonOptions) ?? new())
+            .Metadata.SetValueComparer(StringListComparer);
+        rdb.Property(x => x.ThesisIds)
+            .HasColumnType("jsonb")
+            .HasConversion(
+                v => JsonSerializer.Serialize(v, jsonOptions),
+                v => JsonSerializer.Deserialize<List<Guid>>(v, jsonOptions) ?? new())
+            .Metadata.SetValueComparer(GuidListComparer);
+        // Postgres 14 treats NULLs as distinct in unique indexes, so this cannot dedupe two global
+        // (null-user) rows by itself; the indexer upserts by this identity before inserting.
+        rdb.HasIndex(x => new { x.SourceType, x.SourceId, x.UserId })
+            .IsUnique().HasDatabaseName("idx_research_documents_source_identity");
+        rdb.HasIndex(x => new { x.IndexStatus, x.CapturedAt }).HasDatabaseName("idx_research_documents_status_captured");
+        rdb.HasIndex(x => x.PublishedAt).IsDescending().HasDatabaseName("idx_research_documents_published");
+
+        var rcb = modelBuilder.Entity<ResearchChunk>();
+        rcb.ToTable("research_chunks");
+        rcb.HasKey(x => x.Id);
+        rcb.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
+        rcb.Property(x => x.Text).IsRequired();
+        rcb.Property(x => x.ContentHash).IsRequired().HasMaxLength(128);
+        rcb.Property(x => x.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+        rcb.HasOne<ResearchDocument>().WithMany().HasForeignKey(x => x.DocumentId)
+            .OnDelete(DeleteBehavior.Cascade);
+        rcb.HasIndex(x => new { x.DocumentId, x.Ordinal, x.ContentHash })
+            .IsUnique().HasDatabaseName("idx_research_chunks_doc_ordinal_hash");
+
+        var reb = modelBuilder.Entity<ResearchEmbedding>();
+        reb.ToTable("research_embeddings");
+        reb.HasKey(x => x.Id);
+        reb.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
+        reb.Property(x => x.Provider).IsRequired().HasMaxLength(60);
+        reb.Property(x => x.Model).IsRequired().HasMaxLength(120);
+        reb.Property(x => x.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+        // float[] maps to real[] on Npgsql — no extension required; similarity ranks in-app.
+        reb.Property(x => x.Vector).IsRequired().Metadata.SetValueComparer(FloatArrayComparer);
+        reb.HasOne<ResearchChunk>().WithMany().HasForeignKey(x => x.ChunkId)
+            .OnDelete(DeleteBehavior.Cascade);
+        reb.HasIndex(x => new { x.ChunkId, x.Provider, x.Model, x.EmbeddingVersion })
+            .IsUnique().HasDatabaseName("idx_research_embeddings_chunk_provider_model_version");
     }
 
     private static readonly ValueComparer<List<string>> StringListComparer = new(
@@ -325,6 +388,11 @@ public class ResearchDbContext(DbContextOptions<ResearchDbContext> options) : Db
         (a, b) => (a ?? new()).SequenceEqual(b ?? new()),
         v => v.Aggregate(0, (hash, g) => HashCode.Combine(hash, g.GetHashCode())),
         v => v.ToList());
+
+    private static readonly ValueComparer<float[]> FloatArrayComparer = new(
+        (a, b) => (a ?? Array.Empty<float>()).SequenceEqual(b ?? Array.Empty<float>()),
+        v => v.Aggregate(0, (hash, f) => HashCode.Combine(hash, f.GetHashCode())),
+        v => v.ToArray());
 
     private static readonly ValueComparer<IpsFitFacts> IpsFitFactsComparer = new(
         (a, b) => Equals(a, b),
