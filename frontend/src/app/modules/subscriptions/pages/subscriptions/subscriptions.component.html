@@ -18,24 +18,24 @@
 
     <!-- Summary cards -->
     <div class="grid grid-cols-1 gap-cmn-4 sm:grid-cols-3">
+      @let summary = store.summary();
       <cmn-stat-card
         [value]="
-          (store.summary()?.totalMonthlyEstimate ?? store.monthlyTotal() | appCurrency) ?? ''
+          summary ? ((summary.totalMonthlyEstimate | appCurrency: summary.currency) ?? '—') : '—'
         "
         label="Monthly Cost"
         icon="Zap"
       />
       <cmn-stat-card
         [value]="
-          (store.summary()?.totalAnnualEstimate ?? store.monthlyTotal() * 12 | appCurrency) ?? ''
+          summary ? ((summary.totalAnnualEstimate | appCurrency: summary.currency) ?? '—') : '—'
         "
         label="Annual Cost"
         icon="TrendingUp"
       />
       <cmn-stat-card
         [value]="
-          (store.summary()?.activeCount ?? store.activeSubscriptions().length).toString() +
-          ' subscriptions'
+          (summary?.activeCount ?? store.activeSubscriptions().length).toString() + ' subscriptions'
         "
         label="Active"
         icon="CheckCheck"

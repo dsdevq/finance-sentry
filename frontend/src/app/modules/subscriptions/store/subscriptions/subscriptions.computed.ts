@@ -22,12 +22,6 @@ export function subscriptionsComputed(store: StateSignals) {
     potentiallyCancelledSubscriptions: computed(() =>
       store.subscriptions().filter(s => s.status === 'potentially_cancelled')
     ),
-    monthlyTotal: computed(() =>
-      store
-        .subscriptions()
-        .filter(s => s.status === 'active')
-        .reduce((sum, s) => sum + s.monthlyEquivalent, 0)
-    ),
     dismissTarget: computed(
       () => store.subscriptions().find(s => s.id === store.dismissTargetId()) ?? null
     ),
