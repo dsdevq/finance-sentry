@@ -176,9 +176,8 @@ public sealed class SubscriptionDetectionJob(
 
             try
             {
-                var byMerchant = userGroup
-                    .Where(t => !IsInstallmentDescription(t.Description))
-                    .GroupBy(t => MerchantNameNormalizer.Normalize(t.MerchantName ?? t.Description));
+                var byMerchant = userGroup.GroupBy(t =>
+                    MerchantNameNormalizer.Normalize(t.MerchantName ?? t.Description));
 
                 var results = new List<DetectedSubscriptionData>();
 
@@ -219,6 +218,12 @@ public sealed class SubscriptionDetectionJob(
                     var lastChargeDate = DateOnly.FromDateTime(lastTransaction.TransactionDate);
                     var nextExpectedDate = lastChargeDate.AddDays((int)median);
 
+                    // Fixed-term installment (розстрочка) repayments recur exactly like a
+                    // subscription; tag them so they surface in their own section instead.
+                    var kind = sorted.Any(t => IsInstallmentDescription(t.Description))
+                        ? SubscriptionKinds.Installment
+                        : SubscriptionKinds.Subscription;
+
                     // Fall back to the description for the display name too — TrueLayer (and other
                     // open-banking) transactions carry the merchant only in the description, so using
                     // MerchantName alone rendered every detected subscription as "unknown".
@@ -242,7 +247,8 @@ public sealed class SubscriptionDetectionJob(
                         NextExpectedDate: nextExpectedDate,
                         OccurrenceCount: sorted.Count,
                         ConfidenceScore: sorted.Count,
-                        Category: topCategory));
+                        Category: topCategory,
+                        Kind: kind));
                 }
 
                 await resultService.UpsertDetectedSubscriptionsAsync(userId, results, ct);

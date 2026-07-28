@@ -1,5 +1,6 @@
 namespace FinanceSentry.Tests.Unit.Subscriptions;
 
+using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Modules.Subscriptions.Application.Queries;
 using FinanceSentry.Modules.Subscriptions.Domain;
 using FinanceSentry.Modules.Subscriptions.Domain.Repositories;
@@ -26,6 +27,22 @@ public class GetSubscriptionSummaryQueryHandlerTests
             confidenceScore: 90,
             category: null);
 
+    private static DetectedSubscription ActiveInstallment(decimal averageAmount, string currency) =>
+        DetectedSubscription.Create(
+            UserId,
+            merchantNameNormalized: "rozetka",
+            merchantNameDisplay: "Rozetka",
+            cadence: "monthly",
+            averageAmount: averageAmount,
+            lastKnownAmount: averageAmount,
+            currency: currency,
+            lastChargeDate: new DateOnly(2026, 7, 1),
+            nextExpectedDate: new DateOnly(2026, 8, 1),
+            occurrenceCount: 3,
+            confidenceScore: 90,
+            category: null,
+            kind: SubscriptionKinds.Installment);
+
     private static GetSubscriptionSummaryQueryHandler BuildHandler(params DetectedSubscription[] active)
     {
         var repo = new Mock<IDetectedSubscriptionRepository>(MockBehavior.Strict);
@@ -34,6 +51,20 @@ public class GetSubscriptionSummaryQueryHandlerTests
         repo.Setup(r => r.GetByUserIdAsync(UserId, false, It.IsAny<CancellationToken>()))
             .ReturnsAsync(active);
         return new GetSubscriptionSummaryQueryHandler(repo.Object);
+    }
+
+    [Fact]
+    public async Task Handle_ExcludesInstallments_FromTotalAndCount()
+    {
+        // 10 USD subscription + a 100 USD installment — only the subscription counts.
+        var handler = BuildHandler(
+            ActiveSub(10m, "USD"),
+            ActiveInstallment(100m, "USD"));
+
+        var result = await handler.Handle(new GetSubscriptionSummaryQuery(UserId), CancellationToken.None);
+
+        result.TotalMonthlyEstimate.Should().Be(10m);
+        result.ActiveCount.Should().Be(1);
     }
 
     [Fact]

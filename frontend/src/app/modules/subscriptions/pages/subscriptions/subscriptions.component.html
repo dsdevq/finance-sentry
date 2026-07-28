@@ -108,6 +108,47 @@
       </cmn-card>
     </div>
 
+    <!-- Installments -->
+    @if (store.activeInstallments().length > 0) {
+      <div>
+        <div class="mb-cmn-3">
+          <span
+            class="font-label text-cmn-xs font-semibold uppercase tracking-widest text-text-secondary"
+          >
+            Installments · {{ store.activeInstallments().length }}
+          </span>
+        </div>
+        <cmn-card padding="none">
+          @for (item of store.sortedInstallments(); track item.id) {
+            <cmn-list-item-row [label]="item.merchantName || 'Unknown'">
+              <div
+                [style.background]="item.merchantName | merchantColor"
+                avatar
+                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-cmn-md font-bold text-white"
+              >
+                {{ item.merchantName || '?' | slice: 0 : 1 | uppercase }}
+              </div>
+              <div meta class="min-w-[110px] text-center">
+                <div class="text-cmn-xs text-text-secondary">
+                  {{ item.occurrenceCount }} payment{{ item.occurrenceCount !== 1 ? 's' : '' }} so
+                  far
+                </div>
+                <div class="text-[11px] text-text-disabled">
+                  next {{ item.nextExpectedDate | date: 'mediumDate' }}
+                </div>
+              </div>
+              <div amount class="min-w-[72px] text-right">
+                <div class="font-mono text-cmn-sm font-semibold text-text-primary">
+                  {{ item.monthlyEquivalent | appCurrency: item.currency }}
+                </div>
+                <div class="text-[10px] text-text-disabled">/ mo</div>
+              </div>
+            </cmn-list-item-row>
+          }
+        </cmn-card>
+      </div>
+    }
+
     <!-- Dismissed list -->
     @if (store.dismissedSubscriptions().length > 0) {
       <div>

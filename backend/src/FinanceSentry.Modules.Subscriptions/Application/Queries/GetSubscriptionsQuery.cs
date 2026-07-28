@@ -33,7 +33,8 @@ public class GetSubscriptionsQueryHandler(IDetectedSubscriptionRepository reposi
             s.Status,
             s.OccurrenceCount,
             s.Category,
-            s.DetectedAt)).ToList();
+            s.DetectedAt,
+            s.Kind)).ToList();
 
         return new SubscriptionsListResponse(dtos, dtos.Count, hasInsufficientHistory);
     }

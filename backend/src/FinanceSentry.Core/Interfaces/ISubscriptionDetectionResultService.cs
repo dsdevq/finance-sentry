@@ -23,4 +23,16 @@ public record DetectedSubscriptionData(
     DateOnly NextExpectedDate,
     int OccurrenceCount,
     int ConfidenceScore,
-    string? Category);
+    string? Category,
+    string Kind = SubscriptionKinds.Subscription);
+
+/// <summary>
+/// Distinguishes an open-ended recurring service from a fixed-term installment
+/// (розстрочка) repayment. Both are detected by the same recurrence heuristic
+/// but surfaced in separate UI sections.
+/// </summary>
+public static class SubscriptionKinds
+{
+    public const string Subscription = "subscription";
+    public const string Installment = "installment";
+}
