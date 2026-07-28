@@ -15,7 +15,7 @@ import {InstitutionAvatarComponent} from '../institution-avatar/institution-avat
       >
         <div class="flex items-center gap-cmn-3 flex-1 min-w-0">
           @if (avatarName()) {
-            <cmn-institution-avatar [name]="avatarName()!" />
+            <cmn-institution-avatar [name]="avatarName()!" [logoUrl]="avatarLogoUrl()" />
           }
           <div class="min-w-0">
             <p class="font-medium text-text-primary">{{ label() }}</p>
@@ -59,5 +59,7 @@ export class DisclosureRowComponent {
   public readonly amount = input<number | null>(null);
   public readonly currency = input<string | null>(null);
   public readonly avatarName = input<string | null>(null);
+  /** Optional remote logo for the avatar; falls back to initials if absent/broken. */
+  public readonly avatarLogoUrl = input<string | null>(null);
   public readonly open = input<boolean>(true);
 }

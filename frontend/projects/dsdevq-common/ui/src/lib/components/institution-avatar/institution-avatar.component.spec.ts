@@ -68,4 +68,35 @@ describe('InstitutionAvatarComponent', () => {
     expect(span.className).toContain('h-9');
     expect(span.className).toContain('w-9');
   });
+
+  const setupWithLogo = (name: string, logoUrl: string | null): HTMLElement => {
+    fixture = TestBed.createComponent(InstitutionAvatarComponent);
+    fixture.componentRef.setInput('name', name);
+    fixture.componentRef.setInput('logoUrl', logoUrl);
+    fixture.detectChanges();
+    return fixture.nativeElement.querySelector('span');
+  };
+
+  it('renders the logo image when a logoUrl is provided', () => {
+    const span = setupWithLogo('Revolut', 'https://logo.example/revolut');
+    const img = span.querySelector('img');
+    expect(img).not.toBeNull();
+    expect(img?.getAttribute('src')).toBe('https://logo.example/revolut');
+    expect(img?.getAttribute('alt')).toBe('Revolut logo');
+    expect(span.textContent?.trim()).toBe('');
+  });
+
+  it('renders initials (no image) when logoUrl is null', () => {
+    const span = setupWithLogo('Revolut', null);
+    expect(span.querySelector('img')).toBeNull();
+    expect(span.textContent?.trim()).toBe('RE');
+  });
+
+  it('falls back to initials when the logo image fails to load', () => {
+    const span = setupWithLogo('Revolut', 'https://logo.example/broken');
+    span.querySelector('img')?.dispatchEvent(new Event('error'));
+    fixture.detectChanges();
+    expect(span.querySelector('img')).toBeNull();
+    expect(span.textContent?.trim()).toBe('RE');
+  });
 });

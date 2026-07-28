@@ -16,6 +16,7 @@ import {
 import {take} from 'rxjs';
 
 import {type Institution} from '../../../../shared/models/wealth/wealth.model';
+import {InstitutionLogoPipe} from '../../../../shared/pipes/institution-logo.pipe';
 import {RelativeTimePipe} from '../../../../shared/pipes/relative-time.pipe';
 import {SyncStatusLabelPipe} from '../../../../shared/pipes/sync-status-label.pipe';
 import {SyncStatusVariantPipe} from '../../../../shared/pipes/sync-status-variant.pipe';
@@ -38,6 +39,7 @@ const SKELETON_ROWS = 5;
     DecimalPipe,
     EmptyStateComponent,
     InstitutionAvatarComponent,
+    InstitutionLogoPipe,
     PageHeaderComponent,
     RelativeTimePipe,
     SkeletonComponent,
