@@ -89,8 +89,9 @@
               </div>
             </div>
             <div amount class="min-w-[72px] text-right">
+              <!-- Render each row in its own currency (UAH/EUR/USD) — not the default $ -->
               <div class="font-mono text-cmn-sm font-semibold text-text-primary">
-                {{ sub.monthlyEquivalent | appCurrency }}
+                {{ sub.monthlyEquivalent | appCurrency: sub.currency }}
               </div>
               <div class="text-[10px] text-text-disabled">/ mo</div>
             </div>
@@ -129,7 +130,7 @@
               </div>
               <div amount class="min-w-[72px] text-right">
                 <div class="font-mono text-cmn-sm font-semibold text-text-primary">
-                  {{ sub.monthlyEquivalent | appCurrency }}
+                  {{ sub.monthlyEquivalent | appCurrency: sub.currency }}
                 </div>
                 <div class="text-[10px] text-text-disabled">/ mo</div>
               </div>
