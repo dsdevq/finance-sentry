@@ -16,6 +16,7 @@ import {
 import {take} from 'rxjs';
 
 import {type Provider} from '../../../../shared/models/provider/provider.model';
+import {InstitutionLogoPipe} from '../../../../shared/pipes/institution-logo.pipe';
 import {SyncStatusLabelPipe} from '../../../../shared/pipes/sync-status-label.pipe';
 import {SyncStatusVariantPipe} from '../../../../shared/pipes/sync-status-variant.pipe';
 import {DisconnectDialogComponent} from '../../../bank-sync/components/disconnect-dialog/disconnect-dialog.component';
@@ -47,6 +48,7 @@ export type HoldingsTab = 'holdings' | 'positions';
     DecimalPipe,
     DisclosureRowComponent,
     HoldingBalancePipe,
+    InstitutionLogoPipe,
     PageHeaderComponent,
     StatCardComponent,
     SyncStatusLabelPipe,

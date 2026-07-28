@@ -67,7 +67,10 @@
                 class="flex items-center justify-between gap-cmn-4 px-cmn-4 py-cmn-4 cursor-pointer hover:bg-surface-bg transition-colors"
               >
                 <div class="flex items-center gap-cmn-3 flex-1 min-w-0">
-                  <cmn-institution-avatar [name]="inst.name" />
+                  <cmn-institution-avatar
+                    [name]="inst.name"
+                    [logoUrl]="inst.name | institutionLogo: inst.provider"
+                  />
                   <div class="min-w-0">
                     <p class="font-medium text-text-primary">{{ inst.name }}</p>
                     <p class="text-cmn-xs text-text-secondary">
@@ -171,7 +174,10 @@
                 class="flex items-center justify-between gap-cmn-4 px-cmn-4 py-cmn-4 cursor-pointer hover:bg-surface-bg transition-colors"
               >
                 <div class="flex items-center gap-cmn-3 flex-1 min-w-0">
-                  <cmn-institution-avatar [name]="inst.name" />
+                  <cmn-institution-avatar
+                    [name]="inst.name"
+                    [logoUrl]="inst.name | institutionLogo: inst.provider"
+                  />
                   <div class="min-w-0">
                     <p class="font-medium text-text-primary">{{ inst.name }}</p>
                     <p class="text-cmn-xs text-text-secondary">
@@ -269,7 +275,10 @@
                 class="flex items-center justify-between gap-cmn-4 px-cmn-4 py-cmn-4 cursor-pointer hover:bg-surface-bg transition-colors"
               >
                 <div class="flex items-center gap-cmn-3 flex-1 min-w-0">
-                  <cmn-institution-avatar [name]="inst.name" />
+                  <cmn-institution-avatar
+                    [name]="inst.name"
+                    [logoUrl]="inst.name | institutionLogo: inst.provider"
+                  />
                   <div class="min-w-0">
                     <p class="font-medium text-text-primary">{{ inst.name }}</p>
                     <p class="text-cmn-xs text-text-secondary">

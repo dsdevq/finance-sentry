@@ -93,6 +93,7 @@
                 [label]="inst.name"
                 [sublabel]="sublabel"
                 [avatarName]="inst.name"
+                [avatarLogoUrl]="inst.name | institutionLogo: inst.provider"
                 [amount]="inst.totalInBaseCurrency"
                 [currency]="store.baseCurrency()"
                 [open]="true"
