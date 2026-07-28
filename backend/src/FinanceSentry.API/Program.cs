@@ -4,6 +4,7 @@ using FinanceSentry.API.Conventions;
 using FinanceSentry.API.Hangfire;
 using FinanceSentry.API.Migrations;
 using FinanceSentry.API.Modules;
+using FinanceSentry.Infrastructure.Fx;
 using FinanceSentry.Infrastructure.Logging;
 using FinanceSentry.Modules.BankSync.API.Middleware;
 using FinanceSentry.Modules.BankSync.Infrastructure.Jobs;
@@ -44,6 +45,8 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 builder.Services.AddAllModules(builder.Configuration);
+
+builder.Services.AddExchangeRates(builder.Configuration);
 
 builder.Services.AddHangfireServices(builder.Configuration);
 
@@ -115,6 +118,15 @@ app.MapControllers();
 app.MapHealthChecks("/health/ready");
 
 app.RegisterAllModuleJobs();
+
+// Live FX rates: refresh daily, and once immediately so we leave the hardcoded
+// fallback table behind as soon as the app is up.
+var recurringJobs = app.Services.GetRequiredService<IRecurringJobManager>();
+recurringJobs.AddOrUpdate<ExchangeRateRefreshJob>(
+    "exchange-rate-refresh",
+    job => job.RunAsync(CancellationToken.None),
+    Cron.Daily());
+BackgroundJob.Enqueue<ExchangeRateRefreshJob>(job => job.RunAsync(CancellationToken.None));
 
 app.Run();
 
