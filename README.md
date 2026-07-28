@@ -1,9 +1,9 @@
 # Finance Sentry
 
-[![Release](https://img.shields.io/github/v/release/dsdevq/finance-sentry?sort=semver)](https://github.com/dsdevq/finance-sentry/releases)
-[![Backend CI](https://github.com/dsdevq/finance-sentry/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/dsdevq/finance-sentry/actions/workflows/backend-ci.yml)
-[![Frontend CI](https://github.com/dsdevq/finance-sentry/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/dsdevq/finance-sentry/actions/workflows/frontend-ci.yml)
-[![Deploy](https://github.com/dsdevq/finance-sentry/actions/workflows/deploy.yml/badge.svg)](https://github.com/dsdevq/finance-sentry/actions/workflows/deploy.yml)
+[![Release](https://img.shields.io/github/v/release/lifekit-hq/finance-sentry?sort=semver)](https://github.com/lifekit-hq/finance-sentry/releases)
+[![Backend CI](https://github.com/lifekit-hq/finance-sentry/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/lifekit-hq/finance-sentry/actions/workflows/backend-ci.yml)
+[![Frontend CI](https://github.com/lifekit-hq/finance-sentry/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/lifekit-hq/finance-sentry/actions/workflows/frontend-ci.yml)
+[![Deploy](https://github.com/lifekit-hq/finance-sentry/actions/workflows/deploy.yml/badge.svg)](https://github.com/lifekit-hq/finance-sentry/actions/workflows/deploy.yml)
 
 Personal finance aggregation platform — bank accounts, crypto, brokerage, budgets, subscriptions, and alerts in one place.
 
@@ -146,7 +146,7 @@ Finance Sentry ships as a single product with one [SemVer](https://semver.org/) 
 - release-please maintains an open **release PR** that accumulates commits into a draft [CHANGELOG](CHANGELOG.md) entry. Merging it cuts the release: tag `vX.Y.Z`, GitHub Release with notes, and version bumps in `version.txt`, `frontend/package.json`, and `FinanceSentry.API.csproj` — all in one automated commit.
 - Deploys are continuous; releases are milestones. Cut one whenever a meaningful increment is complete (typically after each feature spec lands).
 
-The current version lives in [`version.txt`](version.txt). Release history: [GitHub Releases](https://github.com/dsdevq/finance-sentry/releases) · [CHANGELOG.md](CHANGELOG.md).
+The current version lives in [`version.txt`](version.txt). Release history: [GitHub Releases](https://github.com/lifekit-hq/finance-sentry/releases) · [CHANGELOG.md](CHANGELOG.md).
 
 ## Development Workflow
 
