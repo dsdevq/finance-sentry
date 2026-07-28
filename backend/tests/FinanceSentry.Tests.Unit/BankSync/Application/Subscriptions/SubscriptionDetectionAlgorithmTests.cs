@@ -71,6 +71,39 @@ public class SubscriptionDetectionAlgorithmTests
             .Should().Be(MerchantNameNormalizer.Normalize("Openai"));
     }
 
+    [Theory]
+    [InlineData("Погашення наступного платежу RozetkaPay", null, true)]
+    [InlineData("Щомісячний платіж telemart - monomarket", null, true)]
+    [InlineData("Погашення наступного платежу iSpace- monomarket", null, true)]
+    [InlineData("Платіж Pandora", 4829, true)] // "Платіж <merchant>" on the installment MCC
+    [InlineData("Платіж Pandora", 5262, false)] // same words, ordinary purchase MCC → not installment
+    [InlineData("Переказ на картку", 4829, false)] // a transfer, not an installment
+    [InlineData("Spotify", 5815, false)]
+    public void IsInstallmentTransaction_ClassifiesByDescriptionAndMcc(string desc, int? mcc, bool expected)
+    {
+        SubscriptionDetectionJob.IsInstallmentTransaction(desc, mcc).Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("Щомісячний платіж telemart - monomarket", "telemart")]
+    [InlineData("Погашення наступного платежу RozetkaPay", "RozetkaPay")]
+    [InlineData("Погашення наступного платежу iSpace- monomarket", "iSpace")]
+    [InlineData("Погашення наступного платежу ТОВ Алло - monomarket", "ТОВ Алло")]
+    [InlineData("Платіж Pandora", "Pandora")]
+    [InlineData("Повне погашення RozetkaPay", "RozetkaPay")]
+    public void ExtractInstallmentMerchant_RecoversMerchant(string desc, string expected)
+    {
+        SubscriptionDetectionJob.ExtractInstallmentMerchant(desc).Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("Повне погашення RozetkaPay", true)]
+    [InlineData("Погашення наступного платежу RozetkaPay", false)]
+    public void IsInstallmentPayoff_DetectsFullPayoff(string desc, bool expected)
+    {
+        SubscriptionDetectionJob.IsInstallmentPayoff(desc).Should().Be(expected);
+    }
+
     [Fact]
     public void TightenedCv_RejectsAmountsThatWouldPassLegacyThreshold()
     {

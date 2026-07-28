@@ -28,6 +28,9 @@ public class SubscriptionsDbContext(DbContextOptions<SubscriptionsDbContext> opt
         sb.Property(s => s.OccurrenceCount).HasDefaultValue(0);
         sb.Property(s => s.ConfidenceScore).HasDefaultValue(0);
         sb.Property(s => s.Category).HasMaxLength(50);
+        sb.Property(s => s.TermCount);
+        sb.Property(s => s.IsManual).HasDefaultValue(false);
+        sb.Ignore(s => s.RemainingPayments);
         sb.Property(s => s.DetectedAt).HasDefaultValueSql("now()");
         sb.Property(s => s.UpdatedAt).HasDefaultValueSql("now()");
 

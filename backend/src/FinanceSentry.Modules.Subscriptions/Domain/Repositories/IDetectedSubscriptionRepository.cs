@@ -12,6 +12,8 @@ public interface IDetectedSubscriptionRepository
 
     Task UpsertAsync(DetectedSubscription subscription, CancellationToken ct = default);
 
+    Task DeleteAsync(DetectedSubscription subscription, CancellationToken ct = default);
+
     Task UpdateStatusAsync(Guid id, string status, CancellationToken ct = default);
 
     Task<IReadOnlyList<DetectedSubscription>> GetActiveByUserIdAsync(

@@ -24,7 +24,8 @@ public record DetectedSubscriptionData(
     int OccurrenceCount,
     int ConfidenceScore,
     string? Category,
-    string Kind = SubscriptionKinds.Subscription);
+    string Kind = SubscriptionKinds.Subscription,
+    bool IsCompleted = false);
 
 /// <summary>
 /// Distinguishes an open-ended recurring service from a fixed-term installment
