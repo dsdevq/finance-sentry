@@ -16,6 +16,7 @@ import {
 import {take} from 'rxjs';
 
 import {type Institution} from '../../../../shared/models/wealth/wealth.model';
+import {AssetLogoPipe} from '../../../../shared/pipes/asset-logo.pipe';
 import {InstitutionLogoPipe} from '../../../../shared/pipes/institution-logo.pipe';
 import {RelativeTimePipe} from '../../../../shared/pipes/relative-time.pipe';
 import {SyncStatusLabelPipe} from '../../../../shared/pipes/sync-status-label.pipe';
@@ -34,6 +35,7 @@ const SKELETON_ROWS = 5;
   imports: [
     AccountBalancePipe,
     AlertComponent,
+    AssetLogoPipe,
     ButtonComponent,
     CardComponent,
     DecimalPipe,

@@ -17,12 +17,12 @@ import {
 import {take} from 'rxjs';
 
 import {type Provider} from '../../../../shared/models/provider/provider.model';
+import {AssetLogoPipe} from '../../../../shared/pipes/asset-logo.pipe';
 import {InstitutionLogoPipe} from '../../../../shared/pipes/institution-logo.pipe';
 import {SyncStatusLabelPipe} from '../../../../shared/pipes/sync-status-label.pipe';
 import {SyncStatusVariantPipe} from '../../../../shared/pipes/sync-status-variant.pipe';
 import {DisconnectDialogComponent} from '../../../bank-sync/components/disconnect-dialog/disconnect-dialog.component';
 import {AccountsStore} from '../../../bank-sync/store/accounts/accounts.store';
-import {AssetLogoPipe} from '../../pipes/asset-logo.pipe';
 import {CategoryLabelPipe} from '../../pipes/category-label.pipe';
 import {CurrencyAmountPipe} from '../../pipes/currency-amount.pipe';
 import {HoldingBalancePipe} from '../../pipes/holding-balance.pipe';
