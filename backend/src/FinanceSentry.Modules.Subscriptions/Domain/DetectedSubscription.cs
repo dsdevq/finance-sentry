@@ -69,19 +69,24 @@ public class DetectedSubscription
         return entity;
     }
 
-    /// <summary>Creates a user-entered installment (manual, never overwritten by detection).</summary>
+    /// <summary>
+    /// Creates a user-entered recurring item (manual, never overwritten by detection).
+    /// Use for a subscription detection can't reliably find (e.g. an irregular Claude
+    /// plan) or an installment it missed.
+    /// </summary>
     public static DetectedSubscription CreateManual(
         string userId,
         string merchantNameDisplay,
         decimal monthlyAmount,
         string currency,
         DateOnly startDate,
-        int? termCount)
+        int? termCount,
+        string kind = SubscriptionKinds.Installment)
     {
         var entity = new DetectedSubscription
         {
             UserId = userId,
-            MerchantNameNormalized = MerchantNameKey(merchantNameDisplay),
+            MerchantNameNormalized = MerchantNameKey(merchantNameDisplay, kind),
             MerchantNameDisplay = merchantNameDisplay,
             Cadence = "monthly",
             AverageAmount = monthlyAmount,
@@ -92,16 +97,16 @@ public class DetectedSubscription
             OccurrenceCount = 1,
             ConfidenceScore = 100,
             Category = null,
-            Kind = SubscriptionKinds.Installment,
-            TermCount = termCount,
+            Kind = kind,
+            TermCount = kind == SubscriptionKinds.Installment ? termCount : null,
             IsManual = true,
         };
         entity.EvaluateCompletion(false);
         return entity;
     }
 
-    private static string MerchantNameKey(string display) =>
-        $"manual:{display.Trim().ToLowerInvariant()}";
+    private static string MerchantNameKey(string display, string kind) =>
+        $"manual:{kind}:{display.Trim().ToLowerInvariant()}";
 
     public void UpdateFromDetection(
         string merchantNameDisplay,

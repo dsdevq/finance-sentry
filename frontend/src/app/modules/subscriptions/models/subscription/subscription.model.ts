@@ -29,6 +29,13 @@ export interface AddInstallmentRequest {
   termCount: Nullable<number>;
 }
 
+export interface AddSubscriptionRequest {
+  merchant: string;
+  monthlyAmount: number;
+  currency: string;
+  startDate: string;
+}
+
 export interface SubscriptionSummary {
   totalMonthlyEstimate: number;
   totalAnnualEstimate: number;

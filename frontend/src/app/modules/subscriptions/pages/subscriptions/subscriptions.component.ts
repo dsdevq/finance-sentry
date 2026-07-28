@@ -62,6 +62,16 @@ export class SubscriptionsComponent {
   public readonly sortOptions = SORT_OPTIONS;
 
   public readonly showAddForm = signal(false);
+  public readonly showSubForm = signal(false);
+
+  public readonly subForm = new FormGroup({
+    merchant: new FormControl('', {nonNullable: true, validators: [Validators.required]}),
+    monthlyAmount: new FormControl<number | null>(null, {
+      validators: [Validators.required, Validators.min(MIN_MONTHLY_AMOUNT)],
+    }),
+    currency: new FormControl('EUR', {nonNullable: true, validators: [Validators.required]}),
+    startDate: new FormControl('', {nonNullable: true, validators: [Validators.required]}),
+  });
 
   public readonly addForm = new FormGroup({
     merchant: new FormControl('', {nonNullable: true, validators: [Validators.required]}),
@@ -150,6 +160,26 @@ export class SubscriptionsComponent {
 
   public toggleAddForm(): void {
     this.showAddForm.update(open => !open);
+  }
+
+  public toggleSubForm(): void {
+    this.showSubForm.update(open => !open);
+  }
+
+  public submitSubscription(): void {
+    if (this.subForm.invalid) {
+      this.subForm.markAllAsTouched();
+      return;
+    }
+    const value = this.subForm.getRawValue();
+    this.store.addSubscription({
+      merchant: value.merchant,
+      monthlyAmount: value.monthlyAmount ?? 0,
+      currency: value.currency,
+      startDate: value.startDate,
+    });
+    this.subForm.reset({merchant: '', monthlyAmount: null, currency: 'EUR', startDate: ''});
+    this.showSubForm.set(false);
   }
 
   public submitAdd(): void {

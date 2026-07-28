@@ -4,6 +4,7 @@ import {type Observable} from 'rxjs';
 
 import {
   type AddInstallmentRequest,
+  type AddSubscriptionRequest,
   type SubscriptionsListResponse,
   type SubscriptionSummary,
 } from '../models/subscription/subscription.model';
@@ -47,5 +48,9 @@ export class SubscriptionsService extends ApiService {
 
   public addInstallment(payload: AddInstallmentRequest): Observable<{id: string}> {
     return this.post<{id: string}>('installments', payload);
+  }
+
+  public addSubscription(payload: AddSubscriptionRequest): Observable<{id: string}> {
+    return this.post<{id: string}>('manual-subscription', payload);
   }
 }
