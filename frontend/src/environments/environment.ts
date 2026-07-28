@@ -4,4 +4,7 @@ export const environment = {
   apiVersion: 'v1',
   wsUrl: 'ws://localhost:5001',
   googleClientId: '687161855116-17f9guiugj8cdlat8h8c1vn5ji1irt8p.apps.googleusercontent.com',
+  // Publishable logo.dev token for stock/ETF ticker logos (client-side safe).
+  // Empty = stock logos disabled (falls back to the initials avatar).
+  logoDevToken: '',
 };

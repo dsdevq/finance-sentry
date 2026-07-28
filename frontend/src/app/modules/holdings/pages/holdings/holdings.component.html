@@ -180,7 +180,14 @@
               <cmn-data-table [rows]="group.rows">
                 <cmn-column key="symbol" header="Symbol">
                   <ng-template let-row cmnCell>
-                    <span class="font-semibold text-text-primary">{{ row.symbol }}</span>
+                    <span class="inline-flex items-center gap-cmn-2">
+                      <cmn-institution-avatar
+                        [name]="row.symbol"
+                        [logoUrl]="row.symbol | assetLogo: row.provider"
+                        size="sm"
+                      />
+                      <span class="font-semibold text-text-primary">{{ row.symbol }}</span>
+                    </span>
                   </ng-template>
                 </cmn-column>
                 <cmn-column key="provider" header="Provider">

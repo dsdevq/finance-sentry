@@ -9,6 +9,7 @@ import {
   CmnDialogService,
   DataTableComponent,
   DisclosureRowComponent,
+  InstitutionAvatarComponent,
   PageHeaderComponent,
   StatCardComponent,
   TagComponent,
@@ -21,6 +22,7 @@ import {SyncStatusLabelPipe} from '../../../../shared/pipes/sync-status-label.pi
 import {SyncStatusVariantPipe} from '../../../../shared/pipes/sync-status-variant.pipe';
 import {DisconnectDialogComponent} from '../../../bank-sync/components/disconnect-dialog/disconnect-dialog.component';
 import {AccountsStore} from '../../../bank-sync/store/accounts/accounts.store';
+import {AssetLogoPipe} from '../../pipes/asset-logo.pipe';
 import {CategoryLabelPipe} from '../../pipes/category-label.pipe';
 import {CurrencyAmountPipe} from '../../pipes/currency-amount.pipe';
 import {HoldingBalancePipe} from '../../pipes/holding-balance.pipe';
@@ -38,6 +40,7 @@ export type HoldingsTab = 'holdings' | 'positions';
   selector: 'fns-holdings',
   imports: [
     AlertComponent,
+    AssetLogoPipe,
     ButtonComponent,
     CardComponent,
     CategoryLabelPipe,
@@ -48,6 +51,7 @@ export type HoldingsTab = 'holdings' | 'positions';
     DecimalPipe,
     DisclosureRowComponent,
     HoldingBalancePipe,
+    InstitutionAvatarComponent,
     InstitutionLogoPipe,
     PageHeaderComponent,
     StatCardComponent,
