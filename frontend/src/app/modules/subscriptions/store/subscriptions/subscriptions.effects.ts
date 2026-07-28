@@ -4,6 +4,7 @@ import {forkJoin, type Observable, pipe, switchMap, tap} from 'rxjs';
 
 import {
   type AddInstallmentRequest,
+  type AddSubscriptionRequest,
   type Subscription,
   type SubscriptionSummary,
 } from '../../models/subscription/subscription.model';
@@ -53,6 +54,9 @@ export function subscriptionsEffects(store: EffectsStore) {
     ),
     addInstallment: rxMethod<AddInstallmentRequest>(
       pipe(switchMap(payload => service.addInstallment(payload).pipe(switchMap(() => refresh()))))
+    ),
+    addSubscription: rxMethod<AddSubscriptionRequest>(
+      pipe(switchMap(payload => service.addSubscription(payload).pipe(switchMap(() => refresh()))))
     ),
   };
 }

@@ -17,7 +17,8 @@ public class SubscriptionsController(
     ICommandHandler<SetInstallmentTermCommand, bool> setTerm,
     ICommandHandler<CompleteInstallmentCommand, bool> completeInstallment,
     ICommandHandler<DeleteInstallmentCommand, bool> deleteInstallment,
-    ICommandHandler<AddManualInstallmentCommand, Guid> addInstallment) : ControllerBase
+    ICommandHandler<AddManualInstallmentCommand, Guid> addInstallment,
+    ICommandHandler<AddManualSubscriptionCommand, Guid> addSubscription) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetSubscriptions(
@@ -84,9 +85,27 @@ public class SubscriptionsController(
             body.TermCount), ct);
         return Ok(new { id });
     }
+
+    [HttpPost("manual-subscription")]
+    public async Task<IActionResult> AddSubscription([FromBody] AddSubscriptionRequest body, CancellationToken ct = default)
+    {
+        var id = await addSubscription.Handle(new AddManualSubscriptionCommand(
+            User.RequireUserId().ToString(),
+            body.Merchant,
+            body.MonthlyAmount,
+            body.Currency,
+            body.StartDate), ct);
+        return Ok(new { id });
+    }
 }
 
 public record SetTermRequest(int? TermCount);
+
+public record AddSubscriptionRequest(
+    string Merchant,
+    decimal MonthlyAmount,
+    string Currency,
+    DateOnly StartDate);
 
 public record AddInstallmentRequest(
     string Merchant,

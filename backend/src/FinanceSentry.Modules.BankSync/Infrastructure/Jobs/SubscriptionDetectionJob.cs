@@ -171,6 +171,7 @@ public sealed class SubscriptionDetectionJob(
             .AsNoTracking()
             .Where(t => t.IsActive
                      && !t.IsPending
+                     && t.Amount != 0m   // skip €0.00 auth holds / reversals that skew amount stability
                      && t.TransactionDate >= cutoff
                      && (t.TransactionType == null || t.TransactionType == "debit"))
             .Join(db.BankAccounts.Where(a => a.IsActive && a.Provider != "plaid"),

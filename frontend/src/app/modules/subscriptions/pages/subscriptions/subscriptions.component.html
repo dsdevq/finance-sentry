@@ -50,14 +50,37 @@
         >
           Active · {{ store.activeSubscriptions().length }}
         </span>
-        <div class="flex gap-cmn-1">
+        <div class="flex items-center gap-cmn-1">
           @for (opt of sortOptions; track opt.value) {
             <cmn-chip [selected]="store.sort() === opt.value" (clicked)="setSort(opt.value)">
               {{ opt.label }}
             </cmn-chip>
           }
+          <cmn-button (clicked)="toggleSubForm()" variant="secondary" size="sm">
+            {{ showSubForm() ? 'Cancel' : 'Add' }}
+          </cmn-button>
         </div>
       </div>
+
+      @if (showSubForm()) {
+        <cmn-card class="mb-cmn-3">
+          <form
+            [formGroup]="subForm"
+            (ngSubmit)="submitSubscription()"
+            class="grid grid-cols-1 gap-cmn-3 sm:grid-cols-2"
+          >
+            <cmn-input formControlName="merchant" placeholder="Merchant (e.g. Claude)" />
+            <cmn-input formControlName="monthlyAmount" type="number" placeholder="Monthly amount" />
+            <cmn-input formControlName="currency" placeholder="Currency (e.g. EUR)" />
+            <cmn-input formControlName="startDate" placeholder="Start date (YYYY-MM-DD)" />
+            <div class="flex items-center">
+              <cmn-button (clicked)="submitSubscription()" variant="primary" size="sm"
+                >Add</cmn-button
+              >
+            </div>
+          </form>
+        </cmn-card>
+      }
 
       <cmn-card padding="none">
         @for (sub of store.sortedActive(); track sub.id) {
