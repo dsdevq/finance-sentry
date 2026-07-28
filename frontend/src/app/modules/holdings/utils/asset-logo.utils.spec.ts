@@ -1,4 +1,3 @@
-import {environment} from '../../../../environments/environment';
 import {AssetLogoUtils} from './asset-logo.utils';
 
 describe('AssetLogoUtils', () => {
@@ -9,26 +8,15 @@ describe('AssetLogoUtils', () => {
       );
     });
 
+    it('builds an FMP image-stock URL for an IBKR ticker (uppercased)', () => {
+      expect(AssetLogoUtils.logoUrl('aapl', 'ibkr')).toBe(
+        'https://financialmodelingprep.com/image-stock/AAPL.png'
+      );
+    });
+
     it('is provider-case-insensitive', () => {
       expect(AssetLogoUtils.logoUrl('XRP', 'Binance')).toContain('/xrp@2x.png');
-    });
-
-    it('returns null for an IBKR ticker when no logo.dev token is configured', () => {
-      // Default environment ships with an empty token.
-      expect(environment.logoDevToken).toBe('');
-      expect(AssetLogoUtils.logoUrl('AAPL', 'ibkr')).toBeNull();
-    });
-
-    it('builds a logo.dev URL for an IBKR ticker when a token is set', () => {
-      const original = environment.logoDevToken;
-      try {
-        (environment as {logoDevToken: string}).logoDevToken = 'pk_test';
-        const url = AssetLogoUtils.logoUrl('aapl', 'ibkr');
-        expect(url).toContain('https://img.logo.dev/ticker/AAPL');
-        expect(url).toContain('token=pk_test');
-      } finally {
-        (environment as {logoDevToken: string}).logoDevToken = original;
-      }
+      expect(AssetLogoUtils.logoUrl('NVDA', 'IBKR')).toContain('/NVDA.png');
     });
 
     it('returns null for an unknown provider', () => {
