@@ -3,11 +3,13 @@ import {
   PROVIDER_DOMAINS,
 } from '../constants/institution/institution-domains.constants';
 
-const FAVICON_ENDPOINT = 'https://www.google.com/s2/favicons';
-const FAVICON_SIZE = 64;
+// DuckDuckGo's icon service returns the image directly (HTTP 200), unlike
+// Google's s2/favicons which 301-redirects — some image pipelines don't follow
+// the redirect, so provider logos silently failed to render.
+const FAVICON_ENDPOINT = 'https://icons.duckduckgo.com/ip3';
 
 /**
- * Resolves a connected institution to a public favicon URL (Google's favicon
+ * Resolves a connected institution to a public favicon URL (DuckDuckGo's icon
  * service) so we render real provider logos without hosting any images.
  * Returns null when the institution isn't recognised — callers fall back to the
  * initials avatar.
@@ -18,7 +20,7 @@ export class InstitutionLogoUtils {
     if (!domain) {
       return null;
     }
-    return `${FAVICON_ENDPOINT}?domain=${domain}&sz=${FAVICON_SIZE}`;
+    return `${FAVICON_ENDPOINT}/${domain}.ico`;
   }
 
   private static resolveDomain(
