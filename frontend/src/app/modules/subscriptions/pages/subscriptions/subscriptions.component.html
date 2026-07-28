@@ -109,15 +109,42 @@
     </div>
 
     <!-- Installments -->
-    @if (store.activeInstallments().length > 0) {
-      <div>
-        <div class="mb-cmn-3">
-          <span
-            class="font-label text-cmn-xs font-semibold uppercase tracking-widest text-text-secondary"
+    <div>
+      <div class="mb-cmn-3 flex items-center justify-between">
+        <span
+          class="font-label text-cmn-xs font-semibold uppercase tracking-widest text-text-secondary"
+        >
+          Installments · {{ store.activeInstallments().length }}
+        </span>
+        <cmn-button (clicked)="toggleAddForm()" variant="secondary" size="sm">
+          {{ showAddForm() ? 'Cancel' : 'Add installment' }}
+        </cmn-button>
+      </div>
+
+      @if (showAddForm()) {
+        <cmn-card class="mb-cmn-3">
+          <form
+            [formGroup]="addForm"
+            (ngSubmit)="submitAdd()"
+            class="grid grid-cols-1 gap-cmn-3 sm:grid-cols-2"
           >
-            Installments · {{ store.activeInstallments().length }}
-          </span>
-        </div>
+            <cmn-input formControlName="merchant" placeholder="Merchant (e.g. Pandora)" />
+            <cmn-input formControlName="monthlyAmount" type="number" placeholder="Monthly amount" />
+            <cmn-input formControlName="currency" placeholder="Currency (e.g. UAH)" />
+            <cmn-input formControlName="startDate" placeholder="Start date (YYYY-MM-DD)" />
+            <cmn-input
+              formControlName="termCount"
+              type="number"
+              placeholder="Total payments (optional)"
+            />
+            <div class="flex items-center">
+              <cmn-button (clicked)="submitAdd()" variant="primary" size="sm">Add</cmn-button>
+            </div>
+          </form>
+        </cmn-card>
+      }
+
+      @if (store.activeInstallments().length > 0) {
         <cmn-card padding="none">
           @for (item of store.sortedInstallments(); track item.id) {
             <cmn-list-item-row [label]="item.merchantName || 'Unknown'">
@@ -128,13 +155,30 @@
               >
                 {{ item.merchantName || '?' | slice: 0 : 1 | uppercase }}
               </div>
-              <div meta class="min-w-[110px] text-center">
+              <div meta class="min-w-[170px] text-center">
                 <div class="text-cmn-xs text-text-secondary">
-                  {{ item.occurrenceCount }} payment{{ item.occurrenceCount !== 1 ? 's' : '' }} so
-                  far
+                  @if (item.termCount) {
+                    {{ item.occurrenceCount }} / {{ item.termCount }} paid
+                    @if (item.remainingPayments !== null) {
+                      · {{ item.remainingPayments }} left
+                    }
+                  } @else {
+                    {{ item.occurrenceCount }} payment{{ item.occurrenceCount !== 1 ? 's' : '' }}
+                  }
                 </div>
                 <div class="text-[11px] text-text-disabled">
                   next {{ item.nextExpectedDate | date: 'mediumDate' }}
+                </div>
+                <div class="mt-cmn-1 flex items-center justify-center gap-cmn-1">
+                  <cmn-input
+                    [formControl]="termControl(item)"
+                    type="number"
+                    size="sm"
+                    placeholder="term"
+                  />
+                  <cmn-button (clicked)="saveTerm(item.id)" variant="secondary" size="sm"
+                    >Set</cmn-button
+                  >
                 </div>
               </div>
               <div amount class="min-w-[72px] text-right">
@@ -143,11 +187,64 @@
                 </div>
                 <div class="text-[10px] text-text-disabled">/ mo</div>
               </div>
+              <div actions class="flex shrink-0 gap-cmn-1">
+                <cmn-button (clicked)="markInstallmentDone(item.id)" variant="secondary" size="sm"
+                  >Done</cmn-button
+                >
+                <cmn-button
+                  (clicked)="deleteInstallment(item)"
+                  variant="secondary"
+                  size="sm"
+                  icon="Trash2"
+                />
+              </div>
             </cmn-list-item-row>
           }
         </cmn-card>
-      </div>
-    }
+      }
+
+      @if (store.completedInstallments().length > 0) {
+        <div class="mt-cmn-3">
+          <div class="mb-cmn-2">
+            <span
+              class="font-label text-cmn-xs font-semibold uppercase tracking-widest text-text-disabled"
+            >
+              Completed · {{ store.completedInstallments().length }}
+            </span>
+          </div>
+          <cmn-card padding="none">
+            @for (item of store.completedInstallments(); track item.id) {
+              <cmn-list-item-row [label]="item.merchantName || 'Unknown'" [dimmed]="true">
+                <div
+                  [style.background]="item.merchantName | merchantColor"
+                  avatar
+                  class="flex h-10 w-10 shrink-0 items-center justify-center rounded-cmn-md font-bold text-white"
+                >
+                  {{ item.merchantName || '?' | slice: 0 : 1 | uppercase }}
+                </div>
+                <div meta class="min-w-[110px] text-center text-cmn-xs text-text-disabled">
+                  {{ item.occurrenceCount }} payments · done
+                </div>
+                <div amount class="min-w-[72px] text-right">
+                  <div class="font-mono text-cmn-sm font-semibold text-text-secondary">
+                    {{ item.monthlyEquivalent | appCurrency: item.currency }}
+                  </div>
+                  <div class="text-[10px] text-text-disabled">/ mo</div>
+                </div>
+                <div actions class="flex shrink-0 gap-cmn-1">
+                  <cmn-button
+                    (clicked)="deleteInstallment(item)"
+                    variant="secondary"
+                    size="sm"
+                    icon="Trash2"
+                  />
+                </div>
+              </cmn-list-item-row>
+            }
+          </cmn-card>
+        </div>
+      }
+    </div>
 
     <!-- Dismissed list -->
     @if (store.dismissedSubscriptions().length > 0) {

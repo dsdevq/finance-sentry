@@ -42,6 +42,9 @@ export function subscriptionsComputed(store: StateSignals) {
     activeInstallments: computed(() =>
       store.subscriptions().filter(s => s.status === 'active' && isInstallment(s))
     ),
+    completedInstallments: computed(() =>
+      store.subscriptions().filter(s => s.status === 'completed' && isInstallment(s))
+    ),
     dismissTarget: computed(
       () => store.subscriptions().find(s => s.id === store.dismissTargetId()) ?? null
     ),

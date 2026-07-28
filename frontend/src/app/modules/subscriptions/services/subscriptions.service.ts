@@ -3,6 +3,7 @@ import {ApiService} from '@dsdevq-common/core';
 import {type Observable} from 'rxjs';
 
 import {
+  type AddInstallmentRequest,
   type SubscriptionsListResponse,
   type SubscriptionSummary,
 } from '../models/subscription/subscription.model';
@@ -30,5 +31,21 @@ export class SubscriptionsService extends ApiService {
 
   public restore(id: string): Observable<void> {
     return this.patch<void>(`${id}/restore`);
+  }
+
+  public setInstallmentTerm(id: string, termCount: Nullable<number>): Observable<void> {
+    return this.patch<void>(`installments/${id}/term`, {termCount});
+  }
+
+  public completeInstallment(id: string): Observable<void> {
+    return this.patch<void>(`installments/${id}/complete`);
+  }
+
+  public deleteInstallment(id: string): Observable<void> {
+    return this.delete<void>(`installments/${id}`);
+  }
+
+  public addInstallment(payload: AddInstallmentRequest): Observable<{id: string}> {
+    return this.post<{id: string}>('installments', payload);
   }
 }

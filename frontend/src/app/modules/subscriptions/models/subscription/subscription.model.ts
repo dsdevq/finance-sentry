@@ -1,4 +1,4 @@
-export type SubscriptionStatus = 'active' | 'dismissed' | 'potentially_cancelled';
+export type SubscriptionStatus = 'active' | 'dismissed' | 'potentially_cancelled' | 'completed';
 export type SubscriptionSort = 'date' | 'amount' | 'name';
 export type DismissedSubscription = Extract<SubscriptionStatus, 'dismissed'>;
 export type SubscriptionKind = 'subscription' | 'installment';
@@ -16,6 +16,17 @@ export interface Subscription {
   status: SubscriptionStatus;
   occurrenceCount: number;
   kind: SubscriptionKind;
+  termCount: Nullable<number>;
+  remainingPayments: Nullable<number>;
+  isManual: boolean;
+}
+
+export interface AddInstallmentRequest {
+  merchant: string;
+  monthlyAmount: number;
+  currency: string;
+  startDate: string;
+  termCount: Nullable<number>;
 }
 
 export interface SubscriptionSummary {

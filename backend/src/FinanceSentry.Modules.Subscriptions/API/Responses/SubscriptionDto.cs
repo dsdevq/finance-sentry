@@ -14,4 +14,7 @@ public record SubscriptionDto(
     int OccurrenceCount,
     string? Category,
     DateTimeOffset DetectedAt,
-    string Kind);
+    string Kind,
+    int? TermCount,
+    int? RemainingPayments,
+    bool IsManual);

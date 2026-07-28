@@ -39,6 +39,12 @@ public class DetectedSubscriptionRepository(SubscriptionsDbContext db) : IDetect
         await _db.SaveChangesAsync(ct);
     }
 
+    public async Task DeleteAsync(DetectedSubscription subscription, CancellationToken ct = default)
+    {
+        _db.DetectedSubscriptions.Remove(subscription);
+        await _db.SaveChangesAsync(ct);
+    }
+
     public async Task UpdateStatusAsync(Guid id, string status, CancellationToken ct = default)
     {
         var subscription = await _db.DetectedSubscriptions.FirstOrDefaultAsync(s => s.Id == id, ct);

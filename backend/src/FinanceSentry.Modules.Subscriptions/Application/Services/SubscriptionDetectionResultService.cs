@@ -34,11 +34,12 @@ public class SubscriptionDetectionResultService(IDetectedSubscriptionRepository 
                     result.OccurrenceCount,
                     result.ConfidenceScore,
                     result.Category,
-                    result.Kind);
+                    result.Kind,
+                    result.IsCompleted);
 
                 await _repository.UpsertAsync(subscription, ct);
             }
-            else if (existing.Status != SubscriptionStatus.Dismissed)
+            else if (ShouldUpdate(existing, result))
             {
                 existing.UpdateFromDetection(
                     result.MerchantNameDisplay,
@@ -49,11 +50,28 @@ public class SubscriptionDetectionResultService(IDetectedSubscriptionRepository 
                     result.OccurrenceCount,
                     result.ConfidenceScore,
                     result.Category,
-                    result.Kind);
+                    result.Kind,
+                    result.IsCompleted);
 
                 await _repository.UpsertAsync(existing, ct);
             }
         }
+    }
+
+    private static bool ShouldUpdate(DetectedSubscription existing, DetectedSubscriptionData result)
+    {
+        // Never let detection touch a user-owned (manual) or dismissed record.
+        if (existing.IsManual || existing.Status == SubscriptionStatus.Dismissed)
+            return false;
+
+        // A completed installment stays completed unless a genuinely new payment arrived.
+        if (existing.Status == SubscriptionStatus.Completed &&
+            result.OccurrenceCount <= existing.OccurrenceCount)
+        {
+            return false;
+        }
+
+        return true;
     }
 
     public async Task MarkStaleAsPotentiallyCancelledAsync(
@@ -65,12 +83,20 @@ public class SubscriptionDetectionResultService(IDetectedSubscriptionRepository 
 
         foreach (var subscription in active)
         {
+            if (subscription.IsManual) continue;
+
             var averageIntervalDays = subscription.Cadence == "annual" ? 365 : 30;
             var staleThreshold = subscription.LastChargeDate.AddDays((int)(averageIntervalDays * 1.5));
 
             if (now > staleThreshold)
             {
-                subscription.MarkPotentiallyCancelled();
+                // A silent installment (payments simply stop, e.g. Telemart) has finished;
+                // a lapsed subscription is only "potentially cancelled".
+                if (subscription.Kind == SubscriptionKinds.Installment)
+                    subscription.MarkCompleted();
+                else
+                    subscription.MarkPotentiallyCancelled();
+
                 await _repository.UpsertAsync(subscription, ct);
             }
         }

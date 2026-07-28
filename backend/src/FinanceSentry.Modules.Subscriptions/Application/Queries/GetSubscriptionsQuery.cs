@@ -34,7 +34,10 @@ public class GetSubscriptionsQueryHandler(IDetectedSubscriptionRepository reposi
             s.OccurrenceCount,
             s.Category,
             s.DetectedAt,
-            s.Kind)).ToList();
+            s.Kind,
+            s.TermCount,
+            s.RemainingPayments,
+            s.IsManual)).ToList();
 
         return new SubscriptionsListResponse(dtos, dtos.Count, hasInsufficientHistory);
     }
