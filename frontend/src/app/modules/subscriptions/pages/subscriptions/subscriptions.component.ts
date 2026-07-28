@@ -1,11 +1,13 @@
 import {DatePipe, SlicePipe, UpperCasePipe} from '@angular/common';
-import {ChangeDetectionStrategy, Component, inject, ViewContainerRef} from '@angular/core';
+import {ChangeDetectionStrategy, Component, inject, signal, ViewContainerRef} from '@angular/core';
+import {FormControl, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
 import {
   ButtonComponent,
   CardComponent,
   ChipComponent,
   CmnDialogService,
   ConfirmDialogComponent,
+  InputComponent,
   ListItemRowComponent,
   PageHeaderComponent,
   StatCardComponent,
@@ -21,6 +23,7 @@ import {MerchantColorPipe} from '../../pipes/merchant-color.pipe';
 import {SubscriptionsStore} from '../../store/subscriptions/subscriptions.store';
 
 const MS_PER_DAY = 86_400_000;
+const MIN_MONTHLY_AMOUNT = 0.01;
 
 const SORT_OPTIONS: {value: SubscriptionSort; label: string}[] = [
   {value: 'date', label: 'Next charge'},
@@ -36,9 +39,11 @@ const SORT_OPTIONS: {value: SubscriptionSort; label: string}[] = [
     CardComponent,
     ChipComponent,
     DatePipe,
+    InputComponent,
     ListItemRowComponent,
     MerchantColorPipe,
     PageHeaderComponent,
+    ReactiveFormsModule,
     SlicePipe,
     StatCardComponent,
     UpperCasePipe,
@@ -50,9 +55,23 @@ const SORT_OPTIONS: {value: SubscriptionSort; label: string}[] = [
 export class SubscriptionsComponent {
   private readonly dialog = inject(CmnDialogService);
   private readonly viewContainerRef = inject(ViewContainerRef);
+  // One reusable control for the inline "set term" editor per installment row.
+  private readonly termControls = new Map<string, FormControl<number | null>>();
 
   public readonly store = inject(SubscriptionsStore);
   public readonly sortOptions = SORT_OPTIONS;
+
+  public readonly showAddForm = signal(false);
+
+  public readonly addForm = new FormGroup({
+    merchant: new FormControl('', {nonNullable: true, validators: [Validators.required]}),
+    monthlyAmount: new FormControl<number | null>(null, {
+      validators: [Validators.required, Validators.min(MIN_MONTHLY_AMOUNT)],
+    }),
+    currency: new FormControl('UAH', {nonNullable: true, validators: [Validators.required]}),
+    startDate: new FormControl('', {nonNullable: true, validators: [Validators.required]}),
+    termCount: new FormControl<number | null>(null),
+  });
 
   public daysUntil(dateStr: string): number {
     return Math.ceil((new Date(dateStr).getTime() - Date.now()) / MS_PER_DAY);
@@ -78,14 +97,81 @@ export class SubscriptionsComponent {
       .afterClosed()
       .pipe(take(1))
       .subscribe(confirmed => {
-        if (confirmed !== true) {
-          return;
+        if (confirmed === true) {
+          this.store.dismiss(sub.id);
         }
-        this.store.dismiss(sub.id);
       });
   }
 
   public restore(id: string): void {
     this.store.restore(id);
+  }
+
+  public markInstallmentDone(id: string): void {
+    this.store.completeInstallment(id);
+  }
+
+  public deleteInstallment(sub: Pick<Subscription, 'id' | 'merchantName'>): void {
+    const ref = this.dialog.open<boolean>(ConfirmDialogComponent, {
+      data: {
+        title: `Delete ${sub.merchantName}?`,
+        message: 'Permanently remove this installment.',
+        confirmLabel: 'Delete',
+        cancelLabel: 'Keep',
+        confirmVariant: 'destructive',
+      },
+      size: 'sm',
+      viewContainerRef: this.viewContainerRef,
+    });
+    ref
+      .afterClosed()
+      .pipe(take(1))
+      .subscribe(confirmed => {
+        if (confirmed === true) {
+          this.store.deleteInstallment(sub.id);
+        }
+      });
+  }
+
+  public termControl(sub: Pick<Subscription, 'id' | 'termCount'>): FormControl<number | null> {
+    let control = this.termControls.get(sub.id);
+    if (!control) {
+      control = new FormControl<number | null>(sub.termCount ?? null);
+      this.termControls.set(sub.id, control);
+    }
+    return control;
+  }
+
+  public saveTerm(id: string): void {
+    const control = this.termControls.get(id);
+    const value = control?.value ?? null;
+    this.store.setInstallmentTerm({id, termCount: value && value > 0 ? value : null});
+  }
+
+  public toggleAddForm(): void {
+    this.showAddForm.update(open => !open);
+  }
+
+  public submitAdd(): void {
+    if (this.addForm.invalid) {
+      this.addForm.markAllAsTouched();
+      return;
+    }
+    const value = this.addForm.getRawValue();
+    this.store.addInstallment({
+      merchant: value.merchant,
+      monthlyAmount: value.monthlyAmount ?? 0,
+      currency: value.currency,
+      startDate: value.startDate,
+      termCount: value.termCount && value.termCount > 0 ? value.termCount : null,
+    });
+    this.addForm.reset({
+      merchant: '',
+      monthlyAmount: null,
+      currency: 'UAH',
+      startDate: '',
+      termCount: null,
+    });
+    this.showAddForm.set(false);
   }
 }
