@@ -1,6 +1,7 @@
 export type SubscriptionStatus = 'active' | 'dismissed' | 'potentially_cancelled';
 export type SubscriptionSort = 'date' | 'amount' | 'name';
 export type DismissedSubscription = Extract<SubscriptionStatus, 'dismissed'>;
+export type SubscriptionKind = 'subscription' | 'installment';
 
 export interface Subscription {
   id: string;
@@ -14,6 +15,7 @@ export interface Subscription {
   nextExpectedDate: string;
   status: SubscriptionStatus;
   occurrenceCount: number;
+  kind: SubscriptionKind;
 }
 
 export interface SubscriptionSummary {

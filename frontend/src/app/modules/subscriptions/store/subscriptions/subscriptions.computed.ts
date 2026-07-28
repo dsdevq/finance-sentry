@@ -13,43 +13,55 @@ interface StateSignals {
   summary: Signal<Nullable<SubscriptionSummary>>;
 }
 
+function sortBy(items: Subscription[], sort: SubscriptionSort): Subscription[] {
+  return [...items].sort((a, b) => {
+    if (sort === 'amount') {
+      return b.monthlyEquivalent - a.monthlyEquivalent;
+    }
+    if (sort === 'name') {
+      return a.merchantName.localeCompare(b.merchantName);
+    }
+    return a.nextExpectedDate.localeCompare(b.nextExpectedDate);
+  });
+}
+
+const isSubscription = (s: Subscription): boolean => s.kind === 'subscription';
+const isInstallment = (s: Subscription): boolean => s.kind === 'installment';
+
 export function subscriptionsComputed(store: StateSignals) {
   return {
-    activeSubscriptions: computed(() => store.subscriptions().filter(s => s.status === 'active')),
+    activeSubscriptions: computed(() =>
+      store.subscriptions().filter(s => s.status === 'active' && isSubscription(s))
+    ),
     dismissedSubscriptions: computed(() =>
-      store.subscriptions().filter(s => s.status === 'dismissed')
+      store.subscriptions().filter(s => s.status === 'dismissed' && isSubscription(s))
     ),
     potentiallyCancelledSubscriptions: computed(() =>
-      store.subscriptions().filter(s => s.status === 'potentially_cancelled')
+      store.subscriptions().filter(s => s.status === 'potentially_cancelled' && isSubscription(s))
+    ),
+    activeInstallments: computed(() =>
+      store.subscriptions().filter(s => s.status === 'active' && isInstallment(s))
     ),
     dismissTarget: computed(
       () => store.subscriptions().find(s => s.id === store.dismissTargetId()) ?? null
     ),
-    sortedActive: computed((): Subscription[] => {
-      const active = store.subscriptions().filter(s => s.status === 'active');
-      const sort = store.sort();
-      return [...active].sort((a, b) => {
-        if (sort === 'amount') {
-          return b.monthlyEquivalent - a.monthlyEquivalent;
-        }
-        if (sort === 'name') {
-          return a.merchantName.localeCompare(b.merchantName);
-        }
-        return a.nextExpectedDate.localeCompare(b.nextExpectedDate);
-      });
-    }),
-    sortedDismissed: computed((): Subscription[] => {
-      const dismissed = store.subscriptions().filter(s => s.status === 'dismissed');
-      const sort = store.sort();
-      return [...dismissed].sort((a, b) => {
-        if (sort === 'amount') {
-          return b.monthlyEquivalent - a.monthlyEquivalent;
-        }
-        if (sort === 'name') {
-          return a.merchantName.localeCompare(b.merchantName);
-        }
-        return a.nextExpectedDate.localeCompare(b.nextExpectedDate);
-      });
-    }),
+    sortedActive: computed((): Subscription[] =>
+      sortBy(
+        store.subscriptions().filter(s => s.status === 'active' && isSubscription(s)),
+        store.sort()
+      )
+    ),
+    sortedInstallments: computed((): Subscription[] =>
+      sortBy(
+        store.subscriptions().filter(s => s.status === 'active' && isInstallment(s)),
+        'amount'
+      )
+    ),
+    sortedDismissed: computed((): Subscription[] =>
+      sortBy(
+        store.subscriptions().filter(s => s.status === 'dismissed' && isSubscription(s)),
+        store.sort()
+      )
+    ),
   };
 }
