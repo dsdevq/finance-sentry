@@ -110,6 +110,22 @@ Full tool catalogue (input parameters, return schemas, real/stub): [`docs/mcp.md
 
 Architecture direction: new `cmn-*` library components that need a complex interactive primitive (date-picker, tree-select, cascader, etc.) should prefer an `nz-*` base over hand-rolling the behaviour. Design token coexistence (`@dsdevq-common/config` Tailwind tokens vs `ng-zorro-antd` CSS vars) is a separate, deferred slice — do not resolve it implicitly when adding new components.
 
+## RAG Module (Feature 034)
+
+`FinanceSentry.Modules.Rag` — schema `rag`, tables `documents` + `chunks`. Key notes:
+
+- `embedding vector(1024)` and `content_tsv tsvector GENERATED ALWAYS` columns are raw SQL only in the migration — NOT mapped as EF properties. This keeps the InMemory test path clean. `SearchAsync` uses `FromSqlRaw` with hand-built pgvector literal (`[f1,f2,...]::vector`).
+- Hybrid retrieval: pgvector HNSW cosine (dense, top-30) + tsvector `@@ plainto_tsquery` (keyword, top-30), fused via RRF k=60, soft recency decay applied to final score.
+- `IEmbeddingClient` / `DeterministicStubEmbeddingClient` is the active impl. Stub maps uint→float to avoid IEEE 754 NaN bit patterns that `BitConverter.ToSingle` can produce; result is L2-normalised.
+- Test project: `FinanceSentry.Modules.Rag.Tests` (InMemory EF for CRUD, mocked `ICorpusRepository` for SearchAsync callers).
+- No pgvector NuGet package added; the vector column lives only in migration SQL.
+
+## Integration test factory pattern
+
+`WebApplicationFactory` subclasses replace only the DbContexts their tested flow touches; all others are registered with Npgsql but migration failures are caught (try/catch in `MigrateAllModules`).
+
+**Critical pitfall** (fixed 2026-07-28): `MockBehavior.Loose` returns `Task.FromResult(null)` for un-setup `Task<IReadOnlyList<T>>` methods. `foreach` on null → NullReferenceException → 500. Always set up every repository method the full call graph touches (including `UpdateCostBasisAsync` calling `HoldingRepo.GetByUserIdAsync`).
+
 ## Frontend test environment gotcha
 
 `ng test @dsdevq-common/ui` and `ng test finance-sentry` both require Chromium (Playwright browser runner).

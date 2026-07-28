@@ -292,6 +292,9 @@ public class CryptoApiFactory : WebApplicationFactory<Program>
         AdapterMock.Setup(a => a.ExchangeName).Returns("binance");
 
         HoldingRepoMock
+            .Setup(r => r.GetByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<CryptoHolding>());
+        HoldingRepoMock
             .Setup(r => r.UpsertRangeAsync(It.IsAny<IReadOnlyList<CryptoHolding>>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
         HoldingRepoMock

@@ -13,6 +13,7 @@ using FinanceSentry.Modules.Research.Infrastructure.Persistence;
 using FinanceSentry.Modules.Radar.Infrastructure.Persistence;
 using FinanceSentry.Modules.Risk.Infrastructure.Persistence;
 using FinanceSentry.Modules.Companion.Infrastructure.Persistence;
+using FinanceSentry.Modules.Rag.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 public static class MigrationExtensions
@@ -34,6 +35,7 @@ public static class MigrationExtensions
         MigrateContext<RadarDbContext>(sp, app.Logger);
         MigrateContext<RiskDbContext>(sp, app.Logger);
         MigrateContext<CompanionDbContext>(sp, app.Logger);
+        MigrateContext<RagDbContext>(sp, app.Logger);
 
         SeedBankSyncCategories(sp, app.Logger);
 
