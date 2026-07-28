@@ -2,9 +2,9 @@ import {InstitutionLogoUtils} from './institution-logo.utils';
 
 describe('InstitutionLogoUtils', () => {
   describe('faviconUrl', () => {
-    it('resolves a direct-connect provider code to a direct-200 favicon URL', () => {
+    it('resolves a direct-connect provider code to its favicon URL', () => {
       expect(InstitutionLogoUtils.faviconUrl('binance', 'Binance')).toBe(
-        'https://icons.duckduckgo.com/ip3/binance.com.ico'
+        'https://www.google.com/s2/favicons?domain=binance.com&sz=64'
       );
     });
 

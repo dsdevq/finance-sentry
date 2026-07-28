@@ -232,7 +232,14 @@
                   ) {
                     <tr class="border-t border-border-default">
                       <td class="py-cmn-3 pl-cmn-16 pr-cmn-4 w-full text-text-primary">
-                        {{ account.accountNumberLast4 }}
+                        <span class="inline-flex items-center gap-cmn-2">
+                          <cmn-institution-avatar
+                            [name]="account.accountNumberLast4"
+                            [logoUrl]="account.accountNumberLast4 | assetLogo: account.provider"
+                            size="sm"
+                          />
+                          <span>{{ account.accountNumberLast4 }}</span>
+                        </span>
                       </td>
                       <td class="py-cmn-3 px-cmn-4 text-text-secondary">
                         {{ account.accountType }}
@@ -333,7 +340,14 @@
                   ) {
                     <tr class="border-t border-border-default">
                       <td class="py-cmn-3 pl-cmn-16 pr-cmn-4 w-full text-text-primary">
-                        {{ account.accountNumberLast4 }}
+                        <span class="inline-flex items-center gap-cmn-2">
+                          <cmn-institution-avatar
+                            [name]="account.accountNumberLast4"
+                            [logoUrl]="account.accountNumberLast4 | assetLogo: account.provider"
+                            size="sm"
+                          />
+                          <span>{{ account.accountNumberLast4 }}</span>
+                        </span>
                       </td>
                       <td class="py-cmn-3 px-cmn-4 text-text-secondary">
                         {{ account.accountType }}
