@@ -38,6 +38,21 @@ public sealed class SubscriptionDetectionJob(
         "cash",
     ];
 
+    // Installment (розстрочка) repayments look exactly like a monthly subscription
+    // — fixed amount, monthly, repeated — but they are a fixed-term loan repayment,
+    // not a recurring service. Monobank labels them distinctively; match on the
+    // real descriptions (verified against live data), not a generic guess.
+    private static readonly string[] InstallmentDescriptionMarkers =
+    [
+        "погашення наступного платежу",   // "repayment of the next payment" (RozetkaPay)
+        "щомісячний платіж",              // "monthly payment" (telemart/monomarket)
+        "розстроч",                       // розстрочка / у розстрочку
+        "оплата частинами",
+        "покупка частинами",
+        "частинами",
+        "installment",
+    ];
+
     public async Task ExecuteAsync(CancellationToken ct = default)
     {
         await ProcessPlaidAccountsAsync(ct);
@@ -161,8 +176,9 @@ public sealed class SubscriptionDetectionJob(
 
             try
             {
-                var byMerchant = userGroup.GroupBy(t =>
-                    MerchantNameNormalizer.Normalize(t.MerchantName ?? t.Description));
+                var byMerchant = userGroup
+                    .Where(t => !IsInstallmentDescription(t.Description))
+                    .GroupBy(t => MerchantNameNormalizer.Normalize(t.MerchantName ?? t.Description));
 
                 var results = new List<DetectedSubscriptionData>();
 
@@ -237,6 +253,18 @@ public sealed class SubscriptionDetectionJob(
                 logger.LogWarning(ex, "Heuristic subscription detection failed for user {UserId}", userId);
             }
         }
+    }
+
+    public static bool IsInstallmentDescription(string? description)
+    {
+        if (string.IsNullOrWhiteSpace(description)) return false;
+
+        var lowered = description.ToLowerInvariant();
+        foreach (var marker in InstallmentDescriptionMarkers)
+        {
+            if (lowered.Contains(marker, StringComparison.Ordinal)) return true;
+        }
+        return false;
     }
 
     public static bool IsUnidentifiableMerchant(string normalized)
