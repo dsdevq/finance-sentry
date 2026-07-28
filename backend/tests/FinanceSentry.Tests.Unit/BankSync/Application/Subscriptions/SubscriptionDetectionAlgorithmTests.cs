@@ -29,6 +29,48 @@ public class SubscriptionDetectionAlgorithmTests
         SubscriptionDetectionJob.IsUnidentifiableMerchant(normalized).Should().BeFalse();
     }
 
+    [Theory]
+    [InlineData("Погашення наступного платежу RozetkaPay")]
+    [InlineData("Щомісячний платіж telemart - monomarket")]
+    [InlineData("Оплата частинами Rozetka")]
+    [InlineData("Купівля у розстрочку")]
+    [InlineData("Installment payment 3/6")]
+    public void InstallmentDescription_IsDetected(string description)
+    {
+        SubscriptionDetectionJob.IsInstallmentDescription(description).Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("Spotify")]
+    [InlineData("Anthropic* Claude Sub")]
+    [InlineData("Netflix.com")]
+    [InlineData(null)]
+    [InlineData("")]
+    public void NonInstallmentDescription_IsNotDetected(string? description)
+    {
+        SubscriptionDetectionJob.IsInstallmentDescription(description).Should().BeFalse();
+    }
+
+    [Fact]
+    public void BrandCanonicalization_UnifiesVaryingClaudeDescriptions()
+    {
+        var keys = new[]
+        {
+            "Anthropic* Claude Sub",
+            "Claude.ai Subscription",
+            "Anthropic Ireland",
+        }.Select(MerchantNameNormalizer.Normalize).Distinct().ToList();
+
+        keys.Should().ContainSingle().Which.Should().Be("claude");
+    }
+
+    [Fact]
+    public void BrandCanonicalization_UnifiesVaryingChatgptDescriptions()
+    {
+        MerchantNameNormalizer.Normalize("Openai *chatgpt Subscr")
+            .Should().Be(MerchantNameNormalizer.Normalize("Openai"));
+    }
+
     [Fact]
     public void TightenedCv_RejectsAmountsThatWouldPassLegacyThreshold()
     {
