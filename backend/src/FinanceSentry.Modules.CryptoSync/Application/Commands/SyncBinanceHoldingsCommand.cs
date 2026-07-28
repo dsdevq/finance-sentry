@@ -87,6 +87,22 @@ public sealed class SyncBinanceHoldingsCommandHandler : ICommandHandler<SyncBina
             await _holdingRepository.UpsertRangeAsync(holdings, ct);
             await _holdingRepository.SaveChangesAsync(ct);
 
+            // Reconcile: the aggregator only returns assets the user still holds (dust
+            // and zero balances are already dropped), so anything persisted but missing
+            // here was sold out — delete it instead of leaving a stale $0 holding.
+            var freshAssets = holdings
+                .Select(h => h.Asset)
+                .ToHashSet(StringComparer.Ordinal);
+            var persisted = await _holdingRepository.GetByUserIdAsync(request.UserId, ct);
+            var stale = persisted
+                .Where(h => !freshAssets.Contains(h.Asset))
+                .ToList();
+            if (stale.Count > 0)
+            {
+                _holdingRepository.RemoveRange(stale);
+                await _holdingRepository.SaveChangesAsync(ct);
+            }
+
             await UpdateCostBasisAsync(request.UserId, apiKey, apiSecret, ct);
 
             var syncedAt = DateTime.UtcNow;

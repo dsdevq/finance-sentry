@@ -47,7 +47,13 @@ public sealed class SyncIBKRHoldingsCommandHandler : ICommandHandler<SyncIBKRHol
 
             var syncedAt = DateTime.UtcNow;
 
-            var holdings = positions
+            // Ignore zero-quantity positions — IBKR keeps returning sold-out symbols
+            // at qty 0, which we must not surface (or persist) as $0 holdings.
+            var activePositions = positions
+                .Where(p => p.Quantity != 0m)
+                .ToList();
+
+            var holdings = activePositions
                 .Select(p => new BrokerageHolding(
                     request.UserId,
                     p.Symbol,
@@ -62,8 +68,19 @@ public sealed class SyncIBKRHoldingsCommandHandler : ICommandHandler<SyncIBKRHol
             await _holdingRepository.UpsertRangeAsync(holdings, ct);
             await _holdingRepository.SaveChangesAsync(ct);
 
-            var positionByKey = positions.ToDictionary(p => p.Symbol, StringComparer.Ordinal);
+            var positionByKey = activePositions.ToDictionary(p => p.Symbol, StringComparer.Ordinal);
             var persisted = await _holdingRepository.GetByUserIdAsync(request.UserId, ct);
+
+            // Reconcile: drop persisted holdings the user no longer holds (sold out /
+            // no longer returned or now zero) so they leave the DB instead of lingering.
+            var stale = persisted
+                .Where(h => h.Provider == "ibkr" && !positionByKey.ContainsKey(h.Symbol))
+                .ToList();
+            if (stale.Count > 0)
+            {
+                _holdingRepository.RemoveRange(stale);
+            }
+
             foreach (var h in persisted)
             {
                 if (positionByKey.TryGetValue(h.Symbol, out var pos))

@@ -33,7 +33,10 @@ public sealed class GetCryptoHoldingsQueryHandler : IQueryHandler<GetCryptoHoldi
 
     public async Task<CryptoHoldingsResponse> Handle(GetCryptoHoldingsQuery request, CancellationToken ct)
     {
-        var holdings = await _holdingRepository.GetByUserIdAsync(request.UserId, ct);
+        // Guard against any zero-balance rows still in the DB from before reconcile ran.
+        var holdings = (await _holdingRepository.GetByUserIdAsync(request.UserId, ct))
+            .Where(h => h.FreeQuantity + h.LockedQuantity != 0m)
+            .ToList();
 
         if (holdings.Count == 0)
         {
