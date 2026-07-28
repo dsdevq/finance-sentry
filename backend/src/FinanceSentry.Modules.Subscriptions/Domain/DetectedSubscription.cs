@@ -1,5 +1,7 @@
 namespace FinanceSentry.Modules.Subscriptions.Domain;
 
+using FinanceSentry.Core.Interfaces;
+
 public class DetectedSubscription
 {
     public Guid Id { get; private set; } = Guid.NewGuid();
@@ -10,6 +12,8 @@ public class DetectedSubscription
     public decimal AverageAmount { get; private set; }
     public decimal LastKnownAmount { get; private set; }
     public string Currency { get; private set; } = string.Empty;
+    /// <summary>"subscription" (open-ended service) or "installment" (fixed-term розстрочка).</summary>
+    public string Kind { get; private set; } = SubscriptionKinds.Subscription;
     public DateOnly LastChargeDate { get; private set; }
     public DateOnly NextExpectedDate { get; private set; }
     public string Status { get; private set; } = SubscriptionStatus.Active;
@@ -34,7 +38,8 @@ public class DetectedSubscription
         DateOnly nextExpectedDate,
         int occurrenceCount,
         int confidenceScore,
-        string? category)
+        string? category,
+        string kind = SubscriptionKinds.Subscription)
     {
         return new DetectedSubscription
         {
@@ -50,6 +55,7 @@ public class DetectedSubscription
             OccurrenceCount = occurrenceCount,
             ConfidenceScore = confidenceScore,
             Category = category,
+            Kind = kind,
         };
     }
 
@@ -61,7 +67,8 @@ public class DetectedSubscription
         DateOnly nextExpectedDate,
         int occurrenceCount,
         int confidenceScore,
-        string? category)
+        string? category,
+        string kind = SubscriptionKinds.Subscription)
     {
         MerchantNameDisplay = merchantNameDisplay;
         AverageAmount = averageAmount;
@@ -71,6 +78,7 @@ public class DetectedSubscription
         OccurrenceCount = occurrenceCount;
         ConfidenceScore = confidenceScore;
         Category = category;
+        Kind = kind;
         Status = SubscriptionStatus.Active;
         UpdatedAt = DateTimeOffset.UtcNow;
     }

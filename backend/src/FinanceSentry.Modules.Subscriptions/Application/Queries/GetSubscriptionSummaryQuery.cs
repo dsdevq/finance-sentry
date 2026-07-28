@@ -1,6 +1,7 @@
 namespace FinanceSentry.Modules.Subscriptions.Application.Queries;
 
 using FinanceSentry.Core.Cqrs;
+using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Core.Utils;
 using FinanceSentry.Modules.Subscriptions.API.Responses;
 using FinanceSentry.Modules.Subscriptions.Domain;
@@ -16,10 +17,15 @@ public class GetSubscriptionSummaryQueryHandler(IDetectedSubscriptionRepository 
     public async Task<SubscriptionSummaryResponse> Handle(
         GetSubscriptionSummaryQuery request, CancellationToken cancellationToken)
     {
-        var active = await _repository.GetActiveByUserIdAsync(request.UserId, cancellationToken);
+        // Installments are a separate concept (fixed-term repayments) — never count
+        // them toward the recurring subscription spend summary.
+        var active = (await _repository.GetActiveByUserIdAsync(request.UserId, cancellationToken))
+            .Where(s => s.Kind == SubscriptionKinds.Subscription)
+            .ToList();
         var all = await _repository.GetByUserIdAsync(request.UserId, false, cancellationToken);
 
-        var potentiallyCancelled = all.Count(s => s.Status == SubscriptionStatus.PotentiallyCancelled);
+        var potentiallyCancelled = all.Count(s =>
+            s.Kind == SubscriptionKinds.Subscription && s.Status == SubscriptionStatus.PotentiallyCancelled);
 
         // Subscriptions can span multiple currencies (e.g. Monobank UAH + Revolut EUR).
         // Normalize every amount to USD before summing so the total is meaningful.

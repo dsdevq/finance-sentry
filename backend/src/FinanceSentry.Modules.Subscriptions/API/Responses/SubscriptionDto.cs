@@ -13,4 +13,5 @@ public record SubscriptionDto(
     string Status,
     int OccurrenceCount,
     string? Category,
-    DateTimeOffset DetectedAt);
+    DateTimeOffset DetectedAt,
+    string Kind);

@@ -33,7 +33,8 @@ public class SubscriptionDetectionResultService(IDetectedSubscriptionRepository 
                     result.NextExpectedDate,
                     result.OccurrenceCount,
                     result.ConfidenceScore,
-                    result.Category);
+                    result.Category,
+                    result.Kind);
 
                 await _repository.UpsertAsync(subscription, ct);
             }
@@ -47,7 +48,8 @@ public class SubscriptionDetectionResultService(IDetectedSubscriptionRepository 
                     result.NextExpectedDate,
                     result.OccurrenceCount,
                     result.ConfidenceScore,
-                    result.Category);
+                    result.Category,
+                    result.Kind);
 
                 await _repository.UpsertAsync(existing, ct);
             }

@@ -1,5 +1,6 @@
 namespace FinanceSentry.Modules.Subscriptions.Infrastructure.Persistence;
 
+using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Modules.Subscriptions.Domain;
 using Microsoft.EntityFrameworkCore;
 
@@ -22,6 +23,7 @@ public class SubscriptionsDbContext(DbContextOptions<SubscriptionsDbContext> opt
         sb.Property(s => s.AverageAmount).HasColumnType("numeric(15,2)").IsRequired();
         sb.Property(s => s.LastKnownAmount).HasColumnType("numeric(15,2)").IsRequired();
         sb.Property(s => s.Currency).IsRequired().HasMaxLength(3);
+        sb.Property(s => s.Kind).IsRequired().HasMaxLength(20).HasDefaultValue(SubscriptionKinds.Subscription);
         sb.Property(s => s.Status).IsRequired().HasMaxLength(25).HasDefaultValue(SubscriptionStatus.Active);
         sb.Property(s => s.OccurrenceCount).HasDefaultValue(0);
         sb.Property(s => s.ConfidenceScore).HasDefaultValue(0);
