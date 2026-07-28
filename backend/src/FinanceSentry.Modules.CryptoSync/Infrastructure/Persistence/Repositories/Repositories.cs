@@ -82,6 +82,11 @@ public sealed class CryptoHoldingRepository : ICryptoHoldingRepository
             .ToListAsync(ct);
     }
 
+    public void RemoveRange(IEnumerable<CryptoHolding> holdings)
+    {
+        _context.CryptoHoldings.RemoveRange(holdings);
+    }
+
     public async Task DeleteByUserIdAsync(Guid userId, CancellationToken ct = default)
     {
         await _context.CryptoHoldings

@@ -92,6 +92,11 @@ public sealed class BrokerageHoldingRepository : IBrokerageHoldingRepository
             .ToListAsync(ct);
     }
 
+    public void RemoveRange(IEnumerable<BrokerageHolding> holdings)
+    {
+        _context.BrokerageHoldings.RemoveRange(holdings);
+    }
+
     public async Task DeleteByUserIdAsync(Guid userId, CancellationToken ct = default)
     {
         await _context.BrokerageHoldings

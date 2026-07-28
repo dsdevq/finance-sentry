@@ -35,7 +35,10 @@ public sealed class GetBrokerageHoldingsQueryHandler
     public async Task<BrokerageHoldingsResponse> Handle(
         GetBrokerageHoldingsQuery request, CancellationToken ct)
     {
-        var holdings = await _holdingRepository.GetByUserIdAsync(request.UserId, ct);
+        // Guard against any zero-quantity rows still in the DB from before reconcile ran.
+        var holdings = (await _holdingRepository.GetByUserIdAsync(request.UserId, ct))
+            .Where(h => h.Quantity != 0m)
+            .ToList();
 
         if (holdings.Count == 0)
         {

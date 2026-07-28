@@ -15,6 +15,10 @@ public interface IBrokerageHoldingRepository
 {
     Task UpsertRangeAsync(IEnumerable<BrokerageHolding> holdings, CancellationToken ct = default);
     Task<IReadOnlyList<BrokerageHolding>> GetByUserIdAsync(Guid userId, CancellationToken ct = default);
+
+    /// <summary>Marks the given tracked holdings for deletion (used to reconcile sold-out positions).</summary>
+    void RemoveRange(IEnumerable<BrokerageHolding> holdings);
+
     Task DeleteByUserIdAsync(Guid userId, CancellationToken ct = default);
     Task SaveChangesAsync(CancellationToken ct = default);
 }

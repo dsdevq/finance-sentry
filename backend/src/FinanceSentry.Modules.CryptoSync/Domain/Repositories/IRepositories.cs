@@ -14,6 +14,10 @@ public interface ICryptoHoldingRepository
 {
     Task UpsertRangeAsync(IReadOnlyList<CryptoHolding> holdings, CancellationToken ct = default);
     Task<IReadOnlyList<CryptoHolding>> GetByUserIdAsync(Guid userId, CancellationToken ct = default);
+
+    /// <summary>Marks the given tracked holdings for deletion (used to reconcile sold-out assets).</summary>
+    void RemoveRange(IEnumerable<CryptoHolding> holdings);
+
     Task DeleteByUserIdAsync(Guid userId, CancellationToken ct = default);
     Task SaveChangesAsync(CancellationToken ct = default);
 }
