@@ -119,10 +119,21 @@
                     ) {
                       <tr class="border-t border-border-default">
                         <td class="py-2 pl-16 pr-4 w-full">
-                          <span class="text-text-primary">{{ account.accountType }}</span>
-                          <span class="block text-xs text-text-disabled"
-                            >&#8226;&#8226;{{ account.accountNumberLast4 }}</span
-                          >
+                          <span class="inline-flex items-center gap-cmn-2">
+                            @if (inst.category === 'crypto' || inst.category === 'brokerage') {
+                              <cmn-institution-avatar
+                                [name]="account.accountType"
+                                [logoUrl]="account.accountNumberLast4 | assetLogo: account.provider"
+                                size="sm"
+                              />
+                            }
+                            <span>
+                              <span class="text-text-primary">{{ account.accountType }}</span>
+                              <span class="block text-xs text-text-disabled"
+                                >&#8226;&#8226;{{ account.accountNumberLast4 }}</span
+                              >
+                            </span>
+                          </span>
                         </td>
                         <td class="py-2 pr-4 text-right font-mono tabular-nums text-text-primary">
                           {{ account.currentBalance | number: '1.2-2' }}

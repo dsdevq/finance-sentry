@@ -29,7 +29,7 @@ export type InstitutionAvatarSize = keyof typeof SIZE_CLASSES;
           (error)="onLogoError()"
           width="64"
           height="64"
-          class="h-full w-full object-contain"
+          class="m-auto max-h-full max-w-full object-contain"
         />
       } @else {
         {{ initials() }}
