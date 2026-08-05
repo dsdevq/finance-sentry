@@ -1,5 +1,6 @@
 namespace FinanceSentry.Modules.BankSync.Application.Services;
 
+using System.Collections.Concurrent;
 using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Infrastructure.Encryption;
 using FinanceSentry.Infrastructure.Logging;
@@ -309,33 +310,29 @@ public class ScheduledSyncService(
         return new SyncResult(true, candidates.Count, entities.Count, null, null);
     }
 
+    // Serializes the refresh-token exchange per TrueLayer connection. A connection can back several
+    // accounts, each with its own scheduled sync job firing on the same cron; without this gate two
+    // jobs could refresh the shared, rotating refresh_token concurrently — one wins, the other gets
+    // invalid_grant and the rotated token is lost, bricking the connection.
+    private static readonly ConcurrentDictionary<Guid, SemaphoreSlim> TrueLayerRefreshLocks = new();
+
     private async Task<SyncResult> SyncTrueLayerAsync(
         Domain.BankAccount account, SyncJob job, DateTime startedAt, CancellationToken ct)
     {
         if (account.TrueLayerConnectionId is null)
             throw new InvalidOperationException($"TrueLayer account {account.Id} has no connection id.");
 
-        var connection = await _truelayerConnections.GetByIdAsync(account.TrueLayerConnectionId.Value, ct)
-            ?? throw new InvalidOperationException($"TrueLayer connection {account.TrueLayerConnectionId} not found.");
+        var connectionId = account.TrueLayerConnectionId.Value;
+        var accessToken = await AcquireTrueLayerAccessTokenAsync(connectionId, job, account.Id, ct);
 
-        var refreshToken = _encryption.Decrypt(
-            connection.EncryptedRefreshToken, connection.Iv, connection.AuthTag, connection.KeyVersion);
-        _logger.CredentialAccessed(job.CorrelationId ?? job.Id.ToString(), account.Id);
-
-        var tokenSet = await _truelayerClient.RefreshAccessTokenAsync(refreshToken, ct);
-
-        // TrueLayer rotates refresh tokens — persist the new one.
-        if (!string.IsNullOrEmpty(tokenSet.RefreshToken) && tokenSet.RefreshToken != refreshToken)
-        {
-            var encrypted = _encryption.Encrypt(tokenSet.RefreshToken);
-            connection.SetRefreshToken(encrypted.Ciphertext, encrypted.Iv, encrypted.AuthTag);
-        }
+        var connection = await _truelayerConnections.GetByIdAsync(connectionId, ct)
+            ?? throw new InvalidOperationException($"TrueLayer connection {connectionId} not found.");
 
         var provider = _providerFactory.Resolve("truelayer");
         var since = connection.LastSyncAt;
 
         var (candidates, _) = await provider.SyncTransactionsAsync(
-            tokenSet.AccessToken, account.ExternalAccountId, account.Id, account.UserId, since, ct);
+            accessToken, account.ExternalAccountId, account.Id, account.UserId, since, ct);
 
         var entities = await PersistAndReconcileAsync(account.Id, candidates, ct);
 
@@ -348,7 +345,7 @@ public class ScheduledSyncService(
         decimal latestBalance = 0m;
         try
         {
-            var bal = await _truelayerClient.GetBalanceAsync(tokenSet.AccessToken, account.ExternalAccountId, ct);
+            var bal = await _truelayerClient.GetBalanceAsync(accessToken, account.ExternalAccountId, ct);
             if (bal is not null)
                 latestBalance = bal.Current;
         }
@@ -372,6 +369,45 @@ public class ScheduledSyncService(
             candidates.Count, entities.Count, durationMs);
 
         return new SyncResult(true, candidates.Count, entities.Count, null, null);
+    }
+
+    /// <summary>
+    /// Exchanges a connection's rotating refresh_token for a fresh access_token, serialized per
+    /// connection. The rotated refresh_token is persisted <em>immediately</em> — before any transaction
+    /// fetch — so a later sync failure cannot strand a consumed token and permanently brick the
+    /// connection (the invalid_grant root cause). The connection is re-read inside the lock so parallel
+    /// per-account jobs always refresh from the latest persisted token.
+    /// </summary>
+    private async Task<string> AcquireTrueLayerAccessTokenAsync(
+        Guid connectionId, SyncJob job, Guid accountId, CancellationToken ct)
+    {
+        var gate = TrueLayerRefreshLocks.GetOrAdd(connectionId, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(ct);
+        try
+        {
+            var connection = await _truelayerConnections.GetByIdAsync(connectionId, ct)
+                ?? throw new InvalidOperationException($"TrueLayer connection {connectionId} not found.");
+
+            var refreshToken = _encryption.Decrypt(
+                connection.EncryptedRefreshToken, connection.Iv, connection.AuthTag, connection.KeyVersion);
+            _logger.CredentialAccessed(job.CorrelationId ?? job.Id.ToString(), accountId);
+
+            var tokenSet = await _truelayerClient.RefreshAccessTokenAsync(refreshToken, ct);
+
+            // Persist the rotated refresh_token now — not after the sync — so nothing downstream can lose it.
+            if (!string.IsNullOrEmpty(tokenSet.RefreshToken) && tokenSet.RefreshToken != refreshToken)
+            {
+                var encrypted = _encryption.Encrypt(tokenSet.RefreshToken);
+                connection.SetRefreshToken(encrypted.Ciphertext, encrypted.Iv, encrypted.AuthTag);
+                await _truelayerConnections.UpdateAsync(connection, ct);
+            }
+
+            return tokenSet.AccessToken;
+        }
+        finally
+        {
+            gate.Release();
+        }
     }
 
     private static string? ExtractErrorCode(string message, string provider)
