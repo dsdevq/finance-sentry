@@ -108,10 +108,29 @@ public static class ResearchModule
         services.AddScoped<IAnalystUniverseRepository, AnalystUniverseRepository>();
         services.AddScoped<INewsSourceRepository, NewsSourceRepository>();
         services.AddScoped<IValuationSnapshotRepository, ValuationSnapshotRepository>();
+        services.AddScoped<IRecommendationTrendRepository, RecommendationTrendRepository>();
         services.AddScoped<IResearchDocumentRepository, ResearchDocumentRepository>();
         services.AddScoped<IResearchRetrievalRepository, ResearchRetrievalRepository>();
         services.Configure<OpportunityOptions>(config.GetSection(OpportunityOptions.SectionName));
         services.Configure<ResearchRetrievalOptions>(config.GetSection(ResearchRetrievalOptions.SectionName));
+        services.Configure<AnalystSourcesOptions>(config.GetSection(AnalystSourcesOptions.SectionName));
+
+        // Finnhub structured provider (feature 037) — documented REST+JSON, keyed via header only
+        // (never the token query param: keys must not appear in URLs/logs). BaseAddress needs the
+        // trailing slash so relative "stock/recommendation" resolves under /api/v1.
+        var analystSources = config.GetSection(AnalystSourcesOptions.SectionName)
+            .Get<AnalystSourcesOptions>() ?? new AnalystSourcesOptions();
+        services.AddHttpClient(FinnhubRecommendationTrendsService.HttpClientName, client =>
+        {
+            client.BaseAddress = new Uri(analystSources.Finnhub.BaseUrl.TrimEnd('/') + "/");
+            client.Timeout = TimeSpan.FromSeconds(30);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd(
+                "Mozilla/5.0 (compatible; FinanceSentry/1.0; +https://finance-sentry.local)");
+            if (!string.IsNullOrWhiteSpace(analystSources.Finnhub.ApiKey))
+            {
+                client.DefaultRequestHeaders.Add("X-Finnhub-Token", analystSources.Finnhub.ApiKey);
+            }
+        });
 
         services.AddHttpClient(YahooMarketDataService.HttpClientName, client =>
         {
@@ -172,23 +191,6 @@ public static class ResearchModule
             AutomaticDecompression = System.Net.DecompressionMethods.All,
         });
 
-        // Yahoo quoteSummary/upgradeDowngradeHistory (per-ticker analyst actions) — same crumb + cookie
-        // dance as the earnings client, with its own CookieContainer so its crumb/cookies are isolated.
-        var yahooAnalystCookies = new System.Net.CookieContainer();
-        services.AddHttpClient(YahooAnalystActionsSource.HttpClientName, client =>
-        {
-            client.Timeout = TimeSpan.FromSeconds(12);
-            client.DefaultRequestHeaders.UserAgent.ParseAdd(
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
-        })
-        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
-        {
-            CookieContainer = yahooAnalystCookies,
-            UseCookies = true,
-            AutomaticDecompression = System.Net.DecompressionMethods.All,
-        })
-        .SetHandlerLifetime(TimeSpan.FromHours(2));
-
         // Yahoo quoteSummary valuation modules (feature 030, US2) — same crumb + cookie dance with its
         // own isolated CookieContainer so its crumb/cookies don't collide with the analyst client.
         var yahooValuationCookies = new System.Net.CookieContainer();
@@ -219,13 +221,19 @@ public static class ResearchModule
         // Singleton: caches the ticker->CIK map + per-ticker EDGAR results across requests.
         services.AddSingleton<ISecEdgarService, SecEdgarService>();
 
-        // Analyst-actions sources (feature 030). Both singletons: MarketBeat is stateless; Yahoo caches
-        // its crumb. Registered under IAnalystActionsSource so the job resolves them as IEnumerable.
-        services.AddSingleton<MarketBeatAnalystActionsSource>();
-        services.AddSingleton<YahooAnalystActionsSource>();
-        services.AddSingleton<IAnalystActionsSource>(sp => sp.GetRequiredService<MarketBeatAnalystActionsSource>());
-        services.AddSingleton<IAnalystActionsSource>(sp => sp.GetRequiredService<YahooAnalystActionsSource>());
+        // Analyst-actions sources. MarketBeat is the sole per-action source since the Yahoo
+        // quoteSummary scraper was retired (feature 037, US2); the Enabled flag keeps its demotion a
+        // config flip (FR-004). Registered under IAnalystActionsSource so the job resolves the set.
+        if (analystSources.Marketbeat.Enabled)
+        {
+            services.AddSingleton<MarketBeatAnalystActionsSource>();
+            services.AddSingleton<IAnalystActionsSource>(sp => sp.GetRequiredService<MarketBeatAnalystActionsSource>());
+        }
         services.AddSingleton<IAnalystSourceHealth, AnalystSourceHealth>();
+
+        // Structured monthly consensus (feature 037). Always registered — the service no-ops via
+        // IsConfigured when no key is present, keeping the DI graph stable across environments.
+        services.AddSingleton<IRecommendationTrendsService, FinnhubRecommendationTrendsService>();
         services.AddScoped<IAnalystUniverseService, AnalystUniverseService>();
         services.AddScoped<Core.Interfaces.IAnalystActionFeedReader, Infrastructure.Persistence.AnalystActionFeedReader>();
 

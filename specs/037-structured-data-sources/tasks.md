@@ -17,9 +17,9 @@
 
 **Purpose**: configuration plumbing both US1 and US2 build on
 
-- [ ] T001 Create `AnalystSourcesOptions` (SectionName `AnalystSources`; nested `MarketbeatOptions { Enabled=true }`, `FinnhubOptions { Enabled=true, ApiKey="", BaseUrl="https://finnhub.io/api/v1", RequestsPerMinute=50 }`) in `backend/src/FinanceSentry.Modules.Research/Application/Services/AnalystSourcesOptions.cs`
-- [ ] T002 Bind options + add named HttpClient `finnhub` (BaseAddress from options, `X-Finnhub-Token` default header from ApiKey when non-empty, 30s timeout, UA per IBKR-quirks convention) in `backend/src/FinanceSentry.Modules.Research/ResearchModule.cs`
-- [ ] T003 [P] Map `FINNHUB_API_KEY` → `AnalystSources__Finnhub__ApiKey` on the `api` service in `docker/docker-compose.prod.yml` and `docker/docker-compose.dev.yml`; document `FINNHUB_API_KEY` (blank = trends capture off) in `docker/.env.example`
+- [X] T001 Create `AnalystSourcesOptions` (SectionName `AnalystSources`; nested `MarketbeatOptions { Enabled=true }`, `FinnhubOptions { Enabled=true, ApiKey="", BaseUrl="https://finnhub.io/api/v1", RequestsPerMinute=50 }`) in `backend/src/FinanceSentry.Modules.Research/Application/Services/AnalystSourcesOptions.cs`
+- [X] T002 Bind options + add named HttpClient `finnhub` (BaseAddress from options, `X-Finnhub-Token` default header from ApiKey when non-empty, 30s timeout, UA per IBKR-quirks convention) in `backend/src/FinanceSentry.Modules.Research/ResearchModule.cs`
+- [X] T003 [P] Map `FINNHUB_API_KEY` → `AnalystSources__Finnhub__ApiKey` on the `api` service in `docker/docker-compose.prod.yml` and `docker/docker-compose.dev.yml`; document `FINNHUB_API_KEY` (blank = trends capture off) in `docker/.env.example`
 
 **Checkpoint**: `dotnet build` zero warnings; app boots with and without the env var.
 
@@ -31,11 +31,11 @@
 
 **⚠️ CRITICAL**: complete before any user story
 
-- [ ] T004 Create `RecommendationTrend` entity (fields per data-model.md: Ticker, Period `DateOnly`, five counts, Source, IngestedAt) in `backend/src/FinanceSentry.Modules.Research/Domain/RecommendationTrend.cs`
-- [ ] T005 [P] Create `IRecommendationTrendRepository` (`UpsertAsync(IReadOnlyList<RecommendationTrend>, ct)` keyed on (Ticker, Period); `GetLatestAsync(ticker, months, ct)`) in `backend/src/FinanceSentry.Modules.Research/Domain/Repositories/IRecommendationTrendRepository.cs`
-- [ ] T006 Add `DbSet<RecommendationTrend>` + entity config (table `recommendation_trends`, schema `research`, unique index (ticker, period), snake_case columns per existing convention) to `ResearchDbContext` in `backend/src/FinanceSentry.Modules.Research/Infrastructure/Persistence/ResearchDbContext.cs`
-- [ ] T007 Generate migration **M010_RecommendationTrends** via `dotnet ef migrations add` **inside the sdk:10.0 container** (NEVER hand-write — M007 lesson) into `backend/src/FinanceSentry.Modules.Research/Migrations/`; verify Designer file + snapshot updated
-- [ ] T008 Implement `RecommendationTrendRepository` (upsert = insert-or-update-counts by (ticker, period)) in `backend/src/FinanceSentry.Modules.Research/Infrastructure/Persistence/Repositories/RecommendationTrendRepository.cs` + DI registration in `ResearchModule.cs`
+- [X] T004 Create `RecommendationTrend` entity (fields per data-model.md: Ticker, Period `DateOnly`, five counts, Source, IngestedAt) in `backend/src/FinanceSentry.Modules.Research/Domain/RecommendationTrend.cs`
+- [X] T005 [P] Create `IRecommendationTrendRepository` (`UpsertAsync(IReadOnlyList<RecommendationTrend>, ct)` keyed on (Ticker, Period); `GetLatestAsync(ticker, months, ct)`) in `backend/src/FinanceSentry.Modules.Research/Domain/Repositories/IRecommendationTrendRepository.cs`
+- [X] T006 Add `DbSet<RecommendationTrend>` + entity config (table `recommendation_trends`, schema `research`, unique index (ticker, period), snake_case columns per existing convention) to `ResearchDbContext` in `backend/src/FinanceSentry.Modules.Research/Infrastructure/Persistence/ResearchDbContext.cs`
+- [X] T007 Generate migration **M010_RecommendationTrends** via `dotnet ef migrations add` **inside the sdk:10.0 container** (NEVER hand-write — M007 lesson) into `backend/src/FinanceSentry.Modules.Research/Migrations/`; verify Designer file + snapshot updated
+- [X] T008 Implement `RecommendationTrendRepository` (upsert = insert-or-update-counts by (ticker, period)) in `backend/src/FinanceSentry.Modules.Research/Infrastructure/Persistence/Repositories/RecommendationTrendRepository.cs` + DI registration in `ResearchModule.cs`
 
 **Checkpoint**: migration applies cleanly on the dev stack (`__ef_migrations_history_research` shows M010); build zero warnings.
 
@@ -49,17 +49,17 @@
 
 ### Tests for User Story 1 (TDD — write first, watch them fail)
 
-- [ ] T009 [P] [US1] Record a real free-tier `/stock/recommendation` response into `backend/tests/FinanceSentry.Modules.Research.Tests/Fixtures/finnhub-recommendation.json`; write contract test asserting the documented shape + parse tolerances (unknown fields ignored, missing count → 0, malformed period → row skipped, non-array root → `AnalystSourceParseException`) in `backend/tests/FinanceSentry.Modules.Research.Tests/Contracts/FinnhubRecommendationContractTests.cs`, per `contracts/finnhub-recommendation.md`
-- [ ] T010 [P] [US1] Unit tests for the service: mapping fixture→records, zero-coverage `[]` → empty + Debug, 401/403 → throws `AnalystSourceParseException`, 429 → one bounded retry then skip, pacing honors `RequestsPerMinute`, key-absent → no-op, in `backend/tests/FinanceSentry.Modules.Research.Tests/Sources/FinnhubRecommendationTrendsServiceTests.cs`
-- [ ] T011 [P] [US1] Key-gated live smoke test (Skip when `FINNHUB_API_KEY` unset): fetch one ticker, assert ≥0 rows parse, in `FinnhubRecommendationContractTests.cs` (same file, `[SkippableFact]`/env-guard pattern used by existing external tests)
+- [X] T009 [P] [US1] Record a real free-tier `/stock/recommendation` response into `backend/tests/FinanceSentry.Modules.Research.Tests/Fixtures/finnhub-recommendation.json`; write contract test asserting the documented shape + parse tolerances (unknown fields ignored, missing count → 0, malformed period → row skipped, non-array root → `AnalystSourceParseException`) in `backend/tests/FinanceSentry.Modules.Research.Tests/Contracts/FinnhubRecommendationContractTests.cs`, per `contracts/finnhub-recommendation.md`
+- [X] T010 [P] [US1] Unit tests for the service: mapping fixture→records, zero-coverage `[]` → empty + Debug, 401/403 → throws `AnalystSourceParseException`, 429 → one bounded retry then skip, pacing honors `RequestsPerMinute`, key-absent → no-op, in `backend/tests/FinanceSentry.Modules.Research.Tests/Sources/FinnhubRecommendationTrendsServiceTests.cs`
+- [X] T011 [P] [US1] Key-gated live smoke test (Skip when `FINNHUB_API_KEY` unset): fetch one ticker, assert ≥0 rows parse, in `FinnhubRecommendationContractTests.cs` (same file, `[SkippableFact]`/env-guard pattern used by existing external tests)
 
 ### Implementation for User Story 1
 
-- [ ] T012 [P] [US1] Create `IRecommendationTrendsService` (`FetchAsync(tickers, ct)` → `IReadOnlyList<RecommendationTrend>`; `bool IsConfigured`) in `backend/src/FinanceSentry.Modules.Research/Application/Services/IRecommendationTrendsService.cs`
-- [ ] T013 [US1] Implement `FinnhubRecommendationTrendsService` (named client `finnhub`; **public static `Parse`** for fixture tests; per-ticker fetch with pacing + error semantics from the contract doc; canonical-ticker preserved over echo) in `backend/src/FinanceSentry.Modules.Research/Infrastructure/Sources/FinnhubRecommendationTrendsService.cs` (depends on T009/T010 failing first, T012)
-- [ ] T014 [US1] Add `CaptureRecommendationTrendsAsync(members, ct)` step to `AnalystActionsIngestionJob` (tracked-set filter via existing `ValuationCaptureReasons`; per-run isolation — never fails the actions run; `IAnalystSourceHealth` strikes under key `finnhub` on total failure; skip with one Debug line when `!IsConfigured`) in `backend/src/FinanceSentry.Modules.Research/Infrastructure/Jobs/AnalystActionsIngestionJob.cs`
-- [ ] T015 [US1] Register `IRecommendationTrendsService` in `ResearchModule.cs` (always registered; no-op path driven by `IsConfigured` so DI graph is stable) + unit-test the job step (configured/unconfigured/failure paths) in existing `backend/tests/FinanceSentry.Modules.Research.Tests/Jobs/AnalystActionsIngestionJobTests.cs`
-- [ ] T016 [US1] Validate on dev stack per quickstart §3–4 (trigger job, check table + logs, both with and without key); fix findings
+- [X] T012 [P] [US1] Create `IRecommendationTrendsService` (`FetchAsync(tickers, ct)` → `IReadOnlyList<RecommendationTrend>`; `bool IsConfigured`) in `backend/src/FinanceSentry.Modules.Research/Application/Services/IRecommendationTrendsService.cs`
+- [X] T013 [US1] Implement `FinnhubRecommendationTrendsService` (named client `finnhub`; **public static `Parse`** for fixture tests; per-ticker fetch with pacing + error semantics from the contract doc; canonical-ticker preserved over echo) in `backend/src/FinanceSentry.Modules.Research/Infrastructure/Sources/FinnhubRecommendationTrendsService.cs` (depends on T009/T010 failing first, T012)
+- [X] T014 [US1] Add `CaptureRecommendationTrendsAsync(members, ct)` step to `AnalystActionsIngestionJob` (tracked-set filter via existing `ValuationCaptureReasons`; per-run isolation — never fails the actions run; `IAnalystSourceHealth` strikes under key `finnhub` on total failure; skip with one Debug line when `!IsConfigured`) in `backend/src/FinanceSentry.Modules.Research/Infrastructure/Jobs/AnalystActionsIngestionJob.cs`
+- [X] T015 [US1] Register `IRecommendationTrendsService` in `ResearchModule.cs` (always registered; no-op path driven by `IsConfigured` so DI graph is stable) + unit-test the job step (configured/unconfigured/failure paths) in existing `backend/tests/FinanceSentry.Modules.Research.Tests/Jobs/AnalystActionsIngestionJobTests.cs`
+- [X] T016 [US1] Validate on dev stack per quickstart §3–4 (trigger job, check table + logs, both with and without key); fix findings
 
 **Checkpoint**: US1 fully functional — structured signal accumulating. MVP deliverable.
 
@@ -73,10 +73,10 @@
 
 ### Implementation for User Story 2 (deletion first, tests prove the absence)
 
-- [ ] T017 [US2] Delete `backend/src/FinanceSentry.Modules.Research/Infrastructure/Sources/YahooAnalystActionsSource.cs`; remove its DI registration + named HttpClient `yahoo-analyst` block from `ResearchModule.cs` (leave `YahooMarketDataService`, `YahooEarningsCalendarService`, `YahooValuationDataService` and their clients strictly untouched)
-- [ ] T018 [P] [US2] Delete Yahoo-analyst test files + fixtures under `backend/tests/FinanceSentry.Modules.Research.Tests/` (locate via `grep -rl "YahooAnalystActions"`); update any shared test helpers that referenced the source
-- [ ] T019 [US2] Gate MarketBeat registration on `AnalystSources:Marketbeat:Enabled` (default true, FR-004 reversibility) in `ResearchModule.cs` + unit test both flag states in `backend/tests/FinanceSentry.Modules.Research.Tests/ResearchModuleRegistrationTests.cs` (create if absent)
-- [ ] T020 [US2] Sweep stale references: `grep -rn "yahoo-analyst\|YahooAnalystActions"` across `backend/` must return nothing; update the `get_analyst_actions` tool `[Description]` (currently says "MarketBeat market-wide sweep + Yahoo per-ticker") in `backend/src/FinanceSentry.Mcp/Tools/GetAnalystActionsTool.cs`; full suite green in container
+- [X] T017 [US2] Delete `backend/src/FinanceSentry.Modules.Research/Infrastructure/Sources/YahooAnalystActionsSource.cs`; remove its DI registration + named HttpClient `yahoo-analyst` block from `ResearchModule.cs` (leave `YahooMarketDataService`, `YahooEarningsCalendarService`, `YahooValuationDataService` and their clients strictly untouched)
+- [X] T018 [P] [US2] Delete Yahoo-analyst test files + fixtures under `backend/tests/FinanceSentry.Modules.Research.Tests/` (locate via `grep -rl "YahooAnalystActions"`); update any shared test helpers that referenced the source
+- [X] T019 [US2] Gate MarketBeat registration on `AnalystSources:Marketbeat:Enabled` (default true, FR-004 reversibility) in `ResearchModule.cs` + unit test both flag states in `backend/tests/FinanceSentry.Modules.Research.Tests/ResearchModuleRegistrationTests.cs` (create if absent)
+- [X] T020 [US2] Sweep stale references: `grep -rn "yahoo-analyst\|YahooAnalystActions"` across `backend/` must return nothing; update the `get_analyst_actions` tool `[Description]` (currently says "MarketBeat market-wide sweep + Yahoo per-ticker") in `backend/src/FinanceSentry.Mcp/Tools/GetAnalystActionsTool.cs`; full suite green in container
 
 **Checkpoint**: crumb/404 failure class is gone; per-action ingestion unchanged.
 
@@ -90,13 +90,13 @@
 
 ### Tests for User Story 3 (TDD — write first)
 
-- [ ] T021 [P] [US3] Unit tests for the query handler extension: ticker query includes ≤N latest trend rows, no-ticker query omits block, no-trends ticker → empty array (not null), in `backend/tests/FinanceSentry.Modules.Research.Tests/Queries/GetAnalystActionsQueryTests.cs` (extend existing)
+- [X] T021 [P] [US3] Unit tests for the query handler extension: ticker query includes ≤N latest trend rows, no-ticker query omits block, no-trends ticker → empty array (not null), in `backend/tests/FinanceSentry.Modules.Research.Tests/Queries/GetAnalystActionsQueryTests.cs` (extend existing)
 
 ### Implementation for User Story 3
 
-- [ ] T022 [US3] Add `RecommendationTrendDto` + optional `RecommendationTrends` list to `AnalystActionsResult` in `backend/src/FinanceSentry.Modules.Research/API/Responses/AnalystActionDto.cs` (or sibling response file, following the one-concept-per-file layout of the module)
-- [ ] T023 [US3] Extend `GetAnalystActionsQuery` handler to load latest trends via `IRecommendationTrendRepository.GetLatestAsync` when a ticker filter is present, in `backend/src/FinanceSentry.Modules.Research/Application/Queries/GetAnalystActionsQuery.cs` (depends on T021 failing first)
-- [ ] T024 [US3] Update `get_analyst_actions` `[Description]` to mention the trends block + MCP smoke via inspector/Ledger in `backend/src/FinanceSentry.Mcp/Tools/GetAnalystActionsTool.cs`
+- [X] T022 [US3] Add `RecommendationTrendDto` + optional `RecommendationTrends` list to `AnalystActionsResult` in `backend/src/FinanceSentry.Modules.Research/API/Responses/AnalystActionDto.cs` (or sibling response file, following the one-concept-per-file layout of the module)
+- [X] T023 [US3] Extend `GetAnalystActionsQuery` handler to load latest trends via `IRecommendationTrendRepository.GetLatestAsync` when a ticker filter is present, in `backend/src/FinanceSentry.Modules.Research/Application/Queries/GetAnalystActionsQuery.cs` (depends on T021 failing first)
+- [X] T024 [US3] Update `get_analyst_actions` `[Description]` to mention the trends block + MCP smoke via inspector/Ledger in `backend/src/FinanceSentry.Mcp/Tools/GetAnalystActionsTool.cs`
 
 **Checkpoint**: all three stories independently functional.
 
@@ -104,9 +104,9 @@
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T025 [P] Zero-warning sweep: full `dotnet build FinanceSentry.sln` + entire unit suite in the sdk:10.0 container; fix all warnings (constitution II)
-- [ ] T026 [P] Update `CLAUDE.md` Active Technologies entry for 037 (new table M010, Finnhub client, retired Yahoo analyst source)
-- [ ] T027 Run full `quickstart.md` validation end-to-end on the dev stack (§3–§7); record outcomes in the PR description
+- [X] T025 [P] Zero-warning sweep: full `dotnet build FinanceSentry.sln` + entire unit suite in the sdk:10.0 container; fix all warnings (constitution II)
+- [X] T026 [P] Update `CLAUDE.md` Active Technologies entry for 037 (new table M010, Finnhub client, retired Yahoo analyst source)
+- [X] T027 Run full `quickstart.md` validation end-to-end on the dev stack (§3–§7); record outcomes in the PR description
 - [ ] T028 Deploy-time follow-ups (post-merge, VPS): add `FINNHUB_API_KEY` to `docker/.env.sops`; after ~1 week run quickstart §5 log check to confirm SC-001 (zero drift-class failures) — **Denys's call per deploy policy**
 
 ---

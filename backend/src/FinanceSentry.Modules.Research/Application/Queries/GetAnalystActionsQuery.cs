@@ -18,9 +18,13 @@ public record GetAnalystActionsQuery(
 
 public class GetAnalystActionsQueryHandler(
     IAnalystActionRepository actions,
-    IAnalystUniverseRepository universe)
+    IAnalystUniverseRepository universe,
+    IRecommendationTrendRepository recommendationTrends)
     : IQueryHandler<GetAnalystActionsQuery, AnalystActionsResult>
 {
+    /// <summary>Consensus months returned on a ticker-filtered query (feature 037, US3).</summary>
+    private const int TrendMonths = 6;
+
     public async Task<AnalystActionsResult> Handle(GetAnalystActionsQuery query, CancellationToken ct)
     {
         if (query.ReferenceId is { } referenceId)
@@ -40,12 +44,17 @@ public class GetAnalystActionsQueryHandler(
         var rows = await actions.QueryAsync(query.Ticker, query.Since, typeFilter, query.Limit, ct);
 
         var coverage = "marketWide";
+        IReadOnlyList<RecommendationTrendDto>? trends = null;
         if (!string.IsNullOrWhiteSpace(query.Ticker))
         {
             coverage = await universe.IsInUniverseAsync(query.Ticker, ct) ? "inUniverse" : "notInUniverse";
+            trends = (await recommendationTrends.GetLatestAsync(query.Ticker, TrendMonths, ct))
+                .Select(t => new RecommendationTrendDto(
+                    t.Period, t.StrongBuy, t.Buy, t.Hold, t.Sell, t.StrongSell, t.Source, t.IngestedAt))
+                .ToList();
         }
 
-        return new AnalystActionsResult(Project(rows), coverage, DateTimeOffset.UtcNow);
+        return new AnalystActionsResult(Project(rows), coverage, DateTimeOffset.UtcNow, trends);
     }
 
     private static List<AnalystActionDto> Project(IEnumerable<AnalystAction> rows)

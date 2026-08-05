@@ -33,17 +33,17 @@ And **no** `yahoo` analyst source lines and no crumb/404 warnings — that scrap
 ## 4. Verify the data
 
 ```sql
--- trends landed for the tracked set
-SELECT ticker, period, strong_buy, buy, hold, sell, strong_sell, ingested_at
+-- trends landed for the tracked set (EF columns are quoted PascalCase)
+SELECT "Ticker", "Period", "StrongBuy", "Buy", "Hold", "Sell", "StrongSell", "IngestedAt"
 FROM research.recommendation_trends
-ORDER BY ticker, period DESC LIMIT 30;
+ORDER BY "Ticker", "Period" DESC LIMIT 30;
 
 -- one row per ticker+month, restated months updated in place
-SELECT ticker, COUNT(*) AS months, MAX(period) AS latest
-FROM research.recommendation_trends GROUP BY ticker ORDER BY ticker;
+SELECT "Ticker", COUNT(*) AS months, MAX("Period") AS latest
+FROM research.recommendation_trends GROUP BY "Ticker" ORDER BY "Ticker";
 ```
 
-Migration check: `M010_RecommendationTrends` present in `research.__ef_migrations_history_research`.
+Migration check: `M010_RecommendationTrends` present in `public.__ef_migrations_history_research`.
 
 ## 5. Verify the retirement (US2 / SC-001)
 

@@ -4,6 +4,7 @@ using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Modules.Research.Application.Services;
 using FinanceSentry.Modules.Research.Domain;
 using FinanceSentry.Modules.Research.Domain.Repositories;
+using FinanceSentry.Modules.Research.Infrastructure.Sources;
 using Hangfire;
 using Microsoft.Extensions.Logging;
 
@@ -23,6 +24,8 @@ public sealed class AnalystActionsIngestionJob(
     IAlertGeneratorService alerts,
     IValuationDataService valuation,
     IValuationSnapshotRepository valuationSnapshots,
+    IRecommendationTrendsService recommendationTrends,
+    IRecommendationTrendRepository recommendationTrendRepository,
     ILogger<AnalystActionsIngestionJob> logger)
 {
     private const int AlertThreshold = 2;
@@ -44,6 +47,47 @@ public sealed class AnalystActionsIngestionJob(
         }
 
         await CaptureValuationSnapshotsAsync(members, ct);
+        await CaptureRecommendationTrendsAsync(members, ct);
+    }
+
+    // Structured monthly consensus for the tracked set (feature 037). Same isolation posture as the
+    // valuation capture: a Finnhub failure never fails the actions run; total failures strike the
+    // health counter under "finnhub" so the existing 2-strike alert path fires.
+    private async Task CaptureRecommendationTrendsAsync(
+        IReadOnlyList<AnalystUniverseMember> members, CancellationToken ct)
+    {
+        if (!recommendationTrends.IsConfigured)
+        {
+            logger.LogDebug("Recommendation trends capture skipped — no Finnhub API key configured");
+            return;
+        }
+
+        var tickers = members
+            .Where(m => ValuationCaptureReasons.Contains(m.Reason))
+            .Select(m => m.Ticker)
+            .Distinct()
+            .ToArray();
+
+        try
+        {
+            var trends = await recommendationTrends.FetchAsync(tickers, ct);
+            var inserted = await recommendationTrendRepository.UpsertAsync(trends, ct);
+            health.RecordSuccess(FinnhubRecommendationTrendsService.SourceName);
+            logger.LogInformation(
+                "Recommendation trends captured for {Covered}/{Total} tracked tickers ({Inserted} new months)",
+                trends.Select(t => t.Ticker).Distinct().Count(), tickers.Length, inserted);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            var consecutive = health.RecordFailure(FinnhubRecommendationTrendsService.SourceName);
+            logger.LogError(ex,
+                "Recommendation trends capture failed ({Consecutive} consecutive)", consecutive);
+
+            if (consecutive >= AlertThreshold)
+            {
+                await RaiseFailureAlertAsync(FinnhubRecommendationTrendsService.SourceName, ex.Message, ct);
+            }
+        }
     }
 
     // Persist a current-metrics valuation snapshot for each holdings/watchlist/candidate ticker so the
