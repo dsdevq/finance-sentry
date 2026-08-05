@@ -173,3 +173,25 @@ internal sealed class FakeValuationSnapshotRepository : IValuationSnapshotReposi
         => Task.FromResult<IReadOnlyList<ValuationSnapshot>>(
             Added.Where(s => s.Ticker == ticker.Trim().ToUpperInvariant()).ToList());
 }
+
+internal sealed class FakeRecommendationTrendRepository : IRecommendationTrendRepository
+{
+    public List<RecommendationTrend> Trends { get; } = [];
+
+    public Task<int> UpsertAsync(IReadOnlyList<RecommendationTrend> trends, CancellationToken ct = default)
+    {
+        Trends.AddRange(trends);
+        return Task.FromResult(trends.Count);
+    }
+
+    public Task<IReadOnlyList<RecommendationTrend>> GetLatestAsync(
+        string ticker, int months, CancellationToken ct = default)
+    {
+        var upper = ticker.Trim().ToUpperInvariant();
+        return Task.FromResult<IReadOnlyList<RecommendationTrend>>(Trends
+            .Where(t => t.Ticker == upper)
+            .OrderByDescending(t => t.Period)
+            .Take(months)
+            .ToList());
+    }
+}

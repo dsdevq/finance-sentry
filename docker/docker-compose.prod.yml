@@ -40,6 +40,7 @@ services:
       TrueLayer__ClientSecret: ${TRUELAYER_CLIENT_SECRET:-}
       TrueLayer__FrontendRedirectBase: ${TRUELAYER_FRONTEND_REDIRECT_BASE:-https://lifekit-vps.tail1cb676.ts.net:4200}
       TrueLayer__CallbackPath: /api/v1/accounts/truelayer/callback
+      AnalystSources__Finnhub__ApiKey: ${FINNHUB_API_KEY:-}
       # Public base of the API itself — used to build the OAuth redirect_uri TrueLayer sends the
       # browser back to after consent. This MUST exactly match a redirect URI registered in the
       # TrueLayer console, or consent is rejected. Default is the console-registered

@@ -34,6 +34,8 @@ public class ResearchDbContext(DbContextOptions<ResearchDbContext> options) : Db
 
     public DbSet<ValuationSnapshot> ValuationSnapshots { get; set; } = null!;
 
+    public DbSet<RecommendationTrend> RecommendationTrends { get; set; } = null!;
+
     public DbSet<ResearchDocument> ResearchDocuments { get; set; } = null!;
 
     public DbSet<ResearchChunk> ResearchChunks { get; set; } = null!;
@@ -320,6 +322,22 @@ public class ResearchDbContext(DbContextOptions<ResearchDbContext> options) : Db
         vsb.Property(x => x.ConsensusTarget).HasColumnType("numeric(18,4)");
         vsb.Property(x => x.IsStale).IsRequired();
         vsb.HasIndex(x => new { x.Ticker, x.CapturedAt }).HasDatabaseName("idx_valuation_snapshots_ticker_captured");
+
+        var rtb = modelBuilder.Entity<RecommendationTrend>();
+        rtb.ToTable("recommendation_trends");
+        rtb.HasKey(x => x.Id);
+        rtb.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
+        rtb.Property(x => x.Ticker).IsRequired().HasMaxLength(12);
+        rtb.Property(x => x.Period).IsRequired();
+        rtb.Property(x => x.StrongBuy).IsRequired();
+        rtb.Property(x => x.Buy).IsRequired();
+        rtb.Property(x => x.Hold).IsRequired();
+        rtb.Property(x => x.Sell).IsRequired();
+        rtb.Property(x => x.StrongSell).IsRequired();
+        rtb.Property(x => x.Source).IsRequired().HasMaxLength(40);
+        rtb.Property(x => x.IngestedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+        rtb.HasIndex(x => new { x.Ticker, x.Period })
+            .IsUnique().HasDatabaseName("idx_recommendation_trends_ticker_period");
 
         var rdb = modelBuilder.Entity<ResearchDocument>();
         rdb.ToTable("research_documents");
