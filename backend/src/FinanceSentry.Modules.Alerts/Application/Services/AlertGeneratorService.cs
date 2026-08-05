@@ -19,6 +19,9 @@ public class AlertGeneratorService(IAlertRepository alerts) : IAlertGeneratorSer
     // Reminders repeat only every 3 days while inside the pre-expiry window, so the detector can run
     // daily without spamming the same connection.
     private static readonly TimeSpan ConsentExpiringSilenceWindow = TimeSpan.FromDays(3);
+    // Backstop only — the failure filter already guarantees one call per streak. Short enough that a
+    // genuine success-then-new-streak re-alerts, long enough to absorb an accidental double-call.
+    private static readonly TimeSpan JobFailureSilenceWindow = TimeSpan.FromMinutes(15);
 
     private readonly IAlertRepository _alerts = alerts;
 
@@ -273,6 +276,30 @@ public class AlertGeneratorService(IAlertRepository alerts) : IAlertGeneratorSer
             Message = $"Your {providerName} open-banking consent expires {window} ({expiresAt:yyyy-MM-dd}). Reconnect it to keep balances and transactions syncing.",
             ReferenceId = referenceId,
             ReferenceLabel = providerName,
+        }, ct);
+    }
+
+    public async Task GenerateJobFailureAlertAsync(
+        Guid userId, Guid referenceId, string jobName, int consecutiveCount, string? lastError,
+        CancellationToken ct = default)
+    {
+        // No FindActive gate here: each streak should produce a fresh alert row (a fresh Telegram
+        // message). The failure filter guarantees one call per streak; HasRecent is a light backstop.
+        var quietSince = DateTimeOffset.UtcNow - JobFailureSilenceWindow;
+        if (await _alerts.HasRecentAsync(userId, AlertType.JobFailure, referenceId, jobName, quietSince, ct))
+            return;
+
+        var detail = string.IsNullOrWhiteSpace(lastError) ? string.Empty : $" Last error: {lastError}";
+
+        await _alerts.AddAsync(new Alert
+        {
+            UserId = userId,
+            Type = AlertType.JobFailure,
+            Severity = AlertSeverity.Error,
+            Title = $"Job failing: {jobName}",
+            Message = $"Scheduled job '{jobName}' has failed {consecutiveCount} times in a row.{detail}",
+            ReferenceId = referenceId,
+            ReferenceLabel = jobName,
         }, ct);
     }
 

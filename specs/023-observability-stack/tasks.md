@@ -78,13 +78,13 @@ description: "Task list for Observability Stack (023)"
 **Goal**: One Telegram alert when a scheduled job hits N consecutive failures; clears on next success. Closes the silent-outage gap (the 636-consecutive-failure incident). Reuses the Alerts→Companion→Telegram path from `ConsentExpiring` (#345).
 **Independent Test**: Force N consecutive failures → exactly one Telegram alert naming job + count; further failures → no dup; a success then failure → re-alerts; transient failure doesn't count.
 
-- [ ] T025 [P] [US4] Add `AlertType.JobFailure` (`backend/src/FinanceSentry.Modules.Alerts/Domain/AlertType.cs`) + `GenerateJobFailureAlertAsync(userId, referenceId, jobName, consecutiveCount, lastError)` in `Core/Interfaces/IAlertGeneratorService.cs` and `AlertGeneratorService.cs` with a `JobFailureSilenceWindow`.
-- [ ] T026 [P] [US4] Append `CompanionEventKind.OperationalFailure` (`…/Companion/Domain/CompanionEventKind.cs`) + map `"JobFailure"` in `MaterialityPolicy.ClassifyAlert`; carry elevated criticality so it surfaces under quieter modes.
-- [ ] T027 [US4] `Observability/Hangfire/ConsecutiveFailureAlertFilter.cs` (`IElectStateFilter`): durable per-job consecutive-failure counter, exclude transient errors (reuse the sync transient set), raise one `JobFailure` alert on the Nth, reset on `Succeeded`; fire-and-forget so dispatch failure can't break the job. (FR-009)
-- [ ] T028 [US4] Register the filter in Hangfire config; make N configurable (default 3) via settings.
-- [ ] T029 [P] [US4] Unit tests in `backend/tests/FinanceSentry.Tests.Unit/Observability/ConsecutiveFailureAlertFilterTests.cs`: Nth→one alert with count; 1..N-1→none; success resets then re-alerts; transient error no-increment; generator throw doesn't propagate.
-- [ ] T030 [US4] Add the new `IAlertGeneratorService` method to the hand-written fakes (`Research.Tests` `OpportunityFakes.cs`, `RunThesisMonitorHandlerTests.cs`) so the solution compiles.
-- [ ] T031 [US4] Validate US4 per `quickstart.md` (force N failures → single Telegram; success clears).
+- [X] T025 [P] [US4] Add `AlertType.JobFailure` (`backend/src/FinanceSentry.Modules.Alerts/Domain/AlertType.cs`) + `GenerateJobFailureAlertAsync(userId, referenceId, jobName, consecutiveCount, lastError)` in `Core/Interfaces/IAlertGeneratorService.cs` and `AlertGeneratorService.cs` with a `JobFailureSilenceWindow`.
+- [X] T026 [P] [US4] Append `CompanionEventKind.OperationalFailure` (`…/Companion/Domain/CompanionEventKind.cs`) + map `"JobFailure"` in `MaterialityPolicy.ClassifyAlert`; carry elevated criticality so it surfaces under quieter modes.
+- [X] T027 [US4] `Observability/Hangfire/ConsecutiveFailureAlertFilter.cs` (`IElectStateFilter`): durable per-job consecutive-failure counter, exclude transient errors (reuse the sync transient set), raise one `JobFailure` alert on the Nth, reset on `Succeeded`; fire-and-forget so dispatch failure can't break the job. (FR-009)
+- [X] T028 [US4] Register the filter in Hangfire config; make N configurable (default 3) via settings.
+- [X] T029 [P] [US4] Unit tests in `backend/tests/FinanceSentry.Tests.Unit/Observability/ConsecutiveFailureAlertFilterTests.cs`: Nth→one alert with count; 1..N-1→none; success resets then re-alerts; transient error no-increment; generator throw doesn't propagate.
+- [X] T030 [US4] Add the new `IAlertGeneratorService` method to the hand-written fakes (`Research.Tests` `OpportunityFakes.cs`, `RunThesisMonitorHandlerTests.cs`) so the solution compiles.
+- [X] T031 [US4] Validate US4 per `quickstart.md` (force N failures → single Telegram; success clears).
 
 **Checkpoint**: silent-failure gap closed; US1/US2/US4 all independently usable.
 

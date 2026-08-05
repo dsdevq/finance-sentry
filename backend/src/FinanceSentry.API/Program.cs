@@ -144,6 +144,12 @@ app.MapHealthChecks("/api/v1/health/ready", new HealthCheckOptions
 GlobalJobFilters.Filters.Add(
     new DashboardObservability.JobMetricsFilter(app.Services.GetRequiredService<JobMetrics>()));
 
+// Alert on N consecutive job failures → Telegram (US4/FR-009); N configurable, default 3.
+GlobalJobFilters.Filters.Add(new DashboardObservability.ConsecutiveFailureAlertFilter(
+    app.Services,
+    new DashboardObservability.HangfireJobFailureStreakStore(),
+    app.Configuration.GetValue("Observability:JobFailureAlertThreshold", 3)));
+
 app.RegisterAllModuleJobs();
 
 // Live FX rates: refresh daily, and once immediately so we leave the hardcoded
