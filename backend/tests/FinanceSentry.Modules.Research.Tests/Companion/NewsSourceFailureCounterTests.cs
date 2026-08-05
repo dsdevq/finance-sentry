@@ -16,12 +16,40 @@ public sealed class NewsSourceFailureCounterTests
     {
         var source = new NewsSource();
 
-        NewsSourceHealthTracker.RecordFailure(source, "timeout").Should().BeFalse();
+        NewsSourceHealthTracker.RecordFailure(source, "timeout").Should().Be(NewsSourceFailureOutcome.None);
         source.ConsecutiveFailures.Should().Be(1);
 
-        NewsSourceHealthTracker.RecordFailure(source, "timeout again").Should().BeTrue();
+        NewsSourceHealthTracker.RecordFailure(source, "timeout again").Should().Be(NewsSourceFailureOutcome.Alert);
         source.ConsecutiveFailures.Should().Be(2);
         source.LastFailureReason.Should().Be("timeout again");
+    }
+
+    [Fact]
+    public void Alert_fires_only_once_not_every_subsequent_failure()
+    {
+        var source = new NewsSource();
+
+        NewsSourceHealthTracker.RecordFailure(source, "1");
+        NewsSourceHealthTracker.RecordFailure(source, "2").Should().Be(NewsSourceFailureOutcome.Alert);
+        // Failures past the alert threshold must not re-alert every run (this was the 600+ alert bug).
+        NewsSourceHealthTracker.RecordFailure(source, "3").Should().Be(NewsSourceFailureOutcome.None);
+        NewsSourceHealthTracker.RecordFailure(source, "4").Should().Be(NewsSourceFailureOutcome.None);
+    }
+
+    [Fact]
+    public void Sustained_failures_auto_disable_the_source_once()
+    {
+        var source = new NewsSource();
+
+        NewsSourceFailureOutcome? disableOutcome = null;
+        for (var i = 0; i < NewsSourceHealthTracker.DisableThreshold; i++)
+        {
+            disableOutcome = NewsSourceHealthTracker.RecordFailure(source, $"fail {i}");
+        }
+
+        disableOutcome.Should().Be(NewsSourceFailureOutcome.Disable);
+        source.Enabled.Should().BeFalse("a source that fails to the disable threshold is retired");
+        source.ConsecutiveFailures.Should().Be(NewsSourceHealthTracker.DisableThreshold);
     }
 
     [Fact]
@@ -41,8 +69,8 @@ public sealed class NewsSourceFailureCounterTests
     {
         var source = new NewsSource();
 
-        NewsSourceHealthTracker.RecordFailure(source, "one").Should().BeFalse();
+        NewsSourceHealthTracker.RecordFailure(source, "one").Should().Be(NewsSourceFailureOutcome.None);
         NewsSourceHealthTracker.RecordSuccess(source);
-        NewsSourceHealthTracker.RecordFailure(source, "two").Should().BeFalse("the counter reset on success");
+        NewsSourceHealthTracker.RecordFailure(source, "two").Should().Be(NewsSourceFailureOutcome.None, "the counter reset on success");
     }
 }

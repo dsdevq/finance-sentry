@@ -335,12 +335,39 @@ public class ScheduledSyncServiceTests
 
         syncJobRepo.Setup(r => r.HasRunningJobAsync(AccountId, default)).ReturnsAsync(true);
 
-        var coordinator = new TransactionSyncCoordinator(syncJobRepo.Object, syncService.Object);
+        var coordinator = new TransactionSyncCoordinator(
+            syncJobRepo.Object, new Mock<IBankAccountRepository>().Object, syncService.Object);
 
         var result = await coordinator.TriggerScheduledSyncAsync(AccountId);
 
         result.Success.Should().BeFalse();
         result.ErrorCode.Should().Be("SYNC_IN_PROGRESS");
         syncService.Verify(s => s.PerformFullSyncAsync(It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    // A consent-expired account (reauth_required) must be skipped by the recurring scheduler so it stops
+    // failing every cycle — the loop that logged errorCode=UNKNOWN ~48x/day for an expired TrueLayer consent.
+    [Fact]
+    public async Task TriggerScheduledSyncAsync_ReauthRequiredAccount_SkipsWithoutSyncing()
+    {
+        var syncJobRepo = new Mock<ISyncJobRepository>();
+        var accountRepo = new Mock<IBankAccountRepository>();
+        var syncService = new Mock<IScheduledSyncService>();
+
+        syncJobRepo.Setup(r => r.HasRunningJobAsync(AccountId, default)).ReturnsAsync(false);
+        var account = new BankAccount { Provider = "truelayer" };
+        account.BeginSync();
+        account.MarkReauthRequired();
+        accountRepo.Setup(r => r.GetByIdAsync(AccountId, It.IsAny<CancellationToken>())).ReturnsAsync(account);
+
+        var coordinator = new TransactionSyncCoordinator(
+            syncJobRepo.Object, accountRepo.Object, syncService.Object);
+
+        var result = await coordinator.TriggerScheduledSyncAsync(AccountId);
+
+        result.ErrorCode.Should().Be("ITEM_LOGIN_REQUIRED");
+        syncService.Verify(
+            s => s.PerformFullSyncAsync(It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 }

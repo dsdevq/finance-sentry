@@ -66,6 +66,59 @@ public sealed class TrendForcePageContractTests
         articles[1].Url.Should().Be("https://www.trendforce.com/presscenter/news/20260720-99999.html");
     }
 
+    // Current live markup (2026-08): the press list restyled from .list-item to
+    // .advs-box.niche-box-post, with the date rendered inside <p class="bd-month">.
+    private const string AdvsBoxFixture = """
+    <html><body>
+      <div class="press-list-wrapper">
+        <div class="advs-box advs-box-top-icon-img niche-box-post boxed-inverse">
+          <div class="block-infos"><div class="block-data"><p class="bd-day"></p><p class="bd-month">4 August 2026</p></div></div>
+          <a class="img-box" href="/presscenter/news/20260804-13166.html"><img src="/images/news-01.jpg" alt=""></a>
+          <div class="advs-box-content">
+            <h2><a class="text-m text-ellipsis-2" href="/presscenter/news/20260804-13166.html"><strong>DRAM Supply to Remain Tight in 2027, Prompting NVIDIA to Lower HBM Configurations</strong></a></h2>
+            <p class="text-m">Memory supply stays constrained through 2027 as HBM absorbs wafer capacity.</p>
+          </div>
+        </div>
+      </div>
+    </body></html>
+    """;
+
+    // Classes we've never seen, but the /presscenter/news/<date>-<id>.html permalink is unchanged. The
+    // parser must recover the article from the href pattern rather than throwing on class drift.
+    private const string DriftedClassesFixture = """
+    <html><body>
+      <section class="brand-new-layout-v3">
+        <div class="whatever-card">
+          <h3 class="totally-renamed"><a href="/presscenter/news/20260801-10001.html">Server DRAM contract prices climb 15% QoQ</a></h3>
+          <span class="posted">1 August 2026</span>
+        </div>
+      </section>
+      <nav><a href="/presscenter/news/Semiconductors">Semiconductors</a></nav>
+    </body></html>
+    """;
+
+    [Fact]
+    public async Task Parse_extracts_current_advs_box_shape()
+    {
+        var articles = await TrendForcePageSource.ParseAsync(AdvsBoxFixture, PageUrl);
+
+        articles.Should().ContainSingle("the hero/list duplicate for one permalink must collapse by URL");
+        articles[0].Title.Should().Contain("DRAM Supply to Remain Tight");
+        articles[0].Url.Should().Be("https://www.trendforce.com/presscenter/news/20260804-13166.html");
+        articles[0].PublishedAt.Should().Be(DateTimeOffset.Parse("4 August 2026"));
+        articles[0].Summary.Should().Contain("HBM absorbs wafer capacity");
+    }
+
+    [Fact]
+    public async Task Parse_recovers_articles_from_href_pattern_when_classes_drift()
+    {
+        var articles = await TrendForcePageSource.ParseAsync(DriftedClassesFixture, PageUrl);
+
+        articles.Should().ContainSingle("only the permalink matches — the category nav link must be ignored");
+        articles[0].Title.Should().Contain("Server DRAM contract prices");
+        articles[0].Url.Should().Be("https://www.trendforce.com/presscenter/news/20260801-10001.html");
+    }
+
     [Fact]
     public async Task Parse_throws_when_article_list_is_missing()
     {

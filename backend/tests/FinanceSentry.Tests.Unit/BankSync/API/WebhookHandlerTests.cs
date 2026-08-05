@@ -88,7 +88,9 @@ public class WebhookHandlerTests
         syncJobRepo.Setup(r => r.HasRunningJobAsync(accountId, default)).ReturnsAsync(true);
 
         var coordinator = new Modules.BankSync.Application.Services.TransactionSyncCoordinator(
-            syncJobRepo.Object, syncService.Object);
+            syncJobRepo.Object,
+            new Mock<Modules.BankSync.Domain.Repositories.IBankAccountRepository>().Object,
+            syncService.Object);
 
         var result = await coordinator.TriggerWebhookSyncAsync(accountId);
 
@@ -111,7 +113,9 @@ public class WebhookHandlerTests
                    .ReturnsAsync(new Modules.BankSync.Application.Services.SyncResult(true, 5, 3, null, null));
 
         var coordinator = new Modules.BankSync.Application.Services.TransactionSyncCoordinator(
-            syncJobRepo.Object, syncService.Object);
+            syncJobRepo.Object,
+            new Mock<Modules.BankSync.Domain.Repositories.IBankAccountRepository>().Object,
+            syncService.Object);
 
         var result = await coordinator.TriggerWebhookSyncAsync(accountId);
 
@@ -131,7 +135,9 @@ public class WebhookHandlerTests
                    .ReturnsAsync(new Modules.BankSync.Application.Services.SyncResult(true, 10, 10, null, null));
 
         var coordinator = new Modules.BankSync.Application.Services.TransactionSyncCoordinator(
-            syncJobRepo.Object, syncService.Object);
+            syncJobRepo.Object,
+            new Mock<Modules.BankSync.Domain.Repositories.IBankAccountRepository>().Object,
+            syncService.Object);
 
         var result = await coordinator.TriggerManualSyncAsync(accountId);
 

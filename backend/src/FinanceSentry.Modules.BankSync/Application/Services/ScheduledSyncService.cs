@@ -385,6 +385,17 @@ public class ScheduledSyncService(
             return null;
         }
 
+        if (provider == "truelayer")
+        {
+            // Expired/revoked consent is a re-consent condition, not a transient failure. Map it to the
+            // canonical reauth code so the account is flagged for reconnection and the scheduler stops
+            // retrying it every cycle (instead of logging errorCode=UNKNOWN forever).
+            if (message.Contains("invalid_grant", StringComparison.OrdinalIgnoreCase)
+                || message.Contains("consent has expired", StringComparison.OrdinalIgnoreCase)
+                || message.Contains("has been revoked", StringComparison.OrdinalIgnoreCase))
+                return "ITEM_LOGIN_REQUIRED";
+        }
+
         string[] knownCodes =
         [
             "ITEM_LOGIN_REQUIRED",
