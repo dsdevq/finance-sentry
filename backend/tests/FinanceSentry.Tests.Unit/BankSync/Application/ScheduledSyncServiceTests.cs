@@ -370,4 +370,73 @@ public class ScheduledSyncServiceTests
             s => s.PerformFullSyncAsync(It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
+
+    // Regression: TrueLayer rotates the refresh_token on every refresh. The new token MUST be persisted
+    // before the transaction fetch, so a mid-sync failure can't strand a consumed token and brick the
+    // connection (the invalid_grant root cause). Here the provider sync throws — the rotated token must
+    // still have been saved.
+    [Fact]
+    public async Task SyncTrueLayer_PersistsRotatedRefreshToken_EvenWhenSyncFails()
+    {
+        var accountRepo = new Mock<IBankAccountRepository>();
+        var txRepo = new Mock<ITransactionRepository>();
+        var jobRepo = new Mock<ISyncJobRepository>();
+        var credRepo = new Mock<IEncryptedCredentialRepository>();
+        var encryption = new Mock<ICredentialEncryptionService>();
+        var plaid = new Mock<IPlaidAdapterInterface>();
+        var dedup = new Mock<ITransactionDeduplicationService>();
+        var logger = new Mock<IBankSyncLogger>();
+        var providerFactory = new Mock<IBankProviderFactory>();
+        var monobankCreds = new Mock<IMonobankCredentialRepository>();
+        var truelayerConnections = new Mock<ITrueLayerConnectionRepository>();
+        var truelayerClient = new Mock<FinanceSentry.Modules.BankSync.Infrastructure.TrueLayer.ITrueLayerClient>();
+        var balanceCache = new FinanceSentry.Modules.BankSync.Infrastructure.Monobank.MonobankBalanceCache();
+        var alertGen = new Mock<FinanceSentry.Core.Interfaces.IAlertGeneratorService>();
+        var userPrefs = new Mock<FinanceSentry.Core.Interfaces.IUserAlertPreferencesReader>();
+
+        var connection = new TrueLayerConnection(UserId, "ob-natwest", "NatWest", "ref-1");
+        connection.SetRefreshToken([1], [2], [3]);
+        var account = new BankAccount
+        {
+            UserId = UserId,
+            Provider = "truelayer",
+            ExternalAccountId = "tl-acc-1",
+            TrueLayerConnectionId = connection.Id,
+            SyncStatus = "active",
+        };
+
+        accountRepo.Setup(r => r.GetByIdAsync(account.Id, It.IsAny<CancellationToken>())).ReturnsAsync(account);
+        truelayerConnections.Setup(r => r.GetByIdAsync(connection.Id, It.IsAny<CancellationToken>())).ReturnsAsync(connection);
+        encryption.Setup(e => e.Decrypt(It.IsAny<byte[]>(), It.IsAny<byte[]>(), It.IsAny<byte[]>(), It.IsAny<int>()))
+                  .Returns("old-refresh");
+        encryption.Setup(e => e.Encrypt("new-refresh")).Returns(new EncryptionResult([9], [8], [7], 1));
+        truelayerClient
+            .Setup(c => c.RefreshAccessTokenAsync("old-refresh", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FinanceSentry.Modules.BankSync.Infrastructure.TrueLayer.TrueLayerTokenSet("AT", "new-refresh", 3600));
+
+        var provider = new Mock<IBankProvider>();
+        provider
+            .Setup(p => p.SyncTransactionsAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<Guid>(),
+                It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("mid-sync failure"));
+        providerFactory.Setup(f => f.Resolve("truelayer")).Returns(provider.Object);
+
+        var sut = new ScheduledSyncService(
+            accountRepo.Object, txRepo.Object, jobRepo.Object, credRepo.Object,
+            encryption.Object, plaid.Object, dedup.Object, logger.Object,
+            providerFactory.Object, monobankCreds.Object,
+            truelayerConnections.Object, truelayerClient.Object,
+            balanceCache, alertGen.Object, userPrefs.Object);
+
+        var result = await sut.PerformFullSyncAsync(account.Id);
+
+        result.Success.Should().BeFalse("the transaction fetch threw");
+        truelayerConnections.Verify(
+            r => r.UpdateAsync(
+                It.Is<TrueLayerConnection>(c => c.EncryptedRefreshToken.Length == 1 && c.EncryptedRefreshToken[0] == 9),
+                It.IsAny<CancellationToken>()),
+            Times.AtLeastOnce,
+            "the rotated refresh token must be persisted before the failing transaction fetch");
+    }
 }
