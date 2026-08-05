@@ -255,6 +255,12 @@ public interface ITrueLayerConnectionRepository
     Task<TrueLayerConnection?> GetByReferenceAsync(string reference, CancellationToken cancellationToken = default);
     Task<TrueLayerConnection?> GetByUserAndProviderAsync(Guid userId, string providerId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<TrueLayerConnection>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// LINKED connections whose consent expires on/before <paramref name="threshold"/> (and hasn't
+    /// already lapsed) — the pre-expiry reminder detector uses this to nudge the user to reconnect.
+    /// </summary>
+    Task<IReadOnlyList<TrueLayerConnection>> GetLinkedExpiringBeforeAsync(DateTime threshold, CancellationToken cancellationToken = default);
     Task<TrueLayerConnection> UpdateAsync(TrueLayerConnection connection, CancellationToken cancellationToken = default);
     Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
 }

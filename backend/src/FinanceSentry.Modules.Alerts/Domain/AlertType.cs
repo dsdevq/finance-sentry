@@ -9,4 +9,5 @@ public static class AlertType
     public const string MarketStructure = "MarketStructure";
     public const string PolicyViolation = "PolicyViolation";
     public const string Opportunity = "Opportunity";
+    public const string ConsentExpiring = "ConsentExpiring";
 }

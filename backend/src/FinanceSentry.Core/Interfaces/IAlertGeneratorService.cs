@@ -103,4 +103,16 @@ public interface IAlertGeneratorService
         string ticker,
         string reason,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Raises a heads-up Alert that a bank connection's consent is about to expire, so the user can
+    /// reconnect proactively instead of after data goes stale. <paramref name="referenceId"/> is the
+    /// connection id so a daily detector doesn't spam duplicates within the silence window.
+    /// </summary>
+    Task GenerateConsentExpiringAlertAsync(
+        Guid userId,
+        Guid referenceId,
+        string providerName,
+        DateTime expiresAt,
+        CancellationToken ct = default);
 }

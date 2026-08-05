@@ -167,6 +167,7 @@ internal sealed class FakeOpportunityAlertGenerator : IAlertGeneratorService
         return Task.CompletedTask;
     }
 
+    public Task GenerateConsentExpiringAlertAsync(Guid userId, Guid referenceId, string providerName, DateTime expiresAt, CancellationToken ct = default) => Task.CompletedTask;
     public Task GenerateLowBalanceAlertAsync(Guid userId, Guid accountId, string accountName, decimal balance, decimal threshold, CancellationToken ct = default) => Task.CompletedTask;
     public Task ResolveLowBalanceAlertAsync(Guid userId, Guid accountId, CancellationToken ct = default) => Task.CompletedTask;
     public Task GenerateSyncFailureAlertAsync(Guid userId, string provider, Guid? accountId, string? accountName, string? errorCode, CancellationToken ct = default) => Task.CompletedTask;

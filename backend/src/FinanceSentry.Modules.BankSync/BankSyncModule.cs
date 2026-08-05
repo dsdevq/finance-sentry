@@ -68,6 +68,11 @@ public static class BankSyncModule
                 job => job.ReapAsync(),
                 "*/15 * * * *");
 
+            mgr.AddOrUpdate<ConsentExpiryReminderJob>(
+                "consent-expiry-reminder",
+                job => job.ExecuteAsync(CancellationToken.None),
+                Cron.Daily());
+
             // Startup sweep: any job still "running"/account still "syncing" after a restart was
             // orphaned mid-sync and would otherwise deadlock the scheduler — reap them all first,
             // then (re)schedule the active accounts.
@@ -154,6 +159,7 @@ public static class BankSyncModule
         services.AddScoped<UnusualSpendDetectionJob>();
         services.AddScoped<SubscriptionDetectionJob>();
         services.AddScoped<StaleSyncReaperJob>();
+        services.AddScoped<ConsentExpiryReminderJob>();
 
         services.AddSingleton<IFeatureFlagService, FeatureFlagService>();
         services.AddSingleton<IAuditLogService, AuditLogService>();

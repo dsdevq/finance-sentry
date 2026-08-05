@@ -31,7 +31,8 @@ public interface IScheduledSyncService
     Task<SyncResult> PerformFullSyncAsync(
         Guid accountId,
         bool webhookTriggered = false,
-        CancellationToken ct = default);
+        CancellationToken ct = default,
+        string? preAcquiredTrueLayerAccessToken = null);
 }
 
 /// <inheritdoc />
@@ -83,7 +84,8 @@ public class ScheduledSyncService(
     public async Task<SyncResult> PerformFullSyncAsync(
           Guid accountId,
           bool webhookTriggered = false,
-          CancellationToken ct = default)
+          CancellationToken ct = default,
+          string? preAcquiredTrueLayerAccessToken = null)
     {
         var startedAt = DateTime.UtcNow;
 
@@ -111,7 +113,7 @@ public class ScheduledSyncService(
             if (account.Provider == "monobank")
                 result = await SyncMonobankAsync(account, job, startedAt, ct);
             else if (account.Provider == "truelayer")
-                result = await SyncTrueLayerAsync(account, job, startedAt, ct);
+                result = await SyncTrueLayerAsync(account, job, startedAt, ct, preAcquiredTrueLayerAccessToken);
             else
                 result = await SyncPlaidAsync(account, job, webhookTriggered, startedAt, ct);
 
@@ -317,13 +319,18 @@ public class ScheduledSyncService(
     private static readonly ConcurrentDictionary<Guid, SemaphoreSlim> TrueLayerRefreshLocks = new();
 
     private async Task<SyncResult> SyncTrueLayerAsync(
-        Domain.BankAccount account, SyncJob job, DateTime startedAt, CancellationToken ct)
+        Domain.BankAccount account, SyncJob job, DateTime startedAt, CancellationToken ct,
+        string? preAcquiredAccessToken = null)
     {
         if (account.TrueLayerConnectionId is null)
             throw new InvalidOperationException($"TrueLayer account {account.Id} has no connection id.");
 
         var connectionId = account.TrueLayerConnectionId.Value;
-        var accessToken = await AcquireTrueLayerAccessTokenAsync(connectionId, job, account.Id, ct);
+        // At reconnect the caller passes the freshly-exchanged access token, which still carries an
+        // active SCA session — the only token that can pull transaction history from strict banks
+        // (e.g. AIB). A refreshed background token cannot, so fall back to it only when none given.
+        var accessToken = preAcquiredAccessToken
+            ?? await AcquireTrueLayerAccessTokenAsync(connectionId, job, account.Id, ct);
 
         var connection = await _truelayerConnections.GetByIdAsync(connectionId, ct)
             ?? throw new InvalidOperationException($"TrueLayer connection {connectionId} not found.");
