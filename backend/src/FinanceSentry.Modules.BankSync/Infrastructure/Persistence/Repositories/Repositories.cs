@@ -140,6 +140,19 @@ public class TransactionRepository(BankSyncDbContext context) : ITransactionRepo
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyCollection<string>> GetAllUniqueHashesByAccountIdAsync(Guid accountId, CancellationToken cancellationToken = default)
+    {
+        // IgnoreQueryFilters() bypasses the global IsActive filter so soft-deleted rows are
+        // included. Their hashes still occupy the unique index (AccountId, UniqueHash); leaving
+        // them out of the dedup set lets a re-synced transaction re-insert and violate the
+        // constraint, which poisons the whole SaveChanges batch.
+        return await _context.Transactions
+            .IgnoreQueryFilters()
+            .Where(t => t.AccountId == accountId)
+            .Select(t => t.UniqueHash)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<IEnumerable<Transaction>> GetByAccountIdAsync(Guid accountId, int skip, int take, CancellationToken cancellationToken = default)
     {
         return await _context.Transactions

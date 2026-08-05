@@ -59,4 +59,21 @@ public class TrueLayerConnection : Entity
         Status = "EXPIRED";
         UpdatedAt = DateTime.UtcNow;
     }
+
+    /// <summary>
+    /// Reuses this connection row for a reconnect/reauth flow: assigns a fresh OAuth reference
+    /// and returns the connection to a pending ("CREATED") state so <c>FinalizeTrueLayerConnect</c>
+    /// will exchange the new authorization code. Linked accounts stay attached, and the existing
+    /// refresh token is left in place until finalize swaps in the new one — so an <b>abandoned</b>
+    /// consent does not sever a still-working connection.
+    /// </summary>
+    public void BeginReauth(string newReference)
+    {
+        if (string.IsNullOrWhiteSpace(newReference))
+            throw new ArgumentException("Reference cannot be empty.", nameof(newReference));
+
+        Reference = newReference;
+        Status = "CREATED";
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

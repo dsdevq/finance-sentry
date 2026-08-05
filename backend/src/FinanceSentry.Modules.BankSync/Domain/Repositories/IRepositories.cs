@@ -101,6 +101,14 @@ public interface ITransactionRepository
     Task<bool> ExistsByUniqueHashAsync(Guid accountId, string uniqueHash, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// All UniqueHash values for the account, <b>including soft-deleted (IsActive=false) rows</b>.
+    /// Bypasses the global IsActive query filter so dedup catches hashes that still occupy the
+    /// unique index (AccountId, UniqueHash); otherwise re-syncing a previously soft-deleted
+    /// transaction violates the constraint and poisons the whole batch.
+    /// </summary>
+    Task<IReadOnlyCollection<string>> GetAllUniqueHashesByAccountIdAsync(Guid accountId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Get transaction count for an account.
     /// </summary>
     Task<int> CountByAccountIdAsync(Guid accountId, CancellationToken cancellationToken = default);

@@ -24,15 +24,6 @@ public class BeginTrueLayerConnectCommandHandler(
     public async Task<BeginTrueLayerConnectResult> Handle(
         BeginTrueLayerConnectCommand request, CancellationToken cancellationToken)
     {
-        var existing = await connections.GetByUserAndProviderAsync(
-            request.UserId, request.ProviderId, cancellationToken);
-
-        if (existing != null && existing.Status == "LINKED")
-            throw new TrueLayerException(
-                "TRUELAYER_PROVIDER_ALREADY_CONNECTED",
-                "This bank is already connected. Disconnect it before reconnecting.",
-                409);
-
         var callbackPath = configuration["TrueLayer:CallbackPath"]
             ?? "/api/v1/accounts/truelayer/callback";
         var publicApiBase = configuration["PublicApiBaseUrl"]
@@ -43,16 +34,30 @@ public class BeginTrueLayerConnectCommandHandler(
 
         var link = client.BuildAuthLink(request.ProviderId, reference, redirectUri);
 
+        // A connection for this provider may already exist — either healthy (accidental
+        // re-connect) or in a reauth_required state after its refresh token died. In both cases
+        // we reuse the existing row rather than blocking or deleting it: keeping the same
+        // connection id means the linked accounts stay attached and get healed in place on
+        // finalize, and leaving the old refresh token intact means an abandoned consent does not
+        // sever a still-working connection. Only when no connection exists do we create a new one.
+        var existing = await connections.GetByUserAndProviderAsync(
+            request.UserId, request.ProviderId, cancellationToken);
+
         if (existing != null)
-            await connections.DeleteAsync(existing.Id, cancellationToken);
+        {
+            existing.BeginReauth(reference);
+            await connections.UpdateAsync(existing, cancellationToken);
+        }
+        else
+        {
+            var entity = new TrueLayerConnection(
+                userId: request.UserId,
+                providerId: request.ProviderId,
+                providerDisplayName: request.ProviderName ?? request.ProviderId,
+                reference: reference);
 
-        var entity = new TrueLayerConnection(
-            userId: request.UserId,
-            providerId: request.ProviderId,
-            providerDisplayName: request.ProviderName ?? request.ProviderId,
-            reference: reference);
-
-        await connections.AddAsync(entity, cancellationToken);
+            await connections.AddAsync(entity, cancellationToken);
+        }
 
         return new BeginTrueLayerConnectResult(Link: link, Reference: reference);
     }

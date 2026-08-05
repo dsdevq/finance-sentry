@@ -53,6 +53,8 @@ public class ScheduledSyncServiceTests
     {
         var accountRepo = new Mock<IBankAccountRepository>();
         var txRepo = new Mock<ITransactionRepository>();
+        txRepo.Setup(r => r.GetAllUniqueHashesByAccountIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+              .ReturnsAsync(Array.Empty<string>());
         var jobRepo = new Mock<ISyncJobRepository>();
         var credRepo = new Mock<IEncryptedCredentialRepository>();
         var encryption = new Mock<ICredentialEncryptionService>();
@@ -164,6 +166,93 @@ public class ScheduledSyncServiceTests
         jobRepo.Verify(r => r.AddAsync(It.IsAny<SyncJob>(), default), Times.Once);
         txRepo.Verify(r => r.AddRangeAsync(It.IsAny<IEnumerable<Transaction>>(), default), Times.Once);
         accountRepo.Verify(r => r.UpdateAsync(It.IsAny<BankAccount>(), default), Times.AtLeast(2));
+    }
+
+    // ── TrueLayer #3: in-batch duplicate hashes must not be double-inserted ──
+
+    [Fact]
+    public async Task PerformFullSyncAsync_InBatchDuplicateHashes_InsertedOnce()
+    {
+        // Regression: two candidates in one provider batch that hash alike (e.g. a pending and a
+        // booked copy) previously both reached AddRange and violated the unique (AccountId,
+        // UniqueHash) index, poisoning the whole SaveChanges and wedging the account in "syncing".
+        var (sut, accountRepo, txRepo, jobRepo, credRepo, encryption, plaid, dedup, _) = BuildSut();
+
+        var account = MakeActiveAccount();
+        accountRepo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), default)).ReturnsAsync(account);
+        accountRepo.Setup(r => r.UpdateAsync(It.IsAny<BankAccount>(), default)).ReturnsAsync(account);
+        jobRepo.Setup(r => r.AddAsync(It.IsAny<SyncJob>(), default)).ReturnsAsync((SyncJob j, CancellationToken _) => j);
+        jobRepo.Setup(r => r.UpdateAsync(It.IsAny<SyncJob>(), default)).ReturnsAsync((SyncJob j, CancellationToken _) => j);
+        jobRepo.Setup(r => r.GetLatestByAccountIdAsync(It.IsAny<Guid>(), default)).ReturnsAsync((SyncJob?)null);
+        credRepo.Setup(r => r.GetByAccountIdAsync(It.IsAny<Guid>(), default)).ReturnsAsync(MakeCredential(AccountId));
+        encryption.Setup(e => e.Decrypt(It.IsAny<byte[]>(), It.IsAny<byte[]>(), It.IsAny<byte[]>(), It.IsAny<int>()))
+                  .Returns("access-sandbox-token");
+
+        var candidates = new List<TransactionCandidate>
+        {
+            new(AccountId, UserId, 50m, DateTime.UtcNow.AddDays(-1), null, "Coffee", true, "debit", null, null, "tx_001"),
+            new(AccountId, UserId, 50m, DateTime.UtcNow.AddDays(-1), null, "Coffee", false, "debit", null, null, "tx_001")
+        };
+        plaid.Setup(p => p.SyncTransactionsAsync("access-sandbox-token", It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string?>(), default))
+             .ReturnsAsync(((IReadOnlyList<TransactionCandidate>)candidates, "cursor_1"));
+        plaid.Setup(p => p.GetAccountsWithBalanceAsync("access-sandbox-token", default))
+             .ReturnsAsync([new("plaid_acc_1", "Checking", "checking", "1234", 100m, 100m, "EUR")]);
+        txRepo.Setup(r => r.GetByAccountIdAsync(It.IsAny<Guid>(), default)).ReturnsAsync([]);
+
+        dedup.Setup(d => d.FilterDuplicates(It.IsAny<IEnumerable<TransactionCandidate>>(), It.IsAny<IReadOnlySet<string>>()))
+             .Returns(candidates);
+        // Both candidates map to entities with the SAME hash — the in-batch collision.
+        dedup.Setup(d => d.ToEntity(candidates[0]))
+             .Returns(new Transaction(AccountId, UserId, 50m, DateTime.UtcNow.AddDays(-1), "Coffee", "dup_hash", false));
+        dedup.Setup(d => d.ToEntity(candidates[1]))
+             .Returns(new Transaction(AccountId, UserId, 50m, DateTime.UtcNow.AddDays(-1), "Coffee", "dup_hash", false));
+
+        IEnumerable<Transaction>? added = null;
+        txRepo.Setup(r => r.AddRangeAsync(It.IsAny<IEnumerable<Transaction>>(), default))
+              .ReturnsAsync((IEnumerable<Transaction> txs, CancellationToken _) => txs)
+              .Callback((IEnumerable<Transaction> txs, CancellationToken _) => added = txs.ToList());
+
+        var result = await sut.PerformFullSyncAsync(AccountId);
+
+        result.Success.Should().BeTrue();
+        added.Should().NotBeNull();
+        added!.Should().ContainSingle("in-batch duplicate hashes collapse to one row before insert");
+    }
+
+    [Fact]
+    public async Task PerformFullSyncAsync_DedupSetIncludesSoftDeletedHashes()
+    {
+        // The hash set handed to dedup must come from GetAllUniqueHashesByAccountIdAsync (which
+        // includes soft-deleted rows), not just the active rows — otherwise a re-synced
+        // soft-deleted transaction slips through and collides with the unique index.
+        var (sut, accountRepo, txRepo, jobRepo, credRepo, encryption, plaid, dedup, _) = BuildSut();
+
+        var account = MakeActiveAccount();
+        accountRepo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), default)).ReturnsAsync(account);
+        accountRepo.Setup(r => r.UpdateAsync(It.IsAny<BankAccount>(), default)).ReturnsAsync(account);
+        jobRepo.Setup(r => r.AddAsync(It.IsAny<SyncJob>(), default)).ReturnsAsync((SyncJob j, CancellationToken _) => j);
+        jobRepo.Setup(r => r.UpdateAsync(It.IsAny<SyncJob>(), default)).ReturnsAsync((SyncJob j, CancellationToken _) => j);
+        jobRepo.Setup(r => r.GetLatestByAccountIdAsync(It.IsAny<Guid>(), default)).ReturnsAsync((SyncJob?)null);
+        credRepo.Setup(r => r.GetByAccountIdAsync(It.IsAny<Guid>(), default)).ReturnsAsync(MakeCredential(AccountId));
+        encryption.Setup(e => e.Decrypt(It.IsAny<byte[]>(), It.IsAny<byte[]>(), It.IsAny<byte[]>(), It.IsAny<int>()))
+                  .Returns("access-sandbox-token");
+        plaid.Setup(p => p.SyncTransactionsAsync("access-sandbox-token", It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string?>(), default))
+             .ReturnsAsync(((IReadOnlyList<TransactionCandidate>)[], "cursor_1"));
+        plaid.Setup(p => p.GetAccountsWithBalanceAsync("access-sandbox-token", default))
+             .ReturnsAsync([new("plaid_acc_1", "Checking", "checking", "1234", 100m, 100m, "EUR")]);
+        txRepo.Setup(r => r.GetByAccountIdAsync(It.IsAny<Guid>(), default)).ReturnsAsync([]);
+        txRepo.Setup(r => r.GetAllUniqueHashesByAccountIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+              .ReturnsAsync(["soft_deleted_hash"]);
+
+        IReadOnlySet<string>? seenSet = null;
+        dedup.Setup(d => d.FilterDuplicates(It.IsAny<IEnumerable<TransactionCandidate>>(), It.IsAny<IReadOnlySet<string>>()))
+             .Callback((IEnumerable<TransactionCandidate> _, IReadOnlySet<string> hashes) => seenSet = hashes)
+             .Returns([]);
+
+        await sut.PerformFullSyncAsync(AccountId);
+
+        seenSet.Should().NotBeNull();
+        seenSet!.Should().Contain("soft_deleted_hash");
     }
 
     // ── T313-3: Deduplication filters existing transactions ─────────────────
@@ -380,6 +469,8 @@ public class ScheduledSyncServiceTests
     {
         var accountRepo = new Mock<IBankAccountRepository>();
         var txRepo = new Mock<ITransactionRepository>();
+        txRepo.Setup(r => r.GetAllUniqueHashesByAccountIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+              .ReturnsAsync(Array.Empty<string>());
         var jobRepo = new Mock<ISyncJobRepository>();
         var credRepo = new Mock<IEncryptedCredentialRepository>();
         var encryption = new Mock<ICredentialEncryptionService>();
