@@ -22,6 +22,7 @@
     <PackageReference Include="Hangfire.PostgreSql" />
     <PackageReference Include="Hangfire.InMemory" />
     <PackageReference Include="AspNetCore.HealthChecks.NpgSql" />
+    <PackageReference Include="AspNetCore.HealthChecks.Hangfire" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
   </ItemGroup>

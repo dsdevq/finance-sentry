@@ -41,9 +41,14 @@ Startup order enforced by health checks: `postgres → api → frontend`.
 |---|---|
 | http://localhost:4200 | Angular SPA |
 | http://localhost:5001/api/v1 | REST API |
-| http://localhost:5001/api/v1/health | Health probe |
+| http://localhost:5001/api/v1/health | Liveness probe |
+| http://localhost:5001/api/v1/health/ready | Readiness probe (per-dependency: `database`, `hangfire`) |
+| http://localhost:5001/metrics | Prometheus exposition (scrape-only) |
 | http://localhost:5001/swagger | Swagger UI |
 | http://localhost:5001/hangfire | Hangfire dashboard |
+| http://localhost:3000 | Grafana (dashboards) |
+| http://localhost:9090 | Prometheus |
+| http://localhost:3100 | Loki (log store) |
 
 ### Run everything
 
@@ -101,6 +106,38 @@ docker compose -f docker-compose.dev.yml down -v              # also drop postgr
 | `Plaid__Secret` | Plaid API secret |
 | `Plaid__WebhookKey` | Plaid webhook signing key |
 | `Jwt__Secret` | JWT signing secret (≥32 chars) |
+
+## Observability (feature 023)
+
+The dev/prod compose stacks run **Prometheus + Grafana + Loki** alongside the app so failures announce
+themselves instead of being found days later via `ssh`+`grep`.
+
+- **Metrics** — the API is instrumented with OpenTelemetry and exposes Prometheus exposition at `/metrics`
+  (ASP.NET Core request rate/latency/errors, .NET runtime, and custom `finance_jobs_*` per-job counters).
+  Prometheus scrapes it every 15s; retention ~30d, hard-capped at 5GB.
+- **Logs** — Serilog ships structured logs to Loki (fire-and-forget; a shipping outage never affects
+  requests). EF Core SQL is suppressed to `Warning` by default (raise via
+  `Serilog:MinimumLevel:Override` in config). Retention ~14d, size-capped.
+- **Dashboards** — provisioned as code under `docker/observability/grafana/provisioning/`. The main
+  dashboard ("Health at a glance") answers *is it healthy now, did last night's jobs run?* at a glance;
+  the availability panel turns red within ~60s of an API outage.
+- **Jobs** — Hangfire storage moved to PostgreSQL (`hangfire` schema) so job history/schedule survive
+  restarts. The Hangfire dashboard at `/hangfire` is loopback/Tailscale-only outside Development.
+
+```bash
+# bring the stack up (adds loki, prometheus, grafana)
+cd docker && docker compose -f docker-compose.dev.yml up -d --build
+
+curl -s http://localhost:5001/metrics | grep finance_jobs_        # custom job metrics present
+curl -s http://localhost:5001/api/v1/health/ready                 # {"status":"Healthy","checks":[...]}
+# open http://localhost:3000 (admin/admin by default) → Finance Sentry → Health at a glance
+```
+
+**Production notes** — Grafana + Hangfire dashboards are reachable only over Tailscale serve (not the
+public funnel); `/metrics` is scrape-only. Set `GRAFANA_ADMIN_USER` / `GRAFANA_ADMIN_PASSWORD` and
+`Observability__Loki__Url` via env/secrets. Grafana metric-threshold alert rules are deferred until
+baselines exist — job silent-failure alerting (US4, N consecutive failures → Telegram) is the app-side
+slice that closes the urgent gap.
 
 ## Running Tests
 

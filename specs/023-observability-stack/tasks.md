@@ -17,9 +17,9 @@ description: "Task list for Observability Stack (023)"
 
 ## Phase 1: Setup (Shared Infrastructure)
 
-- [ ] T001 Add NuGet packages to `backend/Directory.Packages.props` + reference in `FinanceSentry.API` / `FinanceSentry.Infrastructure`: `Hangfire.PostgreSql`, `Serilog.Sinks.Grafana.Loki`, `OpenTelemetry.Extensions.Hosting`, `OpenTelemetry.Instrumentation.AspNetCore`, `OpenTelemetry.Instrumentation.Runtime`, `OpenTelemetry.Exporter.Prometheus.AspNetCore`, `AspNetCore.HealthChecks.NpgSql`, `AspNetCore.HealthChecks.Hangfire`.
-- [ ] T002 [P] Create `backend/src/FinanceSentry.Infrastructure/Observability/` with stub config classes (`SerilogConfiguration`, `OpenTelemetryConfiguration`, `JobMetrics`, `Hangfire/`, `HealthChecks/`).
-- [ ] T003 [P] Create `docker/observability/` skeleton: `prometheus/`, `loki/`, `grafana/provisioning/{datasources,dashboards}/`.
+- [X] T001 Add NuGet packages to `backend/Directory.Packages.props` + reference in `FinanceSentry.API` / `FinanceSentry.Infrastructure`: `Hangfire.PostgreSql`, `Serilog.Sinks.Grafana.Loki`, `OpenTelemetry.Extensions.Hosting`, `OpenTelemetry.Instrumentation.AspNetCore`, `OpenTelemetry.Instrumentation.Runtime`, `OpenTelemetry.Exporter.Prometheus.AspNetCore`, `AspNetCore.HealthChecks.NpgSql`, `AspNetCore.HealthChecks.Hangfire`.
+- [X] T002 [P] Create `backend/src/FinanceSentry.Infrastructure/Observability/` with stub config classes (`SerilogConfiguration`, `OpenTelemetryConfiguration`, `JobMetrics`, `Hangfire/`, `HealthChecks/`).
+- [X] T003 [P] Create `docker/observability/` skeleton: `prometheus/`, `loki/`, `grafana/provisioning/{datasources,dashboards}/`.
 
 ---
 
@@ -27,18 +27,18 @@ description: "Task list for Observability Stack (023)"
 
 **⚠️ CRITICAL**: the collection layer (durable jobs, metrics emitted, logs shipped, containers running) must exist before any story's dashboards/alerts.
 
-- [ ] T004 Replace Hangfire `UseInMemoryStorage` with `UsePostgreSqlStorage` (schema `hangfire`) in `backend/src/FinanceSentry.Modules.BankSync/Infrastructure/Jobs/HangfireSetup.cs` + `FinanceSentry.API/Program.cs`; connection reuses existing Postgres. (FR-010)
-- [ ] T005 [P] `SerilogConfiguration.cs`: structured enrichers (correlation id, module) + `MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", Warning)`, levels driven by config. (FR-011)
-- [ ] T006 [P] Add fire-and-forget Serilog Loki sink (labels `app`,`module`,`level`) in `SerilogConfiguration.cs`; shipping failure must not affect requests. (FR-003)
-- [ ] T007 `OpenTelemetryConfiguration.cs` + `Program.cs`: OTel with ASP.NET Core + Runtime instrumentation and Prometheus exporter mapped at `/metrics`. (FR-001)
-- [ ] T008 [P] `JobMetrics.cs`: custom `Meter` — `finance_jobs_succeeded_total{job}`, `finance_jobs_failed_total{job}`, `finance_job_duration_seconds{job}`, `finance_jobs_scheduled` gauge; bounded labels only (FR-002, FR-007).
-- [ ] T009 `Observability/Hangfire/JobMetricsFilter.cs` (Hangfire `IApplyStateFilter`) records per-job outcome + duration into `JobMetrics`; register globally. (FR-002)
-- [ ] T010 [P] Readiness endpoint `GET /api/v1/health/ready` (Npgsql + Hangfire health checks) in `Program.cs` / `Observability/HealthChecks/`; keep existing `/api/v1/health` liveness. (SC-003)
-- [ ] T011 [P] Add `loki`, `prometheus`, `grafana` services to `docker/docker-compose.dev.yml` and `docker/docker-compose.prod.yml` with bounded named volumes + retention env. (FR-008)
-- [ ] T012 [P] `docker/observability/prometheus/prometheus.yml`: scrape the API `/metrics` (15–30s), retention ~30d. (FR-005)
-- [ ] T013 [P] `docker/observability/loki/loki-config.yml`: ≥14d retention, hard size cap. (FR-005)
-- [ ] T014 `docker/observability/grafana/provisioning/datasources/`: Prometheus + Loki datasources; Grafana admin auth via env. (FR-004)
-- [ ] T015 Secure surfaces: keep `/metrics` scrape-only / non-public (FR-006); add `Observability/Hangfire/DashboardAuthorizationFilter.cs` and re-enable the Hangfire dashboard behind it; Tailscale-only in prod. (FR-004)
+- [X] T004 Replace Hangfire `UseInMemoryStorage` with `UsePostgreSqlStorage` (schema `hangfire`) in `backend/src/FinanceSentry.Modules.BankSync/Infrastructure/Jobs/HangfireSetup.cs` + `FinanceSentry.API/Program.cs`; connection reuses existing Postgres. (FR-010)
+- [X] T005 [P] `SerilogConfiguration.cs`: structured enrichers (correlation id, module) + `MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", Warning)`, levels driven by config. (FR-011)
+- [X] T006 [P] Add fire-and-forget Serilog Loki sink (labels `app`,`module`,`level`) in `SerilogConfiguration.cs`; shipping failure must not affect requests. (FR-003)
+- [X] T007 `OpenTelemetryConfiguration.cs` + `Program.cs`: OTel with ASP.NET Core + Runtime instrumentation and Prometheus exporter mapped at `/metrics`. (FR-001)
+- [X] T008 [P] `JobMetrics.cs`: custom `Meter` — `finance_jobs_succeeded_total{job}`, `finance_jobs_failed_total{job}`, `finance_job_duration_seconds{job}`, `finance_jobs_scheduled` gauge; bounded labels only (FR-002, FR-007).
+- [X] T009 `Observability/Hangfire/JobMetricsFilter.cs` (Hangfire `IApplyStateFilter`) records per-job outcome + duration into `JobMetrics`; register globally. (FR-002)
+- [X] T010 [P] Readiness endpoint `GET /api/v1/health/ready` (Npgsql + Hangfire health checks) in `Program.cs` / `Observability/HealthChecks/`; keep existing `/api/v1/health` liveness. (SC-003)
+- [X] T011 [P] Add `loki`, `prometheus`, `grafana` services to `docker/docker-compose.dev.yml` and `docker/docker-compose.prod.yml` with bounded named volumes + retention env. (FR-008)
+- [X] T012 [P] `docker/observability/prometheus/prometheus.yml`: scrape the API `/metrics` (15–30s), retention ~30d. (FR-005)
+- [X] T013 [P] `docker/observability/loki/loki-config.yml`: ≥14d retention, hard size cap. (FR-005)
+- [X] T014 `docker/observability/grafana/provisioning/datasources/`: Prometheus + Loki datasources; Grafana admin auth via env. (FR-004)
+- [X] T015 Secure surfaces: keep `/metrics` scrape-only / non-public (FR-006); add `Observability/Hangfire/DashboardAuthorizationFilter.cs` and re-enable the Hangfire dashboard behind it; Tailscale-only in prod. (FR-004)
 
 **Checkpoint**: metrics flowing to Prometheus, logs to Loki, jobs durable in Postgres, dashboards reachable.
 
@@ -49,12 +49,12 @@ description: "Task list for Observability Stack (023)"
 **Goal**: One dashboard answers "is the system healthy now, and did last night's syncs run?" in < 30s (SC-001).
 **Independent Test**: Open the main dashboard → API rate/latency/error panels populate; jobs panel shows per-provider last run; stopping the API turns availability red within 60s.
 
-- [ ] T016 [P] [US1] Contract test: `GET /metrics` returns 200 and exposition contains `finance_jobs_*`, in `backend/tests/FinanceSentry.Tests.Integration/Observability/MetricsEndpointTests.cs`.
-- [ ] T017 [P] [US1] Contract test: `GET /api/v1/health/ready` → 200 both checks Healthy; DB down → 503 naming `database`, in `backend/tests/FinanceSentry.Tests.Integration/Observability/HealthReadyTests.cs`.
-- [ ] T018 [US1] Grafana main dashboard as code (`docker/observability/grafana/provisioning/dashboards/api-overview.json`): request rate, p50/p95/p99 latency, 4xx/5xx error rate, ≥24h window. (FR-001, SC-001)
-- [ ] T019 [US1] Jobs panel on the main dashboard: per-provider last run time, duration, success/failure from `finance_jobs_*`. (FR-002)
-- [ ] T020 [US1] Availability panel (app `up` / health) that visibly goes red within 60s of an API outage. (SC-003)
-- [ ] T021 [US1] Validate US1 per `quickstart.md` (panels populate; kill API → red).
+- [X] T016 [P] [US1] Contract test: `GET /metrics` returns 200 and exposition contains `finance_jobs_*`, in `backend/tests/FinanceSentry.Tests.Integration/Observability/MetricsEndpointTests.cs`.
+- [X] T017 [P] [US1] Contract test: `GET /api/v1/health/ready` → 200 both checks Healthy; DB down → 503 naming `database`, in `backend/tests/FinanceSentry.Tests.Integration/Observability/HealthReadyTests.cs`.
+- [X] T018 [US1] Grafana main dashboard as code (`docker/observability/grafana/provisioning/dashboards/api-overview.json`): request rate, p50/p95/p99 latency, 4xx/5xx error rate, ≥24h window. (FR-001, SC-001)
+- [X] T019 [US1] Jobs panel on the main dashboard: per-provider last run time, duration, success/failure from `finance_jobs_*`. (FR-002)
+- [X] T020 [US1] Availability panel (app `up` / health) that visibly goes red within 60s of an API outage. (SC-003)
+- [X] T021 [US1] Validate US1 per `quickstart.md` (panels populate; kill API → red).
 
 **Checkpoint**: MVP — live health/traffic/jobs visibility without SSH.
 

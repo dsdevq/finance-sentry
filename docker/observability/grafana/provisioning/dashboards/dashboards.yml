@@ -1,0 +1,14 @@
+# Dashboards-as-code provider (FR-004, D9) — loads every JSON in this folder on startup.
+apiVersion: 1
+
+providers:
+  - name: finance-sentry
+    orgId: 1
+    folder: Finance Sentry
+    type: file
+    disableDeletion: false
+    editable: true
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards
+      foldersFromFilesStructure: false
