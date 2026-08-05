@@ -63,6 +63,17 @@ public static class BankSyncModule
                 job => job.ExecuteAsync(CancellationToken.None),
                 Cron.Daily());
 
+            mgr.AddOrUpdate<StaleSyncReaperJob>(
+                "stale-sync-reaper",
+                job => job.ReapAsync(),
+                "*/15 * * * *");
+
+            // Startup sweep: any job still "running"/account still "syncing" after a restart was
+            // orphaned mid-sync and would otherwise deadlock the scheduler — reap them all first,
+            // then (re)schedule the active accounts.
+            BackgroundJob.Enqueue<StaleSyncReaperJob>(
+                job => job.ExecuteAsync(true, CancellationToken.None));
+
             BackgroundJob.Enqueue<SyncScheduler>(
                 s => s.ScheduleAllActiveAccounts(CancellationToken.None));
         }
@@ -142,6 +153,7 @@ public static class BankSyncModule
         services.AddScoped<CredentialBackupJob>();
         services.AddScoped<UnusualSpendDetectionJob>();
         services.AddScoped<SubscriptionDetectionJob>();
+        services.AddScoped<StaleSyncReaperJob>();
 
         services.AddSingleton<IFeatureFlagService, FeatureFlagService>();
         services.AddSingleton<IAuditLogService, AuditLogService>();

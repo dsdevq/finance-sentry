@@ -164,6 +164,36 @@ public class BankAccountTests
         account.UserId.Should().Be(specificUserId);
     }
 
+    // ── Reconnect / reauth heal (TrueLayer #3) ──────────────────────────────
+
+    [Fact]
+    public void MarkReconnected_FromReauthRequired_TransitionsToActiveAndRelinks()
+    {
+        var account = MakeAccount();
+        account.MarkReauthRequired();
+        var newConnectionId = Guid.NewGuid();
+
+        account.MarkReconnected(newConnectionId, balance: 250.00m);
+
+        account.SyncStatus.Should().Be("active");
+        account.TrueLayerConnectionId.Should().Be(newConnectionId);
+        account.CurrentBalance.Should().Be(250.00m);
+    }
+
+    [Fact]
+    public void MarkReconnected_ClearsLastSyncError()
+    {
+        var account = MakeAccount();
+        account.BeginSync();
+        account.MarkFailed("ITEM_LOGIN_REQUIRED");
+        account.LastSyncError.Should().Be("ITEM_LOGIN_REQUIRED");
+
+        account.MarkReconnected(Guid.NewGuid(), balance: 0m);
+
+        account.LastSyncError.Should().BeNull();
+        account.SyncStatus.Should().Be("active");
+    }
+
     // ── Helpers ─────────────────────────────────────────────────────────────
 
     private static BankAccount MakeAccount()

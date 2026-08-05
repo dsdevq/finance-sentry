@@ -59,10 +59,6 @@ public class FinalizeTrueLayerConnectCommandHandler(
 
         foreach (var pa in providerAccounts)
         {
-            var existing = await accounts.GetByPlaidItemIdAsync(pa.AccountId, cancellationToken);
-            if (existing != null)
-                continue;
-
             decimal? currentBalance = null;
             try
             {
@@ -72,6 +68,18 @@ public class FinalizeTrueLayerConnectCommandHandler(
             catch (TrueLayerException)
             {
                 // Best-effort: skip balance, account is still usable.
+            }
+
+            var existing = await accounts.GetByPlaidItemIdAsync(pa.AccountId, cancellationToken);
+            if (existing != null)
+            {
+                // Reconnect/reauth: heal the existing account in place instead of skipping it.
+                // Re-point it at the freshly linked connection and clear reauth_required so the
+                // scheduler resumes syncing. A follow-up sync is enqueued below to backfill data.
+                existing.MarkReconnected(connection.Id, currentBalance ?? existing.CurrentBalance ?? 0m);
+                await accounts.UpdateAsync(existing, cancellationToken);
+                createdIds.Add(existing.Id);
+                continue;
             }
 
             var account = new BankAccount(

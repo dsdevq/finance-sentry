@@ -120,6 +120,21 @@ public class BankAccount : Entity
         UpdatedAt = DateTime.UtcNow;
     }
 
+    /// <summary>
+    /// Heals an account after a successful reconnect/reauth. Unlike <see cref="MarkActive"/>,
+    /// which only transitions from "syncing", this transitions from <b>any</b> status (notably
+    /// "reauth_required"), re-points the account at the freshly linked TrueLayer connection, and
+    /// clears the stale error so the scheduler resumes syncing it on the next cycle.
+    /// </summary>
+    public void MarkReconnected(Guid trueLayerConnectionId, decimal balance)
+    {
+        TrueLayerConnectionId = trueLayerConnectionId;
+        SyncStatus = "active";
+        CurrentBalance = balance;
+        LastSyncError = null;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     public void ValidateInvariants()
     {
         if (string.IsNullOrWhiteSpace(ExternalAccountId))

@@ -331,13 +331,31 @@ public class ScheduledSyncService(
         var provider = _providerFactory.Resolve("truelayer");
         var since = connection.LastSyncAt;
 
-        var (candidates, _) = await provider.SyncTransactionsAsync(
-            accessToken, account.ExternalAccountId, account.Id, account.UserId, since, ct);
+        IReadOnlyList<Domain.Transaction> entities;
+        int candidateCount;
+        try
+        {
+            var (candidates, _) = await provider.SyncTransactionsAsync(
+                accessToken, account.ExternalAccountId, account.Id, account.UserId, since, ct);
 
-        var entities = await PersistAndReconcileAsync(account.Id, candidates, ct);
+            entities = await PersistAndReconcileAsync(account.Id, candidates, ct);
+            candidateCount = candidates.Count;
 
-        connection.LastSyncAt = DateTime.UtcNow;
-        await _truelayerConnections.UpdateAsync(connection, ct);
+            connection.LastSyncAt = DateTime.UtcNow;
+            await _truelayerConnections.UpdateAsync(connection, ct);
+        }
+        catch (Infrastructure.TrueLayer.TrueLayerException ex)
+            when (ex.StatusCode == 403 && ex.Message.Contains("access_denied", StringComparison.OrdinalIgnoreCase))
+        {
+            // Strong Customer Authentication wall: some banks (notably AIB) deny background
+            // transaction access made with a refreshed token — only a user-present flow can pull
+            // history. Balance access still works, so degrade to a balance-only sync instead of
+            // hard-failing, which would otherwise flap the account to "failed" every cycle.
+            // LastSyncAt is deliberately not advanced so a later user-present sync can still
+            // backfill transactions from the same point.
+            entities = [];
+            candidateCount = 0;
+        }
 
         // Refresh the live balance — TrueLayer balances can move independently of
         // dedup'd transactions (e.g. an overdraft on AIB), so re-query rather than
@@ -361,14 +379,14 @@ public class ScheduledSyncService(
             ? entities.Max(t => t.PostedDate ?? t.TransactionDate)
             : (DateTime?)null;
 
-        job.MarkSuccess(candidates.Count, entities.Count, lastTxDate);
+        job.MarkSuccess(candidateCount, entities.Count, lastTxDate);
         await _syncJobs.UpdateAsync(job, ct);
 
         var durationMs = (long)(DateTime.UtcNow - startedAt).TotalMilliseconds;
         _logger.SyncCompleted(job.CorrelationId ?? job.Id.ToString(), account.Id,
-            candidates.Count, entities.Count, durationMs);
+            candidateCount, entities.Count, durationMs);
 
-        return new SyncResult(true, candidates.Count, entities.Count, null, null);
+        return new SyncResult(true, candidateCount, entities.Count, null, null);
     }
 
     /// <summary>
@@ -461,10 +479,17 @@ public class ScheduledSyncService(
         Guid accountId, IEnumerable<TransactionCandidate> candidates, CancellationToken ct)
     {
         var existingRows = (await _transactions.GetByAccountIdAsync(accountId, ct)).ToList();
-        var existingHashes = existingRows.Select(t => t.UniqueHash).ToHashSet();
+        // Dedup against ALL hashes — including soft-deleted rows, which still occupy the unique
+        // (AccountId, UniqueHash) index — not just the active rows above. Missing a soft-deleted
+        // hash here re-inserts it and violates the constraint, poisoning the whole batch.
+        var existingHashes = (await _transactions.GetAllUniqueHashesByAccountIdAsync(accountId, ct)).ToHashSet();
 
         var entities = _dedup.FilterDuplicates(candidates, existingHashes)
             .Select(_dedup.ToEntity)
+            // Guard against duplicate hashes *within* a single provider batch (e.g. a pending and
+            // booked copy that hash alike) — FilterDuplicates only compares against existing rows.
+            .GroupBy(e => e.UniqueHash)
+            .Select(g => g.First())
             .ToList();
         if (entities.Count > 0)
             await _transactions.AddRangeAsync(entities, ct);
