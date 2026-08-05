@@ -429,6 +429,14 @@ public class TrueLayerConnectionRepository(BankSyncDbContext context) : ITrueLay
         => await _context.TrueLayerConnections.FirstOrDefaultAsync(
             tc => tc.UserId == userId && tc.ProviderId == providerId, cancellationToken);
 
+    public async Task<IReadOnlyList<TrueLayerConnection>> GetLinkedExpiringBeforeAsync(DateTime threshold, CancellationToken cancellationToken = default)
+        => await _context.TrueLayerConnections
+            .Where(tc => tc.Status == "LINKED"
+                && tc.ConnectionExpiresAt != null
+                && tc.ConnectionExpiresAt <= threshold
+                && tc.ConnectionExpiresAt > DateTime.UtcNow)
+            .ToListAsync(cancellationToken);
+
     public async Task<IReadOnlyList<TrueLayerConnection>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
         => await _context.TrueLayerConnections
             .Where(tc => tc.UserId == userId)

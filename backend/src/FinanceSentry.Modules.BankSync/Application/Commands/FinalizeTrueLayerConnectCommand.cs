@@ -2,11 +2,12 @@ namespace FinanceSentry.Modules.BankSync.Application.Commands;
 
 using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Infrastructure.Encryption;
+using FinanceSentry.Modules.BankSync.Application.Services;
 using FinanceSentry.Modules.BankSync.Domain;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
 using FinanceSentry.Modules.BankSync.Infrastructure.TrueLayer;
-using Hangfire;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 public record FinalizeTrueLayerConnectCommand(string Reference, string Code) : ICommand<FinalizeTrueLayerConnectResult>;
 
@@ -20,8 +21,9 @@ public class FinalizeTrueLayerConnectCommandHandler(
     ITrueLayerConnectionRepository connections,
     ICredentialEncryptionService encryption,
     IBankAccountRepository accounts,
-    IBackgroundJobClient backgroundJobs,
-    IConfiguration configuration)
+    IScheduledSyncService syncService,
+    IConfiguration configuration,
+    ILogger<FinalizeTrueLayerConnectCommandHandler> logger)
     : ICommandHandler<FinalizeTrueLayerConnectCommand, FinalizeTrueLayerConnectResult>
 {
     public async Task<FinalizeTrueLayerConnectResult> Handle(
@@ -101,9 +103,26 @@ public class FinalizeTrueLayerConnectCommandHandler(
             createdIds.Add(account.Id);
         }
 
+        // Sync inline with the freshly-exchanged access token while its SCA session is still
+        // active — this is the only window in which strict banks (e.g. AIB) will return
+        // transaction history; a deferred background job would refresh the token and lose SCA.
+        // Failures here don't fail the reconnect: the connection is already linked and the
+        // recurring scheduler will retry (balance-only for SCA-locked providers).
         foreach (var accountId in createdIds)
-            backgroundJobs.Enqueue<FinanceSentry.Modules.BankSync.Infrastructure.Jobs.ScheduledSyncJob>(
-                job => job.ExecuteSyncAsync(accountId));
+        {
+            try
+            {
+                await syncService.PerformFullSyncAsync(
+                    accountId, webhookTriggered: false, ct: cancellationToken,
+                    preAcquiredTrueLayerAccessToken: tokens.AccessToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex,
+                    "Inline reconnect sync failed for account {AccountId}; scheduler will retry.",
+                    accountId);
+            }
+        }
 
         return new FinalizeTrueLayerConnectResult(
             UserId: connection.UserId,

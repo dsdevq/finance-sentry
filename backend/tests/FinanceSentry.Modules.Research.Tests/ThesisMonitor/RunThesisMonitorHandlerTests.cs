@@ -275,6 +275,10 @@ public class RunThesisMonitorHandlerTests
         public Task DeleteAlertsForAccountAsync(Guid accountId, CancellationToken ct = default)
             => Task.CompletedTask;
 
+        public Task GenerateConsentExpiringAlertAsync(
+            Guid userId, Guid referenceId, string providerName, DateTime expiresAt, CancellationToken ct = default)
+            => Task.CompletedTask;
+
         public Task GenerateThesisBreakAlertAsync(
             Guid userId, Guid thesisId, string ticker, string reason, CancellationToken ct = default)
         {

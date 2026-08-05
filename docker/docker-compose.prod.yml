@@ -41,11 +41,13 @@ services:
       TrueLayer__FrontendRedirectBase: ${TRUELAYER_FRONTEND_REDIRECT_BASE:-https://lifekit-vps.tail1cb676.ts.net:4200}
       TrueLayer__CallbackPath: /api/v1/accounts/truelayer/callback
       # Public base of the API itself — used to build the OAuth redirect_uri TrueLayer sends the
-      # browser back to after consent. Must be the externally reachable API URL (Tailscale serve
-      # maps :5001 → the api container) and MUST exactly match a redirect URI registered in the
-      # TrueLayer console. Left unset it defaults to http://localhost:5001, which dead-ends the
-      # callback for any non-local user.
-      PublicApiBaseUrl: ${PUBLIC_API_BASE_URL:-https://lifekit-vps.tail1cb676.ts.net:5001}
+      # browser back to after consent. This MUST exactly match a redirect URI registered in the
+      # TrueLayer console, or consent is rejected. Default is the console-registered
+      # http://localhost:5001; the browser redirect then dead-ends locally but the callback is
+      # recoverable server-side. To enable true one-tap reconnect, register
+      # https://lifekit-vps.tail1cb676.ts.net:5001/api/v1/accounts/truelayer/callback in the
+      # console, then set PUBLIC_API_BASE_URL=https://lifekit-vps.tail1cb676.ts.net:5001 here.
+      PublicApiBaseUrl: ${PUBLIC_API_BASE_URL:-http://localhost:5001}
       TrueLayer__Scopes: "info accounts balance transactions cards offline_access"
     ports:
       - "127.0.0.1:${API_PORT:-5001}:5000"

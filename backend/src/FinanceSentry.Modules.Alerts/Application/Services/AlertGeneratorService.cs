@@ -16,6 +16,9 @@ public class AlertGeneratorService(IAlertRepository alerts) : IAlertGeneratorSer
     private static readonly TimeSpan MarketStructureFreshnessSilenceWindow = TimeSpan.FromHours(12);
     private static readonly TimeSpan PolicyViolationSilenceWindow = TimeSpan.FromHours(24);
     private static readonly TimeSpan OpportunitySilenceWindow = TimeSpan.FromHours(24);
+    // Reminders repeat only every 3 days while inside the pre-expiry window, so the detector can run
+    // daily without spamming the same connection.
+    private static readonly TimeSpan ConsentExpiringSilenceWindow = TimeSpan.FromDays(3);
 
     private readonly IAlertRepository _alerts = alerts;
 
@@ -245,6 +248,31 @@ public class AlertGeneratorService(IAlertRepository alerts) : IAlertGeneratorSer
             Message = $"{ticker} scored top-tier on conviction scoring: {reason}",
             ReferenceId = referenceId,
             ReferenceLabel = ticker,
+        }, ct);
+    }
+
+    public async Task GenerateConsentExpiringAlertAsync(
+        Guid userId, Guid referenceId, string providerName, DateTime expiresAt, CancellationToken ct = default)
+    {
+        var existing = await _alerts.FindActiveAsync(userId, AlertType.ConsentExpiring, referenceId, ct);
+        if (existing is not null) return;
+
+        var quietSince = DateTimeOffset.UtcNow - ConsentExpiringSilenceWindow;
+        if (await _alerts.HasRecentAsync(userId, AlertType.ConsentExpiring, referenceId, providerName, quietSince, ct))
+            return;
+
+        var days = Math.Max(0, (int)Math.Ceiling((expiresAt - DateTime.UtcNow).TotalDays));
+        var window = days == 0 ? "today" : days == 1 ? "in 1 day" : $"in {days} days";
+
+        await _alerts.AddAsync(new Alert
+        {
+            UserId = userId,
+            Type = AlertType.ConsentExpiring,
+            Severity = AlertSeverity.Warning,
+            Title = $"{providerName} bank connection expires {window}",
+            Message = $"Your {providerName} open-banking consent expires {window} ({expiresAt:yyyy-MM-dd}). Reconnect it to keep balances and transactions syncing.",
+            ReferenceId = referenceId,
+            ReferenceLabel = providerName,
         }, ct);
     }
 

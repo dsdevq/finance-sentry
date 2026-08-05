@@ -15,4 +15,5 @@ public enum CompanionEventKind
     MarketStructure,
     LowBalance,
     AnalystAction,
+    ConsentExpiring,
 }
