@@ -2,7 +2,7 @@
 
 **Feature Branch**: `023-observability-stack`
 **Created**: 2026-07-09
-**Status**: Roadmap — spec only, not yet planned or implemented
+**Status**: Planning — alerting slice pulled into v1 (2026-08-05); prerequisites added from live-log investigation
 **Input**: User description: "Observability stack: OpenTelemetry metrics in the ASP.NET Core API exposed via /metrics, Prometheus + Grafana + Loki containers on the VPS, Serilog shipping to Loki, dashboards for sync jobs, HTTP latency/errors, Hangfire job health"
 
 ## User Scenarios & Testing *(mandatory)*
@@ -50,6 +50,22 @@ As the operator, I can see failure trends of scheduled jobs over time (which job
 
 1. **Given** a job has failed 3 times this week, **When** the operator opens the job-health dashboard, **Then** the failure count and duration trend per job over the selected period is shown.
 
+---
+
+### User Story 4 - Get told when a job keeps failing (Priority: P2)
+
+As the operator, when a scheduled background job fails repeatedly (N consecutive failures), I receive a push notification through my existing Telegram channel — so I learn about an outage the moment it becomes a pattern, instead of discovering it days later by reading logs.
+
+**Why this priority**: The live-log investigation (2026-08-05) found a news-source ingestion job that had failed **636 consecutive times over ~13 days** with no one aware, and an expired-consent bank sync retrying ~48×/day indefinitely. Dashboards only help when the operator thinks to look; a pushed alert closes the "silent outage" gap that visibility alone does not. A minimal alerting slice reuses the already-deployed Companion notification dispatch (Telegram), so cost is low.
+
+**Independent Test**: Force a job to fail N consecutive times; a single Telegram alert fires (not one per failure), naming the job and the consecutive-failure count. A subsequent success clears the state so the next failure re-alerts.
+
+**Acceptance Scenarios**:
+
+1. **Given** a scheduled job has failed N consecutive times, **When** the Nth failure is recorded, **Then** exactly one alert is dispatched to the operator's Telegram channel identifying the job, failure count, and last error summary.
+2. **Given** an alert has already fired for a job, **When** the job continues to fail, **Then** no duplicate alert is sent until the job first succeeds again (de-duplicated / cooldown).
+3. **Given** the alerting path (Telegram/dispatch) is itself unavailable, **When** an alert cannot be sent, **Then** request handling and other jobs are unaffected (fire-and-forget).
+
 ### Edge Cases
 
 - Metrics/log infrastructure itself goes down: application must keep serving user traffic unaffected (fire-and-forget shipping, no hard dependency).
@@ -69,6 +85,9 @@ As the operator, I can see failure trends of scheduled jobs over time (which job
 - **FR-006**: The metrics endpoint MUST NOT be reachable from the public internet without authorization (internal network / scrape-only access).
 - **FR-007**: Metric labels MUST NOT contain personal or financial data; label cardinality MUST be bounded by design (route templates, not raw URLs).
 - **FR-008**: The observability stack MUST run on the existing single production host alongside the app and MUST be part of the same deployment process.
+- **FR-009**: The system MUST alert the operator (via the existing Companion Telegram dispatch path) when a scheduled job reaches N consecutive failures; alerts MUST be de-duplicated (at most one per failure streak) and MUST clear on the next success. Alert dispatch failures MUST NOT affect request handling or job execution.
+- **FR-010**: Background job state (history, outcomes, failed-job records) MUST survive process restarts, so job-health metrics and failure trends (FR-002, US3) reflect real history rather than only the current process lifetime. *(Today Hangfire uses in-memory storage; this is a prerequisite for durable job observability.)*
+- **FR-011**: Application log output MUST be filtered so that framework/ORM diagnostic noise (e.g. per-query SQL at Information level) does not drown application-level events in the log store; log levels MUST be configurable without a code change.
 
 ### Key Entities
 
@@ -96,6 +115,6 @@ As the operator, I can see failure trends of scheduled jobs over time (which job
 ## Notes
 
 - [DECISION] Placement: observability components deploy on the same host as the app via the existing compose/deploy pipeline — no separate infrastructure host.
-- [OUT OF SCOPE] Alert notifications (push/Telegram/email on threshold breach) — deferred to a future feature once baselines are known.
+- [DECISION 2026-08-05] A **minimal** alerting slice is now IN SCOPE (US4 / FR-009): consecutive-failure alerts for scheduled jobs, routed through the existing Companion Telegram dispatch. Rich metric-threshold alert rules in Grafana remain deferred until baselines exist.
 - [OUT OF SCOPE] Frontend (browser) telemetry and distributed tracing — metrics + logs first; tracing becomes relevant when services split.
 - [DEFERRED] Uptime probing from outside the host (external synthetic checks).

@@ -114,14 +114,30 @@ public sealed class NewsIngestionJob(
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            var shouldAlert = NewsSourceHealthTracker.RecordFailure(source, ex.Message);
+            var outcome = NewsSourceHealthTracker.RecordFailure(source, ex.Message);
             await sourceRepo.UpdateAsync(source, ct);
-            logger.LogError(ex,
-                "News source {Source} failed ({Consecutive} consecutive)", source.Name, source.ConsecutiveFailures);
 
-            if (shouldAlert)
+            if (outcome == NewsSourceFailureOutcome.Disable)
             {
-                await RaiseFailureAlertAsync(source.Name, ex.Message, ct);
+                logger.LogError(ex,
+                    "News source {Source} auto-disabled after {Consecutive} consecutive failures",
+                    source.Name, source.ConsecutiveFailures);
+                await RaiseFailureAlertAsync(
+                    source.Name,
+                    $"Auto-disabled after {source.ConsecutiveFailures} consecutive failures: {ex.Message}",
+                    ct);
+            }
+            else
+            {
+                // Ongoing failures below the disable threshold are logged at Warning to avoid flooding the
+                // error stream; the one-time alert still fires when the alert threshold is first crossed.
+                logger.LogWarning(
+                    "News source {Source} failed ({Consecutive} consecutive)", source.Name, source.ConsecutiveFailures);
+
+                if (outcome == NewsSourceFailureOutcome.Alert)
+                {
+                    await RaiseFailureAlertAsync(source.Name, ex.Message, ct);
+                }
             }
         }
     }

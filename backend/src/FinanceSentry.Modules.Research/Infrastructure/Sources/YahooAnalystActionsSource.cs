@@ -78,7 +78,10 @@ public sealed class YahooAnalystActionsSource(
     private async Task<IReadOnlyList<AnalystActionRecord>> FetchTickerAsync(
         HttpClient client, string ticker, string crumbValue, DateOnly cutoff, CancellationToken ct)
     {
-        var url = $"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{Uri.EscapeDataString(ticker)}"
+        // Yahoo uses '-' where symbols carry a class suffix (e.g. BRK.B -> BRK-B); querying the dotted
+        // form 404s. Normalize for the request but keep the caller's canonical symbol on the record.
+        var yahooSymbol = ticker.Replace('.', '-');
+        var url = $"https://query1.finance.yahoo.com/v10/finance/quoteSummary/{Uri.EscapeDataString(yahooSymbol)}"
             + $"?modules=upgradeDowngradeHistory&crumb={Uri.EscapeDataString(crumbValue)}";
 
         try
@@ -93,6 +96,14 @@ public sealed class YahooAnalystActionsSource(
                 }
 
                 return await FetchTickerAsync(client, ticker, refreshed, cutoff, ct);
+            }
+
+            // Delisted, unknown, or coverage-less symbols (and Yahoo's intermittent anti-scrape 404s)
+            // are expected for a broad universe — skip quietly rather than logging a warning per ticker.
+            if (response.StatusCode is System.Net.HttpStatusCode.NotFound or System.Net.HttpStatusCode.TooManyRequests)
+            {
+                logger.LogDebug("Yahoo analyst-actions returned {Status} for {Ticker} — no data", (int)response.StatusCode, ticker);
+                return [];
             }
 
             response.EnsureSuccessStatusCode();

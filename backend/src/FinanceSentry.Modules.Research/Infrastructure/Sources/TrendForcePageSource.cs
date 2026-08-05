@@ -1,5 +1,6 @@
 namespace FinanceSentry.Modules.Research.Infrastructure.Sources;
 
+using System.Text.RegularExpressions;
 using AngleSharp.Dom;
 using AngleSharp.Html.Parser;
 using FinanceSentry.Modules.Research.Application.Services;
@@ -18,13 +19,23 @@ public sealed class TrendForcePageSource(
 
     private const string Host = "trendforce.com";
 
+    // Known card container shapes, most-specific first. TrendForce has restyled the press list twice
+    // (list-item -> niche-box-post), so class selectors are treated as a fast path only: when none
+    // match, ParseAsync falls back to the stable article-href pattern below (FindArticleNodesByHref),
+    // which survives CSS churn.
     private static readonly string[] ArticleSelectors =
     [
+        ".niche-box-post",
         ".press-news-list .list-items > .list-item",
         ".list-items > .list-item",
         "article",
         ".press-item"
     ];
+
+    // TrendForce article permalinks: /presscenter/news/<8-digit-date>-<id>.html. Category/index links
+    // (e.g. /presscenter/news/Semiconductors) do not match, so this cleanly isolates real articles.
+    private static readonly Regex ArticleHrefPattern =
+        new(@"/presscenter/news/\d{6,}-\d+\.html$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     public bool CanHandle(string url) =>
         Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
@@ -108,7 +119,45 @@ public sealed class TrendForcePageSource(
             }
         }
 
-        return [];
+        // Fallback: recover article cards from the stable permalink pattern when the card classes have
+        // drifted. Each matching anchor is climbed to its nearest card ancestor; duplicates (multiple
+        // anchors per card, e.g. image + headline) collapse via reference equality.
+        var byHref = doc.QuerySelectorAll("a[href]")
+            .Where(a => ArticleHrefPattern.IsMatch(a.GetAttribute("href") ?? string.Empty))
+            .Select(FindCardByAnchor)
+            .Distinct()
+            .ToList();
+
+        return byHref;
+    }
+
+    /// <summary>
+    /// Climbs from an article anchor to the smallest ancestor that looks like a self-contained card —
+    /// one carrying a heading and at least one sibling element (date/summary). Falls back to the direct
+    /// parent so extraction still has a scope to query.
+    /// </summary>
+    private static IElement FindCardByAnchor(IElement anchor)
+    {
+        const int MaxDepth = 5;
+        var current = anchor;
+        for (var depth = 0; depth < MaxDepth; depth++)
+        {
+            var parent = current.ParentElement;
+            if (parent is null)
+            {
+                break;
+            }
+
+            var hasHeading = parent.QuerySelector("h1, h2, h3, h4") is not null;
+            if (hasHeading && parent.Children.Length >= 2)
+            {
+                return parent;
+            }
+
+            current = parent;
+        }
+
+        return anchor.ParentElement ?? anchor;
     }
 
     private static string? ExtractTitle(IElement node, IElement anchor)
@@ -122,15 +171,30 @@ public sealed class TrendForcePageSource(
     {
         var timeEl = node.QuerySelector("time[datetime]");
         var raw = timeEl?.GetAttribute("datetime")
-            ?? node.QuerySelector("time, .date, .time, h4.color-green")?.TextContent;
+            ?? node.QuerySelector("time, .date, .time, h4.color-green, .bd-month, .block-data")?.TextContent;
 
-        return DateTimeOffset.TryParse(raw, out var parsed) ? parsed : DateTimeOffset.UtcNow;
+        return DateTimeOffset.TryParse(raw?.Trim(), out var parsed) ? parsed : DateTimeOffset.UtcNow;
     }
 
     private static string? ExtractSummary(IElement node)
     {
-        var summary = node.QuerySelector("p, .summary, .desc")?.TextContent?.Trim();
-        return string.IsNullOrWhiteSpace(summary) ? null : summary;
+        // Prefer an explicit summary element; otherwise the first paragraph that isn't the date block
+        // (TrendForce renders the date inside <p class="bd-day/bd-month">, which must not become the body).
+        foreach (var el in node.QuerySelectorAll(".summary, .desc, p"))
+        {
+            if (el.ClassList.Contains("bd-day") || el.ClassList.Contains("bd-month"))
+            {
+                continue;
+            }
+
+            var text = el.TextContent?.Trim();
+            if (!string.IsNullOrWhiteSpace(text))
+            {
+                return text;
+            }
+        }
+
+        return null;
     }
 
     private static string Resolve(Uri? baseUri, string href)

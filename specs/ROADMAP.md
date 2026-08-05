@@ -14,7 +14,8 @@
 | `033-analytics-query-tool` | Feature | — | **Planned — ready to implement.** Guarded read-only query tool (escape-hatch for the long tail; relieves tool sprawl) |
 | `034-research-rag` | Feature | — | Spec + **research done**; ready to plan/implement. Semantic search over the text corpus (news/filings/notes); complements 033 (prose vs numbers) |
 | `032-agent-as-code` | Architecture | 031 (proves the pattern) | Draft — agent definition in the repo, CI-deployed to the runtime |
-| `023-observability-stack` | Platform | — | Don't orchestrate what you can't observe — do this rung first |
+| `023-observability-stack` | Platform | — | Don't orchestrate what you can't observe — do this rung first. **Alerting slice pulled into v1 (2026-08-05)** after a 13-day silent cron outage |
+| `037-structured-data-sources` | Platform | — | Retire brittle scraping (Yahoo `quoteSummary`, MarketBeat) → free-tier structured APIs (Finnhub/FMP). Analyst-actions first. Origin: 2026-08-05 reliability session |
 | `024-data-retention` | Platform | 023 | Retention policies + verified off-host backups |
 | `025-edge-gateway` | Platform | — | Single reverse-proxy entrypoint, TLS, rate limits |
 | `026-event-bus-outbox` | Platform | 023 | In-monolith broker + transactional outbox (031 is a focused precursor) |
