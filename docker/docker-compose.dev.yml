@@ -50,6 +50,8 @@ services:
       Jwt__Issuer: "https://finance-sentry.local"
       Deduplication__MasterKeyBase64: dGVzdC1kZWR1cGxpY2F0aW9uLWtleS1jaGFuZ2UtaW4tcHJvZHVjdGlvbg==
       GOOGLEOAUTH__CLIENTID: "${GOOGLE_CLIENT_ID:-}"
+      # Ship structured logs to Loki (fire-and-forget); empty disables the sink.
+      Observability__Loki__Url: http://loki:3100
     ports:
       - "5001:5000"
     depends_on:
@@ -109,8 +111,65 @@ services:
       timeout: 5s
       retries: 5
 
+  # --- Observability stack (023) -------------------------------------------------
+  loki:
+    image: grafana/loki:3.1.1
+    container_name: finance-sentry-loki
+    restart: unless-stopped
+    command: -config.file=/etc/loki/loki-config.yml
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./observability/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki_data:/loki
+    networks:
+      - finance-sentry-network
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: finance-sentry-prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=30d
+      - --storage.tsdb.retention.size=5GB
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    depends_on:
+      - api
+    networks:
+      - finance-sentry-network
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: finance-sentry-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+      - loki
+    networks:
+      - finance-sentry-network
+
 volumes:
   postgres_data:
+    driver: local
+  loki_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
     driver: local
 
 networks:

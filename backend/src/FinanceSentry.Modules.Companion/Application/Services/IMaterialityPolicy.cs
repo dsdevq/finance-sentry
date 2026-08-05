@@ -14,6 +14,12 @@ public interface IMaterialityPolicy
     /// <summary>The disposition a freshly-captured event gets under the given mode.</summary>
     EventDisposition DispositionForMode(NotificationMode mode);
 
+    /// <summary>
+    /// Kind-aware disposition. Behaves like <see cref="DispositionForMode"/> except operational failures
+    /// carry elevated criticality — they are never suppressed purely by a quiet mode (US4).
+    /// </summary>
+    EventDisposition DispositionFor(NotificationMode mode, CompanionEventKind kind);
+
     string AlertDedupKey(Guid alertId);
 
     string AnalystDedupKey(Guid userId, Guid analystActionId);

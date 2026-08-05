@@ -16,4 +16,5 @@ public enum CompanionEventKind
     LowBalance,
     AnalystAction,
     ConsentExpiring,
+    OperationalFailure,
 }

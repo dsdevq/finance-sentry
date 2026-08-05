@@ -68,7 +68,7 @@ public sealed class CompanionEventCapture(
                 DedupKey = policy.AlertDedupKey(a.AlertId),
                 ReferenceId = a.ReferenceId ?? a.AlertId,
                 SourceModule = "alerts",
-                Disposition = policy.DispositionForMode(mode),
+                Disposition = policy.DispositionFor(mode, kind.Value),
                 OccurredAt = a.CreatedAt,
             };
 
@@ -129,7 +129,7 @@ public sealed class CompanionEventCapture(
                     DedupKey = policy.AnalystDedupKey(userId, a.ActionId),
                     ReferenceId = a.ActionId,
                     SourceModule = "research",
-                    Disposition = policy.DispositionForMode(mode),
+                    Disposition = policy.DispositionFor(mode, CompanionEventKind.AnalystAction),
                     OccurredAt = a.IngestedAt,
                 };
 

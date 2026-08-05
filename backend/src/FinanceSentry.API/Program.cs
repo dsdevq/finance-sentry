@@ -6,21 +6,21 @@ using FinanceSentry.API.Migrations;
 using FinanceSentry.API.Modules;
 using FinanceSentry.Infrastructure.Fx;
 using FinanceSentry.Infrastructure.Logging;
+using FinanceSentry.Infrastructure.Observability;
+using FinanceSentry.Infrastructure.Observability.HealthChecks;
 using FinanceSentry.Modules.BankSync.API.Middleware;
 using FinanceSentry.Modules.BankSync.Infrastructure.Jobs;
 using Hangfire;
+using Hangfire.Dashboard;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 using Microsoft.OpenApi;
+using DashboardObservability = FinanceSentry.Infrastructure.Observability.Hangfire;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Host.UseSerilog((context, loggerConfig) =>
-    loggerConfig
-        .ReadFrom.Configuration(context.Configuration)
-        .WriteTo.Console()
-        .WriteTo.File("logs/app-.txt", rollingInterval: RollingInterval.Day, retainedFileCountLimit: 14)
-        .Enrich.FromLogContext());
+builder.Host.UseSerilog(SerilogConfiguration.Configure);
 
 builder.Services.AddCors(options =>
     options.AddPolicy("Frontend", policy => policy
@@ -48,12 +48,19 @@ builder.Services.AddAllModules(builder.Configuration);
 
 builder.Services.AddExchangeRates(builder.Configuration);
 
-builder.Services.AddHangfireServices(builder.Configuration);
+builder.Services.AddHangfireServices(builder.Configuration, builder.Environment);
+
+// OpenTelemetry metrics (FR-001/002) — ASP.NET Core + runtime + custom job meter, exposed at /metrics.
+builder.Services.AddObservabilityMetrics();
 
 builder.Services.AddHealthChecks()
     .AddNpgSql(
         builder.Configuration.GetConnectionString("Default")!,
-        name: "npgsql",
+        name: "database",
+        tags: ["ready"])
+    .AddHangfire(
+        options => options.MinimumAvailableServers = 1,
+        name: "hangfire",
         tags: ["ready"]);
 
 builder.Services.AddRateLimiter(options =>
@@ -104,18 +111,44 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-    app.UseHangfireDashboard("/hangfire", new DashboardOptions
-    {
-        Authorization = [new DevDashboardAuthorizationFilter()],
-        DisplayStorageConnectionString = false,
-        DashboardTitle = "Finance Sentry · Hangfire",
-    });
 }
+
+// Hangfire dashboard (FR-004): permissive locally; loopback/Tailscale-only in every other environment,
+// backed by durable Postgres storage so history/schedule survive restarts.
+IDashboardAuthorizationFilter dashboardFilter = app.Environment.IsDevelopment()
+    ? new DevDashboardAuthorizationFilter()
+    : new DashboardObservability.DashboardAuthorizationFilter();
+
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = [dashboardFilter],
+    DisplayStorageConnectionString = false,
+    DashboardTitle = "Finance Sentry · Hangfire",
+});
 
 app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
-app.MapHealthChecks("/health/ready");
+
+// Prometheus exposition (FR-001) — scrape-only / not on the public funnel (FR-006).
+app.MapObservabilityMetricsEndpoint();
+
+// Readiness (SC-003): overall + per-dependency status; JWT-exempt via /api/v1/health prefix.
+app.MapHealthChecks("/api/v1/health/ready", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready"),
+    ResponseWriter = ReadinessResponseWriter.WriteAsync,
+});
+
+// Record per-job outcome + duration metrics as jobs reach terminal states (FR-002).
+GlobalJobFilters.Filters.Add(
+    new DashboardObservability.JobMetricsFilter(app.Services.GetRequiredService<JobMetrics>()));
+
+// Alert on N consecutive job failures → Telegram (US4/FR-009); N configurable, default 3.
+GlobalJobFilters.Filters.Add(new DashboardObservability.ConsecutiveFailureAlertFilter(
+    app.Services,
+    new DashboardObservability.HangfireJobFailureStreakStore(),
+    app.Configuration.GetValue("Observability:JobFailureAlertThreshold", 3)));
 
 app.RegisterAllModuleJobs();
 

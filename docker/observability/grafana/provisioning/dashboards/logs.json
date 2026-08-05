@@ -1,0 +1,87 @@
+{
+  "uid": "fs-logs",
+  "title": "Finance Sentry · Logs",
+  "tags": ["finance-sentry", "us2"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "module",
+        "label": "Module",
+        "type": "query",
+        "datasource": { "type": "loki", "uid": "loki" },
+        "query": "label_values({app=\"finance-sentry\"}, module)",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true
+      },
+      {
+        "name": "level",
+        "label": "Level",
+        "type": "query",
+        "datasource": { "type": "loki", "uid": "loki" },
+        "query": "label_values({app=\"finance-sentry\"}, level)",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true
+      },
+      {
+        "name": "search",
+        "label": "Free text",
+        "type": "textbox",
+        "query": "",
+        "current": { "text": "", "value": "" }
+      },
+      {
+        "name": "correlationId",
+        "label": "Correlation id",
+        "type": "textbox",
+        "query": "",
+        "current": { "text": "", "value": "" }
+      }
+    ]
+  },
+  "annotations": { "list": [] },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Log volume by level",
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 0 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        { "refId": "A", "expr": "sum by (level) (count_over_time({app=\"finance-sentry\", module=~\"$module\"}[$__auto]))", "legendFormat": "{{level}}" }
+      ],
+      "fieldConfig": { "defaults": { "custom": { "drawStyle": "bars", "fillOpacity": 60, "stacking": { "mode": "normal" } } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
+    },
+    {
+      "id": 2,
+      "type": "logs",
+      "title": "Logs — filter by module / level, free text, correlation id",
+      "description": "Structured app logs from Loki (US2). EF Core SQL is suppressed at the default level (FR-011); paste a correlation id to group one request's entries (SC-002).",
+      "gridPos": { "h": 20, "w": 24, "x": 0, "y": 7 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        { "refId": "A", "expr": "{app=\"finance-sentry\", module=~\"$module\", level=~\"$level\"} |~ \"(?i)$search\" |~ \"$correlationId\"" }
+      ],
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": true,
+        "enableLogDetails": true,
+        "dedupStrategy": "none",
+        "sortOrder": "Descending"
+      }
+    }
+  ]
+}

@@ -115,4 +115,18 @@ public interface IAlertGeneratorService
         string providerName,
         DateTime expiresAt,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Raises an operational Alert that a scheduled job has failed <paramref name="consecutiveCount"/>
+    /// times in a row (US4 / FR-009). <paramref name="referenceId"/> is a stable per-job id so the streak
+    /// dedups within the silence window; the caller (the Hangfire failure filter) guarantees one call per
+    /// streak and clears the streak on the next success so a later failure can re-alert.
+    /// </summary>
+    Task GenerateJobFailureAlertAsync(
+        Guid userId,
+        Guid referenceId,
+        string jobName,
+        int consecutiveCount,
+        string? lastError,
+        CancellationToken ct = default);
 }
