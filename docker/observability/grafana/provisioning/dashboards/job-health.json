@@ -1,0 +1,101 @@
+{
+  "uid": "fs-job-health",
+  "title": "Finance Sentry · Job health & trends",
+  "tags": ["finance-sentry", "us3"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "refresh": "30s",
+  "time": { "from": "now-7d", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "job",
+        "label": "Job",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "query": "label_values(finance_jobs_succeeded_total, job)",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true
+      }
+    ]
+  },
+  "annotations": { "list": [] },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Failures per job (over time)",
+      "description": "Per-job failure count from finance_jobs_failed_total (FR-002). Trends persist across API restarts via Prometheus TSDB even though the in-process counter resets (rate/increase handle resets).",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "legendFormat": "{{job}}", "expr": "sum by (job) (increase(finance_jobs_failed_total{job=~\"$job\"}[$__rate_interval]))" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "bars", "fillOpacity": 70, "stacking": { "mode": "normal" } }, "color": { "mode": "palette-classic" } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Successes per job (over time)",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "legendFormat": "{{job}}", "expr": "sum by (job) (increase(finance_jobs_succeeded_total{job=~\"$job\"}[$__rate_interval]))" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "bars", "fillOpacity": 40, "stacking": { "mode": "normal" } }, "color": { "mode": "palette-classic" } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Job duration p95 (s)",
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 9 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "legendFormat": "{{job}}", "expr": "histogram_quantile(0.95, sum by (job, le) (rate(finance_job_duration_seconds_bucket{job=~\"$job\"}[$__rate_interval])))" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 10 } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } }
+    },
+    {
+      "id": 4,
+      "type": "table",
+      "title": "Per-job totals over selected range",
+      "gridPos": { "h": 10, "w": 16, "x": 0, "y": 18 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "format": "table", "instant": true, "expr": "sum by (job) (increase(finance_jobs_succeeded_total{job=~\"$job\"}[$__range]))" },
+        { "refId": "B", "format": "table", "instant": true, "expr": "sum by (job) (increase(finance_jobs_failed_total{job=~\"$job\"}[$__range]))" },
+        { "refId": "C", "format": "table", "instant": true, "expr": "sum by (job) (rate(finance_job_duration_seconds_sum{job=~\"$job\"}[$__range])) / sum by (job) (rate(finance_job_duration_seconds_count{job=~\"$job\"}[$__range]))" }
+      ],
+      "transformations": [
+        { "id": "merge", "options": {} },
+        { "id": "organize", "options": { "renameByName": { "Value #A": "Succeeded", "Value #B": "Failed", "Value #C": "Avg duration (s)", "job": "Job" }, "excludeByName": { "Time": true } } }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Failed" }, "properties": [ { "id": "custom.cellOptions", "value": { "type": "color-background" } }, { "id": "thresholds", "value": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "red", "value": 1 } ] } } ] }
+        ]
+      },
+      "options": { "showHeader": true }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Currently scheduled / enqueued",
+      "gridPos": { "h": 10, "w": 8, "x": 16, "y": 18 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "max(finance_jobs_scheduled)" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short", "decimals": 0, "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "blue", "value": null } ] } }, "overrides": [] },
+      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } }
+    }
+  ]
+}

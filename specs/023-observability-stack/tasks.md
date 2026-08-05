@@ -65,9 +65,9 @@ description: "Task list for Observability Stack (023)"
 **Goal**: Structured log search in the dashboard UI over ≥14 days, no SSH.
 **Independent Test**: Emit a known error → find it in Grafana/Loki by `level=Error` with structured fields; no raw SQL noise.
 
-- [ ] T022 [US2] Grafana Loki logs view/dashboard (`…/dashboards/logs.json`): filter by `level`, `module`, correlation id, free text. (FR-003)
-- [ ] T023 [US2] Verify EF SQL suppressed at default level and structured properties present end-to-end; adjust `SerilogConfiguration` levels if noise leaks. (FR-011, SC-002)
-- [ ] T024 [US2] Validate US2 per `quickstart.md` (injected error found in < 2 min).
+- [X] T022 [US2] Grafana Loki logs view/dashboard (`…/dashboards/logs.json`): filter by `level`, `module`, correlation id, free text. (FR-003)
+- [X] T023 [US2] Verify EF SQL suppressed at default level and structured properties present end-to-end; adjust `SerilogConfiguration` levels if noise leaks. (FR-011, SC-002)
+- [X] T024 [US2] Validate US2 per `quickstart.md` (injected error found in < 2 min).
 
 **Checkpoint**: US1 + US2 both independently usable.
 
@@ -95,8 +95,8 @@ description: "Task list for Observability Stack (023)"
 **Goal**: Failure-count + duration trends per job over a selectable period.
 **Independent Test**: Fail a job twice → trend panel shows two failures with timestamps; survives a restart.
 
-- [ ] T032 [US3] Grafana job-health dashboard (`…/dashboards/job-health.json`): per-job failure count + duration trend over selectable range, from `finance_jobs_*` + Hangfire. (FR-002)
-- [ ] T033 [US3] Verify trends persist across an API restart (Hangfire Postgres storage, FR-010) and validate per `quickstart.md`.
+- [X] T032 [US3] Grafana job-health dashboard (`…/dashboards/job-health.json`): per-job failure count + duration trend over selectable range, from `finance_jobs_*` + Hangfire. (FR-002)
+- [X] T033 [US3] Verify trends persist across an API restart (Hangfire Postgres storage, FR-010) and validate per `quickstart.md`.
 
 **Checkpoint**: all four stories independently functional.
 
@@ -105,10 +105,10 @@ description: "Task list for Observability Stack (023)"
 ## Phase 7: Polish & Cross-Cutting
 
 - [ ] T034 [P] Bump API version + create tag for the new endpoints (`/metrics`, `/api/v1/health/ready`) per constitution Versioning policy.
-- [ ] T035 [P] Observability runbook in `README.md`: bring-up, dashboard URLs (Tailscale), tuning N, retention windows, where alerts land.
+- [X] T035 [P] Observability runbook in `README.md`: bring-up, dashboard URLs (Tailscale), tuning N, retention windows, where alerts land.
 - [ ] T036 Full `dotnet build FinanceSentry.sln` zero-warning sweep + run unit + integration suites in the `sdk:10.0` container.
 - [ ] T037 Deploy to VPS; verify end-to-end: dashboards reachable over Tailscale, `/metrics` scrape-only, one forced consecutive-failure alert lands in Telegram, retention volumes bounded.
-- [ ] T038 [P] Update agent context (`.specify` / `CLAUDE.md` active technologies) with the observability stack.
+- [X] T038 [P] Update agent context (`.specify` / `CLAUDE.md` active technologies) with the observability stack.
 
 ---
 

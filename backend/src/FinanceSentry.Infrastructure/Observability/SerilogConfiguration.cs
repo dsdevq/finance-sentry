@@ -37,8 +37,12 @@ public static class SerilogConfiguration
         var lokiUrl = configuration[LokiUrlConfigKey];
         if (!string.IsNullOrWhiteSpace(lokiUrl))
         {
+            // JSON payload so structured properties (CorrelationId, SourceContext, …) are searchable in
+            // Loki via `| json` (SC-002 correlation-id grouping); only app/module/level become labels so
+            // cardinality stays bounded (FR-007).
             loggerConfiguration.WriteTo.GrafanaLoki(
                 lokiUrl,
+                textFormatter: new LokiJsonTextFormatter(),
                 labels: [new LokiLabel { Key = "app", Value = AppName }],
                 propertiesAsLabels: ["module", "level"]);
         }
