@@ -2,7 +2,11 @@
 
 **Feature Branch**: `037-structured-data-sources`
 **Created**: 2026-08-05
-**Status**: Backlog — spec only, not yet planned
+**Status**: Planned (2026-08-05) — see Decision Log: free re-scope
+
+## Decision Log
+
+- **[DECISION 2026-08-05, Denys]** Phase-0 research falsified the provider table below: Finnhub's `/stock/upgrade-downgrade` and `/stock/price-target` are **premium-only**; FMP's free tier locks grades/targets/ratios to an ~87-ticker sample list; Alpha Vantage allows 25 calls/day (see `research.md` R1). Per this spec's own tension rule (free-insufficient ⇒ hardened scraper stays; paid = explicit separate decision), Denys chose the **free re-scope**: FR-001 is satisfied by (a) retiring the Yahoo `quoteSummary` analyst scraper outright, (b) keeping the hardened MarketBeat sweep as the per-action source with a config demotion flag, and (c) adding free structured **Finnhub `/stock/recommendation`** (monthly consensus counts, new `recommendation_trends` table) as the corroborating structured signal. FMP Starter ($22/mo) is the recorded escalation path if per-action coverage degrades.
 **Origin**: Reliability session 2026-08-05. Reading VPS logs surfaced that the two most-broken data feeds are both *reverse-engineered scraping*, not real integrations: Yahoo's unofficial `quoteSummary` endpoints (crumb/cookie dance, intermittent 404s) for analyst actions, and HTML scraping of TrendForce. Scraping breaks silently and repeatedly; a stable contract does not.
 
 ## Problem
