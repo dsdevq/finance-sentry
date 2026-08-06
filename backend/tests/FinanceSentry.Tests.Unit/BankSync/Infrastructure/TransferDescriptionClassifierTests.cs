@@ -15,6 +15,11 @@ public class TransferDescriptionClassifierTests
     [InlineData("From Instant Access Savings", CategoryKeys.TransferIn)]
     [InlineData("From investment account", CategoryKeys.TransferIn)]
     [InlineData("Payment from Andrea Di Florio", CategoryKeys.TransferIn)]
+    // Monobank «банка» (savings-jar) operations — charity MCC 8398, so the description is the
+    // only reliable transfer signal. "Поповнення" = top-up (out), "З банки" = from jar (in).
+    [InlineData("Поповнення «Поточний RUSORIZ»", CategoryKeys.TransferOut)]
+    [InlineData("Поповнення «Секретний Русоріз 2.0»", CategoryKeys.TransferOut)]
+    [InlineData("З банки «Поточний RUSORIZ»", CategoryKeys.TransferIn)]
     public void Resolve_DirectionalPrefix_ClassifiesTransfer(string description, string expected)
     {
         TransferDescriptionClassifier.Resolve(description).Should().Be(expected);

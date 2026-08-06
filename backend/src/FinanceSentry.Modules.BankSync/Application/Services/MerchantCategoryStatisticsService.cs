@@ -37,7 +37,9 @@ public class MerchantCategoryStatisticsService(
         var transferIds = _transferDetection.DetectTransferTransactionIds(txList.ToList());
 
         var debits = txList
-            .Where(t => !t.IsPending && t.IsActive && t.TransactionType == "debit" && !transferIds.Contains(t.Id))
+            .Where(t => !t.IsPending && t.IsActive && t.TransactionType == "debit"
+                        && !transferIds.Contains(t.Id)
+                        && !CategoryKeys.IsTransfer(t.MerchantCategory))
             .ToList();
 
         if (debits.Count == 0)

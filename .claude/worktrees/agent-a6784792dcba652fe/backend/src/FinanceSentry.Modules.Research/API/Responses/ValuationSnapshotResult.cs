@@ -1,0 +1,58 @@
+namespace FinanceSentry.Modules.Research.API.Responses;
+
+/// <summary>
+/// One valuation metric with its self-built history comparison. <see cref="Value"/> null =
+/// unavailable, NEVER zero-filled (feature 030, FR-006). <see cref="HistoryUnavailable"/> flags
+/// metrics for which no free historical series exists yet (EV/EBITDA, dividend yield) — those grow
+/// their own window as snapshots accrue.
+/// </summary>
+public record MetricValue(
+    decimal? Value,
+    decimal? FiveYearAvg = null,
+    int? HistoryWindowYears = null,
+    bool HistoryUnavailable = false);
+
+/// <summary>A peer in the comparison set with the two cross-sectional metrics we can source live.</summary>
+public record ValuationPeer(string Ticker, decimal? ForwardPe, decimal? EvToEbitda);
+
+/// <summary>The named peer set (default = sector/industry derived; overridable per request).</summary>
+public record ValuationPeerSet(string Name, IReadOnlyList<ValuationPeer> Peers);
+
+/// <summary>The four core valuation metrics, each with its own history comparison.</summary>
+public record ValuationMetricsDto(
+    MetricValue TrailingPe,
+    MetricValue ForwardPe,
+    MetricValue EvToEbitda,
+    MetricValue DividendYield);
+
+/// <summary>
+/// A valuation snapshot for one ticker: current metrics vs the ticker's own history and a named peer
+/// set, plus consensus target and implied upside. <see cref="NotApplicable"/> = non-equity (crypto)
+/// — explicit, never fabricated (feature 030, FR-006). Every response also persists a
+/// <c>valuation_snapshots</c> row so the comparison window grows organically.
+/// </summary>
+public record ValuationSnapshotResult(
+    string Ticker,
+    bool NotApplicable,
+    decimal? Price,
+    bool IsStale,
+    ValuationMetricsDto Metrics,
+    decimal? ConsensusTarget,
+    decimal? ImpliedUpsidePct,
+    ValuationPeerSet? PeerSet,
+    IReadOnlyList<string> Sources,
+    DateTimeOffset RetrievedAt)
+{
+    /// <summary>An explicit not-applicable result for a non-equity ticker (crypto) — no fabricated values.</summary>
+    public static ValuationSnapshotResult ForNonEquity(string ticker) => new(
+        ticker.Trim().ToUpperInvariant(),
+        NotApplicable: true,
+        Price: null,
+        IsStale: false,
+        new ValuationMetricsDto(new MetricValue(null), new MetricValue(null), new MetricValue(null), new MetricValue(null)),
+        ConsensusTarget: null,
+        ImpliedUpsidePct: null,
+        PeerSet: null,
+        Sources: [],
+        RetrievedAt: DateTimeOffset.UtcNow);
+}

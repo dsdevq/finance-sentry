@@ -1,0 +1,302 @@
+namespace FinanceSentry.Modules.BankSync.API.Controllers;
+
+using FinanceSentry.Core.Api;
+using FinanceSentry.Core.Auth;
+using FinanceSentry.Core.Cqrs;
+using FinanceSentry.Modules.BankSync.API.Extensions;
+using FinanceSentry.Modules.BankSync.API.Responses;
+using FinanceSentry.Modules.BankSync.Application.Commands;
+using FinanceSentry.Modules.BankSync.Application.Queries;
+using FinanceSentry.Modules.BankSync.Application.Services;
+using FinanceSentry.Modules.BankSync.Domain.Repositories;
+using FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
+using Hangfire;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+
+[ApiController]
+[Route("accounts")]
+public class BankSyncController(
+    ICommandHandler<ConnectBankAccountCommand, ConnectBankAccountResult> connectHandler,
+    ICommandHandler<ConnectMonobankAccountCommand, ConnectMonobankResult> connectMonobankHandler,
+    IQueryHandler<GetAccountsQuery, GetAccountsResult> getAccountsHandler,
+    IQueryHandler<GetAllTransactionsQuery, AllTransactionsResult> allTransactionsHandler,
+    IQueryHandler<ListTrueLayerProvidersQuery, IReadOnlyList<TrueLayerProviderDto>> listTrueLayerProvidersHandler,
+    ICommandHandler<BeginTrueLayerConnectCommand, BeginTrueLayerConnectResult> beginTrueLayerConnectHandler,
+    ICommandHandler<FinalizeTrueLayerConnectCommand, FinalizeTrueLayerConnectResult> finalizeTrueLayerConnectHandler,
+    ICommandHandler<DisconnectInstitutionCommand, DisconnectInstitutionResult> disconnectInstitutionHandler,
+    Microsoft.Extensions.Configuration.IConfiguration configuration,
+    ILogger<BankSyncController> logger,
+    PlaidAdapter plaid,
+    IBankAccountRepository accounts,
+    ITransactionRepository transactions,
+    IBackgroundJobClient backgroundJobs,
+    ISyncJobRepository syncJobs,
+    ITransactionSyncCoordinator coordinator,
+    FinanceSentry.Core.Interfaces.IAlertGeneratorService alerts) : ControllerBase
+{
+    private readonly PlaidAdapter _plaid = plaid;
+    private readonly IBankAccountRepository _accounts = accounts;
+    private readonly ITransactionRepository _transactions = transactions;
+    private readonly IBackgroundJobClient _backgroundJobs = backgroundJobs;
+    private readonly ISyncJobRepository _syncJobs = syncJobs;
+    private readonly IQueryHandler<GetAllTransactionsQuery, AllTransactionsResult> _allTransactionsHandler = allTransactionsHandler;
+    private readonly ITransactionSyncCoordinator _coordinator = coordinator;
+
+    // ── POST /api/accounts/connect ── T205 ───────────────────────────────────
+
+    [HttpPost("connect")]
+    public async Task<IActionResult> Connect(CancellationToken ct)
+    {
+        var result = await _plaid.CreateLinkTokenAsync(User.RequireUserId(), ct);
+        return Ok(new LinkTokenResponse(
+            result.LinkToken,
+            (int)result.ExpiresIn.TotalSeconds,
+            result.RequestId));
+    }
+
+    // ── POST /api/accounts/link ── T206 ──────────────────────────────────────
+
+    [HttpPost("link")]
+    public async Task<IActionResult> Link([FromBody] LinkRequest request, CancellationToken ct)
+    {
+        var result = await connectHandler.Handle(new ConnectBankAccountCommand(
+            User.RequireUserId(), request.PublicToken, request.InstitutionName), ct);
+
+        return Ok(result);
+    }
+
+    // ── GET /api/accounts ── T207 ────────────────────────────────────────────
+
+    [HttpGet]
+    public async Task<IActionResult> GetAccounts(
+        [FromQuery] string? status = null,
+        [FromQuery] string? currency = null,
+        CancellationToken ct = default)
+    {
+        var result = await getAccountsHandler.Handle(
+            new GetAccountsQuery(User.RequireUserId(), status, currency), ct);
+
+        return Ok(result);
+    }
+
+    // ── GET /api/accounts/transactions ── T208-G ─────────────────────────────
+
+    [HttpGet("transactions")]
+    public async Task<IActionResult> GetAllTransactions(
+        [FromQuery] int offset = 0,
+        [FromQuery] int limit = 50,
+        [FromQuery] DateTime? from = null,
+        [FromQuery] DateTime? to = null,
+        CancellationToken ct = default)
+    {
+        var result = await _allTransactionsHandler.Handle(
+            new GetAllTransactionsQuery(User.RequireUserId(), new PagedRequest(offset, limit), from, to), ct);
+
+        return Ok(PaginationExtensions.CreatePaginatedResponse(
+            result.Transactions, result.TotalCount, result.Offset, result.Limit));
+    }
+
+    // ── GET /api/accounts/{accountId}/transactions ── T208 ───────────────────
+
+    [HttpGet("{accountId:guid}/transactions")]
+    public async Task<IActionResult> GetTransactions(
+        Guid accountId,
+        [FromQuery] int offset = 0,
+        [FromQuery] int limit = 50,
+        [FromQuery] DateTime? startDate = null,
+        [FromQuery] DateTime? endDate = null,
+        CancellationToken ct = default)
+    {
+        var userId = User.RequireUserId();
+
+        var account = await _accounts.GetByIdAsync(accountId, ct);
+        if (account == null || account.UserId != userId)
+            return NotFound(new ApiErrorBody("Account not found.", "ACCOUNT_NOT_FOUND"));
+
+        var txList = (await _transactions.GetByAccountIdAsync(accountId, offset, limit, ct)).ToList();
+        var totalCount = await _transactions.CountByAccountIdAsync(accountId, ct);
+
+        var items = txList.Select(t => new TransactionDto(
+            t.Id,
+            t.AccountId,
+            t.Amount,
+            t.TransactionDate,
+            t.PostedDate,
+            t.Description,
+            t.TransactionType,
+            t.MerchantCategory,
+            t.IsPending,
+            t.CreatedAt,
+            account.Provider,
+            account.AccountType
+        )).ToList();
+
+        return Ok(new TransactionPageResponse(
+            account.Id.ToString(),
+            account.BankName,
+            account.Currency,
+            items,
+            totalCount,
+            offset,
+            limit,
+            (offset + items.Count) < totalCount));
+    }
+
+    // ── POST /api/accounts/{accountId}/sync ── T308 ──────────────────────────
+
+    [HttpPost("{accountId:guid}/sync")]
+    public async Task<IActionResult> TriggerSync(Guid accountId, CancellationToken ct)
+    {
+        var userId = User.RequireUserId();
+
+        var account = await _accounts.GetByIdAsync(accountId, ct);
+        if (account == null || account.UserId != userId)
+            return NotFound(new ApiErrorBody("Account not found.", "ACCOUNT_NOT_FOUND"));
+
+        if (await _syncJobs.HasRunningJobAsync(accountId, ct))
+            return Conflict(new ApiErrorBody("A sync is already in progress for this account.", "SYNC_IN_PROGRESS"));
+
+        var hangfireJobId = _backgroundJobs.Enqueue<Infrastructure.Jobs.ScheduledSyncJob>(
+            job => job.ExecuteSyncAsync(accountId));
+
+        return Accepted(new SyncEnqueuedResponse(
+            hangfireJobId,
+            "Sync enqueued. Use GET /api/accounts/{accountId}/sync-status to track progress."));
+    }
+
+    // ── GET /api/accounts/{accountId}/sync-status ── T309 ───────────────────
+
+    [HttpGet("{accountId:guid}/sync-status")]
+    public async Task<IActionResult> GetSyncStatus(Guid accountId, CancellationToken ct)
+    {
+        var userId = User.RequireUserId();
+
+        var account = await _accounts.GetByIdAsync(accountId, ct);
+        if (account == null || account.UserId != userId)
+            return NotFound(new ApiErrorBody("Account not found.", "ACCOUNT_NOT_FOUND"));
+
+        var latestJob = await _syncJobs.GetLatestByAccountIdAsync(accountId, ct);
+        if (latestJob == null)
+            return Ok(new SyncStatusResponse("never_synced", 0, 0, null, null, null, null));
+
+        return Ok(new SyncStatusResponse(
+            latestJob.Status,
+            latestJob.TransactionCountFetched,
+            latestJob.TransactionCountDeduped,
+            latestJob.ErrorMessage,
+            latestJob.CompletedAt,
+            latestJob.StartedAt,
+            latestJob.CompletedAt));
+    }
+
+    // ── DELETE /api/v1/accounts/institutions/{provider}/{institutionId} ──
+    // Institution-level disconnect: removes a Monobank credential, TrueLayer
+    // connection, or Plaid account and cascades to every child sub-account,
+    // transaction, and alert.
+
+    [HttpDelete("institutions/{provider}/{institutionId:guid}")]
+    public async Task<IActionResult> DisconnectInstitution(string provider, Guid institutionId, CancellationToken ct)
+    {
+        var userId = User.RequireUserId();
+        try
+        {
+            var result = await disconnectInstitutionHandler.Handle(
+                new DisconnectInstitutionCommand(userId, provider, institutionId), ct);
+            return Ok(new { removedAccounts = result.RemovedAccounts });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new ApiErrorBody(ex.Message, "INSTITUTION_NOT_FOUND"));
+        }
+    }
+
+    // ── DELETE /api/accounts/{accountId} ── T309-A ───────────────────────────
+
+    [HttpDelete("{accountId:guid}")]
+    public async Task<IActionResult> DeleteAccount(Guid accountId, CancellationToken ct)
+    {
+        var userId = User.RequireUserId();
+
+        var account = await _accounts.GetByIdAsync(accountId, ct);
+        if (account == null || account.UserId != userId)
+            return NotFound(new ApiErrorBody("Account not found.", "ACCOUNT_NOT_FOUND"));
+
+        await _transactions.SoftDeleteByAccountIdAsync(accountId, ct);
+        await _accounts.DeleteAsync(accountId, ct);
+        await alerts.DeleteAlertsForAccountAsync(accountId, ct);
+
+        return NoContent();
+    }
+
+    // ── POST /api/accounts/monobank/connect ── T019 ──────────────────────────
+
+    [HttpPost("monobank/connect")]
+    public async Task<IActionResult> ConnectMonobank(
+        [FromBody] ConnectMonobankRequest request, CancellationToken ct)
+    {
+        var result = await connectMonobankHandler.Handle(
+            new ConnectMonobankAccountCommand(User.RequireUserId(), request.Token), ct);
+
+        return StatusCode(201, result);
+    }
+
+    // ── GET /api/v1/accounts/truelayer/providers?country=ie ──────────────────
+
+    [HttpGet("truelayer/providers")]
+    public async Task<IActionResult> ListTrueLayerProviders(
+        [FromQuery] string? country = "ie", CancellationToken ct = default)
+    {
+        _ = User.RequireUserId();
+        var result = await listTrueLayerProvidersHandler.Handle(
+            new ListTrueLayerProvidersQuery(country), ct);
+        return Ok(result);
+    }
+
+    // ── POST /api/v1/accounts/truelayer/connect ──────────────────────────────
+
+    [HttpPost("truelayer/connect")]
+    public async Task<IActionResult> BeginTrueLayerConnect(
+        [FromBody] BeginTrueLayerConnectRequest request, CancellationToken ct)
+    {
+        var result = await beginTrueLayerConnectHandler.Handle(
+            new BeginTrueLayerConnectCommand(
+                User.RequireUserId(), request.ProviderId, request.ProviderName), ct);
+        return Ok(result);
+    }
+
+    // ── GET /api/v1/accounts/truelayer/callback?code=&state=&error= ──────────
+    //
+    // Public endpoint hit by TrueLayer after the user consents at their bank.
+    // Exempt from JWT auth; identifies the connection by the 'state' parameter.
+
+    [HttpGet("truelayer/callback")]
+    public async Task<IActionResult> TrueLayerCallback(
+        [FromQuery] string? code,
+        [FromQuery] string? state,
+        [FromQuery] string? error,
+        CancellationToken ct = default)
+    {
+        var frontendBase = (configuration["TrueLayer:FrontendRedirectBase"]
+            ?? "http://localhost:4200").TrimEnd('/');
+
+        if (!string.IsNullOrEmpty(error))
+            return Redirect($"{frontendBase}/accounts/list?connectError={Uri.EscapeDataString(error)}");
+
+        if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(state))
+            return Redirect($"{frontendBase}/accounts/list?connectError=MISSING_CODE_OR_STATE");
+
+        try
+        {
+            await finalizeTrueLayerConnectHandler.Handle(
+                new FinalizeTrueLayerConnectCommand(state, code), ct);
+            return Redirect($"{frontendBase}/accounts/list?connected=truelayer");
+        }
+        catch (FinanceSentry.Modules.BankSync.Infrastructure.TrueLayer.TrueLayerException ex)
+        {
+            logger.LogError(ex, "TrueLayer callback finalization failed: code={ErrorCode}, message={Message}",
+                ex.ErrorCode, ex.Message);
+            return Redirect($"{frontendBase}/accounts/list?connectError={Uri.EscapeDataString(ex.ErrorCode)}");
+        }
+    }
+}

@@ -4,9 +4,13 @@ using FinanceSentry.Modules.BankSync.Domain;
 
 /// <summary>
 /// Classifies bank-transfer transactions from their description prefix, for providers that
-/// give no structured category (TrueLayer). Open-banking feeds render peer/account transfers
-/// with a directional prefix — "To &lt;name/account&gt;" for outgoing, "From …" / "Payment from …"
-/// for incoming — which is a reliable signal that a merchant-keyword match is not.
+/// give no structured category (TrueLayer) or whose MCC misleads (Monobank). Open-banking
+/// feeds render peer/account transfers with a directional prefix — "To &lt;name/account&gt;" for
+/// outgoing, "From …" / "Payment from …" for incoming — which is a reliable signal that a
+/// merchant-keyword match is not. Monobank «банка» (savings-jar) operations are the same shape:
+/// "Поповнення «Jar»" (top-up, outgoing) and "З банки «Jar»" (withdrawal, incoming). Monobank
+/// tags them with the charity MCC 8398, so the description is the only trustworthy signal that
+/// they are internal transfers and not government/charity spend.
 ///
 /// Deliberately conservative: only the directional prefixes match, and the trailing space is
 /// required so "Tobacco"/"Tommy" don't trip the "To" branch. Merchant-keyword matching runs
@@ -15,8 +19,8 @@ using FinanceSentry.Modules.BankSync.Domain;
 /// </summary>
 public static class TransferDescriptionClassifier
 {
-    private static readonly string[] OutgoingPrefixes = ["To "];
-    private static readonly string[] IncomingPrefixes = ["From ", "Payment from "];
+    private static readonly string[] OutgoingPrefixes = ["To ", "Поповнення "];
+    private static readonly string[] IncomingPrefixes = ["From ", "Payment from ", "З банки "];
 
     /// <summary>
     /// Returns <see cref="CategoryKeys.TransferOut"/> / <see cref="CategoryKeys.TransferIn"/>

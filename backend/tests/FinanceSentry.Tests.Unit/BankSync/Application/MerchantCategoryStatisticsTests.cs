@@ -64,4 +64,30 @@ public class MerchantCategoryStatisticsTests
         var food = result.First(c => c.Category == "Food");
         food.TotalSpend.Should().Be(100m);
     }
+
+    [Fact]
+    public async Task GetTopCategories_ExcludesSingleSidedTransferCategory()
+    {
+        // A savings-jar top-up categorized TRANSFER_OUT has no synced counterpart, so the
+        // pair-matcher can't catch it. It must still be excluded from spend by category name.
+        var (_, accountId) = MakeAccount();
+        var date = new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc);
+
+        var transactions = new List<Transaction>
+        {
+            MakeTx(accountId, 9000m, "debit", date, category: CategoryKeys.TransferOut, description: "Поповнення «Jar»"),
+            MakeTx(accountId, 40m,   "debit", date, category: "Food"),
+        };
+
+        var txRepoMock = new Mock<ITransactionRepository>();
+        txRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
+                  .ReturnsAsync(transactions);
+
+        var sut = new MerchantCategoryStatisticsService(txRepoMock.Object, new TransferDetectionService());
+
+        var result = await sut.GetTopCategoriesAsync(UserId, 10);
+
+        result.Should().NotContain(c => c.Category == CategoryKeys.TransferOut);
+        result.Sum(c => c.TotalSpend).Should().Be(40m);
+    }
 }
