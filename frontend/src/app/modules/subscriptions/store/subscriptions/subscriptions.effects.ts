@@ -13,7 +13,7 @@ import {SubscriptionsService} from '../../services/subscriptions.service';
 interface EffectsStore {
   setData: (subscriptions: Subscription[], hasInsufficientHistory: boolean) => void;
   setSummary: (summary: SubscriptionSummary) => void;
-  confirmDismiss: () => void;
+  dismissSubscription: (id: string) => void;
   restoreSubscription: (id: string) => void;
 }
 
@@ -31,13 +31,30 @@ export function subscriptionsEffects(store: EffectsStore) {
       })
     );
 
+  const refreshSummary = (): Observable<SubscriptionSummary> =>
+    service.getSummary().pipe(tap(summary => store.setSummary(summary)));
+
   return {
     load: rxMethod<void>(pipe(switchMap(() => refresh()))),
     dismiss: rxMethod<string>(
-      pipe(switchMap(id => service.dismiss(id).pipe(tap(() => store.confirmDismiss()))))
+      pipe(
+        switchMap(id =>
+          service.dismiss(id).pipe(
+            tap(() => store.dismissSubscription(id)),
+            switchMap(() => refreshSummary())
+          )
+        )
+      )
     ),
     restore: rxMethod<string>(
-      pipe(switchMap(id => service.restore(id).pipe(tap(() => store.restoreSubscription(id)))))
+      pipe(
+        switchMap(id =>
+          service.restore(id).pipe(
+            tap(() => store.restoreSubscription(id)),
+            switchMap(() => refreshSummary())
+          )
+        )
+      )
     ),
     setInstallmentTerm: rxMethod<{id: string; termCount: Nullable<number>}>(
       pipe(

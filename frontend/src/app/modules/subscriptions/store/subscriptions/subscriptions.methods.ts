@@ -18,16 +18,11 @@ export function subscriptionsMethods(store: WritableStateSource<SubscriptionsSta
     setSort(sort: SubscriptionSort): void {
       patchState(store, {sort});
     },
-    setDismissTarget(id: Nullable<string>): void {
-      patchState(store, {dismissTargetId: id});
-    },
-    confirmDismiss(): void {
+    dismissSubscription(id: string): void {
       patchState(store, (s: SubscriptionsState) => ({
         subscriptions: s.subscriptions.map(sub =>
-          sub.id === s.dismissTargetId ? {...sub, status: 'dismissed' as const} : sub
+          sub.id === id ? {...sub, status: 'dismissed' as const} : sub
         ),
-        dismissTargetId: null,
-        summary: null,
       }));
     },
     restoreSubscription(id: string): void {
@@ -35,7 +30,6 @@ export function subscriptionsMethods(store: WritableStateSource<SubscriptionsSta
         subscriptions: s.subscriptions.map(sub =>
           sub.id === id ? {...sub, status: 'active' as const} : sub
         ),
-        summary: null,
       }));
     },
   };
