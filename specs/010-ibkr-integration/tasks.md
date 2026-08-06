@@ -282,10 +282,10 @@ The model collapses to: IBeam holds one IBKR session for the deployment via env-
 
 ### Future — OAuth Web API migration (when going public)
 
-Not started. Bounded scope per `research.md` Decision 3:
+Delivered 2026-07 via IBKR OAuth **1.0a** self-service (PR #285, IBeam cleanup in PR #288). The shipped design differs from the planned authorization-code flow: OAuth 1.0a uses per-user long-lived artifacts (consumer key, access token + secret, RSA keys, DH params) submitted through the connect form — there is no authorize-redirect, no callback code exchange, and no refresh-token lifecycle.
 
-- [ ] **TI-010-040** _(planned)_ Add a forward EF migration to `IBKRCredentials`: encrypted `AccessToken`, `RefreshToken`, plaintext `ExpiresAt`, plus `KeyVersion` for rotation. Reuse `ICredentialEncryptionService`.
-- [ ] **TI-010-041** _(planned)_ Replace `IBKRGatewayClient` with `IBKRWebApiClient` calling IBKR's hosted OAuth endpoints (no IBeam sidecar).
-- [ ] **TI-010-042** _(planned)_ Add OAuth callback endpoint (`GET /api/v1/brokerage/ibkr/oauth-callback?code=…`) that exchanges the auth code for tokens and stores them.
-- [ ] **TI-010-043** _(planned)_ Frontend: replace the launcher button with an `<a href={IBKR_OAUTH_AUTHORIZE_URL}>` redirect.
-- [ ] **TI-010-044** _(planned)_ Remove `ibkr-gateway` Compose service entirely once OAuth is live.
+- [X] **TI-010-040** _(planned)_ Add a forward EF migration to `IBKRCredentials`: encrypted `AccessToken`, `RefreshToken`, plaintext `ExpiresAt`, plus `KeyVersion` for rotation. Reuse `ICredentialEncryptionService`. — delivered as migration `M006_IbkrOAuthArtifacts` (PR #285): stores `ConsumerKey`/`AccessToken`/DH params in the clear, `EncryptedAccessTokenSecret` + two RSA private keys AES-256-GCM encrypted (per-column IV/auth tag). No `RefreshToken`/`ExpiresAt` — OAuth 1.0a tokens don't expire or refresh.
+- [X] **TI-010-041** _(planned)_ Replace `IBKRGatewayClient` with `IBKRWebApiClient` calling IBKR's hosted OAuth endpoints (no IBeam sidecar). — delivered as `IbkrOAuthClient` + `IbkrOAuthSigner`/`IbkrOAuthAdapter` (`Infrastructure/IBKR/OAuth/`) calling `api.ibkr.com` directly (PR #285); `IBKRGatewayClient` and the whole IBeam stack deleted in PR #288.
+- [X] **TI-010-042** _(planned)_ Add OAuth callback endpoint (`GET /api/v1/brokerage/ibkr/oauth-callback?code=…`) that exchanges the auth code for tokens and stores them. — superseded: OAuth 1.0a has no auth-code exchange; Connect persists the six self-service artifacts directly and the live-session-token handshake happens server-side per sync (PR #285).
+- [X] **TI-010-043** _(planned)_ Frontend: replace the launcher button with an `<a href={IBKR_OAUTH_AUTHORIZE_URL}>` redirect. — superseded: no authorize redirect exists in OAuth 1.0a; the launcher became the six-artifact connect form (`ibkr-form.component`, 3 text fields + 3 .pem uploads, PR #285).
+- [X] **TI-010-044** _(planned)_ Remove `ibkr-gateway` Compose service entirely once OAuth is live. — delivered in PR #288: IBeam/gateway service blocks, `Dockerfile.ibeam` and docker.sock mounts removed from both compose files and `deploy.sh`; no `ibkr-gateway` service remains in `docker/docker-compose*.yml`.
