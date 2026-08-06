@@ -15,8 +15,8 @@ public class WealthAggregationServiceTests
         => new(Guid.NewGuid(), "Test Bank", "checking", "1234", provider, currency,
                balance, balance.HasValue ? CurrencyConverter.ToUsd(balance.Value, currency) : null, "synced", null);
 
-    private static BankingTransactionSummary MakeTx(Guid accountId, string provider, decimal amount, string type, DateTime date, bool isPending = false)
-        => new(accountId, provider, type, amount, date, isPending);
+    private static BankingTransactionSummary MakeTx(Guid accountId, string provider, decimal amount, string type, DateTime date, bool isPending = false, string currency = "USD")
+        => new(accountId, provider, type, amount, currency, CurrencyConverter.ToUsd(amount, currency), date, isPending);
 
     private WealthAggregationService BuildService(
         IEnumerable<BankingAccountSummary> accounts,
@@ -151,6 +151,26 @@ public class WealthAggregationServiceTests
         result.TotalDebits.Should().Be(300m);
         result.TotalCredits.Should().Be(300m);
         result.NetFlow.Should().Be(0m);
+    }
+
+    [Fact]
+    public async Task GetTransactionSummary_MixedCurrencies_SumsInUsdNotNativeMagnitudes()
+    {
+        // Regression: previously summed native Amount, so ₴10,000 + $100 read as $10,100.
+        // Correct is $100 + (10,000 × 0.024 UAH) = $340.
+        var usdAcct = Guid.NewGuid();
+        var uahAcct = Guid.NewGuid();
+        var date = new DateTime(2026, 4, 15, 0, 0, 0, DateTimeKind.Utc);
+        var txs = new[]
+        {
+            MakeTx(usdAcct, "plaid", 100m, "debit", date),
+            MakeTx(uahAcct, "monobank", 10000m, "debit", date, currency: "UAH"),
+        };
+
+        var svc = BuildService([MakeAccount("plaid", "USD", 1000m), MakeAccount("monobank", "UAH", 50000m)], txs);
+        var result = await svc.GetTransactionSummaryAsync(UserId, new DateOnly(2026, 4, 1), new DateOnly(2026, 4, 30), null, null);
+
+        result.TotalDebits.Should().Be(340m);
     }
 
     [Fact]

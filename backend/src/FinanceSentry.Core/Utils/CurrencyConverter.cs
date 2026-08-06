@@ -35,6 +35,14 @@ public static class CurrencyConverter
     }
 
     /// <summary>
+    /// True when a rate is available for <paramref name="currency"/>. Callers building a total
+    /// should check this to flag the result as approximate rather than trusting a silent 1:1
+    /// fallback for an unlisted currency.
+    /// </summary>
+    public static bool IsKnown(string? currency) =>
+        !string.IsNullOrWhiteSpace(currency) && _rates.ContainsKey(currency);
+
+    /// <summary>
     /// Replaces the live rate table (USD-per-unit multipliers). The hardcoded
     /// fallback is merged underneath so a currency briefly missing from the feed
     /// still resolves. Ignored when <paramref name="rates"/> is null/empty.

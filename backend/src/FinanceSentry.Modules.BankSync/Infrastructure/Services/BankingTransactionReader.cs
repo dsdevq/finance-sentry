@@ -1,6 +1,7 @@
 namespace FinanceSentry.Modules.BankSync.Infrastructure.Services;
 
 using FinanceSentry.Core.Interfaces;
+using FinanceSentry.Core.Utils;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
 
 public class BankingTransactionReader(
@@ -18,6 +19,7 @@ public class BankingTransactionReader(
 
         var accountList = await _accounts.GetByUserIdAsync(userId, ct);
         var providerByAccount = accountList.ToDictionary(a => a.Id, a => a.Provider);
+        var currencyByAccount = accountList.ToDictionary(a => a.Id, a => a.Currency);
 
         var txList = await _transactions.GetByUserIdAsync(userId, ct);
 
@@ -29,13 +31,19 @@ public class BankingTransactionReader(
                 return new { t, effectiveDate };
             })
             .Where(x => x.effectiveDate >= fromUtc && x.effectiveDate <= toUtc)
-            .Select(x => new BankingTransactionSummary(
-                x.t.AccountId,
-                providerByAccount.TryGetValue(x.t.AccountId, out var p) ? p : "unknown",
-                x.t.TransactionType ?? "debit",
-                x.t.Amount,
-                x.effectiveDate,
-                x.t.IsPending))
+            .Select(x =>
+            {
+                var currency = currencyByAccount.TryGetValue(x.t.AccountId, out var c) ? c : "USD";
+                return new BankingTransactionSummary(
+                    x.t.AccountId,
+                    providerByAccount.TryGetValue(x.t.AccountId, out var p) ? p : "unknown",
+                    x.t.TransactionType ?? "debit",
+                    x.t.Amount,
+                    currency,
+                    CurrencyConverter.ToUsd(x.t.Amount, currency),
+                    x.effectiveDate,
+                    x.t.IsPending);
+            })
             .ToList();
     }
 }

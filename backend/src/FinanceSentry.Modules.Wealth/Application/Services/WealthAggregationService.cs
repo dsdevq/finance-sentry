@@ -206,8 +206,10 @@ public class WealthAggregationService(
             .GroupBy(t => ProviderCategoryMapper.GetCategory(t.Provider))
             .Select(g =>
             {
-                var debits = g.Where(t => string.Equals(t.TransactionType, "debit", StringComparison.OrdinalIgnoreCase)).Sum(t => t.Amount);
-                var credits = g.Where(t => string.Equals(t.TransactionType, "credit", StringComparison.OrdinalIgnoreCase)).Sum(t => t.Amount);
+                // Sum AmountUsd — accounts span currencies (UAH/EUR/…); summing native Amount
+                // would add hryvnia to euros as if both were dollars.
+                var debits = g.Where(t => string.Equals(t.TransactionType, "debit", StringComparison.OrdinalIgnoreCase)).Sum(t => t.AmountUsd);
+                var credits = g.Where(t => string.Equals(t.TransactionType, "credit", StringComparison.OrdinalIgnoreCase)).Sum(t => t.AmountUsd);
                 return new TransactionCategoryDto(g.Key, debits, credits, credits - debits, g.Count());
             })
             .ToList();
