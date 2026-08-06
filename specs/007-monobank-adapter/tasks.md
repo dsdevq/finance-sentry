@@ -45,8 +45,8 @@ No new project or dependency setup required. Monobank API is called via plain `H
 
 ### Contract Tests for User Story 1
 
-- [ ] T011 [P] [US1] Write contract test for `POST /api/v1/accounts/monobank/connect` (201, 400 invalid token, 409 duplicate, 429 rate limit) in `backend/tests/FinanceSentry.Tests/Monobank/ConnectMonobankContractTests.cs`
-- [ ] T012 [P] [US1] Write contract test for Monobank `GET /personal/client-info` response mapping (happy path + 401 error) using mocked HTTP handler in `backend/tests/FinanceSentry.Tests/Monobank/MonobankClientInfoContractTests.cs`
+- [X] T011 [P] [US1] Write contract test for `POST /api/v1/accounts/monobank/connect` (201, 400 invalid token, 409 duplicate, 429 rate limit) in `backend/tests/FinanceSentry.Tests.Unit/BankSync/Monobank/ConnectMonobankContractTests.cs`
+- [X] T012 [P] [US1] Write contract test for Monobank `GET /personal/client-info` response mapping (happy path + 401 error) using mocked HTTP handler in `backend/tests/FinanceSentry.Tests.Unit/BankSync/Monobank/MonobankClientInfoContractTests.cs`
 
 ### Implementation for User Story 1
 
@@ -73,7 +73,7 @@ No new project or dependency setup required. Monobank API is called via plain `H
 
 ### Contract Tests for User Story 2
 
-- [ ] T023 [P] [US2] Write contract test for Monobank `GET /personal/statement/{account}/{from}/{to}` response mapping (amount÷100, currency numeric→alphabetic, Unix timestamp→DateTime UTC) using mocked HTTP handler in `backend/tests/FinanceSentry.Tests/Monobank/MonobankStatementContractTests.cs`
+- [X] T023 [P] [US2] Write contract test for Monobank `GET /personal/statement/{account}/{from}/{to}` response mapping (amount÷100, currency numeric→alphabetic, Unix timestamp→DateTime UTC) using mocked HTTP handler in `backend/tests/FinanceSentry.Tests.Unit/BankSync/Monobank/MonobankStatementContractTests.cs`
 
 ### Implementation for User Story 2
 
@@ -107,8 +107,8 @@ No new project or dependency setup required. Monobank API is called via plain `H
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T034 [P] Write unit tests for `MonobankAdapter` (connect happy path, invalid token, duplicate connect, SyncTransactions amount mapping) in `backend/tests/FinanceSentry.Tests/Monobank/MonobankAdapterTests.cs`
-- [ ] T035 [P] Write unit test for `BankProviderFactory` (resolves plaid for "plaid", monobank for "monobank", throws for unknown) in `backend/tests/FinanceSentry.Tests/Monobank/BankProviderFactoryTests.cs`
+- [X] T034 [P] Write unit tests for `MonobankAdapter` (connect happy path, invalid token, duplicate connect, SyncTransactions amount mapping) in `backend/tests/FinanceSentry.Tests.Unit/BankSync/Monobank/MonobankAdapterTests.cs` — duplicate-connect 409 is owned by `ConnectMonobankAccountCommandHandler`, covered in `ConnectMonobankContractTests.cs`
+- [X] T035 [P] Write unit test for `BankProviderFactory` (resolves plaid for "plaid", monobank for "monobank", throws for unknown) in `backend/tests/FinanceSentry.Tests.Unit/BankSync/Monobank/BankProviderFactoryTests.cs`
 - [X] T036 Bump backend minor version in `backend/src/FinanceSentry.API/FinanceSentry.API.csproj` (no `<Version>` tag present — N/A)
 - [X] T037 Bump frontend minor version in `frontend/package.json` → 0.6.0
 
