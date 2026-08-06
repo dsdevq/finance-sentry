@@ -109,7 +109,8 @@ public class MonobankHttpClient(HttpClient http)
                 continue;
             }
 
-            if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            // Monobank returns 403 (not 401) for a bad/unknown X-Token; treat both as invalid token.
+            if (response.StatusCode is System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden)
                 throw new MonobankException("MONOBANK_TOKEN_INVALID",
                     "Invalid or expired Monobank token.", 400);
 

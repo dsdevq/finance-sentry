@@ -76,7 +76,7 @@ public sealed partial class MarketBeatAnalystActionsSource(
             }
 
             var actionText = CellText(cells, headers, "action");
-            var brokerage = CellText(cells, headers, "brokerage");
+            var brokerage = ExtractFirm(CellAt(cells, headers, "brokerage"));
             if (string.IsNullOrWhiteSpace(brokerage))
             {
                 continue;
@@ -170,6 +170,34 @@ public sealed partial class MarketBeatAnalystActionsSource(
 
     private static string CellText(IHtmlCollection<IElement> cells, Dictionary<string, int> headers, string key)
         => CellAt(cells, headers, key)?.TextContent.Trim() ?? string.Empty;
+
+    // The brokerage cell contains the firm-profile link plus an "All Access" promo anchor whose
+    // sr-only text ("Subscribe to MarketBeat All Access…") pollutes the cell's TextContent.
+    // Prefer the firm-profile link's own text; fall back to stripping the known promo substring.
+    private const string PromoMarker = "Subscribe to MarketBeat All Access";
+
+    private static string ExtractFirm(IElement? brokerageCell)
+    {
+        if (brokerageCell is null)
+        {
+            return string.Empty;
+        }
+
+        // The first by-issuer anchor is the logo image link (whitespace-only text); the firm name
+        // is the first by-issuer anchor that actually carries text.
+        var firmLink = brokerageCell
+            .QuerySelectorAll("a[href*='/ratings/by-issuer/']")
+            .FirstOrDefault(a => !string.IsNullOrWhiteSpace(a.TextContent));
+        var text = firmLink?.TextContent ?? brokerageCell.TextContent;
+
+        var promoIdx = text.IndexOf(PromoMarker, StringComparison.OrdinalIgnoreCase);
+        if (promoIdx >= 0)
+        {
+            text = text[..promoIdx];
+        }
+
+        return text.Trim();
+    }
 
     private static string? ExtractTicker(IElement? companyCell)
     {

@@ -12,6 +12,9 @@ using Xunit;
 /// </summary>
 public sealed class MarketBeatAnalystActionsContractTests
 {
+    // Brokerage cells mirror the live markup: the firm-profile link is followed by an
+    // "All Access" promo anchor whose sr-only span pollutes the cell's TextContent
+    // ("Morgan StanleySubscribe to MarketBeat All Access…"). The parser must emit clean names.
     private const string RatingsFixture = """
     <html><body>
       <table class="ratings-table">
@@ -22,14 +25,23 @@ public sealed class MarketBeatAnalystActionsContractTests
           <tr>
             <td><a href="/stocks/NASDAQ/MU/">Micron Technology</a><div class="ticker-area">MU</div></td>
             <td>Upgrade</td>
-            <td>Morgan Stanley</td>
+            <td data-clean="Morgan Stanley|0">
+              <div class="member-profile d-flex align-items-start">
+                <a class="profile-link member-image-inline" href="https://www.marketbeat.com/ratings/by-issuer/morgan-stanley-stock-recommendations/">
+                  <span class="d-block member-thumbnail rounded-circle border"><img src="/img/logos/morgan-stanley-logo.png" alt="Morgan Stanley logo"></span></a>
+                <div class="member-info"><a href="https://www.marketbeat.com/ratings/by-issuer/morgan-stanley-stock-recommendations/">Morgan Stanley</a><br>
+                  <a class="d-block d-sm-inline-block text-decoration-none" rel="nofollow" href="/subscribe/all-access/?ReferralType=StarRating" target="_blank"
+                     title="Upgrade to MarketBeat All Access to see this firm's recommendation accuracy ranking."><span class="fa-solid fa-star" aria-hidden="true"></span><span class="sr-only">Subscribe to MarketBeat All Access for the firm's recommendation accuracy rating</span></a>
+                </div>
+              </div>
+            </td>
             <td>Equal-Weight → Overweight</td>
             <td>$98.00 → $135.00</td>
           </tr>
           <tr>
             <td><div class="ticker-area">AAPL</div><a href="/stocks/NASDAQ/AAPL/">Apple Inc.</a></td>
             <td>Boost Price Target</td>
-            <td>Wedbush</td>
+            <td>Wedbush<span class="sr-only">Subscribe to MarketBeat All Access for the firm's recommendation accuracy rating</span></td>
             <td>Outperform</td>
             <td>$250.00 → $270.00</td>
           </tr>
@@ -57,6 +69,7 @@ public sealed class MarketBeatAnalystActionsContractTests
 
         var aapl = actions[1];
         aapl.Ticker.Should().Be("AAPL");
+        aapl.Firm.Should().Be("Wedbush"); // promo text stripped even without a firm-profile link
         aapl.ActionType.Should().Be(AnalystActionType.TargetChange);
         aapl.PriorTarget.Should().Be(250.00m);
         aapl.NewTarget.Should().Be(270.00m);
