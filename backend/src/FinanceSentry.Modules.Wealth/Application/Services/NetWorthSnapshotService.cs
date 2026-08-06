@@ -20,7 +20,7 @@ public class NetWorthSnapshotService(INetWorthSnapshotRepository repository) : I
         var previous = await _repository.GetLatestByUserIdAsync(userId, ct);
         var stale = new List<string>();
 
-        var banking = ResolveSleeve("banking", data.BankingTotal, isFresh: true, previous?.BankingTotal, stale);
+        var banking = ResolveSleeve("banking", data.BankingTotal, data.BankingFresh, previous?.BankingTotal, stale);
         var brokerage = ResolveSleeve("brokerage", data.BrokerageTotal, data.BrokerageFresh, previous?.BrokerageTotal, stale);
         var crypto = ResolveSleeve("crypto", data.CryptoTotal, data.CryptoFresh, previous?.CryptoTotal, stale);
 

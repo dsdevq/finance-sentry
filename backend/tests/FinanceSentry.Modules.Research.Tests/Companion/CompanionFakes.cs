@@ -106,6 +106,9 @@ internal sealed class FakeBankingTotalsReader(params Guid[] userIds) : IBankingT
 
     public Task<decimal> GetTotalUsdAsync(Guid userId, CancellationToken ct = default)
         => Task.FromResult(0m);
+
+    public Task<DateTime?> GetLatestSuccessfulSyncAsync(Guid userId, CancellationToken ct = default)
+        => Task.FromResult<DateTime?>(DateTime.UtcNow);
 }
 
 internal sealed class FakeBrokerageReader(IReadOnlyList<BrokerageHoldingSummary>? holdings = null)

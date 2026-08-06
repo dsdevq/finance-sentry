@@ -29,6 +29,9 @@ public sealed class BookSnapshotReaderTests
 
         public Task<decimal> GetTotalUsdAsync(Guid userId, CancellationToken ct = default)
             => throws ? throw new InvalidOperationException("boom") : Task.FromResult(total);
+
+        public Task<DateTime?> GetLatestSuccessfulSyncAsync(Guid userId, CancellationToken ct = default)
+            => Task.FromResult<DateTime?>(DateTime.UtcNow);
     }
 
     [Fact]

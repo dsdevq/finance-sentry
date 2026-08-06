@@ -133,6 +133,11 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
                 label="Total Net Worth"
                 currency="USD"
               />
+              @if (store.netWorthStaleNotice()) {
+                <div class="mt-cmn-2">
+                  <cmn-alert variant="warning">{{ store.netWorthStaleNotice() }}</cmn-alert>
+                </div>
+              }
             }
           </div>
 

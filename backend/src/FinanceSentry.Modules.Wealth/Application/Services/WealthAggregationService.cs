@@ -16,6 +16,10 @@ public class WealthAggregationService(
 
     private static readonly TimeSpan StaleThreshold = TimeSpan.FromHours(1);
 
+    // Banking feeds sync roughly daily (not tick-by-tick like crypto/brokerage prices), so a
+    // longer window before we call a bank account "stale". Matches the net-worth snapshot job.
+    private static readonly TimeSpan BankingStaleThreshold = TimeSpan.FromHours(36);
+
     private static readonly IReadOnlyDictionary<string, int> SyncStatusPriority =
         new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
         {
@@ -146,7 +150,7 @@ public class WealthAggregationService(
                 a.AccountId, a.BankName, a.AccountType, a.AccountNumberLast4,
                 a.Provider, ProviderCategoryMapper.GetCategory(a.Provider),
                 a.Currency, a.CurrentBalance, a.BalanceUsd,
-                a.SyncStatus, a.LastSyncTimestamp)).ToList();
+                EffectiveBankingStatus(a.SyncStatus, a.LastSuccessfulSyncTimestamp), a.LastSyncTimestamp)).ToList();
 
             return new InstitutionDto(
                 InstitutionId: InstitutionIdFor(first),
@@ -154,7 +158,7 @@ public class WealthAggregationService(
                 Name: first.BankName,
                 Category: ProviderCategoryMapper.GetCategory(first.Provider),
                 TotalInBaseCurrency: accountDtos.Sum(a => a.BalanceInBaseCurrency ?? 0m),
-                SyncStatus: WorstSyncStatus(list.Select(a => a.SyncStatus)),
+                SyncStatus: WorstSyncStatus(list.Select(a => EffectiveBankingStatus(a.SyncStatus, a.LastSuccessfulSyncTimestamp))),
                 LastSyncTimestamp: list.Max(a => a.LastSyncTimestamp),
                 LastSuccessfulSyncTimestamp: list.Max(a => a.LastSuccessfulSyncTimestamp),
                 Accounts: accountDtos);
@@ -169,6 +173,22 @@ public class WealthAggregationService(
 
     private static Guid InstitutionIdFor(BankingAccountSummary s)
         => s.MonobankCredentialId ?? s.TrueLayerConnectionId ?? s.AccountId;
+
+    /// <summary>
+    /// Downgrades a banking account that <i>looks</i> synced but hasn't had a successful sync
+    /// within <see cref="BankingStaleThreshold"/> to "stale", so a lapsed connection (e.g. an
+    /// expired TrueLayer consent) shows a frozen balance as stale rather than current. Leaves
+    /// already-actionable states ("reauth_required", "failed") and in-progress ones untouched.
+    /// </summary>
+    private static string EffectiveBankingStatus(string status, DateTime? lastSuccessfulSync)
+    {
+        if (status is not ("synced" or "active"))
+            return status;
+
+        var isStale = lastSuccessfulSync is null
+            || DateTime.UtcNow - lastSuccessfulSync.Value > BankingStaleThreshold;
+        return isStale ? "stale" : status;
+    }
 
     private static string WorstSyncStatus(IEnumerable<string> statuses)
     {

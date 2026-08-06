@@ -104,6 +104,21 @@ export function dashboardComputed(store: StateSignals) {
       }));
     }),
 
+    netWorthStaleNotice: computed((): string | null => {
+      const history = store.netWorthHistory();
+      const latest = history[history.length - 1];
+      const sleeves = latest?.staleSleeves?.trim();
+      if (!sleeves) {
+        return null;
+      }
+      const names = sleeves
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean)
+        .map(s => s.charAt(0).toUpperCase() + s.slice(1));
+      return `${names.join(' & ')} data is stale — carried forward from the last successful sync, not a real change.`;
+    }),
+
     isHistoryLoading: computed(() => store.historyLoading()),
     historyErrorMessage: computed(() => store.historyError()),
   };
