@@ -116,6 +116,7 @@ docker/
 - Vitest unit tests covering the signal stores (run with `npx ng test --watch=false`)
 - All bank-sync pages render (accounts list, connect, transactions, dashboard)
 - Backend: accounts, transactions, sync, webhook, dashboard endpoints all implemented
+- Data retention & backups (024): `FinanceSentry.Modules.Retention` (schema `retention`). A compiled `RetentionPolicyRegistry` gives every table a purge/downsample/keep decision (reflection coverage-guard + keep-forever whitelist tests). Nightly `retention-purge` batch-deletes out-of-policy rows idempotently; nightly `db-backup` does `pg_dump → age-encrypt → Cloudflare R2`; weekly `db-restore-verify` restores into an isolated scratch DB and marks the artifact Verified. US3 `retention-downsample` (weekly compaction) is gated off (`Retention:Downsample:Enabled`). Ops verbs: `dotnet FinanceSentry.API.dll retention-purge [--dry-run] | db-backup | db-restore-verify`. R2/age secrets in `.env.sops` (`BACKUP_*`); blank = jobs no-op. Grafana dashboard `retention-backups`.
 
 **Frontend state sweep — DONE.** All page-level state now lives in SignalStores under `modules/bank-sync/store/` (`accounts`, `connect`, `dashboard`, `sync-status`, `transactions`, `transaction-ledger`). The connect flow moved to `components/connect-modal/` backed by `ConnectStore` (error mapping via `ERROR_MESSAGES_REGISTRY`); transactions use `TransactionsStore`; `sync-status.component.ts` polling folded into `SyncStatusStore` (`rxMethod` timer, no `setInterval`).
 
