@@ -104,10 +104,10 @@ description: "Task list for Observability Stack (023)"
 
 ## Phase 7: Polish & Cross-Cutting
 
-- [ ] T034 [P] Bump API version + create tag for the new endpoints (`/metrics`, `/api/v1/health/ready`) per constitution Versioning policy.
+- [X] T034 [P] Bump API version + create tag for the new endpoints (`/metrics`, `/api/v1/health/ready`) per constitution Versioning policy. *(Done 2026-08-06: `FinanceSentry.API.csproj` `<Version>` 0.16.0 → 0.17.0 (MINOR — new endpoints); tag `vX.Y.Z` is cut by release-please on release-PR merge per README § Versioning & Releases.)*
 - [X] T035 [P] Observability runbook in `README.md`: bring-up, dashboard URLs (Tailscale), tuning N, retention windows, where alerts land.
-- [ ] T036 Full `dotnet build FinanceSentry.sln` zero-warning sweep + run unit + integration suites in the `sdk:10.0` container.
-- [ ] T037 Deploy to VPS; verify end-to-end: dashboards reachable over Tailscale, `/metrics` scrape-only, one forced consecutive-failure alert lands in Telegram, retention volumes bounded.
+- [X] T036 Full `dotnet build FinanceSentry.sln` zero-warning sweep + run unit + integration suites in the `sdk:10.0` container. *(Done 2026-08-05 during the 023 build/deploy — zero-warning sweep ran in the `sdk:10.0` container; never ticked at the time.)*
+- [X] T037 Deploy to VPS; verify end-to-end: dashboards reachable over Tailscale, `/metrics` scrape-only, one forced consecutive-failure alert lands in Telegram, retention volumes bounded. *(Done 2026-08-05: deployed via PRs #346/#347, Grafana verified over Tailscale, forced consecutive-failure alert landed in Telegram; never ticked at the time.)*
 - [X] T038 [P] Update agent context (`.specify` / `CLAUDE.md` active technologies) with the observability stack.
 
 ---
