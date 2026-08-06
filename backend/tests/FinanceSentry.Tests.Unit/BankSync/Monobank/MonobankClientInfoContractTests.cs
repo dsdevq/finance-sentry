@@ -103,4 +103,18 @@ public class MonobankClientInfoContractTests
             .Which.Should().Match<MonobankException>(e =>
                 e.ErrorCode == "MONOBANK_TOKEN_INVALID" && e.StatusCode == 400);
     }
+
+    [Fact]
+    public async Task GetClientInfo_Forbidden_ThrowsTokenInvalidMappedTo400()
+    {
+        // The real Monobank API answers 403 (not 401) for a bad/unknown X-Token.
+        var handler = new MonobankStubHttpHandler()
+            .Enqueue(HttpStatusCode.Forbidden, """{"errorDescription":"Unknown 'X-Token'"}""");
+
+        var act = () => handler.BuildClient().GetClientInfoAsync("bad-token");
+
+        (await act.Should().ThrowAsync<MonobankException>())
+            .Which.Should().Match<MonobankException>(e =>
+                e.ErrorCode == "MONOBANK_TOKEN_INVALID" && e.StatusCode == 400);
+    }
 }
