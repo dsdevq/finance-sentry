@@ -25,6 +25,7 @@ public static class RetentionPolicyRegistry
     private const string Budgets = "budgets";
     private const string Auth = "auth";
     private const string Public = "public";
+    private const string Retention = "retention";
 
     /// <summary>
     /// Every <c>DbContext</c> the retention policy set must account for. The coverage-guard test
@@ -52,6 +53,10 @@ public static class RetentionPolicyRegistry
         Purge(Research, "macro_events", "EventDate", 365, "Past macro-calendar entries."),
         Purge(Research, "recommendation_trends", "IngestedAt", 365, "Monthly consensus; stale once a ticker stops being covered."),
         Purge(Risk, "holding_snapshots", "CapturedAt", 180, "Risk holding time-series."),
+        // The retention module governs its own run-record tables (one row per run; drill rows aren't
+        // artifact-pruned). 180d keeps a recent Verified backup_runs row for the SC-002 query.
+        Purge(Retention, "retention_runs", "StartedAt", 180, "Retention/downsample run history."),
+        Purge(Retention, "backup_runs", "CreatedAt", 180, "Backup + restore-drill history (artifact prune handles live backups)."),
 
         // ── Downsample (US3, P2 — job gated off by default) ──────────────────────────────────────
         Downsample(Radar, "daily_bars", "Date", 365, "Daily OHLC → weekly beyond a year."),
