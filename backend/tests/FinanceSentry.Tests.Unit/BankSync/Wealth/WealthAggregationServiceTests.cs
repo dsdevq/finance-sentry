@@ -11,9 +11,10 @@ public class WealthAggregationServiceTests
 {
     private static readonly Guid UserId = Guid.NewGuid();
 
-    private static BankingAccountSummary MakeAccount(string provider, string currency, decimal? balance)
+    private static BankingAccountSummary MakeAccount(string provider, string currency, decimal? balance, DateTime? lastSuccessfulSync = null)
         => new(Guid.NewGuid(), "Test Bank", "checking", "1234", provider, currency,
-               balance, balance.HasValue ? CurrencyConverter.ToUsd(balance.Value, currency) : null, "synced", null);
+               balance, balance.HasValue ? CurrencyConverter.ToUsd(balance.Value, currency) : null, "synced",
+               DateTime.UtcNow, lastSuccessfulSync ?? DateTime.UtcNow);
 
     private static BankingTransactionSummary MakeTx(Guid accountId, string provider, decimal amount, string type, DateTime date, bool isPending = false, string currency = "USD")
         => new(accountId, provider, type, amount, currency, CurrencyConverter.ToUsd(amount, currency), date, isPending);
@@ -49,6 +50,33 @@ public class WealthAggregationServiceTests
 
         result.TotalNetWorth.Should().Be(3400m);
         result.BaseCurrency.Should().Be("USD");
+    }
+
+    [Fact]
+    public async Task GetWealthSummary_BankingNotSyncedWithinWindow_MarkedStale()
+    {
+        // A bank account that looks synced but hasn't had a successful sync in >36h is stale —
+        // so the frozen balance shows as stale rather than current (Revolut/AIB lapse case).
+        var accounts = new[]
+        {
+            MakeAccount("plaid", "USD", 1000m, lastSuccessfulSync: DateTime.UtcNow.AddDays(-4)),
+        };
+
+        var svc = BuildService(accounts);
+        var result = await svc.GetWealthSummaryAsync(UserId, null, null);
+
+        result.Categories.Single().Institutions.Single().SyncStatus.Should().Be("stale");
+    }
+
+    [Fact]
+    public async Task GetWealthSummary_BankingSyncedRecently_NotStale()
+    {
+        var accounts = new[] { MakeAccount("plaid", "USD", 1000m, lastSuccessfulSync: DateTime.UtcNow.AddHours(-2)) };
+
+        var svc = BuildService(accounts);
+        var result = await svc.GetWealthSummaryAsync(UserId, null, null);
+
+        result.Categories.Single().Institutions.Single().SyncStatus.Should().Be("synced");
     }
 
     [Fact]

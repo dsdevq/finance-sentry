@@ -80,6 +80,23 @@ public class NetWorthSnapshotServiceTests
     }
 
     [Fact]
+    public async Task PersistSnapshotAsync_WhenBankingStale_CarriesForwardPreviousValueAndFlags()
+    {
+        // Regression for the misleading net-worth drop: a lapsed bank connection (Revolut/AIB)
+        // reports a reduced-but-nonzero balance. It must carry forward, not record a phantom drop.
+        var previous = new NetWorthSnapshot { BankingTotal = 5000m, BrokerageTotal = 9912m, CryptoTotal = 240m };
+        var (repo, captured) = SetupInsertCapture(previous);
+        var data = new NetWorthSnapshotData(
+            SnapshotDate, BankingTotal: 1000m, BrokerageTotal: 9912m, CryptoTotal: 240m,
+            BankingFresh: false, BrokerageFresh: true, CryptoFresh: true);
+
+        await new NetWorthSnapshotService(repo.Object).PersistSnapshotAsync(UserId, data, CancellationToken.None);
+
+        captured()!.BankingTotal.Should().Be(5000m); // carried forward, not the stale $1000
+        captured()!.StaleSleeves.Should().Be("banking");
+    }
+
+    [Fact]
     public async Task PersistSnapshotAsync_WhenBrokerageStale_CarriesForwardPreviousValueAndFlags()
     {
         var previous = new NetWorthSnapshot { BankingTotal = 900m, BrokerageTotal = 9912m, CryptoTotal = 240m };

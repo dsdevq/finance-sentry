@@ -41,6 +41,12 @@ public class NetWorthSnapshotJob(
     {
         var now = DateTime.UtcNow;
         var bankingTotal = await _bankingTotals.GetTotalUsdAsync(userId, ct);
+        // Banking is fresh only if a successful sync landed within the window; a lapsed
+        // connection (stale Revolut/AIB) must carry forward, not record a phantom drop.
+        var bankingLastSync = await _bankingTotals.GetLatestSuccessfulSyncAsync(userId, ct);
+        var bankingFresh = bankingLastSync is null
+            ? bankingTotal == 0m
+            : bankingLastSync.Value >= now - StaleWindow;
 
         var cryptoHoldings = await _cryptoReader.GetHoldingsAsync(userId, ct);
         var cryptoTotal = cryptoHoldings.Sum(h => h.UsdValue);
@@ -54,6 +60,6 @@ public class NetWorthSnapshotJob(
 
         await _snapshotService.PersistSnapshotAsync(userId, new NetWorthSnapshotData(
             snapshotDate, bankingTotal, brokerageTotal, cryptoTotal,
-            BrokerageFresh: brokerageFresh, CryptoFresh: cryptoFresh), ct);
+            BankingFresh: bankingFresh, BrokerageFresh: brokerageFresh, CryptoFresh: cryptoFresh), ct);
     }
 }

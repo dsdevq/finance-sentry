@@ -17,6 +17,7 @@ public record NetWorthSnapshotData(
     decimal BankingTotal,
     decimal BrokerageTotal,
     decimal CryptoTotal,
+    bool BankingFresh = true,
     bool BrokerageFresh = true,
     bool CryptoFresh = true,
     string Currency = "USD");

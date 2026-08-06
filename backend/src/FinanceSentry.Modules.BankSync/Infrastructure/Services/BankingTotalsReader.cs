@@ -4,9 +4,12 @@ using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Core.Utils;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
 
-public class BankingTotalsReader(IBankAccountRepository accounts) : IBankingTotalsReader
+public class BankingTotalsReader(
+    IBankAccountRepository accounts,
+    ISyncJobRepository syncJobs) : IBankingTotalsReader
 {
     private readonly IBankAccountRepository _accounts = accounts ?? throw new ArgumentNullException(nameof(accounts));
+    private readonly ISyncJobRepository _syncJobs = syncJobs ?? throw new ArgumentNullException(nameof(syncJobs));
 
     public async Task<IReadOnlyList<Guid>> GetActiveUserIdsAsync(CancellationToken ct = default)
     {
@@ -20,5 +23,21 @@ public class BankingTotalsReader(IBankAccountRepository accounts) : IBankingTota
         return accounts
             .Where(a => a.IsActive && a.CurrentBalance.HasValue)
             .Sum(a => CurrencyConverter.ToUsd(a.CurrentBalance!.Value, a.Currency));
+    }
+
+    public async Task<DateTime?> GetLatestSuccessfulSyncAsync(Guid userId, CancellationToken ct = default)
+    {
+        var accounts = await _accounts.GetByUserIdAsync(userId, ct);
+        var activeIds = accounts.Where(a => a.IsActive).Select(a => a.Id).ToHashSet();
+        if (activeIds.Count == 0)
+            return null;
+
+        var lastSuccessful = await _syncJobs.GetLastSuccessfulSyncTimesByUserAsync(userId, ct);
+        var times = lastSuccessful
+            .Where(kv => activeIds.Contains(kv.Key))
+            .Select(kv => kv.Value)
+            .ToList();
+
+        return times.Count > 0 ? times.Max() : null;
     }
 }

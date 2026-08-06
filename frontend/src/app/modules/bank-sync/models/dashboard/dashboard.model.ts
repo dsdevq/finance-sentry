@@ -7,6 +7,9 @@ export interface NetWorthSnapshotDto {
   cryptoTotal: number;
   totalNetWorth: number;
   currency: string;
+  /** Comma-separated sleeves ('banking','brokerage','crypto') carried forward because their
+   * feed was stale that day — the value is estimated, not measured. Null when all fresh. */
+  staleSleeves?: string | null;
 }
 
 export interface NetWorthHistoryResponse {
