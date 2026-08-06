@@ -369,6 +369,8 @@ After **all tasks in a feature are complete**, act as a QA engineer: spin up the
 - None new. The merged/enriched tools call existing Research module handlers (`GetWatchlistQuery`, `AddWatchlistItemCommand`, `RemoveWatchlistItemCommand`, `RunThesisMonitorCommand`, `ListThesisBreaksQuery`) — no schema or migration changes. (035-mcp-tool-surface-refinement)
 - C# 14 / .NET 10 (backend only — no frontend changes) + ASP.NET Core, EF Core (Npgsql), Hangfire, `FinanceSentry.Core.Cqrs` (hand-rolled `ICommand`/`IQuery` — no MediatR), `System.Net.Http` via `IHttpClientFactory`, `ModelContextProtocol` (existing MCP project). **No new NuGet packages** — Finnhub is plain REST+JSON. (037-structured-data-sources)
 - PostgreSQL 14 — existing `ResearchDbContext` (schema `research`), migration **M010_RecommendationTrends** adding `recommendation_trends` (one row per ticker+period month, upserted). Research migrations M001–M009 exist; next is M010. `analyst_actions` untouched. (037-structured-data-sources)
+- C# 14 / .NET 10 (backend only) + ASP.NET Core, EF Core 10 (Npgsql), Hangfire (PostgreSql storage, (024-data-retention)
+- PostgreSQL 14 — **new `RetentionDbContext`** (schema `retention`, history (024-data-retention)
 
 - `@ngrx/signals` 21.1.0 (NgRx SignalStore) — pilot AuthStore 2026-04-24, extended to DashboardStore + AccountsStore same day
 - C# 13 / .NET 9 (backend) · TypeScript 5.x strict (frontend) + ASP.NET Core 9, EF Core 9, MediatR, ASP.NET Core Identity (`Microsoft.AspNetCore.Identity.EntityFrameworkCore`), Npgsql.EF Core (backend) · Angular 20, RxJS, Angular standalone routing (frontend) (003-auth-flow)
