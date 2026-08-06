@@ -9,7 +9,6 @@ import {
 interface StateSignals {
   subscriptions: Signal<Subscription[]>;
   sort: Signal<SubscriptionSort>;
-  dismissTargetId: Signal<Nullable<string>>;
   summary: Signal<Nullable<SubscriptionSummary>>;
 }
 
@@ -44,9 +43,6 @@ export function subscriptionsComputed(store: StateSignals) {
     ),
     completedInstallments: computed(() =>
       store.subscriptions().filter(s => s.status === 'completed' && isInstallment(s))
-    ),
-    dismissTarget: computed(
-      () => store.subscriptions().find(s => s.id === store.dismissTargetId()) ?? null
     ),
     sortedActive: computed((): Subscription[] =>
       sortBy(

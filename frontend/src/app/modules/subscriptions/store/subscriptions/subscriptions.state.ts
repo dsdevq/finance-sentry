@@ -7,7 +7,6 @@ import {
 export interface SubscriptionsState {
   subscriptions: Subscription[];
   sort: SubscriptionSort;
-  dismissTargetId: Nullable<string>;
   summary: Nullable<SubscriptionSummary>;
   hasInsufficientHistory: boolean;
   status: AsyncStatus;
@@ -16,7 +15,6 @@ export interface SubscriptionsState {
 export const initialSubscriptionsState: SubscriptionsState = {
   subscriptions: [],
   sort: 'date',
-  dismissTargetId: null,
   summary: null,
   hasInsufficientHistory: false,
   status: 'idle',
