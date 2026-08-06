@@ -115,12 +115,12 @@ ship together (spec `[DECISION]`: no purge without proven restore). US3 (downsam
 
 **Independent Test**: Seed 2 years of daily `daily_bars`/`net_worth_snapshots`, run `retention-downsample`, verify recent stays daily, old collapses to weekly aggregates, total rows drop, a multi-year chart spans the boundary with no gap/double-count.
 
-- [ ] T033 [P] [US3] `DownsampleTests` in tests: recent-window untouched, old rows replaced by correct aggregates, row count drops, boundary continuity (no gap / no double-count)
-- [ ] T034 [P] [US3] Create `Application/Downsamplers/IDownsampler.cs` (per-table aggregate contract)
-- [ ] T035 [P] [US3] Create `Application/Downsamplers/DailyBarsDownsampler.cs` — beyond 365d, collapse `radar.daily_bars` to weekly OHLC (first open / max high / min low / last close / sum volume) per `(Ticker, iso-week)`, transactional replace
-- [ ] T036 [P] [US3] Create `Application/Downsamplers/NetWorthDownsampler.cs` — beyond 365d, keep last snapshot per ISO week per user in `wealth.net_worth_snapshots`
-- [ ] T037 [US3] Create `Application/Services/DownsampleService.cs` — runs enabled `IDownsampler`s, writes a `RetentionRun` (RunType=Downsample)
-- [ ] T038 [US3] Create `Infrastructure/Jobs/DownsampleJob.cs` + register `retention-downsample` (`Cron.Daily(4)`), **gated on `Downsample:Enabled` (default off)**
+- [X] T033 [P] [US3] `DownsampleTests` in tests: recent-window untouched, old rows replaced by correct aggregates, row count drops, boundary continuity (no gap / no double-count)
+- [X] T034 [P] [US3] Create `Application/Downsamplers/IDownsampler.cs` (per-table aggregate contract)
+- [X] T035 [P] [US3] Create `Application/Downsamplers/DailyBarsDownsampler.cs` — beyond 365d, collapse `radar.daily_bars` to weekly OHLC (first open / max high / min low / last close / sum volume) per `(Ticker, iso-week)`, transactional replace
+- [X] T036 [P] [US3] Create `Application/Downsamplers/NetWorthDownsampler.cs` — beyond 365d, keep last snapshot per ISO week per user in `wealth.net_worth_snapshots`
+- [X] T037 [US3] Create `Application/Services/DownsampleService.cs` — runs enabled `IDownsampler`s, writes a `RetentionRun` (RunType=Downsample)
+- [X] T038 [US3] Create `Infrastructure/Jobs/DownsampleJob.cs` + register `retention-downsample` (`Cron.Daily(4)`), **gated on `Downsample:Enabled` (default off)**
 
 **Checkpoint**: with the flag on, old history compacts correctly; charts continuous.
 

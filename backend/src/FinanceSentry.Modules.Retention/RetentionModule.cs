@@ -44,6 +44,10 @@ public static class RetentionModule
                 "db-backup", job => job.RunAsync(CancellationToken.None), Cron.Daily(backup.BackupHourUtc));
             mgr.AddOrUpdate<RestoreVerifyJob>(
                 "db-restore-verify", job => job.RunAsync(CancellationToken.None), Cron.Weekly());
+
+            // Downsampling (US3, P2) — scheduled but inert until Retention:Downsample:Enabled.
+            mgr.AddOrUpdate<DownsampleJob>(
+                "retention-downsample", job => job.RunAsync(CancellationToken.None), Cron.Daily(retention.DownsampleHourUtc));
         }
     }
 
@@ -60,6 +64,8 @@ public static class RetentionModule
 
         services.AddScoped<RetentionPurgeService>();
         services.AddScoped<RetentionPurgeJob>();
+        services.AddScoped<DownsampleService>();
+        services.AddScoped<DownsampleJob>();
 
         // US2 backups. The R2 store is a singleton (holds one S3 client); dump/restore are scoped.
         services.AddSingleton<IBackupStore, S3BackupStore>();
