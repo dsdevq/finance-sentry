@@ -9,10 +9,13 @@ const SHELL_BASE =
   'rounded-cmn-lg border border-border-default shadow-cmn-lg overflow-hidden ' +
   'max-h-[90vh] w-full';
 
+// Min-widths are gated behind the first breakpoint where they fit inside the
+// panel's 1rem padding (viewport - 2rem >= min-width); below that the shell's
+// `w-full` makes the dialog full-width-with-margin instead of clipping.
 const SIZE_CLASSES: Record<CmnDialogSize, string> = {
-  sm: 'min-w-[24rem] max-w-md',
-  md: 'min-w-[32rem] max-w-xl',
-  lg: 'min-w-[40rem] max-w-3xl',
+  sm: 'min-w-0 sm:min-w-[24rem] max-w-md',
+  md: 'min-w-0 sm:min-w-[32rem] max-w-xl',
+  lg: 'min-w-0 md:min-w-[40rem] max-w-3xl',
   full: 'max-w-[95vw] h-[95vh]',
 };
 
