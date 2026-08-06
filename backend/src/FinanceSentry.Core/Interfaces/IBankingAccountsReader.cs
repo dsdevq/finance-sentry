@@ -18,4 +18,5 @@ public record BankingAccountSummary(
     DateTime? LastSyncTimestamp,
     DateTime? LastSuccessfulSyncTimestamp = null,
     Guid? MonobankCredentialId = null,
-    Guid? TrueLayerConnectionId = null);
+    Guid? TrueLayerConnectionId = null,
+    string? ProductType = null);

@@ -48,7 +48,8 @@ public class MonobankAdapter(MonobankHttpClient client, ICategoryResolver catego
                 ? a.MaskedPan[^4..] : a.MaskedPan.PadLeft(4, '0'),
             CurrentBalance: MonobankHttpClient.KopecksToDecimal(a.Balance),
             Currency: MonobankHttpClient.MapCurrency(a.CurrencyCode),
-            OwnerName: info.Name)).ToList();
+            OwnerName: info.Name,
+            ProductType: a.ProductType)).ToList();
     }
 
     public async Task<(IReadOnlyList<TransactionCandidate> Candidates, DateTime? NextSyncFrom)> SyncTransactionsAsync(

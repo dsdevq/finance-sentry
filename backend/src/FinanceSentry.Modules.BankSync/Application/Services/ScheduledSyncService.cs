@@ -287,7 +287,13 @@ public class ScheduledSyncService(
                     if (fa.CurrentBalance.HasValue)
                         _monobankBalanceCache.Set(plainToken, fa.ExternalAccountId, fa.CurrentBalance.Value);
                 }
-                latestBalance = freshAccounts.FirstOrDefault(a => a.ExternalAccountId == account.ExternalAccountId)?.CurrentBalance;
+                var freshSelf = freshAccounts.FirstOrDefault(a => a.ExternalAccountId == account.ExternalAccountId);
+                latestBalance = freshSelf?.CurrentBalance;
+
+                // Backfill / refresh the card product type (black/white/…) from client-info so
+                // pre-existing accounts (connected before ProductType was captured) get grouped.
+                if (freshSelf?.ProductType is { Length: > 0 } productType && account.ProductType != productType)
+                    account.ProductType = productType;
             }
             catch (Infrastructure.Monobank.MonobankException)
             {

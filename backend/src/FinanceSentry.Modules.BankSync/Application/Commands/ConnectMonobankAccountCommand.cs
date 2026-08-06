@@ -79,7 +79,8 @@ public class ConnectMonobankAccountCommandHandler(
                 provider: "monobank")
             {
                 MonobankCredentialId = credential.Id,
-                CurrentBalance = MonobankHttpClient.KopecksToDecimal(a.Balance)
+                CurrentBalance = MonobankHttpClient.KopecksToDecimal(a.Balance),
+                ProductType = a.ProductType
             };
 
             await accounts.AddAsync(account, cancellationToken);

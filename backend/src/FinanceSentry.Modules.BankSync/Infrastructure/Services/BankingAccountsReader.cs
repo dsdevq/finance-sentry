@@ -30,7 +30,8 @@ public class BankingAccountsReader(
             a.UpdatedAt,
             lastSuccessful.TryGetValue(a.Id, out var lastOk) ? lastOk : null,
             a.MonobankCredentialId,
-            a.TrueLayerConnectionId))
+            a.TrueLayerConnectionId,
+            a.ProductType))
         .ToList();
     }
 }

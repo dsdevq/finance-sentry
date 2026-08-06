@@ -20,7 +20,19 @@ public record AccountBalanceDto(
     decimal? CurrentBalance,
     decimal? BalanceInBaseCurrency,
     string SyncStatus,
-    DateTime? LastSyncTimestamp);
+    DateTime? LastSyncTimestamp,
+    string? ProductType = null);
+
+/// <summary>
+/// A physical card within an institution, grouping its per-currency sub-accounts. Populated
+/// only for providers that expose a card product (Monobank black/white/…); null elsewhere.
+/// </summary>
+public record CardGroupDto(
+    string CardType,
+    string DisplayName,
+    decimal TotalInBaseCurrency,
+    string SyncStatus,
+    IReadOnlyList<AccountBalanceDto> Accounts);
 
 /// <summary>
 /// An institution the user has connected: one Monobank customer, one
@@ -36,7 +48,8 @@ public record InstitutionDto(
     string SyncStatus,
     DateTime? LastSyncTimestamp,
     DateTime? LastSuccessfulSyncTimestamp,
-    IReadOnlyList<AccountBalanceDto> Accounts);
+    IReadOnlyList<AccountBalanceDto> Accounts,
+    IReadOnlyList<CardGroupDto>? Cards = null);
 
 public record CategorySummaryDto(
     string Category,

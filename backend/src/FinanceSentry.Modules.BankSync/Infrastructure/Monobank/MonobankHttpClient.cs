@@ -40,6 +40,7 @@ public class MonobankHttpClient(HttpClient http)
             MaskedPan: a.MaskedPan?.LastOrDefault() ?? "0000",
             CurrencyCode: a.CurrencyCode,
             Balance: a.Balance,
+            ProductType: a.Type,
             CreditLimit: a.CreditLimit)).ToList();
 
         return new MonobankClientInfo(raw.ClientId, raw.Name, accounts);

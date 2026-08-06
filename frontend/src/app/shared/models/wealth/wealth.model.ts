@@ -11,6 +11,20 @@ export interface AccountBalanceItem extends AccountIdentity {
   balanceInBaseCurrency: Nullable<number>;
   syncStatus: SyncStatus;
   lastSyncTimestamp: Nullable<string>;
+  productType?: Nullable<string>;
+}
+
+/**
+ * A physical card within an institution, grouping its per-currency sub-accounts.
+ * Populated by the backend only for providers with a card product (Monobank
+ * black/white/…); absent otherwise. Zero-balance sub-accounts are already excluded.
+ */
+export interface CardGroup {
+  cardType: string;
+  displayName: string;
+  totalInBaseCurrency: number;
+  syncStatus: SyncStatus;
+  accounts: AccountBalanceItem[];
 }
 
 /**
@@ -29,6 +43,7 @@ export interface Institution {
   lastSyncTimestamp: Nullable<string>;
   lastSuccessfulSyncTimestamp: Nullable<string>;
   accounts: AccountBalanceItem[];
+  cards?: Nullable<CardGroup[]>;
 }
 
 export interface CategorySummary {
