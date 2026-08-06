@@ -190,5 +190,15 @@ public static class MerchantKeywordSeedData
         ("klarna", CategoryKeys.GeneralMerchandise),
         ("carrolls irish", CategoryKeys.GeneralMerchandise),
         ("fee-qtr", CategoryKeys.BankFees),
+
+        // --- TrueLayer description fallbacks: common IE merchants that arrive with no MCC ---
+        ("popeyes", CategoryKeys.FoodAndDrink),
+        ("cineworld", CategoryKeys.Entertainment),
+        ("free-now", CategoryKeys.Transportation),
+        ("veolia", CategoryKeys.Transportation),
+        ("dublin express", CategoryKeys.Transportation),
+        ("lego", CategoryKeys.GeneralMerchandise),
+        ("makeup", CategoryKeys.PersonalCare),
+        ("clubwise", CategoryKeys.Medical),
     ];
 }

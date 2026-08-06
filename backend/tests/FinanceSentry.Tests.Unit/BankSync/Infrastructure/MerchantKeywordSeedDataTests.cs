@@ -33,6 +33,15 @@ public class MerchantKeywordSeedDataTests
     [InlineData("Sq *olives Room Cafe 1", CategoryKeys.FoodAndDrink)]
     [InlineData("*MOBI TOP-UP 0857860057", CategoryKeys.RentAndUtilities)]
     [InlineData("Klarna*mstore.ie", CategoryKeys.GeneralMerchandise)]
+    // TrueLayer no-MCC merchants (observed uncategorized in prod)
+    [InlineData("Popeyes", CategoryKeys.FoodAndDrink)]
+    [InlineData("Cineworld", CategoryKeys.Entertainment)]
+    [InlineData("Frn* Hold.free-Now.com", CategoryKeys.Transportation)]
+    [InlineData("veoliatransport.com", CategoryKeys.Transportation)]
+    [InlineData("Dt Dublin Express", CategoryKeys.Transportation)]
+    [InlineData("Lego Blanchardstown", CategoryKeys.GeneralMerchandise)]
+    [InlineData("Makeup", CategoryKeys.PersonalCare)]
+    [InlineData("Clubwise Software Ltd", CategoryKeys.Medical)]
     public void Resolve_KnownMerchantDescriptions_MapToExpectedCategory(string description, string expected)
     {
         MerchantKeywordMatcher.Resolve(description, Prepared).Should().Be(expected);
