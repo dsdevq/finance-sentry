@@ -3,6 +3,7 @@ namespace FinanceSentry.Modules.Retention.Tests;
 using System.Reflection;
 using FinanceSentry.Modules.Retention.Application;
 using FinanceSentry.Modules.Retention.Domain;
+using FinanceSentry.Modules.Retention.Infrastructure.Persistence;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
@@ -118,7 +119,29 @@ public sealed class RetentionPolicyRegistryTests
     public void Generic_purge_set_matches_expected_count()
     {
         // Guards against accidental additions/removals to the actively-purged set.
-        RetentionPolicyRegistry.GenericPurgePolicies.Should().HaveCount(9);
+        RetentionPolicyRegistry.GenericPurgePolicies.Should().HaveCount(11);
+    }
+
+    [Fact]
+    public void Retention_module_governs_its_own_tables()
+    {
+        // Per-table coverage for the retention schema: the module that enforces retention must not
+        // leave its own run-record tables ungoverned (the gap this test closes). Instantiating the
+        // context reads its EF model without a database connection.
+        var options = new DbContextOptionsBuilder<RetentionDbContext>()
+            .UseNpgsql("Host=unused;Database=unused")
+            .Options;
+        using var ctx = new RetentionDbContext(options);
+
+        var mapped = ctx.Model.GetEntityTypes()
+            .Select(e => (Schema: e.GetSchema() ?? RetentionDbContext.Schema, Table: e.GetTableName()))
+            .ToList();
+
+        mapped.Should().NotBeEmpty();
+        foreach (var (schema, table) in mapped)
+            Policies.Should().Contain(
+                p => p.Schema == schema && p.Table == table,
+                "retention table {0}.{1} must have a policy", schema, table);
     }
 
     private static IEnumerable<Type> SafeTypes(Assembly a)
