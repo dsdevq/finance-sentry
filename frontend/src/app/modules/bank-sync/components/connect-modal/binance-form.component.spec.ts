@@ -88,6 +88,14 @@ describe('BinanceFormComponent', () => {
     expect(fixture.componentInstance.isDuplicateError()).toBe(true);
   });
 
+  it('isDuplicateError flips when the backend emits ALREADY_CONNECTED', () => {
+    const store = buildConnectStore('ALREADY_CONNECTED');
+    configure(store, buildAccountsStore(), buildStrategy());
+
+    const fixture = TestBed.createComponent(BinanceFormComponent);
+    expect(fixture.componentInstance.isDuplicateError()).toBe(true);
+  });
+
   it('disconnectExisting calls accountsStore.disconnectBinance and resets error/form', () => {
     const store = buildConnectStore('BINANCE_DUPLICATE');
     const accounts = buildAccountsStore();

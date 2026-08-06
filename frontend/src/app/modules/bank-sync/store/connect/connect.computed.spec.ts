@@ -83,6 +83,39 @@ describe('connectComputed', () => {
     });
   });
 
+  it('errorMessage resolves the real backend INVALID_CREDENTIALS code for binance', () => {
+    const store = build({
+      status: 'error',
+      errorCode: 'INVALID_CREDENTIALS',
+      selectedProvider: 'binance',
+    });
+    TestBed.runInInjectionContext(() => {
+      expect(connectComputed(store).errorMessage()).toContain('read-only API key');
+    });
+  });
+
+  it('errorMessage resolves the real backend INVALID_CREDENTIALS code for ibkr', () => {
+    const store = build({
+      status: 'error',
+      errorCode: 'INVALID_CREDENTIALS',
+      selectedProvider: 'ibkr',
+    });
+    TestBed.runInInjectionContext(() => {
+      expect(connectComputed(store).errorMessage()).toContain('IB Gateway');
+    });
+  });
+
+  it('errorMessage resolves the real backend ALREADY_CONNECTED code for binance', () => {
+    const store = build({
+      status: 'error',
+      errorCode: 'ALREADY_CONNECTED',
+      selectedProvider: 'binance',
+    });
+    TestBed.runInInjectionContext(() => {
+      expect(connectComputed(store).errorMessage()).toContain('Binance account already connected');
+    });
+  });
+
   it('errorMessage maps PLAID_LINK_FAILED to link-specific copy', () => {
     const store = build({
       status: 'error',

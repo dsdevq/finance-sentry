@@ -13,8 +13,74 @@ describe('connectMethods', () => {
     methods.selectProvider('monobank');
 
     expect(state.selectedProvider()).toBe('monobank');
+    expect(state.status()).toBe('idle');
     expect(state.errorCode()).toBeNull();
     expect(state.statusMessage()).toBeNull();
+  });
+
+  it('selectInstitutionType(crypto) resets error status and selects binance', () => {
+    const state = signalState(initialConnectState);
+    const methods = connectMethods(state);
+    methods.setError('X');
+
+    methods.selectInstitutionType('crypto');
+
+    expect(state.modalStep()).toBe('binance-form');
+    expect(state.selectedProvider()).toBe('binance');
+    expect(state.status()).toBe('idle');
+    expect(state.errorCode()).toBeNull();
+    expect(state.statusMessage()).toBeNull();
+  });
+
+  it('selectInstitutionType(broker) resets error status and selects ibkr', () => {
+    const state = signalState(initialConnectState);
+    const methods = connectMethods(state);
+    methods.setError('X');
+
+    methods.selectInstitutionType('broker');
+
+    expect(state.modalStep()).toBe('ibkr-form');
+    expect(state.selectedProvider()).toBe('ibkr');
+    expect(state.status()).toBe('idle');
+    expect(state.errorCode()).toBeNull();
+  });
+
+  it('selectInstitutionType(bank) keeps the current provider until a bank is picked', () => {
+    const state = signalState(initialConnectState);
+    const methods = connectMethods(state);
+    methods.selectProvider('monobank');
+
+    methods.selectInstitutionType('bank');
+
+    expect(state.modalStep()).toBe('bank-picker');
+    expect(state.selectedProvider()).toBe('monobank');
+    expect(state.status()).toBe('idle');
+  });
+
+  it('setModalStep resets error status on navigation between steps', () => {
+    const state = signalState(initialConnectState);
+    const methods = connectMethods(state);
+    methods.setError('MONOBANK_TOKEN_INVALID');
+
+    methods.setModalStep('bank-picker');
+
+    expect(state.modalStep()).toBe('bank-picker');
+    expect(state.status()).toBe('idle');
+    expect(state.errorCode()).toBeNull();
+    expect(state.statusMessage()).toBeNull();
+  });
+
+  it('selectBankProvider resets error status and sets the provider', () => {
+    const state = signalState(initialConnectState);
+    const methods = connectMethods(state);
+    methods.setError('X');
+
+    methods.selectBankProvider('truelayer');
+
+    expect(state.selectedProvider()).toBe('truelayer');
+    expect(state.modalStep()).toBe('truelayer-picker');
+    expect(state.status()).toBe('idle');
+    expect(state.errorCode()).toBeNull();
   });
 
   it('setInitializing clears error and statusMessage', () => {

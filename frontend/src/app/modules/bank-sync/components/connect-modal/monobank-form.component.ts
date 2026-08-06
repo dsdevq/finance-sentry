@@ -1,4 +1,5 @@
 import {ChangeDetectionStrategy, Component, computed, inject} from '@angular/core';
+import {toSignal} from '@angular/core/rxjs-interop';
 import {FormControl, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
 import {
   AlertComponent,
@@ -34,27 +35,32 @@ export class MonobankFormComponent {
   private readonly strategy = inject(CONNECT_STRATEGY);
   private readonly accountsStore = inject(AccountsStore, {optional: true});
 
+  private readonly token = new FormControl<string>('', {
+    nonNullable: true,
+    validators: [
+      Validators.required,
+      Validators.minLength(MONOBANK_TOKEN_MIN_LENGTH),
+      Validators.maxLength(MONOBANK_TOKEN_MAX_LENGTH),
+      Validators.pattern(MONOBANK_TOKEN_PATTERN),
+    ],
+  });
+
+  // FormControl.touched/invalid are not signals — bridge via the control's
+  // unified event stream so the computed re-evaluates on value/status/touched changes.
+  private readonly tokenControlEvents = toSignal(this.token.events);
+
   public readonly store = inject(ConnectStore);
 
-  public readonly form = new FormGroup({
-    token: new FormControl<string>('', {
-      nonNullable: true,
-      validators: [
-        Validators.required,
-        Validators.minLength(MONOBANK_TOKEN_MIN_LENGTH),
-        Validators.maxLength(MONOBANK_TOKEN_MAX_LENGTH),
-        Validators.pattern(MONOBANK_TOKEN_PATTERN),
-      ],
-    }),
-  });
+  public readonly form = new FormGroup({token: this.token});
 
   public readonly tokenControl = this.form.controls.token;
 
-  public readonly tokenError = computed(() =>
-    this.tokenControl.touched && this.tokenControl.invalid
+  public readonly tokenError = computed(() => {
+    this.tokenControlEvents();
+    return this.tokenControl.touched && this.tokenControl.invalid
       ? "This doesn't look like a Monobank token"
-      : ''
-  );
+      : '';
+  });
 
   public readonly isDuplicateError = computed(
     () => this.store.errorCode() === 'MONOBANK_TOKEN_DUPLICATE'
