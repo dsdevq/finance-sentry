@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "status-red": "#EF4444",
+                    "surface": "#fcf8ff",
+                    "on-tertiary-container": "#ffd2be",
+                    "on-tertiary-fixed": "#351000",
+                    "surface-bright": "#fcf8ff",
+                    "tertiary-fixed": "#ffdbcc",
+                    "gray-200": "#E5E7EB",
+                    "surface-container-lowest": "#ffffff",
+                    "secondary-container": "#d0e1fb",
+                    "surface-container-highest": "#e4e1ee",
+                    "surface-container-low": "#f5f2ff",
+                    "on-primary": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "status-amber": "#F59E0B",
+                    "on-primary-fixed-variant": "#3323cc",
+                    "on-background": "#1b1b24",
+                    "secondary-fixed": "#d3e4fe",
+                    "tertiary": "#7e3000",
+                    "secondary-fixed-dim": "#b7c8e1",
+                    "surface-dim": "#dcd8e5",
+                    "primary-container": "#4f46e5",
+                    "tertiary-fixed-dim": "#ffb695",
+                    "tertiary-container": "#a44100",
+                    "surface-tint": "#4d44e3",
+                    "on-error-container": "#93000a",
+                    "inverse-surface": "#302f39",
+                    "on-secondary": "#ffffff",
+                    "on-primary-fixed": "#0f0069",
+                    "on-secondary-fixed-variant": "#38485d",
+                    "inverse-primary": "#c3c0ff",
+                    "gray-100": "#F3F4F6",
+                    "on-tertiary-fixed-variant": "#7b2f00",
+                    "on-secondary-container": "#54647a",
+                    "secondary": "#505f76",
+                    "surface-variant": "#e4e1ee",
+                    "surface-container-high": "#eae6f4",
+                    "on-tertiary": "#ffffff",
+                    "primary": "#3525cd",
+                    "on-secondary-fixed": "#0b1c30",
+                    "outline": "#777587",
+                    "background": "#fcf8ff",
+                    "on-error": "#ffffff",
+                    "indigo-primary": "#4F46E5",
+                    "on-primary-container": "#dad7ff",
+                    "primary-fixed-dim": "#c3c0ff",
+                    "status-green": "#10B981",
+                    "surface-container": "#f0ecf9",
+                    "gray-950": "#030712",
+                    "on-surface-variant": "#464555",
+                    "primary-fixed": "#e2dfff",
+                    "inverse-on-surface": "#f3effc",
+                    "outline-variant": "#c7c4d8",
+                    "on-surface": "#1b1b24",
+                    "error": "#ba1a1a"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "gutter": "16px",
+                    "page-padding": "32px",
+                    "content-max-width": "1440px",
+                    "sidebar-collapsed": "64px",
+                    "stack-gap": "8px",
+                    "sidebar-width": "240px"
+            },
+            "fontFamily": {
+                    "label-caps": ["Inter"],
+                    "body-sm": ["Inter"],
+                    "body-base": ["Inter"],
+                    "headline-section": ["Inter"],
+                    "display-hero": ["Inter"],
+                    "data-mono": ["Inter"]
+            },
+            "fontSize": {
+                    "label-caps": ["11px", {"lineHeight": "12px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "body-sm": ["12px", {"lineHeight": "16px", "fontWeight": "400"}],
+                    "body-base": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-section": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "display-hero": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                    "data-mono": ["14px", {"lineHeight": "20px", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+        }
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-background text-on-surface antialiased overflow-hidden">
+<!-- Modal Overlay -->
+<div class="fixed inset-0 bg-gray-950/40 backdrop-blur-sm z-[100] flex items-center justify-center">
+<!-- Modal Content -->
+<div class="w-[520px] bg-white rounded-xl border border-surface-variant shadow-2xl p-8 flex flex-col gap-8">
+<div class="flex flex-col gap-1">
+<h2 class="font-headline-section text-headline-section text-gray-950">Connect Account</h2>
+<p class="font-body-base text-body-base text-on-surface-variant">Choose a provider type to begin syncing your assets.</p>
+</div>
+<!-- Option Cards Row -->
+<div class="flex gap-4">
+<!-- Card 1: Bank -->
+<button class="flex-1 flex flex-col items-center text-center p-5 rounded-lg border border-gray-200 hover:border-indigo-primary hover:bg-indigo-50/30 transition-all group">
+<div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-4 group-hover:bg-indigo-100">
+<span class="material-symbols-outlined text-indigo-primary" data-icon="account_balance">account_balance</span>
+</div>
+<span class="font-body-base font-semibold text-gray-950 block mb-1">Bank</span>
+<span class="font-body-sm text-on-surface-variant">Connect via Plaid</span>
+</button>
+<!-- Card 2: Crypto -->
+<button class="flex-1 flex flex-col items-center text-center p-5 rounded-lg border border-gray-200 hover:border-indigo-primary hover:bg-indigo-50/30 transition-all group">
+<div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-4 group-hover:bg-indigo-100">
+<span class="material-symbols-outlined text-indigo-primary" data-icon="monitoring">monitoring</span>
+</div>
+<span class="font-body-base font-semibold text-gray-950 block mb-1">Crypto Exchange</span>
+<span class="font-body-sm text-on-surface-variant">Binance via API key</span>
+</button>
+<!-- Card 3: Broker -->
+<button class="flex-1 flex flex-col items-center text-center p-5 rounded-lg border border-gray-200 hover:border-indigo-primary hover:bg-indigo-50/30 transition-all group">
+<div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-4 group-hover:bg-indigo-100">
+<span class="material-symbols-outlined text-indigo-primary" data-icon="work">work</span>
+</div>
+<span class="font-body-base font-semibold text-gray-950 block mb-1">Broker</span>
+<span class="font-body-sm text-on-surface-variant">IBKR credentials</span>
+</button>
+</div>
+<div class="flex justify-center">
+<a class="font-body-base text-gray-500 hover:text-gray-950 underline underline-offset-4 transition-colors" href="#">Cancel</a>
+</div>
+</div>
+</div>
+<!-- Main Shell Layout -->
+<div class="flex min-h-screen">
+<!-- SideNavBar -->
+<aside class="flex flex-col w-[240px] h-screen fixed left-0 top-0 z-50 pt-6 pb-4 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 font-['Inter'] text-sm tracking-tight">
+<div class="px-6 mb-8 flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-indigo-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-lg" data-icon="security">security</span>
+</div>
+<h1 class="text-base font-bold tracking-tight text-gray-950 dark:text-white">Finance Sentry</h1>
+</div>
+<nav class="flex-1 px-3 space-y-1">
+<a class="flex items-center gap-3 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+                    Dashboard
+                </a>
+<a class="flex items-center gap-3 px-4 py-2 text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-900/20 font-semibold border-r-2 border-indigo-600 transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="account_balance">account_balance</span>
+                    Accounts
+                </a>
+<a class="flex items-center gap-3 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+                    Transactions
+                </a>
+<a class="flex items-center gap-3 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="monitoring">monitoring</span>
+                    Holdings
+                </a>
+<a class="flex items-center gap-3 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-all duration-200 ease-in-out" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+                    Settings
+                </a>
+</nav>
+<div class="px-6 mt-auto">
+<button class="w-full py-2 bg-indigo-primary text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors shadow-sm">
+                    Connect Account
+                </button>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 ml-[240px]">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center h-16 px-8 w-full bg-white/80 dark:bg-gray-950/80 backdrop-blur-md sticky top-0 z-40 border-b border-gray-200 dark:border-gray-800 max-w-[calc(100%-240px)]">
+<div class="flex items-center gap-4">
+<h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Accounts</h2>
+</div>
+<div class="flex-1 max-w-md mx-8">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm" data-icon="search">search</span>
+<input class="w-full bg-gray-50 border-none rounded-lg pl-10 pr-4 py-1.5 text-sm focus:ring-1 focus:ring-indigo-primary transition-all" placeholder="Search accounts (⌘K)" type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-gray-500 cursor-pointer hover:text-gray-900 transition-colors" data-icon="dark_mode">dark_mode</span>
+<img alt="User Profile Avatar" class="w-8 h-8 rounded-full border border-gray-200" data-alt="professional portrait of a businessman in a suit with a neutral background, sharp focus, institutional corporate headshot" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDGnGmPbb6HcqnP7CBnjA73nsquHA0t42J6V6j6jkJAi8KNXASMZ3u8vdp6WYlh7qswEJYns6urrh0nVhQ7kzgZpI7mqi7EweLqVAS9nzWODRGbiCCw89WUJH18XjRTQmfl5wMrZPvU81o1eN1h3q7MXwvODGSuYxIzVR9RcJmgsCpLzK5GdXZzXHhRebyvoPzKyCZZ8MVsOldKBay9E8nDII9jQnnL3KKFM4KvraaMLvDZyk6rW5t0zNJDX2diSGPA93pGNSNEhik"/>
+</div>
+</header>
+<!-- Page Content -->
+<div class="p-8 max-w-[1440px] mx-auto">
+<div class="flex items-baseline justify-between mb-8">
+<h1 class="font-display-hero text-display-hero text-gray-950">Inventory</h1>
+<div class="flex gap-2">
+<span class="text-xs font-label-caps text-on-surface-variant px-2 py-1 bg-gray-100 rounded">TOTAL ASSETS: $1,248,302.40</span>
+</div>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-12 gap-6">
+<!-- Banking Section -->
+<section class="col-span-12 lg:col-span-7 bg-white rounded-xl border border-gray-200 overflow-hidden">
+<div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+<h3 class="font-headline-section text-headline-section text-sm flex items-center gap-2 uppercase tracking-widest text-gray-500">
+<span class="material-symbols-outlined text-sm" data-icon="account_balance">account_balance</span>
+                                Banking &amp; Cash
+                            </h3>
+<span class="font-data-mono text-data-mono text-gray-500">$452,100.00</span>
+</div>
+<div class="divide-y divide-gray-100">
+<div class="px-6 py-4 flex items-center justify-between hover:bg-gray-50/50 transition-colors group">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded bg-gray-50 border border-gray-100 flex items-center justify-center">
+<img class="w-6 h-6 grayscale" data-alt="minimalist modern bank logo in monochrome navy blue and white geometric shape" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB3ZLQT86CrUwdJYwnRY-kqi1dQqL0Kfzy92LQlfeprPTjpU_JZoaFFXcbqRrnSzGf07w152xF4c_PARdSf9n_5O9pmRwOEiayvUs7YDQsojAZQMplM5Wo8PbTRVG8BUb536AsuJzLZGP9JUNcotEpONhMKUO6IYKmQ1gueIYrVJWbFpQY4uY4PTp5ZrV-GaN_a1BQO6SKfezqtXoeXLD3RTvCfzWM43958DlHljMWX4N3y5WUUJIPwgEOnsYpTdmlVsKxHaOrbpf8"/>
+</div>
+<div>
+<p class="font-body-base font-semibold text-gray-900">Chase Sapphire Checking</p>
+<p class="font-body-sm text-gray-500">**** 4291 • Last synced 2m ago</p>
+</div>
+</div>
+<div class="text-right">
+<p class="font-data-mono text-data-mono font-bold">$142,300.00</p>
+<p class="font-body-sm text-status-green flex items-center justify-end gap-1">
+<span class="material-symbols-outlined text-[12px]" data-icon="check_circle">check_circle</span> Linked
+                                    </p>
+</div>
+</div>
+<div class="px-6 py-4 flex items-center justify-between hover:bg-gray-50/50 transition-colors">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded bg-gray-50 border border-gray-100 flex items-center justify-center">
+<img class="w-6 h-6 grayscale" data-alt="clean institutional logo with geometric typography and solid primary color accents" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCI77JuS6RmSycHDzmlf3X9JFJVjxOMsMLfmSk__CzkelYrKdd3LrcI7kGiKO-NzEGLp5SMtbZ-h-mjSbHmNoCB798YsSIoUW7xRADtmG6cROzjohIvDaNyozpPYwMr8EetpRyvWyqc3O1vWakTHf1ouu7va5j5HfSo-_MoY_9rFEQNNo4WaAoVw_VbaPriQ30ypqEY2F5nlmn8NP3m3uGFsXzxU20tpplobMpzVP-BbRdwqDUg66L_vVUvvGnLecbVZkwuxRmcwlo"/>
+</div>
+<div>
+<p class="font-body-base font-semibold text-gray-900">Marcus High Yield Savings</p>
+<p class="font-body-sm text-gray-500">**** 8832 • Last synced 1h ago</p>
+</div>
+</div>
+<div class="text-right">
+<p class="font-data-mono text-data-mono font-bold">$309,800.00</p>
+<p class="font-body-sm text-status-green flex items-center justify-end gap-1">
+<span class="material-symbols-outlined text-[12px]" data-icon="check_circle">check_circle</span> Linked
+                                    </p>
+</div>
+</div>
+</div>
+</section>
+<!-- Stats Card -->
+<div class="col-span-12 lg:col-span-5 grid grid-cols-1 gap-6">
+<div class="bg-indigo-primary rounded-xl p-6 text-white flex flex-col justify-between">
+<div>
+<p class="text-xs font-label-caps opacity-80 mb-1">TOTAL NET WORTH</p>
+<h4 class="text-3xl font-display-hero">$1,248,302</h4>
+</div>
+<div class="flex items-center gap-4 mt-8">
+<div class="flex-1">
+<p class="text-[10px] font-label-caps opacity-60">24H CHANGE</p>
+<p class="text-status-green font-data-mono">+$12,402.12</p>
+</div>
+<div class="flex-1">
+<p class="text-[10px] font-label-caps opacity-60">YTD RETURN</p>
+<p class="text-status-green font-data-mono">+14.2%</p>
+</div>
+</div>
+</div>
+<div class="bg-white rounded-xl border border-gray-200 p-6">
+<p class="text-xs font-label-caps text-on-surface-variant mb-4">ASSET ALLOCATION</p>
+<div class="space-y-4">
+<div>
+<div class="flex justify-between text-xs mb-1">
+<span class="font-medium">Crypto Assets</span>
+<span class="font-data-mono">42%</span>
+</div>
+<div class="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+<div class="h-full bg-indigo-primary" style="width: 42%"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-xs mb-1">
+<span class="font-medium">Brokerage</span>
+<span class="font-data-mono">31%</span>
+</div>
+<div class="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+<div class="h-full bg-indigo-400" style="width: 31%"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-xs mb-1">
+<span class="font-medium">Cash</span>
+<span class="font-data-mono">27%</span>
+</div>
+<div class="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+<div class="h-full bg-indigo-200" style="width: 27%"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Digital Assets Section -->
+<section class="col-span-12 lg:col-span-12 bg-white rounded-xl border border-gray-200 overflow-hidden">
+<div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+<h3 class="font-headline-section text-headline-section text-sm flex items-center gap-2 uppercase tracking-widest text-gray-500">
+<span class="material-symbols-outlined text-sm" data-icon="currency_bitcoin">currency_bitcoin</span>
+                                Digital Assets &amp; Exchanges
+                            </h3>
+<div class="flex gap-4">
+<span class="font-data-mono text-data-mono text-gray-500">BTC: $64,231.00</span>
+<span class="font-data-mono text-data-mono text-gray-500">ETH: $3,402.11</span>
+</div>
+</div>
+<table class="w-full text-left">
+<thead class="bg-gray-50/30 text-[10px] font-label-caps text-gray-400 uppercase tracking-widest border-b border-gray-100">
+<tr>
+<th class="px-6 py-3 font-semibold">Account / Exchange</th>
+<th class="px-6 py-3 font-semibold text-right">Balance</th>
+<th class="px-6 py-3 font-semibold text-right">Value (USD)</th>
+<th class="px-6 py-3 font-semibold text-center">Status</th>
+<th class="px-6 py-3 font-semibold"></th>
+</tr>
+</thead>
+<tbody class="divide-y divide-gray-100">
+<tr class="hover:bg-gray-50/50 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-gray-100 flex items-center justify-center">
+<span class="material-symbols-outlined text-gray-400 text-lg" data-icon="token">token</span>
+</div>
+<div>
+<p class="font-body-base font-semibold text-gray-900">Binance Exchange</p>
+<p class="font-body-sm text-gray-500">Main Trading Account • API V3</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-right">
+<p class="font-data-mono text-sm">4.281 BTC</p>
+<p class="text-[10px] text-gray-400">12.50 ETH</p>
+</td>
+<td class="px-6 py-4 text-right">
+<p class="font-data-mono font-bold">$274,801.40</p>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="px-2 py-1 bg-green-50 text-status-green text-[10px] font-bold rounded border border-green-100">LIVE SYNC</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-gray-400 hover:text-gray-900 transition-colors">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+<tr class="hover:bg-gray-50/50 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-gray-100 flex items-center justify-center">
+<span class="material-symbols-outlined text-gray-400 text-lg" data-icon="account_balance_wallet">account_balance_wallet</span>
+</div>
+<div>
+<p class="font-body-base font-semibold text-gray-900">Ledger Nano X</p>
+<p class="font-body-sm text-gray-500">Cold Storage • BTC / ETH / SOL</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-4 text-right">
+<p class="font-data-mono text-sm">8.112 BTC</p>
+</td>
+<td class="px-6 py-4 text-right">
+<p class="font-data-mono font-bold">$521,432.10</p>
+</td>
+<td class="px-6 py-4 text-center">
+<span class="px-2 py-1 bg-amber-50 text-status-amber text-[10px] font-bold rounded border border-amber-100">STALE (14d)</span>
+</td>
+<td class="px-6 py-4 text-right">
+<button class="text-gray-400 hover:text-gray-900 transition-colors">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+</div>
+</div>
+</main>
+</div>
+</body></html>

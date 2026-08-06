@@ -26,4 +26,12 @@ public static class CategoryKeys
 
     /// <summary>Synthetic fallback for transactions with no resolvable category.</summary>
     public const string Uncategorized = "UNCATEGORIZED";
+
+    /// <summary>
+    /// True for the two directional-transfer keys. Transfers move money between a user's own
+    /// accounts (incl. single-sided ones like savings-jar top-ups whose counterpart account is
+    /// not synced), so they must never be counted as spend or cash-flow.
+    /// </summary>
+    public static bool IsTransfer(string? category) =>
+        category == TransferIn || category == TransferOut;
 }

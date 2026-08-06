@@ -1,6 +1,7 @@
 namespace FinanceSentry.Modules.BankSync.Application.Services;
 
 using FinanceSentry.Core.Utils;
+using FinanceSentry.Modules.BankSync.Domain;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
 
 /// <summary>
@@ -61,7 +62,8 @@ public class MoneyFlowStatisticsService(
 
         // 4. Group by (currency, year-month) and sum inflow/outflow
         var result = txList
-            .Where(t => !t.IsPending && t.IsActive && !transferIds.Contains(t.Id))
+            .Where(t => !t.IsPending && t.IsActive && !transferIds.Contains(t.Id)
+                        && !CategoryKeys.IsTransfer(t.MerchantCategory))
             .Select(t => new
             {
                 Transaction = t,

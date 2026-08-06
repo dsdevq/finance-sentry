@@ -3,6 +3,7 @@ namespace FinanceSentry.Modules.BankSync.Infrastructure.Monobank;
 using FinanceSentry.Modules.BankSync.Application.Services;
 using FinanceSentry.Modules.BankSync.Application.Services.CategoryMapping;
 using FinanceSentry.Modules.BankSync.Domain.Interfaces;
+using FinanceSentry.Modules.BankSync.Infrastructure.Categorization;
 
 public class MonobankAdapter(MonobankHttpClient client, ICategoryResolver categoryResolver) : IMonobankAdapter, IBankProvider
 {
@@ -115,9 +116,16 @@ public class MonobankAdapter(MonobankHttpClient client, ICategoryResolver catego
                 IsPending: t.Hold,
                 TransactionType: txType,
                 MerchantName: t.CounterName,
-                MerchantCategory: _categoryResolver.ResolveMcc(t.MCC),
+                MerchantCategory: ResolveCategory(t),
                 PlaidTransactionId: null,
                 Mcc: t.MCC);
         });
     }
+
+    // A directional-transfer description (savings-jar top-up "Поповнення «…»" / withdrawal
+    // "З банки «…»") is a stronger signal than the MCC: Monobank tags jar operations with the
+    // charity MCC 8398, which would otherwise land them in GOVERNMENT_AND_NON_PROFIT spend.
+    // Fall back to the MCC map for everything else.
+    private string ResolveCategory(MonobankTransaction t) =>
+        TransferDescriptionClassifier.Resolve(t.Description) ?? _categoryResolver.ResolveMcc(t.MCC);
 }

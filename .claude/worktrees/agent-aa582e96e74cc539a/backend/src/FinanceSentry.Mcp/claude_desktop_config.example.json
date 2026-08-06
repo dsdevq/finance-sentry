@@ -1,0 +1,15 @@
+{
+  "_comment": "Example claude_desktop_config.json snippet. Merge the 'mcpServers' block into your real config at: %APPDATA%/Claude/claude_desktop_config.json (Windows) or ~/.config/Claude/claude_desktop_config.json (Linux/macOS). Browser-based MCP OAuth login is easiest when the stdio process runs on the host rather than through docker exec. Restart Claude Desktop after editing.",
+  "mcpServers": {
+    "finance-sentry": {
+      "command": "docker",
+      "args": [
+        "exec",
+        "-i",
+        "finance-sentry-mcp",
+        "dotnet",
+        "FinanceSentry.Mcp.dll"
+      ]
+    }
+  }
+}
