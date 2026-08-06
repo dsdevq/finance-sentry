@@ -29,9 +29,9 @@ ship together (spec `[DECISION]`: no purge without proven restore). US3 (downsam
 
 **Purpose**: New module skeleton wired into the monolith.
 
-- [ ] T001 Create `FinanceSentry.Modules.Retention.csproj` + folder tree (Domain/Application/Infrastructure) matching plan.md structure; target net10.0, reference `FinanceSentry.Core`, `FinanceSentry.Infrastructure`; add to `FinanceSentry.sln`
-- [ ] T002 Create test project `backend/tests/FinanceSentry.Modules.Retention.Tests/FinanceSentry.Modules.Retention.Tests.csproj` (xUnit), reference the module + `FinanceSentry.API` for DbContexts; add to `FinanceSentry.sln`; add a `ProjectReference` from `FinanceSentry.API` to the module so the assembly-scan (`FinanceSentry.Modules.*.dll`) loads it
-- [ ] T003 [P] Add `AWSSDK.S3` NuGet package to the module csproj (R2 S3 client)
+- [X] T001 Create `FinanceSentry.Modules.Retention.csproj` + folder tree (Domain/Application/Infrastructure) matching plan.md structure; target net10.0, reference `FinanceSentry.Core`, `FinanceSentry.Infrastructure`; add to `FinanceSentry.sln`
+- [X] T002 Create test project `backend/tests/FinanceSentry.Modules.Retention.Tests/FinanceSentry.Modules.Retention.Tests.csproj` (xUnit), reference the module + `FinanceSentry.API` for DbContexts; add to `FinanceSentry.sln`; add a `ProjectReference` from `FinanceSentry.API` to the module so the assembly-scan (`FinanceSentry.Modules.*.dll`) loads it
+- [X] T003 [P] Add `AWSSDK.S3` NuGet package to the module csproj (R2 S3 client)
 
 **Checkpoint**: `dotnet build backend/` succeeds with the empty module registered.
 
@@ -43,14 +43,14 @@ ship together (spec `[DECISION]`: no purge without proven restore). US3 (downsam
 
 **⚠️ CRITICAL**: No user story work begins until this phase completes.
 
-- [ ] T004 [P] Create `RetentionRun` entity in `Domain/RetentionRun.cs` (Id, RunType, StartedAt, CompletedAt, Outcome, TableResults jsonb, Error) per data-model.md
-- [ ] T005 [P] Create `BackupRun` entity in `Domain/BackupRun.cs` (Id, Kind, CreatedAt, ArtifactKey, SizeBytes, Sha256, Encrypted, VerificationStatus, VerifiedAt, Error) per data-model.md
-- [ ] T006 Create `RetentionDbContext` in `Infrastructure/Persistence/RetentionDbContext.cs`: `HasDefaultSchema("retention")`, map both entities, `TableResults` as `jsonb`, indexes `(RunType, StartedAt desc)`, `(CreatedAt desc)`, partial `(VerifiedAt desc) WHERE VerificationStatus='Verified'`
-- [ ] T007 Create `Infrastructure/Persistence/RetentionDbContextFactory.cs` (design-time) with `MigrationsHistoryTable("__ef_migrations_history_retention", "retention")`
-- [ ] T008 Generate EF migration `M001_InitialSchema` (in-container `dotnet ef`, see 036 note in CLAUDE.md) creating `retention.retention_runs` + `retention.backup_runs` + indexes; verify Designer file + attributes present (M007 hand-written-migration lesson)
-- [ ] T009 [P] Create `Application/RetentionOptions.cs` (PurgeHourUtc=3, WindowOverrides map, DefaultBatchSize=5000, Downsample:Enabled=false) bound from `Retention:`
-- [ ] T010 [P] Create `Application/BackupOptions.cs` (BackupHourUtc=2, R2 endpoint/bucket/keys, AgeRecipient, AgeIdentity, RetainDaily=30, RetainWeekly=8, RestoreVerifyDay) bound from `Backup:` + `BACKUP_*` env
-- [ ] T011 Create `RetentionModule.cs` implementing `IModuleRegistrar`: register `RetentionDbContext` (Npgsql, MigrationsHistory table), bind both options; wire the context into `app.MigrateAllModules()`
+- [X] T004 [P] Create `RetentionRun` entity in `Domain/RetentionRun.cs` (Id, RunType, StartedAt, CompletedAt, Outcome, TableResults jsonb, Error) per data-model.md
+- [X] T005 [P] Create `BackupRun` entity in `Domain/BackupRun.cs` (Id, Kind, CreatedAt, ArtifactKey, SizeBytes, Sha256, Encrypted, VerificationStatus, VerifiedAt, Error) per data-model.md
+- [X] T006 Create `RetentionDbContext` in `Infrastructure/Persistence/RetentionDbContext.cs`: `HasDefaultSchema("retention")`, map both entities, `TableResults` as `jsonb`, indexes `(RunType, StartedAt desc)`, `(CreatedAt desc)`, partial `(VerifiedAt desc) WHERE VerificationStatus='Verified'`
+- [X] T007 Create `Infrastructure/Persistence/RetentionDbContextFactory.cs` (design-time) with `MigrationsHistoryTable("__ef_migrations_history_retention", "retention")`
+- [X] T008 Generate EF migration `M001_InitialSchema` (in-container `dotnet ef`, see 036 note in CLAUDE.md) creating `retention.retention_runs` + `retention.backup_runs` + indexes; verify Designer file + attributes present (M007 hand-written-migration lesson)
+- [X] T009 [P] Create `Application/RetentionOptions.cs` (PurgeHourUtc=3, WindowOverrides map, DefaultBatchSize=5000, Downsample:Enabled=false) bound from `Retention:`
+- [X] T010 [P] Create `Application/BackupOptions.cs` (BackupHourUtc=2, R2 endpoint/bucket/keys, AgeRecipient, AgeIdentity, RetainDaily=30, RetainWeekly=8, RestoreVerifyDay) bound from `Backup:` + `BACKUP_*` env
+- [X] T011 Create `RetentionModule.cs` implementing `IModuleRegistrar`: register `RetentionDbContext` (Npgsql, MigrationsHistory table), bind both options; wire the context into `app.MigrateAllModules()`
 
 **Checkpoint**: migration applies; `retention` schema + both tables exist in a fresh DB.
 
