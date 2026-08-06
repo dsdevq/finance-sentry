@@ -117,10 +117,7 @@ docker/
 - All bank-sync pages render (accounts list, connect, transactions, dashboard)
 - Backend: accounts, transactions, sync, webhook, dashboard endpoints all implemented
 
-**Frontend state sweep — remaining:**
-- `connect-account.component.ts` still owns Plaid init, state, and error mapping → extract `ConnectStore`, move local errorCode ladder to `ERROR_MESSAGES_REGISTRY`
-- `transaction-list.component.ts` → `TransactionsStore`
-- `sync-status.component.ts` polling → fold into `AccountsStore` or its own store
+**Frontend state sweep — DONE.** All page-level state now lives in SignalStores under `modules/bank-sync/store/` (`accounts`, `connect`, `dashboard`, `sync-status`, `transactions`, `transaction-ledger`). The connect flow moved to `components/connect-modal/` backed by `ConnectStore` (error mapping via `ERROR_MESSAGES_REGISTRY`); transactions use `TransactionsStore`; `sync-status.component.ts` polling folded into `SyncStatusStore` (`rxMethod` timer, no `setInterval`).
 
 **Known broken:** integration tests in `frontend/tests/integration/bank-sync/` are stale (`BankAccount.provider` field, `exchangePublicToken` signature) — they are Playwright e2e, not part of the Vitest unit suite.
 
