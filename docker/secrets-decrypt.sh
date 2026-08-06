@@ -2,7 +2,10 @@
 # Decrypt docker/.env.sops → docker/.env using the age private key at
 # ~/.config/sops/age/keys.txt (the standard sops location).
 #
-# Use this on a fresh clone or when you've lost your local docker/.env.
+# RUNTIME materialization only: docker compose reads the plaintext docker/.env
+# via --env-file. Use this on a fresh clone (or the VPS, though deploy.sh does it
+# for you) to produce that file. To EDIT a secret, do NOT decrypt+edit+encrypt —
+# use ./docker/secrets-edit.sh (in-place, no plaintext left on disk).
 #
 # Requires: sops, age, and the age private key whose public counterpart is
 # listed in .sops.yaml at the repo root.

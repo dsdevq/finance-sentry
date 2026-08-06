@@ -9,7 +9,8 @@ Backend-only feature. New module `FinanceSentry.Modules.Retention` +
    (S3 credentials). Note the account-scoped S3 endpoint.
 2. **Backup age keypair**: `age-keygen -o backup-age.key` → the file's public line is the
    recipient, the `AGE-SECRET-KEY-...` line is the identity.
-3. Add to `docker/.env.sops` (then re-encrypt with `docker/secrets-encrypt.sh`):
+3. Add to `docker/.env.sops` by editing it in place with `docker/secrets-edit.sh`
+   (sops decrypts into your editor and re-encrypts on save — no plaintext file):
    ```
    BACKUP_R2_ENDPOINT=https://<account>.r2.cloudflarestorage.com
    BACKUP_R2_BUCKET=finance-sentry-backups
