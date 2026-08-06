@@ -39,7 +39,12 @@ export class BinanceFormComponent {
 
   public readonly helpUrl = BINANCE_HELP_URL;
 
-  public readonly isDuplicateError = computed(() => this.store.errorCode() === 'BINANCE_DUPLICATE');
+  // Backend emits ALREADY_CONNECTED (409) for a duplicate Binance connection;
+  // BINANCE_DUPLICATE is kept for backwards compatibility.
+  public readonly isDuplicateError = computed(() => {
+    const code = this.store.errorCode();
+    return code === 'ALREADY_CONNECTED' || code === 'BINANCE_DUPLICATE';
+  });
 
   public submit(): void {
     if (this.form.invalid) {

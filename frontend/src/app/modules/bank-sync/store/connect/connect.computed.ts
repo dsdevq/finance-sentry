@@ -42,6 +42,19 @@ function mapErrorByProvider(
 
 const PROVIDER_SLUGS: readonly Provider[] = ['plaid', 'monobank', 'binance', 'ibkr'];
 
+function resolveForProvider(
+  errorMessages: ErrorMessageService,
+  code: Nullable<string>,
+  provider: Provider
+): Nullable<string> {
+  if (!code) {
+    return null;
+  }
+  // Backend emits generic codes (e.g. INVALID_CREDENTIALS from both Binance and
+  // IBKR) — try the provider-prefixed registry key first, then the raw code.
+  return errorMessages.resolve(`${provider.toUpperCase()}_${code}`) ?? errorMessages.resolve(code);
+}
+
 export function connectComputed(store: StateSignals) {
   const errorMessages = inject(ErrorMessageService);
   const accountsStore = inject(AccountsStore, {optional: true});
@@ -61,7 +74,7 @@ export function connectComputed(store: StateSignals) {
       return mapErrorByProvider(
         store.errorCode(),
         store.selectedProvider(),
-        errorMessages.resolve(store.errorCode())
+        resolveForProvider(errorMessages, store.errorCode(), store.selectedProvider())
       );
     }),
     connectedProviders: computed<ReadonlySet<Provider>>(() => {

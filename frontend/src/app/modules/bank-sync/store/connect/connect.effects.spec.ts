@@ -18,6 +18,7 @@ function buildStore() {
     setSuccess: vi.fn(),
     setError: vi.fn(),
     setInstitutionType: vi.fn(),
+    selectProvider: vi.fn(),
     status: vi.fn().mockReturnValue('idle' as const),
     institutionType: vi.fn().mockReturnValue(null),
   };
@@ -71,6 +72,7 @@ describe('connectEffects.connect', () => {
       connectEffects(store).connect({strategy, payload: undefined});
     });
 
+    expect(store.selectProvider).toHaveBeenCalledWith('plaid');
     expect(store.setInstitutionType).toHaveBeenCalledWith('bank');
     expect(store.setSyncing).toHaveBeenCalled();
     // eslint-disable-next-line @typescript-eslint/unbound-method
@@ -94,6 +96,7 @@ describe('connectEffects.connect', () => {
       connectEffects(store).connect({strategy, payload: {apiKey: 'k', apiSecret: 's'}});
     });
 
+    expect(store.selectProvider).toHaveBeenCalledWith('binance');
     expect(store.setSuccess).toHaveBeenCalled();
     expect(store.setPolling).not.toHaveBeenCalled();
   });

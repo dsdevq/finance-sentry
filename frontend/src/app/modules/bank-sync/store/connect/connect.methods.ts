@@ -17,6 +17,11 @@ const STEP_FOR_BANK_PROVIDER: Record<BankProvider, ModalStep> = {
   truelayer: 'truelayer-picker',
 };
 
+const PROVIDER_FOR_TYPE: Partial<Record<InstitutionType, Provider>> = {
+  crypto: 'binance',
+  broker: 'ibkr',
+};
+
 export function connectMethods(store: WritableStateSource<ConnectState>) {
   return {
     openModal(): void {
@@ -39,21 +44,35 @@ export function connectMethods(store: WritableStateSource<ConnectState>) {
       });
     },
     selectInstitutionType(type: InstitutionType): void {
-      patchState(store, {institutionType: type, modalStep: STEP_FOR_TYPE[type], errorCode: null});
+      const provider = PROVIDER_FOR_TYPE[type];
+      patchState(store, {
+        institutionType: type,
+        modalStep: STEP_FOR_TYPE[type],
+        status: 'idle',
+        errorCode: null,
+        statusMessage: null,
+        ...(provider ? {selectedProvider: provider} : {}),
+      });
     },
     setInstitutionType(type: InstitutionType): void {
       patchState(store, {institutionType: type});
     },
     setModalStep(step: ModalStep): void {
-      patchState(store, {modalStep: step, errorCode: null});
+      patchState(store, {modalStep: step, status: 'idle', errorCode: null, statusMessage: null});
     },
     selectProvider(provider: Provider): void {
-      patchState(store, {selectedProvider: provider, errorCode: null, statusMessage: null});
+      patchState(store, {
+        selectedProvider: provider,
+        status: 'idle',
+        errorCode: null,
+        statusMessage: null,
+      });
     },
     selectBankProvider(slug: BankProvider): void {
       patchState(store, {
         selectedProvider: slug,
         modalStep: STEP_FOR_BANK_PROVIDER[slug],
+        status: 'idle',
         errorCode: null,
         statusMessage: null,
       });

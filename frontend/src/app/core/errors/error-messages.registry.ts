@@ -10,9 +10,13 @@ export const ERROR_MESSAGES_REGISTRY: ErrorMessagesMap = {
     'Binance rejected the provided credentials. Use a read-only API key with no IP restrictions.',
   BINANCE_DUPLICATE:
     'Binance account already connected. Disconnect the existing one to use new keys.',
+  BINANCE_ALREADY_CONNECTED:
+    'Binance account already connected. Disconnect the existing one to use new keys.',
   IBKR_INVALID_CREDENTIALS:
     'IB Gateway rejected the provided credentials. Confirm the 2FA push notification on your phone and try again.',
   IBKR_DUPLICATE: 'IBKR account already connected. Disconnect the existing one to reconnect.',
+  IBKR_ALREADY_CONNECTED:
+    'IBKR account already connected. Disconnect the existing one to reconnect.',
   IBKR_GATEWAY_UNAVAILABLE:
     'Could not reach the IBKR gateway. This is usually temporary — try again in a minute.',
   PLAID_DUPLICATE: 'This bank is already connected. View it in your accounts list.',

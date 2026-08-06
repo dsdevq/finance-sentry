@@ -6,7 +6,10 @@ import {rxMethod} from '@ngrx/signals/rxjs-interop';
 import {catchError, EMPTY, filter, map, pipe, race, switchMap, take, tap, timer} from 'rxjs';
 
 import {AppRoute} from '../../../../shared/enums/app-route/app-route.enum';
-import {type InstitutionType} from '../../../../shared/models/provider/provider.model';
+import {
+  type InstitutionType,
+  type Provider,
+} from '../../../../shared/models/provider/provider.model';
 import {ErrorUtils} from '../../../../shared/utils/error.utils';
 import {AccountsStore} from '../accounts/accounts.store';
 import {type ConnectStatus} from './connect.state';
@@ -17,6 +20,7 @@ interface EffectsStore {
   setSuccess: () => void;
   setError: (code: Nullable<string>) => void;
   setInstitutionType: (type: InstitutionType) => void;
+  selectProvider: (provider: Provider) => void;
   status: () => ConnectStatus;
   institutionType: () => Nullable<InstitutionType>;
 }
@@ -90,6 +94,7 @@ export function connectEffects(store: EffectsStore) {
   const connect = rxMethod<ConnectInput>(
     pipe(
       tap(({strategy}) => {
+        store.selectProvider(strategy.slug);
         store.setInstitutionType(institutionTypeForSlug(strategy));
         store.setSyncing(`Connecting your ${strategy.slug} account...`);
       }),
