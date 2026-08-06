@@ -2,10 +2,15 @@ namespace FinanceSentry.Modules.Retention;
 
 using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Modules.Retention.Application;
+using FinanceSentry.Modules.Retention.Application.Services;
+using FinanceSentry.Modules.Retention.Infrastructure;
+using FinanceSentry.Modules.Retention.Infrastructure.Jobs;
 using FinanceSentry.Modules.Retention.Infrastructure.Persistence;
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 /// <summary>
 /// Cross-cutting retention &amp; backup module (feature 024). Owns the <c>retention</c> schema and the
@@ -20,6 +25,19 @@ public static class RetentionModule
             => services.AddRetentionModule(config);
     }
 
+    private sealed class JobRegistrar : IJobRegistrar
+    {
+        public void RegisterJobs(IServiceProvider sp)
+        {
+            var mgr = sp.GetRequiredService<IRecurringJobManager>();
+            var retention = sp.GetRequiredService<IOptions<RetentionOptions>>().Value;
+
+            // Nightly generic purge of out-of-policy rows (US1).
+            mgr.AddOrUpdate<RetentionPurgeJob>(
+                "retention-purge", job => job.RunAsync(false, CancellationToken.None), Cron.Daily(retention.PurgeHourUtc));
+        }
+    }
+
     public static IServiceCollection AddRetentionModule(
         this IServiceCollection services, IConfiguration config)
     {
@@ -30,6 +48,12 @@ public static class RetentionModule
 
         services.Configure<RetentionOptions>(config.GetSection(RetentionOptions.SectionName));
         services.Configure<BackupOptions>(config.GetSection(BackupOptions.SectionName));
+
+        services.AddScoped<RetentionPurgeService>();
+        services.AddScoped<RetentionPurgeJob>();
+
+        services.AddHostedService<RetentionMetricsPrimer>();
+        services.AddSingleton<IJobRegistrar, JobRegistrar>();
 
         return services;
     }

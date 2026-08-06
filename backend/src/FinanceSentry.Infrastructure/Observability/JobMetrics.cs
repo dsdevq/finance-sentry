@@ -1,5 +1,6 @@
 namespace FinanceSentry.Infrastructure.Observability;
 
+using System.Collections.Concurrent;
 using System.Diagnostics.Metrics;
 using global::Hangfire;
 
@@ -21,6 +22,12 @@ public sealed class JobMetrics : IDisposable
     private readonly Counter<long> _succeeded;
     private readonly Counter<long> _failed;
     private readonly Histogram<double> _duration;
+    private readonly Counter<long> _retentionRowsRemoved;
+
+    // Data-retention/backup observability (feature 024). Timestamps are seeded from the DB at startup
+    // by RetentionMetricsPrimer and updated live by the jobs; age gauges compute against now.
+    private readonly ConcurrentDictionary<string, DateTimeOffset> _lastRetentionRun = new();
+    private DateTimeOffset? _lastBackupVerified;
 
     public JobMetrics()
     {
@@ -42,6 +49,29 @@ public sealed class JobMetrics : IDisposable
             "finance_jobs_scheduled",
             ObserveScheduled,
             description: "Jobs currently enqueued or scheduled and awaiting execution.");
+
+        // ── Data retention & backups (feature 024) ──────────────────────────────────────────────
+        _retentionRowsRemoved = _meter.CreateCounter<long>(
+            "finance_retention_rows_removed",
+            description: "Rows removed by the generic retention purge, by table.");
+
+        _meter.CreateObservableGauge(
+            "finance_retention_last_run_age_seconds",
+            ObserveRetentionAge,
+            unit: "s",
+            description: "Seconds since the last successful retention run, by run type (SC-005).");
+
+        _meter.CreateObservableGauge(
+            "finance_backup_last_verified_age_seconds",
+            ObserveBackupVerifiedAge,
+            unit: "s",
+            description: "Seconds since the last backup that provably restored (SC-002).");
+
+        _meter.CreateObservableGauge(
+            "finance_backup_last_verified_timestamp",
+            ObserveBackupVerifiedTimestamp,
+            unit: "s",
+            description: "Unix time of the last provably-restorable backup (SC-002).");
     }
 
     /// <summary>Records a job that reached <c>Succeeded</c>.</summary>
@@ -62,9 +92,41 @@ public sealed class JobMetrics : IDisposable
             _duration.Record(durationSeconds, tag);
     }
 
+    /// <summary>Records rows removed by a retention purge for a table (feature 024).</summary>
+    public void RecordRetentionRowsRemoved(string table, long rows)
+        => _retentionRowsRemoved.Add(rows, new KeyValuePair<string, object?>("table", table));
+
+    /// <summary>Marks the most recent successful retention run of a given type (feature 024).</summary>
+    public void SetLastRetentionRun(string runType, DateTimeOffset completedAt)
+        => _lastRetentionRun[runType] = completedAt;
+
+    /// <summary>Marks the most recent backup proven restorable by a drill (feature 024, SC-002).</summary>
+    public void SetLastBackupVerified(DateTimeOffset verifiedAt)
+        => _lastBackupVerified = verifiedAt;
+
     private static IEnumerable<Measurement<long>> ObserveScheduled()
     {
         yield return new Measurement<long>(SafeScheduledCount());
+    }
+
+    private IEnumerable<Measurement<double>> ObserveRetentionAge()
+    {
+        var now = DateTimeOffset.UtcNow;
+        foreach (var (runType, at) in _lastRetentionRun)
+            yield return new Measurement<double>(
+                (now - at).TotalSeconds, new KeyValuePair<string, object?>("run_type", runType));
+    }
+
+    private IEnumerable<Measurement<double>> ObserveBackupVerifiedAge()
+    {
+        if (_lastBackupVerified is { } at)
+            yield return new Measurement<double>((DateTimeOffset.UtcNow - at).TotalSeconds);
+    }
+
+    private IEnumerable<Measurement<double>> ObserveBackupVerifiedTimestamp()
+    {
+        if (_lastBackupVerified is { } at)
+            yield return new Measurement<double>(at.ToUnixTimeSeconds());
     }
 
     // Reads Hangfire's own counts defensively — storage may not be configured yet during startup/tests.

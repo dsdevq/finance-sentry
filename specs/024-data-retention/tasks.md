@@ -64,18 +64,18 @@ ship together (spec `[DECISION]`: no purge without proven restore). US3 (downsam
 
 ### Tests for User Story 1
 
-- [ ] T012 [P] [US1] `RetentionPolicyRegistryTests` in tests: **coverage guard** (reflect over every registered `DbContext`'s entity→table map, assert each table has exactly one policy), **keep-forever whitelist** (pinned list of user-owned tables all `Action=Keep`), **well-formedness** invariants, **no-orphan-enforcement** (every `Bespoke` policy names a real job id)
-- [ ] T013 [P] [US1] `RetentionPurgeServiceTests` in tests: straddle-cutoff (only older rows deleted), batching (≤ batch per statement), idempotent re-run (no double-count), `dryRun=true` (examined>0, removed=0), UTC cutoff
+- [X] T012 [P] [US1] `RetentionPolicyRegistryTests` in tests: **coverage guard** (reflect over every registered `DbContext`'s entity→table map, assert each table has exactly one policy), **keep-forever whitelist** (pinned list of user-owned tables all `Action=Keep`), **well-formedness** invariants, **no-orphan-enforcement** (every `Bespoke` policy names a real job id)
+- [X] T013 [P] [US1] `RetentionPurgeServiceTests` in tests: straddle-cutoff (only older rows deleted), batching (≤ batch per statement), idempotent re-run (no double-count), `dryRun=true` (examined>0, removed=0), UTC cutoff
 
 ### Implementation for User Story 1
 
-- [ ] T014 [P] [US1] Create `Domain/RetentionPolicy.cs` — `RetentionPolicy` record + `RetentionAction` (Purge/Downsample/Keep) + `RetentionEnforcer` (Generic/Bespoke) enums
-- [ ] T015 [US1] Create `Application/RetentionPolicyRegistry.cs` — `All : IReadOnlyList<RetentionPolicy>` populated per research.md D9 (all schemas/tables incl. Keep + Bespoke entries)
-- [ ] T016 [US1] Create `Application/Services/RetentionPurgeService.cs` — for each `Generic` `Purge` policy: batched `DELETE ... WHERE ctid IN (SELECT ctid ... WHERE {ts} < @cutoff LIMIT @batch)` loop; UTC cutoff (registry default or `WindowOverrides`); `dryRun` counts only; write one `RetentionRun` with per-table `TableResults` + Outcome
-- [ ] T017 [US1] Create `Infrastructure/Jobs/RetentionPurgeJob.cs` — `[AutomaticRetry(Attempts=0)]`, `RunAsync(bool dryRun, CancellationToken)` delegating to the service
-- [ ] T018 [US1] Add `IJobRegistrar` to `RetentionModule.cs`: register `retention-purge` recurring job `Cron.Daily(PurgeHourUtc)`
-- [ ] T019 [P] [US1] Add `finance_retention_last_run_age_seconds{run_type}` + `finance_retention_rows_removed_total{table}` to `backend/src/FinanceSentry.Infrastructure/Observability/JobMetrics.cs`
-- [ ] T020 [US1] FR-004 caps: add `retainedFileCountLimit:14` + `fileSizeLimitBytes:100MB` + `rollOnFileSizeLimit` to the Serilog file sink in `SerilogConfiguration.cs`; set explicit `JobExpirationTimeout` in `BankSync/Infrastructure/Jobs/HangfireSetup.cs`
+- [X] T014 [P] [US1] Create `Domain/RetentionPolicy.cs` — `RetentionPolicy` record + `RetentionAction` (Purge/Downsample/Keep) + `RetentionEnforcer` (Generic/Bespoke) enums
+- [X] T015 [US1] Create `Application/RetentionPolicyRegistry.cs` — `All : IReadOnlyList<RetentionPolicy>` populated per research.md D9 (all schemas/tables incl. Keep + Bespoke entries)
+- [X] T016 [US1] Create `Application/Services/RetentionPurgeService.cs` — for each `Generic` `Purge` policy: batched `DELETE ... WHERE ctid IN (SELECT ctid ... WHERE {ts} < @cutoff LIMIT @batch)` loop; UTC cutoff (registry default or `WindowOverrides`); `dryRun` counts only; write one `RetentionRun` with per-table `TableResults` + Outcome
+- [X] T017 [US1] Create `Infrastructure/Jobs/RetentionPurgeJob.cs` — `[AutomaticRetry(Attempts=0)]`, `RunAsync(bool dryRun, CancellationToken)` delegating to the service
+- [X] T018 [US1] Add `IJobRegistrar` to `RetentionModule.cs`: register `retention-purge` recurring job `Cron.Daily(PurgeHourUtc)`
+- [X] T019 [P] [US1] Add `finance_retention_last_run_age_seconds{run_type}` + `finance_retention_rows_removed_total{table}` to `backend/src/FinanceSentry.Infrastructure/Observability/JobMetrics.cs`
+- [X] T020 [US1] FR-004 caps: add `retainedFileCountLimit:14` + `fileSizeLimitBytes:100MB` + `rollOnFileSizeLimit` to the Serilog file sink in `SerilogConfiguration.cs`; set explicit `JobExpirationTimeout` in `BankSync/Infrastructure/Jobs/HangfireSetup.cs`
 
 **Checkpoint**: `retention-purge` (dry-run then real) works, records runs, leaves in-window + keep-forever rows untouched; registry guard tests green.
 

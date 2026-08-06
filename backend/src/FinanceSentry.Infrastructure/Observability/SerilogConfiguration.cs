@@ -17,6 +17,10 @@ public static class SerilogConfiguration
     private const string AppName = "finance-sentry";
     private const string LokiUrlConfigKey = "Observability:Loki:Url";
 
+    // FR-004 (feature 024): cap the rolling file so a single day's logs cannot exhaust host disk.
+    private const long FileSizeLimitBytes = 100L * 1024 * 1024;
+    private const int RetainedFileCountLimit = 14;
+
     /// <summary>Matches the <c>UseSerilog</c> host callback signature.</summary>
     public static void Configure(HostBuilderContext context, LoggerConfiguration loggerConfiguration)
     {
@@ -32,7 +36,12 @@ public static class SerilogConfiguration
             .Enrich.With<ModuleEnricher>()
             .Enrich.WithProperty("app", AppName)
             .WriteTo.Console()
-            .WriteTo.File("logs/app-.txt", rollingInterval: RollingInterval.Day, retainedFileCountLimit: 14);
+            .WriteTo.File(
+                "logs/app-.txt",
+                rollingInterval: RollingInterval.Day,
+                retainedFileCountLimit: RetainedFileCountLimit,
+                fileSizeLimitBytes: FileSizeLimitBytes,
+                rollOnFileSizeLimit: true);
 
         var lokiUrl = configuration[LokiUrlConfigKey];
         if (!string.IsNullOrWhiteSpace(lokiUrl))
