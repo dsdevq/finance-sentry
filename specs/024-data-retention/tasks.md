@@ -89,21 +89,21 @@ ship together (spec `[DECISION]`: no purge without proven restore). US3 (downsam
 
 ### Tests for User Story 2
 
-- [ ] T021 [P] [US2] `BackupRoundTripTests` in tests: `pg_dump` → age-encrypt → age-decrypt → `pg_restore` into a scratch DB reproduces key-table counts + a sampled recent `bank_sync.transactions` row (SC-003); `IBackupStore` prune keeps exactly `RetainDaily` newest (use a local temp-dir `IBackupStore` fake + local Postgres)
-- [ ] T022 [P] [US2] `RestoreIsolationTests` in tests: assert `RestoreVerifier` builds a connection string targeting only `restore_verify_*` and never opens a write connection to the app database (FR-006 + edge case)
+- [X] T021 [P] [US2] `BackupRoundTripTests` in tests: `pg_dump` → age-encrypt → age-decrypt → `pg_restore` into a scratch DB reproduces key-table counts + a sampled recent `bank_sync.transactions` row (SC-003); `IBackupStore` prune keeps exactly `RetainDaily` newest (use a local temp-dir `IBackupStore` fake + local Postgres)
+- [X] T022 [P] [US2] `RestoreIsolationTests` in tests: assert `RestoreVerifier` builds a connection string targeting only `restore_verify_*` and never opens a write connection to the app database (FR-006 + edge case)
 
 ### Implementation for User Story 2
 
-- [ ] T023 [P] [US2] Create `Domain/IBackupStore.cs` — domain interface: `PutAsync(key, stream)`, `GetAsync(key)`, `ListAsync(prefix)`, `DeleteAsync(key)` (Principle I: no module touches AWSSDK directly)
-- [ ] T024 [US2] Create `Infrastructure/Backup/S3BackupStore.cs` implementing `IBackupStore` via `AWSSDK.S3` against R2 (endpoint/bucket/keys from `BackupOptions`, `ForcePathStyle`, region `auto`, multipart put); register in `RetentionModule` DI; **no-op + warn when keys blank**
-- [ ] T025 [P] [US2] Create `Infrastructure/Backup/PgDumpRunner.cs` — shells `pg_dump -Fc` piped through `age --encrypt`, and `age --decrypt` → `createdb`/`pg_restore`/`dropdb`; connection info from the app connection string; streams to avoid buffering full dump
-- [ ] T026 [US2] Create `Infrastructure/Jobs/BackupJob.cs` — `[AutomaticRetry(0)]`: dump→encrypt→`IBackupStore.Put` under `daily/`|`weekly/`; insert `backup_runs` `Pending` with `Sha256`+`SizeBytes`; prune R2 objects + rows beyond `RetainDaily`/`RetainWeekly`
-- [ ] T027 [US2] Create `Application/Services/RestoreVerifier.cs` — download latest artifact→decrypt→`createdb restore_verify_<utc>`→`pg_restore`→read-only checks (row counts, latest tx recency)→`dropdb`; return verified/failed
-- [ ] T028 [US2] Create `Infrastructure/Jobs/RestoreVerifyJob.cs` — `[AutomaticRetry(0)]`, `Cron.Weekly()`; flips the referenced `backup_runs` row to `Verified`(+`VerifiedAt`) or `Failed`
-- [ ] T029 [US2] Register `db-backup` (`Cron.Daily(BackupHourUtc)`) + `db-restore-verify` (`Cron.Weekly()`) in `RetentionModule` `IJobRegistrar`
-- [ ] T030 [US2] Add `postgresql-client-14` (version-matched) + `age` binary to the API image in `docker/Dockerfile`; verify `pg_dump --version` = 14.x at build
-- [ ] T031 [P] [US2] Add `finance_backup_last_verified_age_seconds` + `finance_backup_last_verified_timestamp` observable gauges (from `backup_runs`) to `Observability/JobMetrics.cs`
-- [ ] T032 [P] [US2] Add Grafana dashboard `docker/observability/grafana/dashboards/retention-backups.json` (backup age, last-verified ts, rows-removed/run, restore-drill status) — dashboards-as-code
+- [X] T023 [P] [US2] Create `Domain/IBackupStore.cs` — domain interface: `PutAsync(key, stream)`, `GetAsync(key)`, `ListAsync(prefix)`, `DeleteAsync(key)` (Principle I: no module touches AWSSDK directly)
+- [X] T024 [US2] Create `Infrastructure/Backup/S3BackupStore.cs` implementing `IBackupStore` via `AWSSDK.S3` against R2 (endpoint/bucket/keys from `BackupOptions`, `ForcePathStyle`, region `auto`, multipart put); register in `RetentionModule` DI; **no-op + warn when keys blank**
+- [X] T025 [P] [US2] Create `Infrastructure/Backup/PgDumpRunner.cs` — shells `pg_dump -Fc` piped through `age --encrypt`, and `age --decrypt` → `createdb`/`pg_restore`/`dropdb`; connection info from the app connection string; streams to avoid buffering full dump
+- [X] T026 [US2] Create `Infrastructure/Jobs/BackupJob.cs` — `[AutomaticRetry(0)]`: dump→encrypt→`IBackupStore.Put` under `daily/`|`weekly/`; insert `backup_runs` `Pending` with `Sha256`+`SizeBytes`; prune R2 objects + rows beyond `RetainDaily`/`RetainWeekly`
+- [X] T027 [US2] Create `Application/Services/RestoreVerifier.cs` — download latest artifact→decrypt→`createdb restore_verify_<utc>`→`pg_restore`→read-only checks (row counts, latest tx recency)→`dropdb`; return verified/failed
+- [X] T028 [US2] Create `Infrastructure/Jobs/RestoreVerifyJob.cs` — `[AutomaticRetry(0)]`, `Cron.Weekly()`; flips the referenced `backup_runs` row to `Verified`(+`VerifiedAt`) or `Failed`
+- [X] T029 [US2] Register `db-backup` (`Cron.Daily(BackupHourUtc)`) + `db-restore-verify` (`Cron.Weekly()`) in `RetentionModule` `IJobRegistrar`
+- [X] T030 [US2] Add `postgresql-client-14` (version-matched) + `age` binary to the API image in `docker/Dockerfile`; verify `pg_dump --version` = 14.x at build
+- [X] T031 [P] [US2] Add `finance_backup_last_verified_age_seconds` + `finance_backup_last_verified_timestamp` observable gauges (from `backup_runs`) to `Observability/JobMetrics.cs`
+- [X] T032 [P] [US2] Add Grafana dashboard `docker/observability/grafana/dashboards/retention-backups.json` (backup age, last-verified ts, rows-removed/run, restore-drill status) — dashboards-as-code
 
 **Checkpoint**: backup → R2 artifact exists & encrypted; restore drill verifies into isolation and marks `Verified`; SC-002 query + Grafana panel answer "last provably-restorable backup".
 

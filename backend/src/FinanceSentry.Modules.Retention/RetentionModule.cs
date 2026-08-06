@@ -3,7 +3,9 @@ namespace FinanceSentry.Modules.Retention;
 using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Modules.Retention.Application;
 using FinanceSentry.Modules.Retention.Application.Services;
+using FinanceSentry.Modules.Retention.Domain;
 using FinanceSentry.Modules.Retention.Infrastructure;
+using FinanceSentry.Modules.Retention.Infrastructure.Backup;
 using FinanceSentry.Modules.Retention.Infrastructure.Jobs;
 using FinanceSentry.Modules.Retention.Infrastructure.Persistence;
 using Hangfire;
@@ -35,6 +37,13 @@ public static class RetentionModule
             // Nightly generic purge of out-of-policy rows (US1).
             mgr.AddOrUpdate<RetentionPurgeJob>(
                 "retention-purge", job => job.RunAsync(false, CancellationToken.None), Cron.Daily(retention.PurgeHourUtc));
+
+            // Nightly off-host backup + weekly restore drill (US2).
+            var backup = sp.GetRequiredService<IOptions<BackupOptions>>().Value;
+            mgr.AddOrUpdate<BackupJob>(
+                "db-backup", job => job.RunAsync(CancellationToken.None), Cron.Daily(backup.BackupHourUtc));
+            mgr.AddOrUpdate<RestoreVerifyJob>(
+                "db-restore-verify", job => job.RunAsync(CancellationToken.None), Cron.Weekly());
         }
     }
 
@@ -51,6 +60,13 @@ public static class RetentionModule
 
         services.AddScoped<RetentionPurgeService>();
         services.AddScoped<RetentionPurgeJob>();
+
+        // US2 backups. The R2 store is a singleton (holds one S3 client); dump/restore are scoped.
+        services.AddSingleton<IBackupStore, S3BackupStore>();
+        services.AddScoped<PgDumpRunner>();
+        services.AddScoped<RestoreVerifier>();
+        services.AddScoped<BackupJob>();
+        services.AddScoped<RestoreVerifyJob>();
 
         services.AddHostedService<RetentionMetricsPrimer>();
         services.AddSingleton<IJobRegistrar, JobRegistrar>();

@@ -41,6 +41,13 @@ services:
       TrueLayer__FrontendRedirectBase: ${TRUELAYER_FRONTEND_REDIRECT_BASE:-https://lifekit-vps.tail1cb676.ts.net:4200}
       TrueLayer__CallbackPath: /api/v1/accounts/truelayer/callback
       AnalystSources__Finnhub__ApiKey: ${FINNHUB_API_KEY:-}
+      # Off-host encrypted backups (feature 024). Empty = backup jobs no-op (dev/local safe).
+      Backup__R2Endpoint: ${BACKUP_R2_ENDPOINT:-}
+      Backup__R2Bucket: ${BACKUP_R2_BUCKET:-}
+      Backup__R2AccessKey: ${BACKUP_R2_ACCESS_KEY:-}
+      Backup__R2SecretKey: ${BACKUP_R2_SECRET_KEY:-}
+      Backup__AgeRecipient: ${BACKUP_AGE_RECIPIENT:-}
+      Backup__AgeIdentity: ${BACKUP_AGE_IDENTITY:-}
       # Public base of the API itself — used to build the OAuth redirect_uri TrueLayer sends the
       # browser back to after consent. This MUST exactly match a redirect URI registered in the
       # TrueLayer console, or consent is rejected. Default is the console-registered
