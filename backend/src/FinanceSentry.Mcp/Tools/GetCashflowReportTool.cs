@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using FinanceSentry.Core.Api;
 using FinanceSentry.Core.Cqrs;
+using FinanceSentry.Core.Utils;
 using FinanceSentry.Mcp.Abstractions;
 using FinanceSentry.Modules.BankSync.Application.Queries;
 using Microsoft.Extensions.Logging;
@@ -68,12 +69,14 @@ public sealed class GetCashflowReportTool(
             .OrderBy(g => g.Key.Year).ThenBy(g => g.Key.Month)
             .Select(g =>
             {
+                // Convert to USD by each transaction's currency — accounts span currencies and
+                // summing native magnitudes would mix hryvnia with euros/dollars.
                 var inflow = g
                     .Where(t => IsCredit(t.TransactionType))
-                    .Sum(t => Math.Abs(t.Amount));
+                    .Sum(t => CurrencyConverter.ToUsd(Math.Abs(t.Amount), t.Currency));
                 var outflow = g
                     .Where(t => IsDebit(t.TransactionType))
-                    .Sum(t => Math.Abs(t.Amount));
+                    .Sum(t => CurrencyConverter.ToUsd(Math.Abs(t.Amount), t.Currency));
                 return new CashflowReportEntry(
                     $"{g.Key.Year:D4}-{g.Key.Month:D2}",
                     inflow,

@@ -31,11 +31,25 @@ public class MerchantCategoryStatisticsTests
         return tx;
     }
 
+    private static MerchantCategoryStatisticsService BuildSut(
+        IEnumerable<Transaction> transactions, IEnumerable<BankAccount> accounts)
+    {
+        var txRepoMock = new Mock<ITransactionRepository>();
+        txRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
+                  .ReturnsAsync(transactions.ToList());
+
+        var acctRepoMock = new Mock<IBankAccountRepository>();
+        acctRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(accounts.ToList());
+
+        return new MerchantCategoryStatisticsService(txRepoMock.Object, acctRepoMock.Object, new TransferDetectionService());
+    }
+
     [Fact]
     public async Task GetTopCategories_ExcludesInternalTransferDebit()
     {
-        var (_, accountAId) = MakeAccount();
-        var (_, accountBId) = MakeAccount();
+        var (accountA, accountAId) = MakeAccount();
+        var (accountB, accountBId) = MakeAccount();
         var date = new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc);
 
         // Internal transfer pair carrying a category. Must NOT appear in spending.
@@ -51,11 +65,7 @@ public class MerchantCategoryStatisticsTests
             MakeTx(accountAId, 100m, "debit", date, category: "Travel"),
         };
 
-        var txRepoMock = new Mock<ITransactionRepository>();
-        txRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
-                  .ReturnsAsync(transactions);
-
-        var sut = new MerchantCategoryStatisticsService(txRepoMock.Object, new TransferDetectionService());
+        var sut = BuildSut(transactions, [accountA, accountB]);
 
         var result = await sut.GetTopCategoriesAsync(UserId, 10);
 
@@ -70,7 +80,7 @@ public class MerchantCategoryStatisticsTests
     {
         // A savings-jar top-up categorized TRANSFER_OUT has no synced counterpart, so the
         // pair-matcher can't catch it. It must still be excluded from spend by category name.
-        var (_, accountId) = MakeAccount();
+        var (account, accountId) = MakeAccount();
         var date = new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc);
 
         var transactions = new List<Transaction>
@@ -79,15 +89,34 @@ public class MerchantCategoryStatisticsTests
             MakeTx(accountId, 40m,   "debit", date, category: "Food"),
         };
 
-        var txRepoMock = new Mock<ITransactionRepository>();
-        txRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
-                  .ReturnsAsync(transactions);
-
-        var sut = new MerchantCategoryStatisticsService(txRepoMock.Object, new TransferDetectionService());
+        var sut = BuildSut(transactions, [account]);
 
         var result = await sut.GetTopCategoriesAsync(UserId, 10);
 
         result.Should().NotContain(c => c.Category == CategoryKeys.TransferOut);
         result.Sum(c => c.TotalSpend).Should().Be(40m);
+    }
+
+    [Fact]
+    public async Task GetTopCategories_MixedCurrencies_SumsSpendInUsd()
+    {
+        // Spend must be converted by account currency before summing. A ₴10,000 Food debit on a
+        // UAH account is $240, not $10,000 — otherwise it would dwarf a real $100 USD Food spend.
+        var (usd, usdId) = MakeAccount("USD");
+        var (uah, uahId) = MakeAccount("UAH");
+        var date = new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc);
+
+        var transactions = new List<Transaction>
+        {
+            MakeTx(usdId, 100m,   "debit", date, category: "Food"),
+            MakeTx(uahId, 10000m, "debit", date, category: "Food"),
+        };
+
+        var sut = BuildSut(transactions, [usd, uah]);
+
+        var result = await sut.GetTopCategoriesAsync(UserId, 10);
+
+        // 100 + (10000 × 0.024) = 340, not 10100
+        result.Single(c => c.Category == "Food").TotalSpend.Should().Be(340m);
     }
 }

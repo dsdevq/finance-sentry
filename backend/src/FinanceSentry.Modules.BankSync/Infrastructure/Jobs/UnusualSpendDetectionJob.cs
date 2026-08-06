@@ -1,6 +1,7 @@
 namespace FinanceSentry.Modules.BankSync.Infrastructure.Jobs;
 
 using FinanceSentry.Core.Interfaces;
+using FinanceSentry.Core.Utils;
 using FinanceSentry.Modules.BankSync.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -27,11 +28,21 @@ public sealed class UnusualSpendDetectionJob(
             .Select(t => new
             {
                 t.UserId,
+                t.AccountId,
                 t.MerchantCategory,
                 t.TransactionDate,
                 t.Amount,
             })
             .ToListAsync(ct);
+
+        // Convert to USD by account currency before the threshold math — a category funded from
+        // multiple-currency accounts would otherwise compare mixed native magnitudes.
+        var currencyByAccount = await db.BankAccounts
+            .AsNoTracking()
+            .Select(a => new { a.Id, a.Currency })
+            .ToDictionaryAsync(a => a.Id, a => a.Currency, ct);
+        decimal ToUsd(Guid accountId, decimal amount) =>
+            CurrencyConverter.ToUsd(Math.Abs(amount), currencyByAccount.TryGetValue(accountId, out var c) ? c : "USD");
 
         var grouped = rows.GroupBy(r => new {r.UserId, Category = r.MerchantCategory!});
 
@@ -39,7 +50,7 @@ public sealed class UnusualSpendDetectionJob(
         {
             var byMonth = group
                 .GroupBy(r => new {r.TransactionDate.Year, r.TransactionDate.Month})
-                .ToDictionary(g => g.Key, g => g.Sum(x => Math.Abs(x.Amount)));
+                .ToDictionary(g => g.Key, g => g.Sum(x => ToUsd(x.AccountId, x.Amount)));
 
             var historicMonths = byMonth
                 .Where(kv => new DateTime(kv.Key.Year, kv.Key.Month, 1) < currentMonthStart)

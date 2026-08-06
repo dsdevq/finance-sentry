@@ -1,6 +1,7 @@
 namespace FinanceSentry.Modules.Budgets.Application.Queries;
 
 using FinanceSentry.Core.Cqrs;
+using FinanceSentry.Core.Utils;
 using FinanceSentry.Modules.BankSync.Application.Queries;
 using FinanceSentry.Modules.Budgets.API.Responses;
 using FinanceSentry.Modules.Budgets.Application.Services;
@@ -45,19 +46,23 @@ public class GetBudgetSummaryQueryHandler(
             spentByCategory[normalized] = spentByCategory.GetValueOrDefault(normalized) + amount;
         }
 
+        // Spend arrives already in USD (GetMerchantSpendingQuery converts). Normalize each
+        // budget's limit to USD too so the comparison, remaining, and totals are apples-to-apples
+        // across budgets defined in different currencies. The summary is a single-currency (USD) view.
         var items = userBudgets.Select(b =>
         {
+            var limitUsd = CurrencyConverter.ToUsd(b.MonthlyLimit, b.Currency);
             var spent = spentByCategory.GetValueOrDefault(b.Category, 0m);
-            var remaining = b.MonthlyLimit - spent;
+            var remaining = limitUsd - spent;
             return new BudgetSummaryItemDto(
                 b.Id,
                 b.Category,
                 _normalization.GetLabel(b.Category),
-                b.MonthlyLimit,
+                limitUsd,
                 spent,
                 remaining,
-                spent > b.MonthlyLimit,
-                b.Currency);
+                spent > limitUsd,
+                "USD");
         }).ToList();
 
         return new BudgetSummaryResponse(

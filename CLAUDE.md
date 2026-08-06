@@ -160,6 +160,18 @@ Use `/csharp-quality` for a batch cleanup sweep across multiple files.
 
 ---
 
+## Currency / Money Aggregation Rule — mandatory
+
+Accounts span currencies (Monobank=UAH, Revolut/AIB=EUR, IBKR/Binance=USD, …). **Never sum a native `Amount`/`Balance` across accounts** — a raw `.Sum(x => x.Amount)` adds hryvnia to euros as if both were dollars (this caused the "$28k monthly outflow" and "Government $71k top spending" bugs).
+
+The convention, enforced structurally:
+- **Convert once at the reader/query boundary**, where the account currency is in scope, via `FinanceSentry.Core.Utils.CurrencyConverter.ToUsd(amount, currency)` (the single conversion primitive; the FX refresh job feeds its rate table).
+- **Every DTO that crosses an aggregation boundary carries a `…Usd` / `…InBaseCurrency` field** (e.g. `BankingTransactionSummary.AmountUsd`, `BankingAccountSummary.BalanceUsd`, `CryptoHoldingSummary.UsdValue`). Aggregations sum **only** that field, never the native one.
+- When you add a new totals/summary path over transaction-level data, thread the account currency in and expose a converted field — do not sum native amounts and "fix it later".
+- Unknown currency: `CurrencyConverter.ToUsd` falls back to 1:1. Use `CurrencyConverter.IsKnown(currency)` if you need to flag a total as approximate rather than trust a silent fallback.
+
+---
+
 ## UI Component Library Rule
 
 **Any new UI component MUST be created in `@dsdevq-common/ui` first.** Components are never built directly in the host Angular app (`frontend/`). This applies to all future features, starting with 005-ui-component-library. The `cmn-` selector prefix is reserved for library components.

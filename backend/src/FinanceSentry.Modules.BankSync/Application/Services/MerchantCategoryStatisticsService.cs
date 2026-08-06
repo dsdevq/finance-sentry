@@ -1,5 +1,6 @@
 namespace FinanceSentry.Modules.BankSync.Application.Services;
 
+using FinanceSentry.Core.Utils;
 using FinanceSentry.Modules.BankSync.Domain;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
 
@@ -24,9 +25,11 @@ public interface IMerchantCategoryStatisticsService
 /// <inheritdoc />
 public class MerchantCategoryStatisticsService(
     ITransactionRepository transactions,
+    IBankAccountRepository accounts,
     ITransferDetectionService transferDetection) : IMerchantCategoryStatisticsService
 {
     private readonly ITransactionRepository _transactions = transactions ?? throw new ArgumentNullException(nameof(transactions));
+    private readonly IBankAccountRepository _accounts = accounts ?? throw new ArgumentNullException(nameof(accounts));
     private readonly ITransferDetectionService _transferDetection = transferDetection ?? throw new ArgumentNullException(nameof(transferDetection));
 
     /// <inheritdoc />
@@ -35,6 +38,13 @@ public class MerchantCategoryStatisticsService(
     {
         var txList = await _transactions.GetByUserIdAsync(userId, ct);
         var transferIds = _transferDetection.DetectTransferTransactionIds(txList.ToList());
+
+        // Convert each transaction to USD by its account currency — accounts span UAH/EUR/…,
+        // so summing native Amount would mix currencies and inflate the spend total.
+        var accountList = await _accounts.GetByUserIdAsync(userId, ct);
+        var currencyByAccount = accountList.ToDictionary(a => a.Id, a => a.Currency);
+        decimal ToUsd(Transaction t) =>
+            CurrencyConverter.ToUsd(t.Amount, currencyByAccount.TryGetValue(t.AccountId, out var c) ? c : "USD");
 
         var debits = txList
             .Where(t => !t.IsPending && t.IsActive && t.TransactionType == "debit"
@@ -45,13 +55,13 @@ public class MerchantCategoryStatisticsService(
         if (debits.Count == 0)
             return [];
 
-        var totalSpend = debits.Sum(t => t.Amount);
+        var totalSpend = debits.Sum(ToUsd);
 
         var result = debits
             .GroupBy(t => t.MerchantCategory ?? CategoryKeys.Uncategorized)
             .Select(g =>
             {
-                var spend = g.Sum(t => t.Amount);
+                var spend = g.Sum(ToUsd);
                 var pct = totalSpend > 0 ? Math.Round(spend / totalSpend * 100, 2) : 0m;
                 return new CategoryStat(g.Key, spend, pct);
             })
