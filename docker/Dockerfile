@@ -24,7 +24,10 @@ RUN --mount=type=cache,target=/root/.nuget/packages \
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS runtime
 WORKDIR /app
 
-RUN apk add --no-cache curl tzdata
+# curl/tzdata for health + timezones; postgresql16-client (pg_dump/pg_restore/createdb/dropdb) + age
+# power the feature-024 off-host backup + restore-drill jobs. A v16 client dumps/restores the v14
+# server (supported newer-client→older-server direction); backups no-op when BACKUP_* is unset.
+RUN apk add --no-cache curl tzdata postgresql16-client age krb5-libs
 
 COPY --from=build /app/publish .
 

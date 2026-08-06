@@ -116,6 +116,7 @@ docker/
 - Vitest unit tests covering the signal stores (run with `npx ng test --watch=false`)
 - All bank-sync pages render (accounts list, connect, transactions, dashboard)
 - Backend: accounts, transactions, sync, webhook, dashboard endpoints all implemented
+- Data retention & backups (024): `FinanceSentry.Modules.Retention` (schema `retention`). A compiled `RetentionPolicyRegistry` gives every table a purge/downsample/keep decision (reflection coverage-guard + keep-forever whitelist tests). Nightly `retention-purge` batch-deletes out-of-policy rows idempotently; nightly `db-backup` does `pg_dump → age-encrypt → Cloudflare R2`; weekly `db-restore-verify` restores into an isolated scratch DB and marks the artifact Verified. US3 `retention-downsample` (weekly compaction) is gated off (`Retention:Downsample:Enabled`). Ops verbs: `dotnet FinanceSentry.API.dll retention-purge [--dry-run] | db-backup | db-restore-verify`. R2/age secrets in `.env.sops` (`BACKUP_*`); blank = jobs no-op. Grafana dashboard `retention-backups`.
 
 **Frontend state sweep — DONE.** All page-level state now lives in SignalStores under `modules/bank-sync/store/` (`accounts`, `connect`, `dashboard`, `sync-status`, `transactions`, `transaction-ledger`). The connect flow moved to `components/connect-modal/` backed by `ConnectStore` (error mapping via `ERROR_MESSAGES_REGISTRY`); transactions use `TransactionsStore`; `sync-status.component.ts` polling folded into `SyncStatusStore` (`rxMethod` timer, no `setInterval`).
 
@@ -369,6 +370,8 @@ After **all tasks in a feature are complete**, act as a QA engineer: spin up the
 - None new. The merged/enriched tools call existing Research module handlers (`GetWatchlistQuery`, `AddWatchlistItemCommand`, `RemoveWatchlistItemCommand`, `RunThesisMonitorCommand`, `ListThesisBreaksQuery`) — no schema or migration changes. (035-mcp-tool-surface-refinement)
 - C# 14 / .NET 10 (backend only — no frontend changes) + ASP.NET Core, EF Core (Npgsql), Hangfire, `FinanceSentry.Core.Cqrs` (hand-rolled `ICommand`/`IQuery` — no MediatR), `System.Net.Http` via `IHttpClientFactory`, `ModelContextProtocol` (existing MCP project). **No new NuGet packages** — Finnhub is plain REST+JSON. (037-structured-data-sources)
 - PostgreSQL 14 — existing `ResearchDbContext` (schema `research`), migration **M010_RecommendationTrends** adding `recommendation_trends` (one row per ticker+period month, upserted). Research migrations M001–M009 exist; next is M010. `analyst_actions` untouched. (037-structured-data-sources)
+- C# 14 / .NET 10 (backend only) + ASP.NET Core, EF Core 10 (Npgsql), Hangfire (PostgreSql storage, (024-data-retention)
+- PostgreSQL 14 — **new `RetentionDbContext`** (schema `retention`, history (024-data-retention)
 
 - `@ngrx/signals` 21.1.0 (NgRx SignalStore) — pilot AuthStore 2026-04-24, extended to DashboardStore + AccountsStore same day
 - C# 13 / .NET 9 (backend) · TypeScript 5.x strict (frontend) + ASP.NET Core 9, EF Core 9, MediatR, ASP.NET Core Identity (`Microsoft.AspNetCore.Identity.EntityFrameworkCore`), Npgsql.EF Core (backend) · Angular 20, RxJS, Angular standalone routing (frontend) (003-auth-flow)

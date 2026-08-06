@@ -169,3 +169,9 @@ Separate from the Radar program: a deliberate production-engineering ladder (obs
 | `027-k8s-migration` | Single-node cluster replaces compose in prod | 025; 023/024 strongly advised |
 | `028-extract-market-data-service` | Radar/market-data becomes its own service | 026, 025, radar (018) stable |
 | `029-grpc-internal-contract` | One internal call goes contract-first RPC | 028 |
+
+### 024 follow-ups (implemented; deferred bits)
+
+- **US3 downsampling ships gated off** (`Retention:Downsample:Enabled=false`). Enable only after validating aggregates on a data copy — it irreversibly compacts `radar.daily_bars` and `net_worth_snapshots` to weekly. (~806 old daily bars would collapse on the current dev DB.)
+- **Migration-history-table name mismatch** (pre-existing, surfaced during 024): Budgets/Subscriptions/Alerts and CryptoSync/BrokerageSync use a generic/suffixed `__ef_migrations_history*` name in their runtime module registration vs. their design-time factory. Harmless for logical `pg_dump`/`pg_restore` (the whole DB is dumped/restored), but a future per-schema physical-restore or migration-history audit should reconcile them. Not a 024 blocker.
+- **Conservative keep-forever windows**: several genuinely-growing but low-rate tables (`news_articles`, `quote_cache`, `analyst_actions`, `thesis_events`) are `Keep` by decision to avoid RAG-provenance breakage; revisit their windows once provenance is decoupled.

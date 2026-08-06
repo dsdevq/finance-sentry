@@ -100,6 +100,13 @@ if (args.Length > 0 && args[0] == SubscriptionDetectionCommand.Verb)
     return;
 }
 
+// Feature 024 retention/backup verbs (retention-purge [--dry-run] · db-backup · db-restore-verify).
+if (args.Length > 0 && RetentionCommand.Handles(args[0]))
+{
+    await RetentionCommand.RunAsync(app.Services, args);
+    return;
+}
+
 app.UseSerilogRequestLogging();
 app.UseCors("Frontend");
 app.UseMiddleware<ErrorHandlingMiddleware>();
