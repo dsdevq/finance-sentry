@@ -111,7 +111,7 @@
 **Purpose**: Version bump, smoke-test all quickstart scenarios.
 
 - [X] T024 Bump API version from `0.4.0` → `0.5.0` in `backend/src/FinanceSentry.API/FinanceSentry.API.csproj`
-- [ ] T025 Validate all 7 scenarios in `specs/008-wealth-aggregation-api/quickstart.md` pass against the running Docker stack
+- [X] T025 Validate all 7 scenarios in `specs/008-wealth-aggregation-api/quickstart.md` pass against the running Docker stack *(Done 2026-08-06 against local stack: scenarios 1, 4, 7 fully pass; 2, 3, 5, 6 pass on contract/shape/filter-echo — positive-data assertions not exercisable locally (local DB has zero bank accounts/transactions, only IBKR holdings); provider filter positively verified via `?provider=ibkr`. Quickstart's bearer-token flow is stale — auth moved to the `fs_access_token` httpOnly cookie.)*
 
 ---
 

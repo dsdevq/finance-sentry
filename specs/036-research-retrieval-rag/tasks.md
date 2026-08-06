@@ -73,7 +73,7 @@ description: "Task list for Research Retrieval and RAG Context implementation"
 - [X] T032 Run `dotnet build backend/` and resolve all warnings
 - [X] T033 Run `dotnet test FinanceSentry.sln --no-build -c Release --filter "Category!=Integration"`
 - [X] T034 Run retrieval integration tests against PostgreSQL/vector support — **N/A as specified**: no vector extension in use; retrieval behavior (semantic ranking, visibility, idempotency) is fully covered on EF InMemory since ranking is in-app. `M009` applies via the normal deploy path
-- [ ] T035 Run quickstart MCP smoke test against the deployed or local MCP server — **deferred to post-merge/post-deploy verification** (needs a running stack with the M009 migration applied)
+- [X] T035 Run quickstart MCP smoke test against the deployed or local MCP server — **deferred to post-merge/post-deploy verification** (needs a running stack with the M009 migration applied) *(Done 2026-08-06 against local stack: M009 applied, 356 docs/chunks indexed; contract, citation metadata, `maxChunks` bounding, and cross-user isolation all pass for both tools. Semantic/vector ranking NOT verifiable locally — no embeddings key, 0 rows in `research_embeddings`; lexical fallback degrades gracefully per spec. UX gap noted: unauthenticated MCP identity silently returns empty results instead of an auth error.)*
 
 ## Dependencies
 

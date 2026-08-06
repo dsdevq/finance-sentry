@@ -150,7 +150,7 @@ description: "Task list for Companion-Mode Data Layer implementation"
 - [X] T050 Extend candidate-creation MCP tool(s) to accept `source: "Ledger"` (FR-010) in the relevant tool under `backend/src/FinanceSentry.Mcp/Tools/` and verify `list_candidates` surfaces it
 - [X] T051 `/csharp-quality` sweep across all new files; `dotnet build backend/` zero warnings
 - [X] T052 Bump backend `<Version>` in `backend/src/FinanceSentry.API/FinanceSentry.API.csproj`
-- [ ] T053 Run `quickstart.md` verification (P1/P2/P3 + failure-alerting) against the Docker stack; confirm M008 in `__ef_migrations_history_research`
+- [X] T053 Run `quickstart.md` verification (P1/P2/P3 + failure-alerting) against the Docker stack; confirm M008 in `__ef_migrations_history_research` *(Done 2026-08-06 locally: M008 applied; P1/P2/P3 pass end-to-end via MCP stdio + Hangfire triggers. Failure-alerting verified through counter/threshold/one-shot logic; final alert row unproducible locally — no active bank accounts → empty fan-out. Crypto valuation needs `SOL-USD`, not bare `SOL`. Known wart filed: MarketBeat firm names carry a "Subscribe to MarketBeat All Access…" suffix (parser drift). TrendForce seed correctly skipped (no DRAM thesis locally); quickstart's Yahoo contract-test mention is stale post-037.)*
 
 ---
 
