@@ -7,7 +7,8 @@ public record MonobankAccountInfo(
     string MaskedPan,
     int CurrencyCode,
     long Balance,
-    long CreditLimit);
+    long CreditLimit,
+    string? ProductType = null);
 
 public record MonobankClientInfo(
     string ClientId,

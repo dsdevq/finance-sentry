@@ -19,6 +19,45 @@ public class WealthAggregationServiceTests
     private static BankingTransactionSummary MakeTx(Guid accountId, string provider, decimal amount, string type, DateTime date, bool isPending = false, string currency = "USD")
         => new(accountId, provider, type, amount, currency, CurrencyConverter.ToUsd(amount, currency), date, isPending);
 
+    private static BankingAccountSummary MakeMonobankAccount(string currency, decimal? balance, string? productType, Guid credId)
+        => new(Guid.NewGuid(), "Monobank", "checking", "1234", "monobank", currency,
+               balance, balance.HasValue ? CurrencyConverter.ToUsd(balance.Value, currency) : null, "synced",
+               DateTime.UtcNow, DateTime.UtcNow, MonobankCredentialId: credId, ProductType: productType);
+
+    [Fact]
+    public async Task GetWealthSummary_Monobank_GroupsByCard_HidesEmptySubAccountsAndEmptyCards()
+    {
+        var cred = Guid.NewGuid();
+        var accounts = new[]
+        {
+            MakeMonobankAccount("UAH", 10000m, "black", cred),  // black card — has money
+            MakeMonobankAccount("USD", 0m, "black", cred),      // black card — empty currency, hidden
+            MakeMonobankAccount("UAH", 5000m, "white", cred),   // white card — has money
+            MakeMonobankAccount("UAH", 0m, "platinum", cred),   // platinum — all empty, whole card hidden
+        };
+
+        var svc = BuildService(accounts);
+        var result = await svc.GetWealthSummaryAsync(UserId, null, null);
+
+        var inst = result.Categories.Single(c => c.Category == "banking").Institutions.Single();
+        inst.Cards.Should().NotBeNull();
+        inst.Cards!.Select(c => c.CardType).Should().BeEquivalentTo(["black", "white"]); // platinum dropped
+
+        var black = inst.Cards!.Single(c => c.CardType == "black");
+        black.DisplayName.Should().Be("Black");
+        black.Accounts.Should().HaveCount(1);                 // empty USD hidden
+        black.Accounts.Single().Currency.Should().Be("UAH");
+    }
+
+    [Fact]
+    public async Task GetWealthSummary_NonMonobank_HasNoCardGrouping()
+    {
+        var svc = BuildService([MakeAccount("plaid", "USD", 1000m)]);
+        var result = await svc.GetWealthSummaryAsync(UserId, null, null);
+
+        result.Categories.Single().Institutions.Single().Cards.Should().BeNull();
+    }
+
     private WealthAggregationService BuildService(
         IEnumerable<BankingAccountSummary> accounts,
         IEnumerable<BankingTransactionSummary>? transactions = null)

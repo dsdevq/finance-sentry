@@ -150,7 +150,15 @@ public class WealthAggregationService(
                 a.AccountId, a.BankName, a.AccountType, a.AccountNumberLast4,
                 a.Provider, ProviderCategoryMapper.GetCategory(a.Provider),
                 a.Currency, a.CurrentBalance, a.BalanceUsd,
-                EffectiveBankingStatus(a.SyncStatus, a.LastSuccessfulSyncTimestamp), a.LastSyncTimestamp)).ToList();
+                EffectiveBankingStatus(a.SyncStatus, a.LastSuccessfulSyncTimestamp), a.LastSyncTimestamp,
+                a.ProductType)).ToList();
+
+            // Monobank returns one account per card × currency. Group them into physical cards
+            // (black/white/…) with empty sub-accounts hidden, so the UI can nest currencies under
+            // the card instead of showing a flat, mostly-empty list.
+            var cards = string.Equals(first.Provider, "monobank", StringComparison.OrdinalIgnoreCase)
+                ? BuildMonobankCards(accountDtos)
+                : null;
 
             return new InstitutionDto(
                 InstitutionId: InstitutionIdFor(first),
@@ -161,7 +169,8 @@ public class WealthAggregationService(
                 SyncStatus: WorstSyncStatus(list.Select(a => EffectiveBankingStatus(a.SyncStatus, a.LastSuccessfulSyncTimestamp))),
                 LastSyncTimestamp: list.Max(a => a.LastSyncTimestamp),
                 LastSuccessfulSyncTimestamp: list.Max(a => a.LastSuccessfulSyncTimestamp),
-                Accounts: accountDtos);
+                Accounts: accountDtos,
+                Cards: cards);
         }).OrderByDescending(i => i.TotalInBaseCurrency)];
     }
 
@@ -173,6 +182,40 @@ public class WealthAggregationService(
 
     private static Guid InstitutionIdFor(BankingAccountSummary s)
         => s.MonobankCredentialId ?? s.TrueLayerConnectionId ?? s.AccountId;
+
+    /// <summary>
+    /// Groups Monobank currency sub-accounts into physical cards by product type, hiding
+    /// zero-balance sub-accounts (and cards left entirely empty). A missing product type (rows
+    /// connected before it was captured) collapses into one "Card" group until the next sync
+    /// backfills it.
+    /// </summary>
+    private static IReadOnlyList<CardGroupDto> BuildMonobankCards(IReadOnlyList<AccountBalanceDto> accounts)
+    {
+        return [.. accounts
+            .GroupBy(a => a.ProductType ?? "card")
+            .Select(g => new
+            {
+                CardType = g.Key,
+                NonEmpty = g.Where(a => (a.CurrentBalance ?? 0m) != 0m).ToList(),
+            })
+            .Where(x => x.NonEmpty.Count > 0)
+            .Select(x => new CardGroupDto(
+                CardType: x.CardType,
+                DisplayName: FormatCardName(x.CardType),
+                TotalInBaseCurrency: x.NonEmpty.Sum(a => a.BalanceInBaseCurrency ?? 0m),
+                SyncStatus: WorstSyncStatus(x.NonEmpty.Select(a => a.SyncStatus)),
+                Accounts: x.NonEmpty))
+            .OrderByDescending(c => c.TotalInBaseCurrency)];
+    }
+
+    private static string FormatCardName(string productType) => productType.ToLowerInvariant() switch
+    {
+        "fop" => "FOP",
+        "eaid" => "eAid",
+        "card" => "Card",
+        var s when s.Length > 0 => char.ToUpperInvariant(s[0]) + s[1..],
+        _ => productType,
+    };
 
     /// <summary>
     /// Downgrades a banking account that <i>looks</i> synced but hasn't had a successful sync

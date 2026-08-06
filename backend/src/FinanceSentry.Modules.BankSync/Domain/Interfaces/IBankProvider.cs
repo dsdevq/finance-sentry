@@ -9,7 +9,8 @@ public record BankAccountInfo(
     string AccountNumberLast4,
     decimal? CurrentBalance,
     string Currency,
-    string OwnerName);
+    string OwnerName,
+    string? ProductType = null);
 
 public interface IBankProvider
 {

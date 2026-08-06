@@ -18,6 +18,14 @@ public class BankAccount : Entity
 
     public string AccountType { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Provider-specific product/card type, preserved verbatim (e.g. Monobank "black" / "white" /
+    /// "platinum" / "fop"). Lets currency sub-accounts of the same physical card be grouped and
+    /// labelled. Null for providers that don't expose a card product. <see cref="AccountType"/>
+    /// stays the generic normalized type.
+    /// </summary>
+    public string? ProductType { get; set; }
+
     public string AccountNumberLast4 { get; set; } = string.Empty;
 
     public string OwnerName { get; set; } = string.Empty;
