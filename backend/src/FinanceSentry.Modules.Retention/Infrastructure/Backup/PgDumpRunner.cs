@@ -65,13 +65,23 @@ public sealed class PgDumpRunner
     public Task CreateDatabaseAsync(string name, CancellationToken ct) =>
         RunAsync("createdb", [name], DbEnv("postgres"), ct);
 
-    /// <summary>Drops a database if it exists (connects to the <c>postgres</c> maintenance DB).</summary>
+    /// <summary>
+    /// Drops a database if it exists (connects to the <c>postgres</c> maintenance DB). <c>--force</c>
+    /// terminates any lingering connection to the scratch DB so the drill always cleans up.
+    /// </summary>
     public Task DropDatabaseAsync(string name, CancellationToken ct) =>
-        RunAsync("dropdb", ["--if-exists", name], DbEnv("postgres"), ct);
+        RunAsync("dropdb", ["--force", "--if-exists", name], DbEnv("postgres"), ct);
 
-    /// <summary>Connection string for verification reads against a restored scratch database.</summary>
+    /// <summary>
+    /// Connection string for verification reads against a restored scratch database. Pooling is
+    /// disabled so no physical connection outlives the check and blocks the subsequent drop.
+    /// </summary>
     public string ScratchConnectionString(string scratchDb) =>
-        new NpgsqlConnectionStringBuilder(_conn.ConnectionString) { Database = scratchDb }.ConnectionString;
+        new NpgsqlConnectionStringBuilder(_conn.ConnectionString)
+        {
+            Database = scratchDb,
+            Pooling = false,
+        }.ConnectionString;
 
     private Dictionary<string, string> DbEnv(string database) => new()
     {

@@ -131,7 +131,7 @@ ship together (spec `[DECISION]`: no purge without proven restore). US3 (downsam
 - [ ] T039 [P] Bump backend version in `backend/src/FinanceSentry.API/FinanceSentry.API.csproj` (new module → MINOR)
 - [ ] T040 [P] Run `/csharp-quality` sweep over all new `.cs` files — zero `dotnet build` warnings gate
 - [ ] T041 [P] Log the migration-history-table-name discrepancy (Budgets/Subscriptions/Alerts/Crypto/Brokerage runtime vs design-time) as a tracked follow-up in `specs/ROADMAP.md`
-- [ ] T042 Run `quickstart.md` end-to-end against the local stack: dry-run purge, real purge, `db-backup`, `db-restore-verify`; confirm run records + Grafana panel
+- [X] T042 Run `quickstart.md` end-to-end against the local stack: dry-run purge, real purge, `db-backup`, `db-restore-verify`; confirm run records + Grafana panel
 - [ ] T043 [P] Update `CLAUDE.md` Key Files + Current App State with the Retention module
 
 ---

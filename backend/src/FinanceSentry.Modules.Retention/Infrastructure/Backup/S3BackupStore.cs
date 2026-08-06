@@ -64,8 +64,9 @@ public sealed class S3BackupStore : IBackupStore, IDisposable
                 },
                 ct);
 
-            results.AddRange(response.S3Objects.Select(o =>
-                new BackupObject(o.Key, o.Size ?? 0, o.LastModified ?? default)));
+            // AWSSDK v4 returns a null S3Objects list (not empty) when the prefix has no objects.
+            foreach (var o in response.S3Objects ?? [])
+                results.Add(new BackupObject(o.Key, o.Size ?? 0, o.LastModified ?? default));
 
             continuationToken = response.IsTruncated == true ? response.NextContinuationToken : null;
         }
