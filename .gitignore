@@ -103,3 +103,7 @@ backend/obj/
 backend/packages/
 .claude/settings.local.json
 .aider*
+
+# Stray agent worktree copies and QA scratch — never commit
+.claude/worktrees/
+frontend/.qa-tmp.mjs
