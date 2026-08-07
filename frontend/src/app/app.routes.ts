@@ -51,10 +51,10 @@ export const APP_ROUTES: Routes = [
           ),
       },
       {
-        path: AppRoute.Holdings.slice(1),
+        path: AppRoute.Investments.slice(1),
         loadComponent: () =>
           import('./modules/holdings/pages/holdings/holdings.component').then(
-            m => m.HoldingsComponent
+            m => m.InvestmentsComponent
           ),
       },
       {

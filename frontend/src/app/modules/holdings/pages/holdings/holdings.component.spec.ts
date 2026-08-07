@@ -1,176 +1,101 @@
 import {DecimalPipe} from '@angular/common';
 import {signal} from '@angular/core';
 import {TestBed} from '@angular/core/testing';
-import {By} from '@angular/platform-browser';
-import {CmnDialogService} from '@dsdevq-common/ui';
-import {beforeEach, describe, expect, it, vi} from 'vitest';
+import {beforeEach, describe, expect, it} from 'vitest';
 
-import {
-  type AccountBalanceItem,
-  type Institution,
-} from '../../../../shared/models/wealth/wealth.model';
-import {AccountsStore} from '../../../bank-sync/store/accounts/accounts.store';
+import {type PositionAssetGroup} from '../../store/holdings.computed';
 import {HoldingsStore} from '../../store/holdings.store';
-import {HoldingsComponent} from './holdings.component';
+import {InvestmentsComponent} from './holdings.component';
 
-const MOCK_ACCOUNT: AccountBalanceItem = {
-  accountId: 'acc-1',
-  bankName: 'Interactive Brokers',
-  provider: 'ibkr',
-  category: 'brokerage',
-  accountType: 'Margin',
-  accountNumberLast4: '7890',
-  currentBalance: 12345.67,
-  currency: 'USD',
-  balanceInBaseCurrency: 12345.67,
-  syncStatus: 'synced',
-  lastSyncTimestamp: null,
+const EQUITY_GROUP: PositionAssetGroup = {
+  assetClass: 'equity',
+  label: 'Equities',
+  totalValue: 100,
+  rows: [
+    {
+      symbol: 'DRAM',
+      provider: 'ibkr',
+      quantity: 10,
+      currentPrice: 10,
+      currentValue: 100,
+      pnlPercent: 25.3,
+      weightPercent: 100,
+    },
+  ],
 };
 
-const MOCK_INSTITUTION: Institution = {
-  institutionId: 'inst-1',
-  provider: 'ibkr',
-  name: 'Interactive Brokers',
-  category: 'brokerage',
-  totalInBaseCurrency: 12345.67,
-  syncStatus: 'synced',
-  lastSyncTimestamp: null,
-  lastSuccessfulSyncTimestamp: null,
-  accounts: [MOCK_ACCOUNT],
+const CRYPTO_GROUP: PositionAssetGroup = {
+  assetClass: 'crypto',
+  label: 'Crypto',
+  totalValue: 50,
+  rows: [
+    {
+      symbol: 'SOL',
+      provider: 'binance',
+      quantity: 1,
+      currentPrice: 50,
+      currentValue: 50,
+      pnlPercent: null,
+      weightPercent: 100,
+    },
+  ],
 };
 
-describe('HoldingsComponent — cmn-disclosure-row projected slots', () => {
-  let mockHoldingsStore: {
-    errorMessage: ReturnType<typeof signal<string>>;
-    isLoading: ReturnType<typeof signal<boolean>>;
-    totalNetWorth: ReturnType<typeof signal<number>>;
-    bankingCategory: ReturnType<typeof signal<null>>;
-    brokerageCategory: ReturnType<typeof signal<null>>;
-    cryptoCategory: ReturnType<typeof signal<null>>;
-    allInstitutions: ReturnType<typeof signal<Institution[]>>;
-    summary: ReturnType<typeof signal<null>>;
-    baseCurrency: ReturnType<typeof signal<string>>;
+describe('InvestmentsComponent — positions view', () => {
+  let mockStore: {
     isPositionsLoading: ReturnType<typeof signal<boolean>>;
     positionsErrorMessage: ReturnType<typeof signal<string>>;
+    positionsByAssetClass: ReturnType<typeof signal<PositionAssetGroup[]>>;
     totalPositionsValue: ReturnType<typeof signal<number>>;
-    positionsByAssetClass: ReturnType<typeof signal<never[]>>;
-    positionsLoaded: ReturnType<typeof signal<boolean>>;
-    loadPositions: ReturnType<typeof vi.fn>;
+    allocationSegments: ReturnType<typeof signal<never[]>>;
   };
 
   beforeEach(async () => {
-    mockHoldingsStore = {
-      errorMessage: signal(''),
-      isLoading: signal(false),
-      totalNetWorth: signal(12345.67),
-      bankingCategory: signal(null),
-      brokerageCategory: signal(null),
-      cryptoCategory: signal(null),
-      allInstitutions: signal<Institution[]>([MOCK_INSTITUTION]),
-      summary: signal(null),
-      baseCurrency: signal('USD'),
+    mockStore = {
       isPositionsLoading: signal(false),
       positionsErrorMessage: signal(''),
-      totalPositionsValue: signal(0),
-      positionsByAssetClass: signal([]),
-      positionsLoaded: signal(false),
-      loadPositions: vi.fn(),
+      positionsByAssetClass: signal<PositionAssetGroup[]>([EQUITY_GROUP, CRYPTO_GROUP]),
+      totalPositionsValue: signal(150),
+      allocationSegments: signal([]),
     };
 
     await TestBed.configureTestingModule({
-      imports: [HoldingsComponent],
-      providers: [
-        {provide: CmnDialogService, useValue: {open: vi.fn()}},
-        // Mirrors provideDecimalPipe() from app.config — holding-balance /
-        // currency-amount pipes inject DecimalPipe, provided app-wide at runtime.
-        DecimalPipe,
-      ],
+      imports: [InvestmentsComponent],
+      providers: [DecimalPipe],
     })
-      .overrideComponent(HoldingsComponent, {
-        set: {
-          providers: [
-            {provide: HoldingsStore, useValue: mockHoldingsStore},
-            {
-              provide: AccountsStore,
-              useValue: {disconnectBinance: vi.fn(), disconnectIBKR: vi.fn()},
-            },
-          ],
-        },
+      .overrideComponent(InvestmentsComponent, {
+        set: {providers: [{provide: HoldingsStore, useValue: mockStore}]},
       })
       .compileComponents();
   });
 
-  it('renders cmn-disclosure-row for each institution instead of a raw details element', () => {
-    const fixture = TestBed.createComponent(HoldingsComponent);
+  it('renders a group card per asset class', () => {
+    const fixture = TestBed.createComponent(InvestmentsComponent);
     fixture.detectChanges();
 
-    const rows = fixture.debugElement.queryAll(By.css('cmn-disclosure-row'));
-    expect(rows).toHaveLength(1);
-
-    // Holdings renders no raw <details> of its own — every <details> on the page
-    // belongs to a cmn-disclosure-row (the component owns its internal one).
-    const details = fixture.debugElement.queryAll(By.css('details'));
-    details.forEach(d =>
-      expect((d.nativeElement as HTMLElement).closest('cmn-disclosure-row')).not.toBeNull()
-    );
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('Equities');
+    expect(text).toContain('Crypto');
+    expect(text).toContain('DRAM');
+    expect(text).toContain('SOL');
   });
 
-  it('renders each institution open by default, matching the original <details open>', () => {
-    const fixture = TestBed.createComponent(HoldingsComponent);
+  it('renders provider-reported P&L for equities and an em dash when P&L is unavailable', () => {
+    const fixture = TestBed.createComponent(InvestmentsComponent);
     fixture.detectChanges();
 
-    const details = fixture.nativeElement.querySelector(
-      'cmn-disclosure-row details'
-    ) as HTMLDetailsElement;
-    expect(details).not.toBeNull();
-    expect(details.open).toBe(true);
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('25.30%');
+    expect(text).toContain('—');
   });
 
-  it('keeps a row collapsed after the user closes it — the [open] binding does not force it back', () => {
-    const fixture = TestBed.createComponent(HoldingsComponent);
+  it('shows an empty state when there are no positions', () => {
+    mockStore.positionsByAssetClass.set([]);
+
+    const fixture = TestBed.createComponent(InvestmentsComponent);
     fixture.detectChanges();
 
-    const details = fixture.nativeElement.querySelector(
-      'cmn-disclosure-row details'
-    ) as HTMLDetailsElement;
-
-    // Simulate the user collapsing the row (native <details> owns toggle state).
-    details.open = false;
-    details.dispatchEvent(new Event('toggle'));
-
-    // A subsequent change-detection pass must not re-open it. Angular's
-    // dirty-checking skips re-writing an unchanged [open]="true" binding, so
-    // the user's collapse is preserved.
-    fixture.detectChanges();
-
-    expect(details.open).toBe(false);
-  });
-
-  it('[status] slot projects sync-status tag inside the disclosure row', () => {
-    const fixture = TestBed.createComponent(HoldingsComponent);
-    fixture.detectChanges();
-
-    const tag = fixture.nativeElement.querySelector('cmn-disclosure-row cmn-tag');
-    expect(tag).not.toBeNull();
-    expect(tag.textContent.trim()).toContain('Synced');
-  });
-
-  it('[actions] slot projects disconnect button for a disconnectable provider (ibkr)', () => {
-    const fixture = TestBed.createComponent(HoldingsComponent);
-    fixture.detectChanges();
-
-    const button = fixture.nativeElement.querySelector('cmn-disclosure-row cmn-button');
-    expect(button).not.toBeNull();
-    expect(button.textContent.trim()).toContain('Disconnect');
-  });
-
-  it('does not render disconnect button when provider is not disconnectable', () => {
-    mockHoldingsStore.allInstitutions.set([{...MOCK_INSTITUTION, provider: 'plaid'}]);
-
-    const fixture = TestBed.createComponent(HoldingsComponent);
-    fixture.detectChanges();
-
-    const button = fixture.nativeElement.querySelector('cmn-disclosure-row cmn-button');
-    expect(button).toBeNull();
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('No positions yet');
   });
 });

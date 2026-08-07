@@ -1,20 +1,16 @@
 import {computed, inject, type Signal} from '@angular/core';
 import {ErrorMessageService} from '@dsdevq-common/core';
+import {type DonutSegment} from '@dsdevq-common/ui';
 
-import {type CategorySummary, type Institution} from '../../../shared/models/wealth/wealth.model';
 import {type Position} from '../models/position/position.model';
 import {type HoldingsState} from './holdings.state';
 
 interface StateSignals {
-  summary: Signal<HoldingsState['summary']>;
-  status: Signal<HoldingsState['status']>;
-  errorCode: Signal<Nullable<string>>;
   positions: Signal<Position[]>;
   positionsStatus: Signal<HoldingsState['positionsStatus']>;
   positionsErrorCode: Signal<Nullable<string>>;
 }
 
-const DEFAULT_ERROR = 'Failed to load holdings. Please try again.';
 const DEFAULT_POSITIONS_ERROR = 'Failed to load positions.';
 const WEIGHT_TO_PERCENT = 100;
 
@@ -44,6 +40,11 @@ const ASSET_CLASS_LABEL: Record<AssetClass, string> = {
   crypto: 'Crypto',
 };
 
+const ASSET_CLASS_COLOR: Record<AssetClass, string> = {
+  equity: '#6366f1',
+  crypto: '#f59e0b',
+};
+
 const CRYPTO_PROVIDERS = new Set<string>(['binance']);
 
 function resolveAssetClass(provider: string): AssetClass {
@@ -53,31 +54,43 @@ function resolveAssetClass(provider: string): AssetClass {
 export function holdingsComputed(store: StateSignals) {
   const errorMessages = inject(ErrorMessageService);
 
-  return {
-    isLoading: computed(() => store.status() === 'loading'),
-    errorMessage: computed(() => {
-      if (store.status() !== 'error') {
-        return '';
+  const totalPositionsValue = computed(() =>
+    store.positions().reduce((sum, p) => sum + p.currentValue, 0)
+  );
+
+  const positionsByAssetClass = computed((): PositionAssetGroup[] => {
+    const positions = store.positions();
+    const totalValue = positions.reduce((sum, p) => sum + p.currentValue, 0);
+    const groups = new Map<AssetClass, PositionRow[]>();
+
+    for (const p of positions) {
+      const assetClass = resolveAssetClass(p.provider);
+      const row: PositionRow = {
+        symbol: p.symbol,
+        provider: p.provider,
+        quantity: p.quantity,
+        currentPrice: p.currentPrice,
+        currentValue: p.currentValue,
+        pnlPercent: p.pnlPercent,
+        weightPercent: totalValue > 0 ? (p.currentValue / totalValue) * WEIGHT_TO_PERCENT : 0,
+      };
+      const bucket = groups.get(assetClass);
+      if (bucket) {
+        bucket.push(row);
+      } else {
+        groups.set(assetClass, [row]);
       }
-      return errorMessages.resolve(store.errorCode()) ?? DEFAULT_ERROR;
-    }),
-    totalNetWorth: computed(() => store.summary()?.totalNetWorth ?? 0),
-    baseCurrency: computed(() => store.summary()?.baseCurrency ?? 'USD'),
-    bankingCategory: computed(
-      (): Nullable<CategorySummary> =>
-        store.summary()?.categories.find(c => c.category === 'banking') ?? null
-    ),
-    brokerageCategory: computed(
-      (): Nullable<CategorySummary> =>
-        store.summary()?.categories.find(c => c.category === 'brokerage') ?? null
-    ),
-    cryptoCategory: computed(
-      (): Nullable<CategorySummary> =>
-        store.summary()?.categories.find(c => c.category === 'crypto') ?? null
-    ),
-    allInstitutions: computed(
-      (): Institution[] => store.summary()?.categories.flatMap(c => c.institutions) ?? []
-    ),
+    }
+
+    return ASSET_CLASS_ORDER.filter(cls => groups.has(cls)).map(cls => ({
+      assetClass: cls,
+      label: ASSET_CLASS_LABEL[cls],
+      rows: (groups.get(cls) ?? []).sort((a, b) => b.currentValue - a.currentValue),
+      totalValue: (groups.get(cls) ?? []).reduce((sum, r) => sum + r.currentValue, 0),
+    }));
+  });
+
+  return {
     positions: computed((): Position[] => store.positions()),
     isPositionsLoading: computed(() => store.positionsStatus() === 'loading'),
     positionsLoaded: computed(
@@ -89,39 +102,14 @@ export function holdingsComputed(store: StateSignals) {
       }
       return errorMessages.resolve(store.positionsErrorCode()) ?? DEFAULT_POSITIONS_ERROR;
     }),
-    totalPositionsValue: computed(() =>
-      store.positions().reduce((sum, p) => sum + p.currentValue, 0)
+    totalPositionsValue,
+    positionsByAssetClass,
+    allocationSegments: computed((): DonutSegment[] =>
+      positionsByAssetClass().map(group => ({
+        label: group.label,
+        value: group.totalValue,
+        color: ASSET_CLASS_COLOR[group.assetClass],
+      }))
     ),
-    positionsByAssetClass: computed(() => {
-      const positions = store.positions();
-      const totalValue = positions.reduce((sum, p) => sum + p.currentValue, 0);
-      const groups = new Map<AssetClass, PositionRow[]>();
-
-      for (const p of positions) {
-        const assetClass = resolveAssetClass(p.provider);
-        const row: PositionRow = {
-          symbol: p.symbol,
-          provider: p.provider,
-          quantity: p.quantity,
-          currentPrice: p.currentPrice,
-          currentValue: p.currentValue,
-          pnlPercent: p.pnlPercent,
-          weightPercent: totalValue > 0 ? (p.currentValue / totalValue) * WEIGHT_TO_PERCENT : 0,
-        };
-        const bucket = groups.get(assetClass);
-        if (bucket) {
-          bucket.push(row);
-        } else {
-          groups.set(assetClass, [row]);
-        }
-      }
-
-      return ASSET_CLASS_ORDER.filter(cls => groups.has(cls)).map(cls => ({
-        assetClass: cls,
-        label: ASSET_CLASS_LABEL[cls],
-        rows: (groups.get(cls) ?? []).sort((a, b) => b.currentValue - a.currentValue),
-        totalValue: (groups.get(cls) ?? []).reduce((sum, r) => sum + r.currentValue, 0),
-      }));
-    }),
   };
 }

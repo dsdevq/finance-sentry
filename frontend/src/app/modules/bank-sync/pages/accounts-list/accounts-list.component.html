@@ -16,6 +16,16 @@
     }
   </div>
 
+  @if (!store.isLoading() && store.netWorthSegments().length > 1) {
+    <div class="mb-cmn-8 sm:max-w-sm sm:ml-auto">
+      <cmn-donut-chart
+        [segments]="store.netWorthSegments()"
+        [currency]="store.baseCurrency()"
+        label="Net worth by category"
+      />
+    </div>
+  }
+
   @if (store.isLoading()) {
     <cmn-card>
       <div class="p-cmn-4 space-y-cmn-3">
