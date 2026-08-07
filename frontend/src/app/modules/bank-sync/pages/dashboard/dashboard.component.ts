@@ -89,22 +89,22 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
               icon="Wallet"
             />
             <cmn-stat-card
-              [value]="store.latestInflowFormatted()"
-              [loading]="store.isLoading()"
-              label="Monthly Inflow"
+              [value]="store.netWorthChangeFormatted()"
+              [loading]="store.isHistoryLoading()"
+              label="Change (period)"
               icon="TrendingUp"
             />
             <cmn-stat-card
-              [value]="store.latestOutflowFormatted()"
+              [value]="store.monthlySpendingFormatted()"
               [loading]="store.isLoading()"
-              label="Monthly Outflow"
+              label="Spending this month"
               icon="TrendingDown"
             />
             <cmn-stat-card
-              [value]="store.savingsRateFormatted()"
+              [value]="store.topCategoryFormatted()"
               [loading]="store.isLoading()"
-              label="Savings Rate"
-              icon="PiggyBank"
+              [label]="store.topCategoryLabel()"
+              icon="ChartPie"
             />
           </div>
 
@@ -143,19 +143,12 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
             }
           </div>
 
-          @if (store.hasCashFlow()) {
-            <div class="grid grid-cols-1 gap-cmn-4 lg:grid-cols-2">
-              <cmn-bar-chart
-                [series]="store.cashFlowBars()"
-                label="Income vs Spending"
-                currency="USD"
-              />
-              <cmn-bar-chart
-                [series]="store.savingsRateBars()"
-                label="Monthly Savings Rate"
-                valueFormat="percent"
-              />
-            </div>
+          @if (store.hasSpending()) {
+            <cmn-bar-chart
+              [series]="store.monthlySpendingBars()"
+              label="Monthly Spending"
+              currency="USD"
+            />
           }
 
           <div class="grid grid-cols-1 gap-cmn-4 lg:grid-cols-3">

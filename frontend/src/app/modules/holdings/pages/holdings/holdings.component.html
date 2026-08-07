@@ -16,11 +16,16 @@
         </div>
       </cmn-card>
     } @else {
-      <div class="grid gap-cmn-4 sm:grid-cols-2 items-start">
-        <cmn-stat-card
-          [value]="store.totalPositionsValue() | currencyAmount"
-          label="Total position value"
-        />
+      <div class="grid gap-cmn-4 sm:grid-cols-2 items-stretch">
+        <div class="grid content-start gap-cmn-4">
+          <cmn-stat-card
+            [value]="store.totalPositionsValue() | currencyAmount"
+            label="Total position value"
+          />
+          @for (group of store.positionsByAssetClass(); track group.assetClass) {
+            <cmn-stat-card [value]="group.totalValue | currencyAmount" [label]="group.label" />
+          }
+        </div>
         <cmn-donut-chart
           [segments]="store.allocationSegments()"
           label="Allocation"

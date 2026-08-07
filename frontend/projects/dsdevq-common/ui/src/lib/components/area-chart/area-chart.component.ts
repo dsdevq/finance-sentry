@@ -173,17 +173,20 @@ export class AreaChartComponent implements AfterViewInit, OnDestroy {
         scales: {
           x: {
             stacked: true,
-            grid: {color: borderDefault},
+            grid: {display: false},
+            border: {display: false},
             ticks: {
               color: textSecondary,
               font: {family: 'Inter', size: 11},
               maxRotation: 0,
               autoSkip: true,
+              maxTicksLimit: 8,
             },
           },
           y: {
             stacked: true,
             grid: {color: borderDefault},
+            border: {display: false},
             ticks: {
               color: textSecondary,
               font: {family: 'Inter', size: 11},
