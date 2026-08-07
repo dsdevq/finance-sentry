@@ -372,6 +372,8 @@ After **all tasks in a feature are complete**, act as a QA engineer: spin up the
 - PostgreSQL 14 — existing `ResearchDbContext` (schema `research`), migration **M010_RecommendationTrends** adding `recommendation_trends` (one row per ticker+period month, upserted). Research migrations M001–M009 exist; next is M010. `analyst_actions` untouched. (037-structured-data-sources)
 - C# 14 / .NET 10 (backend only) + ASP.NET Core, EF Core 10 (Npgsql), Hangfire (PostgreSql storage, (024-data-retention)
 - PostgreSQL 14 — **new `RetentionDbContext`** (schema `retention`, history (024-data-retention)
+- C# 14 / .NET 10 (backend only — no frontend changes) + ASP.NET Core, EF Core 10 (Npgsql), `FinanceSentry.Core.Cqrs` (hand-rolled `ICommand`/`IQuery` — **no MediatR**), `ModelContextProtocol` (existing `FinanceSentry.Mcp` project). No new NuGet packages. (039-ips-risk-boundary)
+- PostgreSQL 14 — a single physical DB hosting both schemas: `research` (`ResearchDbContext`, table `investment_policy_statements`) and `risk` (`RiskDbContext`, table `risk_rule_sets`). Next migrations: Research **M012**, Risk **M002**. (039-ips-risk-boundary)
 
 - `@ngrx/signals` 21.1.0 (NgRx SignalStore) — pilot AuthStore 2026-04-24, extended to DashboardStore + AccountsStore same day
 - C# 13 / .NET 9 (backend) · TypeScript 5.x strict (frontend) + ASP.NET Core 9, EF Core 9, MediatR, ASP.NET Core Identity (`Microsoft.AspNetCore.Identity.EntityFrameworkCore`), Npgsql.EF Core (backend) · Angular 20, RxJS, Angular standalone routing (frontend) (003-auth-flow)
