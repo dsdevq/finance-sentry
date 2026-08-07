@@ -2,6 +2,8 @@ import {ChangeDetectionStrategy, Component, computed, inject} from '@angular/cor
 import {Router} from '@angular/router';
 import {
   AlertComponent,
+  AreaChartComponent,
+  BarChartComponent,
   ButtonComponent,
   CardComponent,
   CmnCellDirective,
@@ -9,7 +11,6 @@ import {
   DataTableComponent,
   DonutChartComponent,
   IconComponent,
-  LineChartComponent,
   StatCardComponent,
 } from '@dsdevq-common/ui';
 
@@ -33,6 +34,8 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
     AlertComponent,
     AppCurrencyPipe,
     AppDecimalPipe,
+    AreaChartComponent,
+    BarChartComponent,
     ButtonComponent,
     CardComponent,
     CmnCellDirective,
@@ -40,7 +43,6 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
     DataTableComponent,
     DonutChartComponent,
     IconComponent,
-    LineChartComponent,
     MerchantCategoryPipe,
     StatCardComponent,
   ],
@@ -51,7 +53,7 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
       <div class="mx-auto max-w-screen-lg space-y-cmn-6">
         <div>
           <h1 class="font-headline text-2xl font-bold text-text-primary">Dashboard</h1>
-          <p class="mt-1 text-cmn-sm text-text-secondary">Your financial overview at a glance</p>
+          <p class="mt-1 text-cmn-sm text-text-secondary">How your money is trending over time</p>
         </div>
 
         @if (store.errorMessage()) {
@@ -83,14 +85,8 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
             <cmn-stat-card
               [value]="store.totalBalanceFormatted()"
               [loading]="store.isLoading()"
-              label="Total Balance"
+              label="Net Worth"
               icon="Wallet"
-            />
-            <cmn-stat-card
-              [value]="store.data()?.accountCount?.toString() ?? '—'"
-              [loading]="store.isLoading()"
-              label="Accounts"
-              icon="Building2"
             />
             <cmn-stat-card
               [value]="store.latestInflowFormatted()"
@@ -104,11 +100,17 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
               label="Monthly Outflow"
               icon="TrendingDown"
             />
+            <cmn-stat-card
+              [value]="store.savingsRateFormatted()"
+              [loading]="store.isLoading()"
+              label="Savings Rate"
+              icon="PiggyBank"
+            />
           </div>
 
           <div>
             <div class="mb-cmn-3 flex items-center justify-between">
-              <span class="text-cmn-sm font-medium text-text-secondary">Net Worth History</span>
+              <span class="text-cmn-sm font-medium text-text-secondary">Net Worth Over Time</span>
               <div class="flex gap-cmn-1">
                 @for (r of ranges; track r.value) {
                   <cmn-button
@@ -128,9 +130,9 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
                 >No history yet. Run the net worth snapshot job to populate the chart.</cmn-alert
               >
             } @else {
-              <cmn-line-chart
-                [data]="store.netWorthHistoryData()"
-                label="Total Net Worth"
+              <cmn-area-chart
+                [series]="store.netWorthAreaSeries()"
+                label="Net worth by sleeve"
                 currency="USD"
               />
               @if (store.netWorthStaleNotice()) {
@@ -141,14 +143,22 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
             }
           </div>
 
-          <div class="grid grid-cols-1 gap-cmn-4 lg:grid-cols-3">
-            <div class="lg:col-span-2">
-              <cmn-line-chart
-                [data]="store.netFlowChartData()"
-                label="Monthly Net Cash Flow"
+          @if (store.hasCashFlow()) {
+            <div class="grid grid-cols-1 gap-cmn-4 lg:grid-cols-2">
+              <cmn-bar-chart
+                [series]="store.cashFlowBars()"
+                label="Income vs Spending"
                 currency="USD"
               />
+              <cmn-bar-chart
+                [series]="store.savingsRateBars()"
+                label="Monthly Savings Rate"
+                valueFormat="percent"
+              />
             </div>
+          }
+
+          <div class="grid grid-cols-1 gap-cmn-4 lg:grid-cols-3">
             <div>
               <cmn-donut-chart
                 [segments]="store.categoryChartData()"
@@ -156,25 +166,26 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
                 currency="USD"
               />
             </div>
-          </div>
-
-          <cmn-data-table
-            [rows]="store.data()?.topCategories ?? []"
-            class="grid gap-4"
-            emptyMessage="No spending data available"
-          >
-            <cmn-column key="category" header="Category">
-              <ng-template let-row cmnCell>{{ row.category | merchantCategory }}</ng-template>
-            </cmn-column>
-            <cmn-column key="spend" header="Total Spend" align="right">
-              <ng-template let-row cmnCell>{{ row.totalSpend | appCurrency }}</ng-template>
-            </cmn-column>
-            <cmn-column key="pct" header="% of Total" align="right">
-              <ng-template let-row cmnCell
-                >{{ row.percentOfTotal | appDecimal: '1.1-1' }}%</ng-template
+            <div class="lg:col-span-2">
+              <cmn-data-table
+                [rows]="store.data()?.topCategories ?? []"
+                class="grid gap-4"
+                emptyMessage="No spending data available"
               >
-            </cmn-column>
-          </cmn-data-table>
+                <cmn-column key="category" header="Category">
+                  <ng-template let-row cmnCell>{{ row.category | merchantCategory }}</ng-template>
+                </cmn-column>
+                <cmn-column key="spend" header="Total Spend" align="right">
+                  <ng-template let-row cmnCell>{{ row.totalSpend | appCurrency }}</ng-template>
+                </cmn-column>
+                <cmn-column key="pct" header="% of Total" align="right">
+                  <ng-template let-row cmnCell
+                    >{{ row.percentOfTotal | appDecimal: '1.1-1' }}%</ng-template
+                  >
+                </cmn-column>
+              </cmn-data-table>
+            </div>
+          </div>
         }
       </div>
     </div>
