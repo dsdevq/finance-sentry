@@ -90,7 +90,7 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
             />
             <cmn-stat-card
               [value]="store.netWorthChangeFormatted()"
-              [loading]="store.isHistoryLoading()"
+              [loading]="store.isLoading()"
               label="Change (period)"
               icon="TrendingUp"
             />
