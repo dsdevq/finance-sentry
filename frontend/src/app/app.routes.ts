@@ -52,10 +52,8 @@ export const APP_ROUTES: Routes = [
       },
       {
         path: AppRoute.Investments.slice(1),
-        loadComponent: () =>
-          import('./modules/holdings/pages/holdings/holdings.component').then(
-            m => m.InvestmentsComponent
-          ),
+        redirectTo: AppRoute.AccountsInvestments.slice(1),
+        pathMatch: 'full',
       },
       {
         path: AppRoute.Budgets.slice(1),
