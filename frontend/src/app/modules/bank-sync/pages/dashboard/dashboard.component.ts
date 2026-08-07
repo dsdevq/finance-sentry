@@ -89,9 +89,9 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
               icon="Wallet"
             />
             <cmn-stat-card
-              [value]="store.netWorthChangeFormatted()"
+              [value]="store.monthlyInflowFormatted()"
               [loading]="store.isLoading()"
-              label="Change (period)"
+              label="Income this month"
               icon="TrendingUp"
             />
             <cmn-stat-card
@@ -101,10 +101,10 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
               icon="TrendingDown"
             />
             <cmn-stat-card
-              [value]="store.topCategoryFormatted()"
+              [value]="store.netWorthChangeFormatted()"
               [loading]="store.isLoading()"
-              [label]="store.topCategoryLabel()"
-              icon="ChartPie"
+              label="Change (period)"
+              icon="Activity"
             />
           </div>
 
@@ -143,10 +143,23 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
             }
           </div>
 
-          @if (store.hasSpending()) {
+          @if (store.hasIncome()) {
+            <div class="grid grid-cols-1 gap-cmn-4 lg:grid-cols-2">
+              <cmn-bar-chart
+                [series]="store.incomeVsSpendingBars()"
+                label="Income vs Spending"
+                currency="USD"
+              />
+              <cmn-bar-chart
+                [series]="store.savingsRateBars()"
+                label="Monthly Savings Rate"
+                valueFormat="percent"
+              />
+            </div>
+          } @else if (store.hasCashFlow()) {
             <cmn-bar-chart
-              [series]="store.monthlySpendingBars()"
-              label="Monthly Spending"
+              [series]="store.incomeVsSpendingBars()"
+              label="Income vs Spending"
               currency="USD"
             />
           }
