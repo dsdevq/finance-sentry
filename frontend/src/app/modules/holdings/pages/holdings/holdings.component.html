@@ -16,22 +16,52 @@
         </div>
       </cmn-card>
     } @else {
-      <div class="grid gap-cmn-4 sm:grid-cols-2 items-stretch">
-        <div class="grid content-start gap-cmn-4">
-          <cmn-stat-card
-            [value]="store.totalPositionsValue() | currencyAmount"
-            label="Total position value"
-          />
-          @for (group of store.positionsByAssetClass(); track group.assetClass) {
-            <cmn-stat-card [value]="group.totalValue | currencyAmount" [label]="group.label" />
-          }
+      <cmn-card class="block">
+        <div class="flex flex-col gap-cmn-6 md:flex-row md:items-center">
+          <div class="min-w-0 flex-1">
+            <p class="text-cmn-xs uppercase tracking-wide text-text-secondary">
+              Total position value
+            </p>
+            <p class="mt-cmn-1 font-mono text-cmn-3xl font-bold tabular-nums text-text-primary">
+              {{ store.totalPositionsValue() | currencyAmount }}
+            </p>
+            <p class="mt-cmn-1 text-cmn-sm text-text-secondary">
+              {{ store.positions().length }} position{{
+                store.positions().length !== 1 ? 's' : ''
+              }}
+              across {{ store.positionsByAssetClass().length }} asset
+              {{ store.positionsByAssetClass().length !== 1 ? 'classes' : 'class' }}
+            </p>
+
+            <div class="mt-cmn-5 space-y-cmn-3 border-t border-border-default pt-cmn-4">
+              @for (row of store.allocationBreakdown(); track row.label) {
+                <div class="flex items-center gap-cmn-3">
+                  <span
+                    [style.background-color]="row.color"
+                    class="h-2.5 w-2.5 shrink-0 rounded-full"
+                  ></span>
+                  <span class="text-cmn-sm text-text-primary">{{ row.label }}</span>
+                  <span class="text-cmn-xs tabular-nums text-text-secondary"
+                    >{{ row.percent | number: '1.0-0' }}%</span
+                  >
+                  <span class="ml-auto font-mono text-cmn-sm tabular-nums text-text-primary">
+                    {{ row.value | currencyAmount }}
+                  </span>
+                </div>
+              }
+            </div>
+          </div>
+
+          <div class="w-full md:w-[240px] md:shrink-0">
+            <cmn-donut-chart
+              [segments]="store.allocationSegments()"
+              [chrome]="false"
+              [showLegend]="false"
+              currency="USD"
+            />
+          </div>
         </div>
-        <cmn-donut-chart
-          [segments]="store.allocationSegments()"
-          label="Allocation"
-          currency="USD"
-        />
-      </div>
+      </cmn-card>
 
       @for (group of store.positionsByAssetClass(); track group.assetClass) {
         <cmn-card class="grid gap-cmn-4">
