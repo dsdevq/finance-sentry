@@ -29,6 +29,7 @@ public sealed class ListTransactionsToolTests
             "TestBank",
             "USD",
             100m,
+            100m,
             date ?? DateTime.UtcNow,
             null,
             "Test description",
