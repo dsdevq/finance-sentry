@@ -26,7 +26,7 @@ export interface PositionRow {
   quantity: number;
   currentPrice: number;
   currentValue: number;
-  pnlPercent: number;
+  pnlPercent: Nullable<number>;
   weightPercent: number;
 }
 
@@ -105,7 +105,7 @@ export function holdingsComputed(store: StateSignals) {
           quantity: p.quantity,
           currentPrice: p.currentPrice,
           currentValue: p.currentValue,
-          pnlPercent: p.mockPnlPercent,
+          pnlPercent: p.pnlPercent,
           weightPercent: totalValue > 0 ? (p.currentValue / totalValue) * WEIGHT_TO_PERCENT : 0,
         };
         const bucket = groups.get(assetClass);

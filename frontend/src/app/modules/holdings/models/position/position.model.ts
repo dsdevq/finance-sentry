@@ -3,6 +3,8 @@ export interface BrokeragePositionDto {
   instrumentType: string;
   quantity: number;
   usdValue: number;
+  costBasisUsd: Nullable<number>;
+  averageCostUsd: Nullable<number>;
 }
 
 export interface BrokerageHoldingsDto {
@@ -34,5 +36,8 @@ export interface Position {
   quantity: number;
   currentValue: number;
   currentPrice: number;
-  mockPnlPercent: number;
+  // Provider-supplied P&L only (IBKR cost basis). Null when the provider gives
+  // us no cost basis (crypto cost basis is reconstructed on our side, so we do
+  // not surface a P&L we can't stand behind).
+  pnlPercent: Nullable<number>;
 }

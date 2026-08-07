@@ -9,18 +9,18 @@ import {
   type Position,
 } from '../models/position/position.model';
 
-const HASH_MULTIPLIER = 31;
-const HASH_MASK = 0xfffff;
-const PNL_RANGE = 5000;
-const PNL_OFFSET = 2000;
-const PNL_SCALE = 100;
+const PERCENT_SCALE = 100;
 
-function mockPnl(symbol: string): number {
-  let hash = 0;
-  for (const c of symbol) {
-    hash = (hash * HASH_MULTIPLIER + c.charCodeAt(0)) & HASH_MASK;
+// P&L % from the provider's own cost basis. Returns null when no usable cost
+// basis is available, so callers render "no data" rather than a fabricated number.
+function providerPnlPercent(
+  currentValue: number,
+  costBasisUsd: Nullable<number>
+): Nullable<number> {
+  if (costBasisUsd == null || costBasisUsd <= 0) {
+    return null;
   }
-  return ((hash % PNL_RANGE) - PNL_OFFSET) / PNL_SCALE;
+  return ((currentValue - costBasisUsd) / costBasisUsd) * PERCENT_SCALE;
 }
 
 @Injectable({providedIn: 'root'})
@@ -38,15 +38,23 @@ export class PositionsService extends ApiService {
 
     return forkJoin([brokerage$, crypto$]).pipe(
       map(([brokerage, crypto]) => {
-        const brokeragePositions: Position[] = (brokerage?.positions ?? []).map(p => ({
-          symbol: p.symbol,
-          provider: brokerage?.provider ?? 'ibkr',
-          quantity: p.quantity,
-          currentValue: p.usdValue,
-          currentPrice: p.quantity > 0 ? p.usdValue / p.quantity : 0,
-          mockPnlPercent: mockPnl(p.symbol),
-        }));
+        const brokeragePositions: Position[] = (brokerage?.positions ?? []).map(p => {
+          // IBKR supplies avgCost directly; derive total cost basis when only the
+          // per-unit average is returned.
+          const costBasisUsd =
+            p.costBasisUsd ?? (p.averageCostUsd != null ? p.averageCostUsd * p.quantity : null);
+          return {
+            symbol: p.symbol,
+            provider: brokerage?.provider ?? 'ibkr',
+            quantity: p.quantity,
+            currentValue: p.usdValue,
+            currentPrice: p.quantity > 0 ? p.usdValue / p.quantity : 0,
+            pnlPercent: providerPnlPercent(p.usdValue, costBasisUsd),
+          };
+        });
 
+        // Binance returns no P&L, and our reconstructed crypto cost basis differs
+        // from the exchange's own figure — so we do not surface a crypto P&L.
         const cryptoPositions: Position[] = (crypto?.holdings ?? []).map(h => ({
           symbol: h.asset,
           provider: crypto?.provider ?? 'binance',
@@ -56,7 +64,7 @@ export class PositionsService extends ApiService {
             h.freeQuantity + h.lockedQuantity > 0
               ? h.usdValue / (h.freeQuantity + h.lockedQuantity)
               : 0,
-          mockPnlPercent: mockPnl(h.asset),
+          pnlPercent: null,
         }));
 
         return [...brokeragePositions, ...cryptoPositions];

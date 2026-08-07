@@ -227,11 +227,19 @@
                 </cmn-column>
                 <cmn-column key="pnl" header="P&L %" align="right">
                   <ng-template let-row cmnCell>
-                    <span
-                      [class]="row.pnlPercent >= 0 ? pnlPositiveClass : pnlNegativeClass"
-                      class="font-mono tabular-nums"
-                      >{{ row.pnlPercent | number: '1.2-2' }}%</span
-                    >
+                    @if (row.pnlPercent === null) {
+                      <span
+                        class="font-mono tabular-nums text-text-secondary"
+                        title="No cost basis reported by provider"
+                        >—</span
+                      >
+                    } @else {
+                      <span
+                        [class]="row.pnlPercent >= 0 ? pnlPositiveClass : pnlNegativeClass"
+                        class="font-mono tabular-nums"
+                        >{{ row.pnlPercent | number: '1.2-2' }}%</span
+                      >
+                    }
                   </ng-template>
                 </cmn-column>
                 <cmn-column key="weight" header="Weight" align="right">
