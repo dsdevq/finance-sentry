@@ -12,6 +12,11 @@ const PADDING_CLASSES: Record<CardPadding, string> = {
 @Component({
   selector: 'cmn-card',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '[class.flex]': 'fill()',
+    '[class.flex-col]': 'fill()',
+    '[class.min-h-0]': 'fill()',
+  },
   template: `
     <div [class]="classes()">
       <ng-content />
@@ -21,6 +26,13 @@ const PADDING_CLASSES: Record<CardPadding, string> = {
 export class CardComponent {
   public readonly padding = input<CardPadding>('md');
   public readonly elevated = input<boolean>(false);
+  /**
+   * Fill mode: the card stretches to its flex parent and clips overflow, so a
+   * child marked `flex-1 min-h-0 overflow-auto` scrolls internally (with a
+   * sticky header) instead of growing the page. The host must be sized by its
+   * parent (e.g. `class="flex-1 min-h-0"`).
+   */
+  public readonly fill = input<boolean>(false);
 
   public readonly classes = computed(() => {
     const parts: string[] = [
@@ -35,6 +47,9 @@ export class CardComponent {
     }
     if (this.elevated()) {
       parts.push('shadow-cmn-md');
+    }
+    if (this.fill()) {
+      parts.push('flex', 'min-h-0', 'flex-1', 'flex-col', 'overflow-hidden');
     }
     return parts.join(' ');
   });

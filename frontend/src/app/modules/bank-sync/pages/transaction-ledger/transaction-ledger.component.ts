@@ -44,6 +44,7 @@ const SKELETON_ROWS = 8;
   ],
   templateUrl: './transaction-ledger.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {class: 'block h-full'},
   providers: [TransactionLedgerStore],
 })
 export class TransactionLedgerComponent {
