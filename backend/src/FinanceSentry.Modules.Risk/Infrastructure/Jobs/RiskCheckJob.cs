@@ -3,6 +3,7 @@ namespace FinanceSentry.Modules.Risk.Infrastructure.Jobs;
 using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Modules.Risk.Application.Services;
 using FinanceSentry.Modules.Risk.Domain;
+using FinanceSentry.Modules.Risk.Domain.Ports;
 using FinanceSentry.Modules.Risk.Domain.Repositories;
 using Hangfire;
 using Microsoft.Extensions.Options;
@@ -19,6 +20,7 @@ public sealed class RiskCheckJob(
     IPolicyViolationAckRepository ackRepo,
     IHoldingSnapshotRepository snapshotRepo,
     IRiskEvaluationService evaluationService,
+    IAllocationPolicySource allocationPolicySource,
     ITurnoverTracker turnoverTracker,
     IAddToBrokenThesisDetector brokenThesisDetector,
     IBrokenThesisReader brokenThesisReader,
@@ -59,7 +61,8 @@ public sealed class RiskCheckJob(
 
         var ruleSet = await ruleSetRepo.GetCurrentAsync(userId, ct);
         var acks = await ackRepo.ListActiveAsync(userId, ct);
-        var report = evaluationService.Evaluate(book, ruleSet, acks, now);
+        var allocationTargets = await allocationPolicySource.GetAllocationTargetsAsync(userId, ct);
+        var report = evaluationService.Evaluate(book, ruleSet, allocationTargets, acks, now);
 
         await EmitComplianceSignalsAsync(userId, report, ct);
         await ResolveClearedViolationsAsync(userId, book, report, ct);

@@ -1,5 +1,4 @@
 using FinanceSentry.Modules.Risk.Application.Commands;
-using FinanceSentry.Modules.Risk.Domain;
 using FinanceSentry.Modules.Risk.Infrastructure.Persistence.Repositories;
 using FluentAssertions;
 using Xunit;
@@ -16,7 +15,7 @@ public sealed class SaveRiskRuleSetCommandTests
         await using var db = TestSupport.NewContext();
         var handler = new SaveRiskRuleSetCommandHandler(new RiskRuleSetRepository(db));
 
-        var command = new SaveRiskRuleSetCommand(UserId, 1.5m, null, null, null, null, null, null);
+        var command = new SaveRiskRuleSetCommand(UserId, 1.5m, null, null, null, null, null);
 
         var act = () => handler.Handle(command, CancellationToken.None);
 
@@ -29,7 +28,7 @@ public sealed class SaveRiskRuleSetCommandTests
         await using var db = TestSupport.NewContext();
         var handler = new SaveRiskRuleSetCommandHandler(new RiskRuleSetRepository(db));
 
-        var command = new SaveRiskRuleSetCommand(UserId, null, null, null, null, null, -1, null);
+        var command = new SaveRiskRuleSetCommand(UserId, null, null, null, null, null, -1);
 
         var act = () => handler.Handle(command, CancellationToken.None);
 
@@ -43,10 +42,10 @@ public sealed class SaveRiskRuleSetCommandTests
         var repo = new RiskRuleSetRepository(db);
         var handler = new SaveRiskRuleSetCommandHandler(repo);
 
-        var first = await handler.Handle(new SaveRiskRuleSetCommand(UserId, 0.25m, null, null, null, null, null, null), CancellationToken.None);
+        var first = await handler.Handle(new SaveRiskRuleSetCommand(UserId, 0.25m, null, null, null, null, null), CancellationToken.None);
         first.Version.Should().Be(1);
 
-        var second = await handler.Handle(new SaveRiskRuleSetCommand(UserId, 0.3m, null, null, null, null, null, null), CancellationToken.None);
+        var second = await handler.Handle(new SaveRiskRuleSetCommand(UserId, 0.3m, null, null, null, null, null), CancellationToken.None);
         second.Version.Should().Be(2);
 
         var current = await repo.GetCurrentAsync(UserId);
@@ -60,7 +59,7 @@ public sealed class SaveRiskRuleSetCommandTests
         await using var db = TestSupport.NewContext();
         var handler = new SaveRiskRuleSetCommandHandler(new RiskRuleSetRepository(db));
 
-        var command = new SaveRiskRuleSetCommand(UserId, null, null, null, null, null, null, null);
+        var command = new SaveRiskRuleSetCommand(UserId, null, null, null, null, null, null);
 
         var saved = await handler.Handle(command, CancellationToken.None);
 
@@ -68,18 +67,4 @@ public sealed class SaveRiskRuleSetCommandTests
         saved.MaxPositionWeightPct.Should().BeNull();
     }
 
-    [Fact]
-    public async Task AllocationTarget_TargetPctOutOfRange_IsRejected()
-    {
-        await using var db = TestSupport.NewContext();
-        var handler = new SaveRiskRuleSetCommandHandler(new RiskRuleSetRepository(db));
-
-        var command = new SaveRiskRuleSetCommand(
-            UserId, null, null, null, null, null, null,
-            [new AllocationTargetEntry("Equity", 1.5m, 0.05m)]);
-
-        var act = () => handler.Handle(command, CancellationToken.None);
-
-        await act.Should().ThrowAsync<RiskRuleSetValidationException>();
-    }
 }

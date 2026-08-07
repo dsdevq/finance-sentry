@@ -4,6 +4,7 @@ using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Modules.Risk.Application.Services;
 using FinanceSentry.Modules.Risk.Domain;
+using FinanceSentry.Modules.Risk.Domain.Ports;
 using FinanceSentry.Modules.Risk.Domain.Repositories;
 using Microsoft.Extensions.Options;
 
@@ -28,6 +29,7 @@ public sealed class CheckRiskRulesQueryHandler(
     IPolicyViolationAckRepository ackRepo,
     IHoldingSnapshotRepository snapshotRepo,
     IRiskEvaluationService evaluationService,
+    IAllocationPolicySource allocationPolicySource,
     ITurnoverTracker turnoverTracker,
     IMarketStructureReader structureReader,
     IOptions<RiskOptions> options)
@@ -46,7 +48,8 @@ public sealed class CheckRiskRulesQueryHandler(
         if (query.Proposal is null)
         {
             var acks = await ackRepo.ListActiveAsync(query.UserId, ct);
-            var report = evaluationService.Evaluate(book, ruleSet, acks);
+            var allocationTargets = await allocationPolicySource.GetAllocationTargetsAsync(query.UserId, ct);
+            var report = evaluationService.Evaluate(book, ruleSet, allocationTargets, acks);
             var context = await BuildPortfolioContextAsync(book, ct);
             return new CheckRiskRulesResult(report, null, ruleSet is not null, context);
         }

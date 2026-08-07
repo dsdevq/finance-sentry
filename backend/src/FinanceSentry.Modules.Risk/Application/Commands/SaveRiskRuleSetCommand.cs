@@ -12,8 +12,7 @@ public record SaveRiskRuleSetCommand(
     decimal? MinCashBufferPct,
     decimal? MaxLossPerThesisPct,
     decimal? MaxNewPositionPct,
-    int? TurnoverBudgetPerQuarter,
-    IReadOnlyList<AllocationTargetEntry>? AllocationTargets) : ICommand<RiskRuleSetDto>;
+    int? TurnoverBudgetPerQuarter) : ICommand<RiskRuleSetDto>;
 
 public sealed class RiskRuleSetValidationException(string message) : Exception(message);
 
@@ -33,7 +32,6 @@ public sealed class SaveRiskRuleSetCommandHandler(IRiskRuleSetRepository repo)
             MaxLossPerThesisPct = command.MaxLossPerThesisPct,
             MaxNewPositionPct = command.MaxNewPositionPct,
             TurnoverBudgetPerQuarter = command.TurnoverBudgetPerQuarter,
-            AllocationTargets = (command.AllocationTargets ?? []).ToList(),
         };
 
         var saved = await repo.SaveNewVersionAsync(entity, ct);
@@ -52,21 +50,6 @@ public sealed class SaveRiskRuleSetCommandHandler(IRiskRuleSetRepository repo)
         {
             throw new RiskRuleSetValidationException(
                 $"{nameof(command.TurnoverBudgetPerQuarter)} must be non-negative if set.");
-        }
-
-        foreach (var target in command.AllocationTargets ?? [])
-        {
-            if (target.TargetPct is <= 0 or > 1)
-            {
-                throw new RiskRuleSetValidationException(
-                    $"Allocation target for {target.AssetClass} must have TargetPct in (0, 1].");
-            }
-
-            if (target.DriftBandPct < 0)
-            {
-                throw new RiskRuleSetValidationException(
-                    $"Allocation target for {target.AssetClass} must have a non-negative DriftBandPct.");
-            }
         }
     }
 

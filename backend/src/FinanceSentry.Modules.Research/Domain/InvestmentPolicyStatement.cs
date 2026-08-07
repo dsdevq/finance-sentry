@@ -41,8 +41,10 @@ public class InvestmentPolicyStatement
     public int CoolingOffDays { get; set; } = DefaultCoolingOffDays;
 
     // Constraints.
+    // NOTE (039): the single-position cap moved to its single home — the Risk rule set
+    // (RiskRuleSet.MaxPositionWeightPct). The IPS holds intent (target allocation); enforced
+    // limits like the position cap live in Risk. See specs/039-ips-risk-boundary.
     public List<string> Exclusions { get; set; } = [];
-    public decimal? MaxSinglePositionPct { get; set; }
 
     // Governance / review.
     public string ReviewCadence { get; set; } = "annual";

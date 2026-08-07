@@ -28,7 +28,6 @@ public sealed class SaveIpsTool(
         [Description("Recurring contribution plan (dollar-cost averaging), if any.")] ContributionPlan? contributionPlan = null,
         [Description("Free-form sell discipline — the rules for when to trim or exit.")] string? sellDiscipline = null,
         [Description("Mandatory cooling-off period in days before any allocation/fund change. Defaults to 90.")] int? coolingOffDays = null,
-        [Description("Maximum weight for any single position, as a percent.")] decimal? maxSinglePositionPct = null,
         [Description("Review cadence (e.g. annual). Defaults to annual.")] string? reviewCadence = null,
         [Description("Optional user GUID. Defaults to the authenticated MCP identity.")] Guid? userId = null,
         CancellationToken cancellationToken = default)
@@ -54,7 +53,6 @@ public sealed class SaveIpsTool(
                 sellDiscipline,
                 coolingOffDays,
                 exclusions ?? [],
-                maxSinglePositionPct,
                 reviewCadence),
             cancellationToken);
     }

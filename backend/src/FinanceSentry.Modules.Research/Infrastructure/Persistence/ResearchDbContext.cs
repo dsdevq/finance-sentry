@@ -158,7 +158,6 @@ public class ResearchDbContext(DbContextOptions<ResearchDbContext> options) : Db
         ib.Property(x => x.MaxDrawdownTolerancePct).HasColumnType("numeric(6,2)");
         ib.Property(x => x.SellDiscipline).HasMaxLength(2000);
         ib.Property(x => x.CoolingOffDays).IsRequired();
-        ib.Property(x => x.MaxSinglePositionPct).HasColumnType("numeric(6,2)");
         ib.Property(x => x.ReviewCadence).IsRequired().HasMaxLength(20);
         ib.Property(x => x.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
         ib.Property(x => x.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");

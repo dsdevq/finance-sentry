@@ -3,7 +3,6 @@ using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Mcp.Abstractions;
 using FinanceSentry.Modules.Risk.Application.Commands;
 using FinanceSentry.Modules.Risk.Application.Queries;
-using FinanceSentry.Modules.Risk.Domain;
 using ModelContextProtocol.Server;
 
 namespace FinanceSentry.Mcp.Tools;
@@ -22,7 +21,6 @@ public sealed class SaveRiskRulesTool(
         [Description("Max loss (0,1] from entry before a thesis's price_drawdown trigger fires by default.")] decimal? maxLossPerThesisPct = null,
         [Description("Max weight (0,1] any single NEW position may be sized to.")] decimal? maxNewPositionPct = null,
         [Description("Max discretionary trades per rolling quarter, non-negative.")] int? turnoverBudgetPerQuarter = null,
-        [Description("Target weights per sleeve/asset with a drift band, e.g. [{assetClass:'Equity',targetPct:0.6,driftBandPct:0.05}].")] IReadOnlyList<AllocationTargetEntry>? allocationTargets = null,
         [Description("Optional user GUID. Defaults to the authenticated MCP identity.")] Guid? userId = null,
         CancellationToken cancellationToken = default)
     {
@@ -40,8 +38,7 @@ public sealed class SaveRiskRulesTool(
                 minCashBufferPct,
                 maxLossPerThesisPct,
                 maxNewPositionPct,
-                turnoverBudgetPerQuarter,
-                allocationTargets),
+                turnoverBudgetPerQuarter),
             cancellationToken);
     }
 }

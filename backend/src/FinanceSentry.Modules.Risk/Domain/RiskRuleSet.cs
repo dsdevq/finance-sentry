@@ -23,9 +23,9 @@ public class RiskRuleSet
 
     public int? TurnoverBudgetPerQuarter { get; set; }
 
-    public List<AllocationTargetEntry> AllocationTargets { get; set; } = [];
-
+    // NOTE (039): target allocation moved to its single home — the IPS
+    // (InvestmentPolicyStatement.AllocationTargets, Research module). The Risk rule set holds
+    // enforced limits; intent like the target mix lives in the IPS. The allocation-drift check
+    // reads the IPS via IAllocationPolicySource. See specs/039-ips-risk-boundary.
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }
-
-public sealed record AllocationTargetEntry(string AssetClass, decimal TargetPct, decimal DriftBandPct);

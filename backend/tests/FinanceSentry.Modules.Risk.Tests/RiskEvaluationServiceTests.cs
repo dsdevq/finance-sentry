@@ -1,5 +1,6 @@
 using FinanceSentry.Modules.Risk.Application.Services;
 using FinanceSentry.Modules.Risk.Domain;
+using FinanceSentry.Modules.Risk.Domain.Ports;
 using FluentAssertions;
 using Xunit;
 
@@ -15,7 +16,7 @@ public sealed class RiskEvaluationServiceTests
     {
         var book = new BookSnapshot(15000m, 0m, [new BookPosition("DRAM", RiskSleeve.Brokerage, 100m, 6900m, 0.46m)], false, []);
 
-        var report = _service.Evaluate(book, null, []);
+        var report = _service.Evaluate(book, null, [], []);
 
         report.HasRuleSet.Should().BeFalse();
         report.Violations.Should().BeEmpty();
@@ -28,7 +29,7 @@ public sealed class RiskEvaluationServiceTests
         var book = new BookSnapshot(15000m, 1000m, [new BookPosition("DRAM", RiskSleeve.Brokerage, 100m, 6900m, 0.46m)], false, []);
         var ruleSet = new RiskRuleSet { UserId = UserId, MaxPositionWeightPct = 0.25m };
 
-        var report = _service.Evaluate(book, ruleSet, []);
+        var report = _service.Evaluate(book, ruleSet, [], []);
 
         report.Violations.Should().ContainSingle();
         var violation = report.Violations.Single();
@@ -46,7 +47,7 @@ public sealed class RiskEvaluationServiceTests
         var book = new BookSnapshot(10000m, 3000m, [new BookPosition("AAPL", RiskSleeve.Brokerage, 10m, 2000m, 0.2m)], false, []);
         var ruleSet = new RiskRuleSet { UserId = UserId, MaxPositionWeightPct = 0.25m };
 
-        var report = _service.Evaluate(book, ruleSet, []);
+        var report = _service.Evaluate(book, ruleSet, [], []);
 
         report.Violations.Should().BeEmpty();
         report.HasRuleSet.Should().BeTrue();
@@ -64,7 +65,7 @@ public sealed class RiskEvaluationServiceTests
             false, []);
         var ruleSet = new RiskRuleSet { UserId = UserId, MaxSleeveWeightPct = 0.5m };
 
-        var report = _service.Evaluate(book, ruleSet, []);
+        var report = _service.Evaluate(book, ruleSet, [], []);
 
         report.Violations.Should().ContainSingle(v => v.RuleKey == RiskRuleKeys.MaxSleeveWeight && v.Subject == RiskSleeve.Brokerage);
     }
@@ -75,7 +76,7 @@ public sealed class RiskEvaluationServiceTests
         var book = new BookSnapshot(10000m, 200m, [new BookPosition("AAPL", RiskSleeve.Brokerage, 1m, 9800m, 0.98m)], false, []);
         var ruleSet = new RiskRuleSet { UserId = UserId, MinCashBufferPct = 0.1m };
 
-        var report = _service.Evaluate(book, ruleSet, []);
+        var report = _service.Evaluate(book, ruleSet, [], []);
 
         report.Violations.Should().ContainSingle(v => v.RuleKey == RiskRuleKeys.MinCashBuffer && v.Subject == "CASH");
     }
@@ -95,7 +96,7 @@ public sealed class RiskEvaluationServiceTests
             WorseningStepPct = 0.05m,
         };
 
-        var report = _service.Evaluate(book, ruleSet, [ack]);
+        var report = _service.Evaluate(book, ruleSet, [], [ack]);
 
         var violation = report.Violations.Should().ContainSingle().Subject;
         violation.Status.Should().Be(PolicyViolationStatus.Acknowledged);
@@ -117,7 +118,7 @@ public sealed class RiskEvaluationServiceTests
             WorseningStepPct = 0.05m,
         };
 
-        var report = _service.Evaluate(book, ruleSet, [ack]);
+        var report = _service.Evaluate(book, ruleSet, [], [ack]);
 
         report.Violations.Should().ContainSingle().Which.Status.Should().Be(PolicyViolationStatus.Worsened);
     }
@@ -128,10 +129,62 @@ public sealed class RiskEvaluationServiceTests
         var book = new BookSnapshot(15000m, 1000m, [new BookPosition("DRAM", RiskSleeve.Brokerage, 100m, 6900m, 0.46m)], true, ["brokerage"]);
         var ruleSet = new RiskRuleSet { UserId = UserId, MaxPositionWeightPct = 0.25m };
 
-        var report = _service.Evaluate(book, ruleSet, []);
+        var report = _service.Evaluate(book, ruleSet, [], []);
 
         report.IsStale.Should().BeTrue();
         report.Violations.Should().ContainSingle();
+    }
+
+    // 039 (US2/SC-002): allocation-drift verdicts are now produced from the target allocation passed
+    // in from its single home (the IPS), not a copy on the rule set. The comparison and emitted
+    // violation fields are unchanged — a sleeve past its drift band flags exactly as before.
+    [Fact]
+    public void Evaluate_SleeveDriftPastBand_FlagsAllocationDrift_FromInjectedTargets()
+    {
+        var book = new BookSnapshot(
+            10000m, 0m,
+            [new BookPosition("DRAM", RiskSleeve.Brokerage, 100m, 4600m, 0.46m)],
+            false, []);
+        var ruleSet = new RiskRuleSet { UserId = UserId, MaxPositionWeightPct = 0.50m };
+        AllocationDriftTarget[] targets = [new(RiskSleeve.Brokerage, 0.30m, 0.05m)];
+
+        var report = _service.Evaluate(book, ruleSet, targets, []);
+
+        var drift = report.Violations.Should()
+            .ContainSingle(v => v.RuleKey == RiskRuleKeys.AllocationDrift).Subject;
+        drift.Subject.Should().Be(RiskSleeve.Brokerage);
+        drift.ObservedValue.Should().Be(0.46m);
+        drift.LimitValue.Should().Be(0.30m);
+        drift.ExcessUsd.Should().BeApproximately(0.16m * 10000m, 0.01m);
+    }
+
+    [Fact]
+    public void Evaluate_SleeveWithinBand_NoAllocationDrift_FromInjectedTargets()
+    {
+        var book = new BookSnapshot(
+            10000m, 0m,
+            [new BookPosition("DRAM", RiskSleeve.Brokerage, 100m, 3200m, 0.32m)],
+            false, []);
+        var ruleSet = new RiskRuleSet { UserId = UserId, MaxPositionWeightPct = 0.50m };
+        AllocationDriftTarget[] targets = [new(RiskSleeve.Brokerage, 0.30m, 0.05m)];
+
+        var report = _service.Evaluate(book, ruleSet, targets, []);
+
+        report.Violations.Should().NotContain(v => v.RuleKey == RiskRuleKeys.AllocationDrift);
+    }
+
+    [Fact]
+    public void Evaluate_NoInjectedTargets_EmitsNoAllocationDrift()
+    {
+        var book = new BookSnapshot(
+            10000m, 0m,
+            [new BookPosition("DRAM", RiskSleeve.Brokerage, 100m, 4600m, 0.46m)],
+            false, []);
+        var ruleSet = new RiskRuleSet { UserId = UserId, MaxPositionWeightPct = 0.50m };
+
+        var report = _service.Evaluate(book, ruleSet, [], []);
+
+        report.Violations.Should().NotContain(v => v.RuleKey == RiskRuleKeys.AllocationDrift);
     }
 
     [Fact]

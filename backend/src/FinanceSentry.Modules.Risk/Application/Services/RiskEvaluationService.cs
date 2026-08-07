@@ -1,16 +1,20 @@
 namespace FinanceSentry.Modules.Risk.Application.Services;
 
 using FinanceSentry.Modules.Risk.Domain;
+using FinanceSentry.Modules.Risk.Domain.Ports;
 
 /// <summary>
 /// Pure evaluation logic (SC-001): no I/O, no clock reads beyond the injected `now`. Deterministic
-/// facts only — no LLM, no composite/blended score (FR-008).
+/// facts only — no LLM, no composite/blended score (FR-008). 039: the target allocation is read from
+/// its single home (the IPS) by the caller and passed into <c>Evaluate</c> as the allocation-targets
+/// argument; the service stays pure.
 /// </summary>
 public sealed class RiskEvaluationService : IRiskEvaluationService
 {
     public ComplianceReport Evaluate(
         BookSnapshot book,
         RiskRuleSet? ruleSet,
+        IReadOnlyList<AllocationDriftTarget> allocationTargets,
         IReadOnlyList<PolicyViolationAck> acks,
         DateTimeOffset? now = null)
     {
@@ -21,7 +25,7 @@ public sealed class RiskEvaluationService : IRiskEvaluationService
             return new ComplianceReport(generatedAt, book.IsStale, book.StaleSources, [], HasRuleSet: false);
         }
 
-        var raw = ComputeRawViolations(book, ruleSet);
+        var raw = ComputeRawViolations(book, ruleSet, allocationTargets);
         var acked = ApplyAcks(raw, acks);
 
         return new ComplianceReport(generatedAt, book.IsStale, book.StaleSources, acked, HasRuleSet: true);
@@ -151,7 +155,8 @@ public sealed class RiskEvaluationService : IRiskEvaluationService
         return Math.Max(0m, cash + Math.Max(0m, externalMax));
     }
 
-    private static List<PolicyViolation> ComputeRawViolations(BookSnapshot book, RiskRuleSet ruleSet)
+    private static List<PolicyViolation> ComputeRawViolations(
+        BookSnapshot book, RiskRuleSet ruleSet, IReadOnlyList<AllocationDriftTarget> allocationTargets)
     {
         var violations = new List<PolicyViolation>();
 
@@ -214,14 +219,15 @@ public sealed class RiskEvaluationService : IRiskEvaluationService
 
         // FR-001c: sleeve weight vs configured allocation target, breaching only past the drift
         // band. ExcessUsd is the rebalancing amount the drift implies (facts; clients attach
-        // friction estimates before suggesting a trade).
-        if (ruleSet.AllocationTargets.Count > 0 && book.TotalUsd > 0)
+        // friction estimates before suggesting a trade). 039: targets come from the IPS (single
+        // home), pre-translated to fraction target + symmetric drift band by the caller.
+        if (allocationTargets.Count > 0 && book.TotalUsd > 0)
         {
             var weightBySleeve = book.Positions
                 .GroupBy(p => p.Sleeve, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(g => g.Key, g => g.Sum(p => p.WeightPct), StringComparer.OrdinalIgnoreCase);
 
-            foreach (var target in ruleSet.AllocationTargets)
+            foreach (var target in allocationTargets)
             {
                 var actual = weightBySleeve.TryGetValue(target.AssetClass, out var w) ? w : 0m;
                 var drift = actual - target.TargetPct;

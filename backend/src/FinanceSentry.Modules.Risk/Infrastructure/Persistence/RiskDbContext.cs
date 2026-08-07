@@ -1,9 +1,7 @@
 namespace FinanceSentry.Modules.Risk.Infrastructure.Persistence;
 
-using System.Text.Json;
 using FinanceSentry.Modules.Risk.Domain;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 public class RiskDbContext(DbContextOptions<RiskDbContext> options) : DbContext(options)
 {
@@ -18,12 +16,6 @@ public class RiskDbContext(DbContextOptions<RiskDbContext> options) : DbContext(
         modelBuilder.HasDefaultSchema("risk");
         base.OnModelCreating(modelBuilder);
 
-        var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
-        var allocationTargetsComparer = new ValueComparer<List<AllocationTargetEntry>>(
-            (a, b) => (a ?? new()).SequenceEqual(b ?? new()),
-            v => (v ?? new()).Aggregate(0, (h, e) => HashCode.Combine(h, e.GetHashCode())),
-            v => (v ?? new()).ToList());
-
         var ruleSet = modelBuilder.Entity<RiskRuleSet>();
         ruleSet.ToTable("risk_rule_sets");
         ruleSet.HasKey(x => x.Id);
@@ -36,13 +28,6 @@ public class RiskDbContext(DbContextOptions<RiskDbContext> options) : DbContext(
         ruleSet.Property(x => x.MinCashBufferPct).HasColumnType("numeric(9,6)");
         ruleSet.Property(x => x.MaxLossPerThesisPct).HasColumnType("numeric(9,6)");
         ruleSet.Property(x => x.MaxNewPositionPct).HasColumnType("numeric(9,6)");
-        ruleSet.Property(x => x.AllocationTargets)
-            .HasColumnName("allocation_targets_json")
-            .HasColumnType("jsonb")
-            .HasConversion(
-                v => JsonSerializer.Serialize(v, jsonOptions),
-                v => JsonSerializer.Deserialize<List<AllocationTargetEntry>>(v, jsonOptions) ?? new())
-            .Metadata.SetValueComparer(allocationTargetsComparer);
         ruleSet.HasIndex(x => new { x.UserId, x.IsCurrent }).HasDatabaseName("idx_risk_rule_sets_user_current");
 
         var ack = modelBuilder.Entity<PolicyViolationAck>();
