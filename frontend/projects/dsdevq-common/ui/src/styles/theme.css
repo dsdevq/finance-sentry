@@ -7,15 +7,15 @@
 /* ─── Light theme (default) ─────────────────────────────────────────────── */
 :root,
 [data-theme='light'] {
-  /* Surface */
-  --color-surface-bg: #f5f2ff;
+  /* Surface — cool neutral ground (a whisper of the indigo accent, not a lavender wash) */
+  --color-surface-bg: #f7f8fa;
   --color-surface-card: #ffffff;
-  --color-surface-raised: #eae6f4;
+  --color-surface-raised: #eef0f4;
 
   /* Text */
-  --color-text-primary: #1b1b24;
-  --color-text-secondary: #464555;
-  --color-text-disabled: #9a9aaa;
+  --color-text-primary: #101828;
+  --color-text-secondary: #556070;
+  --color-text-disabled: #98a2b3;
   --color-text-inverse: #ffffff;
 
   /* Accent — indigo palette */
@@ -54,9 +54,9 @@
   --color-status-warning: #f59e0b;
   --color-status-error: #ef4444;
 
-  /* Border */
-  --color-border-default: #c7c4d8;
-  --color-border-strong: #777587;
+  /* Border — neutral grey */
+  --color-border-default: #e4e7ec;
+  --color-border-strong: #98a2b3;
   --color-border-focus: #4f46e5;
 
   /* Shadow — dual-layer per Finance Sentry design tokens */

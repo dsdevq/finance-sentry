@@ -158,16 +158,19 @@ export class BarChartComponent implements AfterViewInit, OnDestroy {
           x: {
             stacked: this.stacked(),
             grid: {display: false},
+            border: {display: false},
             ticks: {
               color: textSecondary,
               font: {family: 'Inter', size: 11},
               maxRotation: 0,
               autoSkip: true,
+              maxTicksLimit: 12,
             },
           },
           y: {
             stacked: this.stacked(),
             grid: {color: borderDefault},
+            border: {display: false},
             ticks: {
               color: textSecondary,
               font: {family: 'Inter', size: 11},

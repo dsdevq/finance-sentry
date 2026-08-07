@@ -33,22 +33,15 @@ const DAY_FORMATTER = new Intl.DateTimeFormat('en-US', {month: 'short', day: 'nu
 const SHORT_SPAN_DAYS = 92;
 const MS_PER_DAY = 86_400_000;
 
-const MONTH_KEY_PAD = 2;
-const PERCENT = 100;
-
 const SLEEVE_COLOR = {banking: '#10b981', brokerage: '#6366f1', crypto: '#f59e0b'} as const;
-const INCOME_COLOR = '#10b981';
-const SPENDING_COLOR = '#ef4444';
-const SAVINGS_COLOR = '#6366f1';
+const SPENDING_COLOR = '#6366f1';
 
-interface MonthTotals {
-  inflow: number;
-  outflow: number;
-  net: number;
-}
+// Need at least a start and end snapshot to state a change over the window.
+const MIN_POINTS_FOR_DELTA = 2;
 
 function currentMonthKey(): string {
   const now = new Date();
+  const MONTH_KEY_PAD = 2;
   return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(MONTH_KEY_PAD, '0')}`;
 }
 
@@ -57,41 +50,34 @@ function formatMonthKey(key: string): string {
   return MONTH_FORMATTER.format(new Date(Date.UTC(year, month - 1, 1)));
 }
 
-/** Collapse the per-currency monthly rows into one USD total per month, sorted chronologically. */
-function groupMonthlyFlow(rows: MonthlyFlow[]): [string, MonthTotals][] {
-  const byMonth = new Map<string, MonthTotals>();
+/** Collapse the per-currency monthly rows into one USD outflow per month, sorted chronologically. */
+function groupMonthlyOutflow(rows: MonthlyFlow[]): [string, number][] {
+  const byMonth = new Map<string, number>();
   for (const r of rows) {
-    const cur = byMonth.get(r.month) ?? {inflow: 0, outflow: 0, net: 0};
-    cur.inflow += r.inflowUsd;
-    cur.outflow += r.outflowUsd;
-    cur.net += r.netUsd;
-    byMonth.set(r.month, cur);
+    byMonth.set(r.month, (byMonth.get(r.month) ?? 0) + r.outflowUsd);
   }
   return [...byMonth.entries()].sort(([a], [b]) => a.localeCompare(b));
 }
 
-function sumCurrentMonthUsd(rows: MonthlyFlow[]): Nullable<MonthTotals> {
+function currentMonthOutflow(rows: MonthlyFlow[]): Nullable<number> {
   const key = currentMonthKey();
   const forMonth = rows.filter(r => r.month === key);
   if (forMonth.length === 0) {
     return null;
   }
-  return forMonth.reduce<MonthTotals>(
-    (acc, r) => ({
-      inflow: acc.inflow + r.inflowUsd,
-      outflow: acc.outflow + r.outflowUsd,
-      net: acc.net + r.netUsd,
-    }),
-    {inflow: 0, outflow: 0, net: 0}
-  );
+  return forMonth.reduce((sum, r) => sum + r.outflowUsd, 0);
 }
 
 export function dashboardComputed(store: StateSignals) {
   const currency = inject(CurrencyPipe);
   const categoryStore = inject(CategoryStore);
 
+  // Snapshots with a real total; days with a missing feed land as 0 and would otherwise
+  // render as a cliff down to the axis, reading as if net worth briefly vanished.
+  const validHistory = computed(() => store.netWorthHistory().filter(s => s.totalNetWorth > 0));
+
   const snapshotLabeller = computed((): ((s: NetWorthSnapshotDto) => string) => {
-    const history = store.netWorthHistory();
+    const history = validHistory();
     if (history.length === 0) {
       return s => s.snapshotDate;
     }
@@ -106,86 +92,92 @@ export function dashboardComputed(store: StateSignals) {
       () => currency.transform(store.data()?.totalNetWorthUsd ?? 0) ?? ''
     ),
 
-    latestInflowFormatted: computed(() => {
-      const current = sumCurrentMonthUsd(store.data()?.monthlyFlow ?? []);
-      return current ? COMPACT_FORMATTER.format(current.inflow) : '—';
-    }),
-
-    latestOutflowFormatted: computed(() => {
-      const current = sumCurrentMonthUsd(store.data()?.monthlyFlow ?? []);
-      return current ? COMPACT_FORMATTER.format(current.outflow) : '—';
-    }),
-
-    savingsRateFormatted: computed(() => {
-      const current = sumCurrentMonthUsd(store.data()?.monthlyFlow ?? []);
-      if (!current || current.inflow <= 0) {
+    // Signed net-worth change across the loaded window.
+    netWorthChangeFormatted: computed(() => {
+      const history = validHistory();
+      if (history.length < MIN_POINTS_FOR_DELTA) {
         return '—';
       }
-      return `${((current.net / current.inflow) * PERCENT).toFixed(0)}%`;
+      const delta = history[history.length - 1].totalNetWorth - history[0].totalNetWorth;
+      const sign = delta >= 0 ? '+' : '−';
+      return `${sign}${COMPACT_FORMATTER.format(Math.abs(delta))}`;
+    }),
+
+    monthlySpendingFormatted: computed(() => {
+      const spend = currentMonthOutflow(store.data()?.monthlyFlow ?? []);
+      return spend != null ? COMPACT_FORMATTER.format(spend) : '—';
+    }),
+
+    topCategoryLabel: computed(() => {
+      const top = store.data()?.topCategories?.[0];
+      if (!top) {
+        return 'Top Category';
+      }
+      return categoryStore.labelMap()[top.category] ?? MerchantCategoryUtils.format(top.category);
+    }),
+
+    topCategoryFormatted: computed(() => {
+      const top = store.data()?.topCategories?.[0];
+      return top ? (currency.transform(top.totalSpend) ?? '—') : '—';
     }),
 
     // Stacked net-worth composition (banking / brokerage / crypto) over time — the snapshots
     // already carry each sleeve, so we plot the mix rather than throwing it away for one line.
     netWorthAreaSeries: computed((): AreaSeries[] => {
-      const history = store.netWorthHistory();
+      const history = validHistory();
       if (history.length === 0) {
         return [];
       }
       const labelOf = snapshotLabeller();
+      const labels = history.map(labelOf);
+      // A sleeve reading 0 on a given day means its feed was missing, not that the
+      // balance vanished — carry the last-known value forward so the stack doesn't
+      // collapse to the axis and read as a crash.
+      const carryForward = (pick: (s: NetWorthSnapshotDto) => number): number[] => {
+        let last = 0;
+        return history.map(s => {
+          const value = pick(s);
+          if (value > 0) {
+            last = value;
+          }
+          return last;
+        });
+      };
+      const toPoints = (values: number[]) => values.map((value, i) => ({label: labels[i], value}));
       return [
         {
           label: 'Banking',
           color: SLEEVE_COLOR.banking,
-          points: history.map(s => ({label: labelOf(s), value: s.bankingTotal})),
+          points: toPoints(carryForward(s => s.bankingTotal)),
         },
         {
           label: 'Brokerage',
           color: SLEEVE_COLOR.brokerage,
-          points: history.map(s => ({label: labelOf(s), value: s.brokerageTotal})),
+          points: toPoints(carryForward(s => s.brokerageTotal)),
         },
         {
           label: 'Crypto',
           color: SLEEVE_COLOR.crypto,
-          points: history.map(s => ({label: labelOf(s), value: s.cryptoTotal})),
+          points: toPoints(carryForward(s => s.cryptoTotal)),
         },
       ];
     }),
 
-    cashFlowBars: computed((): BarSeries[] => {
-      const grouped = groupMonthlyFlow(store.data()?.monthlyFlow ?? []);
+    monthlySpendingBars: computed((): BarSeries[] => {
+      const grouped = groupMonthlyOutflow(store.data()?.monthlyFlow ?? []);
       if (grouped.length === 0) {
         return [];
       }
       return [
-        {
-          label: 'Income',
-          color: INCOME_COLOR,
-          points: grouped.map(([key, v]) => ({label: formatMonthKey(key), value: v.inflow})),
-        },
         {
           label: 'Spending',
           color: SPENDING_COLOR,
-          points: grouped.map(([key, v]) => ({label: formatMonthKey(key), value: v.outflow})),
+          points: grouped.map(([key, value]) => ({label: formatMonthKey(key), value})),
         },
       ];
     }),
 
-    savingsRateBars: computed((): BarSeries[] => {
-      const grouped = groupMonthlyFlow(store.data()?.monthlyFlow ?? []);
-      if (grouped.length === 0) {
-        return [];
-      }
-      return [
-        {
-          label: 'Savings rate',
-          color: SAVINGS_COLOR,
-          points: grouped.map(([key, v]) => ({
-            label: formatMonthKey(key),
-            value: v.inflow > 0 ? (v.net / v.inflow) * PERCENT : 0,
-          })),
-        },
-      ];
-    }),
+    hasSpending: computed(() => (store.data()?.monthlyFlow ?? []).length > 0),
 
     categoryChartData: computed((): DonutSegment[] =>
       (store.data()?.topCategories ?? []).map(c => ({
@@ -193,8 +185,6 @@ export function dashboardComputed(store: StateSignals) {
         value: c.totalSpend,
       }))
     ),
-
-    hasCashFlow: computed(() => (store.data()?.monthlyFlow ?? []).length > 0),
 
     netWorthStaleNotice: computed((): string | null => {
       const history = store.netWorthHistory();
