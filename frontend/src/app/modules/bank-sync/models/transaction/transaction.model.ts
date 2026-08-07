@@ -9,6 +9,7 @@ export interface GlobalTransactionDto extends Timestamped {
   bankName: string;
   currency: string;
   amount: number;
+  amountUsd: number;
   date: string;
   postedDate: Nullable<string>;
   description: string;

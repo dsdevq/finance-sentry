@@ -2,6 +2,7 @@ namespace FinanceSentry.Modules.BankSync.Application.Queries;
 
 using FinanceSentry.Core.Api;
 using FinanceSentry.Core.Cqrs;
+using FinanceSentry.Core.Utils;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
 
 // ── DTOs ─────────────────────────────────────────────────────────────────────
@@ -12,6 +13,7 @@ public record GlobalTransactionDto(
     string BankName,
     string Currency,
     decimal Amount,
+    decimal AmountUsd,
     DateTime Date,
     DateTime? PostedDate,
     string Description,
@@ -76,6 +78,7 @@ public class GetAllTransactionsQueryHandler(
                 meta.Item1,
                 meta.Item2,
                 t.Amount,
+                CurrencyConverter.ToUsd(t.Amount, meta.Item2),
                 t.TransactionDate,
                 t.PostedDate,
                 t.Description,

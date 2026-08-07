@@ -35,7 +35,7 @@ export function transactionLedgerComputed(store: StateSignals) {
           const date = new Date(t.postedDate ?? t.date);
           return t.transactionType === 'debit' && date >= monthStart;
         })
-        .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+        .reduce((sum, t) => sum + Math.abs(t.amountUsd), 0);
     }),
     topCategory: computed(() => {
       const counts: Record<string, number> = {};

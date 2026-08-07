@@ -35,18 +35,24 @@ const PERCENT_MULTIPLIER = 100;
   selector: 'cmn-donut-chart',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div
-      class="flex flex-col gap-cmn-3 rounded-cmn-lg border border-border-default bg-surface-card p-cmn-4"
-    >
-      <span
-        class="font-label text-cmn-xs font-semibold uppercase tracking-wide text-text-secondary"
+    @if (chrome()) {
+      <div
+        class="flex flex-col gap-cmn-3 rounded-cmn-lg border border-border-default bg-surface-card p-cmn-4"
       >
-        {{ label() }}
-      </span>
-      <div class="relative w-full" style="min-height: 280px">
+        <span
+          class="font-label text-cmn-xs font-semibold uppercase tracking-wide text-text-secondary"
+        >
+          {{ label() }}
+        </span>
+        <div class="relative w-full" style="min-height: 280px">
+          <canvas #chartCanvas></canvas>
+        </div>
+      </div>
+    } @else {
+      <div class="relative h-full w-full" style="min-height: 220px">
         <canvas #chartCanvas></canvas>
       </div>
-    </div>
+    }
   `,
 })
 export class DonutChartComponent implements AfterViewInit, OnDestroy {
@@ -56,6 +62,10 @@ export class DonutChartComponent implements AfterViewInit, OnDestroy {
   public readonly segments = input<DonutSegment[]>([]);
   public readonly label = input<string>('');
   public readonly currency = input<string>('USD');
+  /** When false, renders only the ring (no bordered card, no title) for embedding. */
+  public readonly chrome = input<boolean>(true);
+  /** When false, hides the chart's built-in legend (host renders its own). */
+  public readonly showLegend = input<boolean>(true);
 
   constructor() {
     effect(() => {
@@ -113,6 +123,7 @@ export class DonutChartComponent implements AfterViewInit, OnDestroy {
         cutout: '70%',
         plugins: {
           legend: {
+            display: this.showLegend(),
             position: 'bottom',
             labels: {
               color: textSecondary || '#464555',
