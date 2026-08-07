@@ -119,8 +119,14 @@ services:
     ports:
       - "127.0.0.1:${FRONTEND_PORT:-4200}:4200"
     depends_on:
+      # Ordering only — NOT service_healthy. During a recreate the old and new api
+      # containers briefly overlap and contend on the ~14 per-context EF migration
+      # locks; a slow/transient-unhealthy api under service_healthy aborts the whole
+      # `compose up`, leaving the frontend never started (outage on 2026-08-07).
+      # deploy.sh gates real readiness with its own 120s api health-poll loop, so
+      # nginx just 502s for a few seconds until the api is up — no aborted deploy.
       api:
-        condition: service_healthy
+        condition: service_started
     networks:
       - finance-sentry
     logging:
