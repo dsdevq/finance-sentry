@@ -1,6 +1,8 @@
+using FinanceSentry.Core.Utils;
 using FinanceSentry.Modules.BrokerageSync.Domain.Exceptions;
 using FinanceSentry.Modules.BrokerageSync.Domain.Interfaces;
 using FinanceSentry.Modules.BrokerageSync.Domain.Repositories;
+using Microsoft.Extensions.Logging;
 
 namespace FinanceSentry.Modules.BrokerageSync.Infrastructure.IBKR.OAuth;
 
@@ -13,8 +15,11 @@ namespace FinanceSentry.Modules.BrokerageSync.Infrastructure.IBKR.OAuth;
 public sealed class IbkrOAuthAdapter(
     IIBKRCredentialRepository credentialRepository,
     IIbkrCredentialResolver resolver,
-    IbkrOAuthClient client) : IBrokerAdapter
+    IbkrOAuthClient client,
+    ILogger<IbkrOAuthAdapter> logger) : IBrokerAdapter
 {
+    private const string BaseLedgerKey = "BASE";
+
     public string BrokerName => "IBKR";
 
     public async Task EnsureSessionAsync(Guid credentialId, CancellationToken ct = default)
@@ -40,7 +45,7 @@ public sealed class IbkrOAuthAdapter(
     {
         using var credentials = await ResolveAsync(credentialId, ct);
         var positions = await client.GetPositionsAsync(credentials, accountId, ct);
-        return positions
+        var result = positions
             .Select(p => new BrokerPosition(
                 Symbol: p.ContractDesc,
                 InstrumentType: p.AssetClass,
@@ -48,6 +53,43 @@ public sealed class IbkrOAuthAdapter(
                 UsdValue: p.MktValue,
                 AverageCostUsd: p.AvgPrice ?? p.AvgCost))
             .ToList();
+
+        result.AddRange(await GetCashPositionsAsync(credentials, accountId, ct));
+        return result;
+    }
+
+    /// <summary>
+    /// Uninvested cash from the IBKR ledger, surfaced as synthetic CASH positions so it shows in
+    /// holdings and net worth. Best-effort: the ledger endpoint can 403 on restricted read-only
+    /// sessions, and cash is supplementary, so a failure is logged and skipped rather than failing
+    /// the whole sync.
+    /// </summary>
+    private async Task<IReadOnlyList<BrokerPosition>> GetCashPositionsAsync(
+        IbkrOAuthCredentials credentials, string accountId, CancellationToken ct)
+    {
+        try
+        {
+            var ledger = await client.GetLedgerAsync(credentials, accountId, ct);
+            return ledger
+                .Where(kv => !string.Equals(kv.Key, BaseLedgerKey, StringComparison.OrdinalIgnoreCase)
+                             && kv.Value.CashBalance != 0m)
+                .Select(kv =>
+                {
+                    var currency = string.IsNullOrWhiteSpace(kv.Value.Currency) ? kv.Key : kv.Value.Currency!;
+                    return new BrokerPosition(
+                        Symbol: $"{currency} Cash",
+                        InstrumentType: "CASH",
+                        Quantity: kv.Value.CashBalance,
+                        UsdValue: CurrencyConverter.ToUsd(kv.Value.CashBalance, currency),
+                        AverageCostUsd: null);
+                })
+                .ToList();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "IBKR cash ledger fetch failed for account {AccountId}; skipping cash.", accountId);
+            return [];
+        }
     }
 
     private async Task<IbkrOAuthCredentials> ResolveAsync(Guid credentialId, CancellationToken ct)

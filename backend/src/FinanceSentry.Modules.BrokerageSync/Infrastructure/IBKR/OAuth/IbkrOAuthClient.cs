@@ -53,6 +53,19 @@ public sealed class IbkrOAuthClient(
         return await response.Content.ReadFromJsonAsync<List<IBKRPositionResponse>>(ct) ?? [];
     }
 
+    /// <summary>
+    /// Reads the account's cash ledger (settled cash per currency). Keyed by currency code,
+    /// plus a <c>"BASE"</c> aggregate row the caller is expected to skip.
+    /// </summary>
+    public async Task<IReadOnlyDictionary<string, IBKRLedgerEntry>> GetLedgerAsync(
+        IbkrOAuthCredentials credentials, string accountId, CancellationToken ct = default)
+    {
+        using var response = await SendSignedGetAsync(
+            credentials, $"/v1/api/portfolio/{accountId}/ledger", ct);
+        return await response.Content.ReadFromJsonAsync<Dictionary<string, IBKRLedgerEntry>>(ct)
+            ?? new Dictionary<string, IBKRLedgerEntry>();
+    }
+
     private async Task<HttpResponseMessage> SendSignedGetAsync(
         IbkrOAuthCredentials credentials, string path, CancellationToken ct)
     {
