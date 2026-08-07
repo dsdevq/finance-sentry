@@ -1,258 +1,105 @@
 <div class="p-cmn-6">
   <div class="mx-auto max-w-screen-lg space-y-cmn-5">
     <cmn-page-header
-      title="Holdings"
-      subtitle="Allocation across institutions, or a flat position-level view for brokerage + crypto."
+      title="Investments"
+      subtitle="Your brokerage and crypto positions, with provider-reported P&L."
     />
 
-    <!-- Tab bar -->
-    <div class="flex gap-cmn-2 border-b border-border-default">
-      <button [class]="tabClass('holdings')" (click)="switchTab('holdings')" type="button">
-        Allocation
-      </button>
-      <button [class]="tabClass('positions')" (click)="switchTab('positions')" type="button">
-        Positions
-      </button>
-    </div>
-
-    <!-- Error state -->
-    @if (store.errorMessage()) {
-      <cmn-alert variant="error">{{ store.errorMessage() }}</cmn-alert>
-    }
-
-    <!-- Loading skeleton -->
-    @if (store.isLoading()) {
-      <div class="grid grid-cols-3 gap-4">
-        @for (_ of [1, 2, 3]; track $index) {
-          <div class="h-24 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse"></div>
-        }
-      </div>
+    @if (store.isPositionsLoading()) {
       <div class="h-64 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse"></div>
-    }
-
-    @if (activeTab() === 'holdings' && !store.isLoading() && !store.errorMessage()) {
-      <!-- KPI cards -->
-      <div class="grid grid-cols-3 gap-4">
-        <cmn-stat-card [value]="store.totalNetWorth() | currencyAmount" label="Net Asset Value" />
-        <cmn-stat-card
-          [value]="store.bankingCategory()?.totalInBaseCurrency | currencyAmount"
-          label="Banking"
-        />
-        <cmn-stat-card
-          [value]="
-            (store.brokerageCategory()?.totalInBaseCurrency ?? 0) +
-              (store.cryptoCategory()?.totalInBaseCurrency ?? 0) | currencyAmount
-          "
-          label="Brokerage & Crypto"
-        />
-      </div>
-
-      <!-- Allocation breakdown -->
-      <div class="grid grid-cols-3 gap-4">
-        @for (cat of store.summary()?.categories ?? []; track cat.category) {
-          <cmn-card>
-            <div class="flex items-center justify-between mb-1">
-              <span class="text-xs font-medium uppercase tracking-wider text-neutral-500">
-                {{ cat.category | categoryLabel }}
-              </span>
-              <span class="text-xs text-neutral-400"
-                >{{ cat.institutionCount }} institution{{
-                  cat.institutionCount !== 1 ? 's' : ''
-                }}</span
-              >
-            </div>
-            <p
-              class="text-xl font-mono font-semibold text-neutral-900 dark:text-neutral-100 tabular-nums"
-            >
-              {{ cat.totalInBaseCurrency | number: '1.2-2' }}
-            </p>
-          </cmn-card>
-        }
-      </div>
-
-      <!-- Detailed Holdings table -->
-      <cmn-card class="grid gap-4">
-        <h2 class="text-sm font-semibold uppercase tracking-wider text-neutral-500 mb-4">
-          Detailed Holdings
-        </h2>
-
-        @if (store.allInstitutions().length === 0) {
-          <div class="py-12 text-center text-neutral-400 text-sm">
-            No accounts connected. Connect an account to see your holdings.
-          </div>
-        } @else {
-          <div class="-mx-4">
-            @for (inst of store.allInstitutions(); track inst.institutionId + inst.provider) {
-              @let sublabel =
-                (inst.category | categoryLabel) +
-                ' · ' +
-                inst.accounts.length +
-                ' row' +
-                (inst.accounts.length !== 1 ? 's' : '');
-              <cmn-disclosure-row
-                [label]="inst.name"
-                [sublabel]="sublabel"
-                [avatarName]="inst.name"
-                [avatarLogoUrl]="inst.name | institutionLogo: inst.provider"
-                [amount]="inst.totalInBaseCurrency"
-                [currency]="store.baseCurrency()"
-                [open]="true"
-              >
-                <cmn-tag [variant]="inst.syncStatus | syncStatusVariant" status>{{
-                  inst.syncStatus | syncStatusLabel
-                }}</cmn-tag>
-                @if (canDisconnect(inst.provider)) {
-                  <cmn-button
-                    (clicked)="disconnect(inst.provider, inst.name); $event.stopPropagation()"
-                    actions
-                    variant="secondary"
-                    size="sm"
-                  >
-                    Disconnect
-                  </cmn-button>
-                }
-                <table class="w-full text-sm bg-surface-bg">
-                  <tbody>
-                    @for (
-                      account of inst.accounts;
-                      track account.accountId + account.accountNumberLast4
-                    ) {
-                      <tr class="border-t border-border-default">
-                        <td class="py-2 pl-16 pr-4 w-full">
-                          <span class="inline-flex items-center gap-cmn-2">
-                            @if (inst.category === 'crypto' || inst.category === 'brokerage') {
-                              <cmn-institution-avatar
-                                [name]="account.accountType"
-                                [logoUrl]="account.accountNumberLast4 | assetLogo: account.provider"
-                                size="sm"
-                              />
-                            }
-                            <span>
-                              <span class="text-text-primary">{{ account.accountType }}</span>
-                              <span class="block text-xs text-text-disabled"
-                                >&#8226;&#8226;{{ account.accountNumberLast4 }}</span
-                              >
-                            </span>
-                          </span>
-                        </td>
-                        <td class="py-2 pr-4 text-right font-mono tabular-nums text-text-primary">
-                          {{ account.currentBalance | number: '1.2-2' }}
-                          <span class="block text-xs text-text-disabled">{{
-                            account.currency
-                          }}</span>
-                        </td>
-                        <td class="py-2 pr-4 text-right font-mono tabular-nums text-text-primary">
-                          @let bal = account | holdingBalance;
-                          <div>{{ bal.native }}</div>
-                          @if (bal.usd) {
-                            <div class="text-xs text-text-disabled">{{ bal.usd }}</div>
-                          }
-                        </td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
-              </cmn-disclosure-row>
-            }
-          </div>
-        }
+    } @else if (store.positionsErrorMessage()) {
+      <cmn-alert variant="error">{{ store.positionsErrorMessage() }}</cmn-alert>
+    } @else if (store.positionsByAssetClass().length === 0) {
+      <cmn-card>
+        <div class="py-cmn-8 text-center text-text-secondary text-cmn-sm">
+          No positions yet. Connect a brokerage or crypto account to see holdings.
+        </div>
       </cmn-card>
-    }
-
-    @if (activeTab() === 'positions') {
-      @if (store.isPositionsLoading()) {
-        <div class="h-64 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse"></div>
-      } @else if (store.positionsErrorMessage()) {
-        <cmn-alert variant="error">{{ store.positionsErrorMessage() }}</cmn-alert>
-      } @else {
+    } @else {
+      <div class="grid gap-cmn-4 sm:grid-cols-2 items-start">
         <cmn-stat-card
           [value]="store.totalPositionsValue() | currencyAmount"
           label="Total position value"
         />
+        <cmn-donut-chart
+          [segments]="store.allocationSegments()"
+          label="Allocation"
+          currency="USD"
+        />
+      </div>
 
-        @if (store.positionsByAssetClass().length === 0) {
-          <cmn-card>
-            <div class="py-cmn-8 text-center text-text-secondary text-cmn-sm">
-              No positions yet. Connect a brokerage or crypto account to see holdings.
-            </div>
-          </cmn-card>
-        } @else {
-          @for (group of store.positionsByAssetClass(); track group.assetClass) {
-            <cmn-card class="grid gap-cmn-4">
-              <div class="flex items-baseline justify-between">
-                <h2 class="font-headline text-cmn-lg font-semibold text-text-primary">
-                  {{ group.label }}
-                </h2>
-                <span class="font-mono tabular-nums text-cmn-sm text-text-secondary">
-                  {{ group.totalValue | currencyAmount }}
+      @for (group of store.positionsByAssetClass(); track group.assetClass) {
+        <cmn-card class="grid gap-cmn-4">
+          <div class="flex items-baseline justify-between">
+            <h2 class="font-headline text-cmn-lg font-semibold text-text-primary">
+              {{ group.label }}
+            </h2>
+            <span class="font-mono tabular-nums text-cmn-sm text-text-secondary">
+              {{ group.totalValue | currencyAmount }}
+            </span>
+          </div>
+
+          <cmn-data-table [rows]="group.rows">
+            <cmn-column key="symbol" header="Symbol">
+              <ng-template let-row cmnCell>
+                <span class="inline-flex items-center gap-cmn-2">
+                  <cmn-institution-avatar
+                    [name]="row.symbol"
+                    [logoUrl]="row.symbol | assetLogo: row.provider"
+                    size="sm"
+                  />
+                  <span class="font-semibold text-text-primary">{{ row.symbol }}</span>
                 </span>
-              </div>
-
-              <cmn-data-table [rows]="group.rows">
-                <cmn-column key="symbol" header="Symbol">
-                  <ng-template let-row cmnCell>
-                    <span class="inline-flex items-center gap-cmn-2">
-                      <cmn-institution-avatar
-                        [name]="row.symbol"
-                        [logoUrl]="row.symbol | assetLogo: row.provider"
-                        size="sm"
-                      />
-                      <span class="font-semibold text-text-primary">{{ row.symbol }}</span>
-                    </span>
-                  </ng-template>
-                </cmn-column>
-                <cmn-column key="provider" header="Provider">
-                  <ng-template let-row cmnCell>
-                    <span class="text-text-secondary">{{ row.provider }}</span>
-                  </ng-template>
-                </cmn-column>
-                <cmn-column key="quantity" header="Quantity" align="right">
-                  <ng-template let-row cmnCell>
-                    <span class="font-mono tabular-nums">{{ row.quantity | number: '1.0-8' }}</span>
-                  </ng-template>
-                </cmn-column>
-                <cmn-column key="price" header="Price" align="right">
-                  <ng-template let-row cmnCell>
-                    <span class="font-mono tabular-nums">{{
-                      row.currentPrice | currencyAmount
-                    }}</span>
-                  </ng-template>
-                </cmn-column>
-                <cmn-column key="value" header="Value" align="right">
-                  <ng-template let-row cmnCell>
-                    <span class="font-mono tabular-nums font-semibold">{{
-                      row.currentValue | currencyAmount
-                    }}</span>
-                  </ng-template>
-                </cmn-column>
-                <cmn-column key="pnl" header="P&L %" align="right">
-                  <ng-template let-row cmnCell>
-                    @if (row.pnlPercent === null) {
-                      <span
-                        class="font-mono tabular-nums text-text-secondary"
-                        title="No cost basis reported by provider"
-                        >—</span
-                      >
-                    } @else {
-                      <span
-                        [class]="row.pnlPercent >= 0 ? pnlPositiveClass : pnlNegativeClass"
-                        class="font-mono tabular-nums"
-                        >{{ row.pnlPercent | number: '1.2-2' }}%</span
-                      >
-                    }
-                  </ng-template>
-                </cmn-column>
-                <cmn-column key="weight" header="Weight" align="right">
-                  <ng-template let-row cmnCell>
-                    <span class="font-mono tabular-nums text-text-secondary"
-                      >{{ row.weightPercent | number: '1.1-1' }}%</span
-                    >
-                  </ng-template>
-                </cmn-column>
-              </cmn-data-table>
-            </cmn-card>
-          }
-        }
+              </ng-template>
+            </cmn-column>
+            <cmn-column key="provider" header="Provider">
+              <ng-template let-row cmnCell>
+                <span class="text-text-secondary">{{ row.provider }}</span>
+              </ng-template>
+            </cmn-column>
+            <cmn-column key="quantity" header="Quantity" align="right">
+              <ng-template let-row cmnCell>
+                <span class="font-mono tabular-nums">{{ row.quantity | number: '1.0-8' }}</span>
+              </ng-template>
+            </cmn-column>
+            <cmn-column key="price" header="Price" align="right">
+              <ng-template let-row cmnCell>
+                <span class="font-mono tabular-nums">{{ row.currentPrice | currencyAmount }}</span>
+              </ng-template>
+            </cmn-column>
+            <cmn-column key="value" header="Value" align="right">
+              <ng-template let-row cmnCell>
+                <span class="font-mono tabular-nums font-semibold">{{
+                  row.currentValue | currencyAmount
+                }}</span>
+              </ng-template>
+            </cmn-column>
+            <cmn-column key="pnl" header="P&L %" align="right">
+              <ng-template let-row cmnCell>
+                @if (row.pnlPercent === null) {
+                  <span
+                    class="font-mono tabular-nums text-text-secondary"
+                    title="No cost basis reported by provider"
+                    >—</span
+                  >
+                } @else {
+                  <span
+                    [class]="row.pnlPercent >= 0 ? pnlPositiveClass : pnlNegativeClass"
+                    class="font-mono tabular-nums"
+                    >{{ row.pnlPercent | number: '1.2-2' }}%</span
+                  >
+                }
+              </ng-template>
+            </cmn-column>
+            <cmn-column key="weight" header="Weight" align="right">
+              <ng-template let-row cmnCell>
+                <span class="font-mono tabular-nums text-text-secondary"
+                  >{{ row.weightPercent | number: '1.1-1' }}%</span
+                >
+              </ng-template>
+            </cmn-column>
+          </cmn-data-table>
+        </cmn-card>
       }
     }
   </div>

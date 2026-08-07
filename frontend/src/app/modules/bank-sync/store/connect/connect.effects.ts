@@ -35,8 +35,8 @@ const POLL_MAX_MS = 60_000;
 
 const ROUTE_BY_INSTITUTION: Record<InstitutionType, string> = {
   bank: AppRoute.Accounts,
-  crypto: AppRoute.Holdings,
-  broker: AppRoute.Holdings,
+  crypto: AppRoute.Investments,
+  broker: AppRoute.Investments,
 };
 
 function extractCode(err: unknown): Nullable<string> {

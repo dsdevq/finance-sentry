@@ -7,7 +7,7 @@ export enum AppRoute {
   AccountsList = '/accounts/list',
   Dashboard = '/dashboard',
   Transactions = '/transactions',
-  Holdings = '/holdings',
+  Investments = '/investments',
   Budgets = '/budgets',
   Subscriptions = '/subscriptions',
   Alerts = '/alerts',
