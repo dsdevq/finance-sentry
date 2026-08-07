@@ -14,7 +14,9 @@ public class TransferDescriptionClassifierTests
     [InlineData("To Instant Access Savings", CategoryKeys.TransferOut)]
     [InlineData("From Instant Access Savings", CategoryKeys.TransferIn)]
     [InlineData("From investment account", CategoryKeys.TransferIn)]
-    [InlineData("Payment from Andrea Di Florio", CategoryKeys.TransferIn)]
+    // External incoming payments are income, NOT internal transfers — they must stay in cash-flow.
+    [InlineData("Payment from Andrea Di Florio", CategoryKeys.Income)]
+    [InlineData("Payment from Ss+c Wealth And Insurance", CategoryKeys.Income)]
     // Monobank «банка» (savings-jar) operations — charity MCC 8398, so the description is the
     // only reliable transfer signal. "Поповнення" = top-up (out), "З банки" = from jar (in).
     [InlineData("Поповнення «Поточний RUSORIZ»", CategoryKeys.TransferOut)]
