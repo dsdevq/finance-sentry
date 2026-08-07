@@ -64,3 +64,12 @@ export interface WealthSummaryResponse {
   categories: CategorySummary[];
   appliedFilters: AppliedFilters;
 }
+
+/** A single row in the net-worth-by-category breakdown shown on the accounts hero. */
+export interface NetWorthBreakdownRow {
+  label: string;
+  color: string;
+  value: number;
+  institutionCount: number;
+  percent: number;
+}

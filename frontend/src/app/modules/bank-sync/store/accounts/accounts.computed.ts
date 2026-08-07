@@ -4,8 +4,11 @@ import {type DonutSegment} from '@dsdevq-common/ui';
 import {
   type AccountCategory,
   type CategorySummary,
+  type NetWorthBreakdownRow,
   type WealthSummaryResponse,
 } from '../../../../shared/models/wealth/wealth.model';
+
+const PERCENT = 100;
 
 interface StateSignals {
   summary: Signal<Nullable<WealthSummaryResponse>>;
@@ -54,5 +57,20 @@ export function accountsComputed(store: StateSignals) {
           color: CATEGORY_COLOR[cat.category],
         }))
     ),
+    netWorthBreakdown: computed((): NetWorthBreakdownRow[] => {
+      const positive = (store.summary()?.categories ?? []).filter(
+        cat => cat.totalInBaseCurrency > 0
+      );
+      const total = positive.reduce((sum, cat) => sum + cat.totalInBaseCurrency, 0);
+      return positive
+        .map(cat => ({
+          label: CATEGORY_LABEL[cat.category],
+          color: CATEGORY_COLOR[cat.category],
+          value: cat.totalInBaseCurrency,
+          institutionCount: cat.institutionCount,
+          percent: total > 0 ? (cat.totalInBaseCurrency / total) * PERCENT : 0,
+        }))
+        .sort((a, b) => b.value - a.value);
+    }),
   };
 }
