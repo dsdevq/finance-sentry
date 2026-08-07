@@ -5,6 +5,7 @@ export enum AppRoute {
   McpConnect = '/mcp/connect',
   Accounts = '/accounts',
   AccountsList = '/accounts/list',
+  AccountsInvestments = '/accounts/investments',
   Dashboard = '/dashboard',
   Transactions = '/transactions',
   Investments = '/investments',

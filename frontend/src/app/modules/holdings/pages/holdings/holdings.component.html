@@ -1,141 +1,134 @@
-<div class="p-cmn-6">
-  <div class="mx-auto max-w-screen-lg space-y-cmn-5">
-    <cmn-page-header
-      title="Investments"
-      subtitle="Your brokerage and crypto positions, with provider-reported P&L."
-    />
+<div class="space-y-cmn-5">
+  @if (store.isPositionsLoading()) {
+    <div class="h-64 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse"></div>
+  } @else if (store.positionsErrorMessage()) {
+    <cmn-alert variant="error">{{ store.positionsErrorMessage() }}</cmn-alert>
+  } @else if (store.positionsByAssetClass().length === 0) {
+    <cmn-card>
+      <div class="py-cmn-8 text-center text-text-secondary text-cmn-sm">
+        No positions yet. Connect a brokerage or crypto account to see holdings.
+      </div>
+    </cmn-card>
+  } @else {
+    <cmn-card class="block">
+      <div class="flex flex-col gap-cmn-6 md:flex-row md:items-center">
+        <div class="min-w-0 flex-1">
+          <p class="text-cmn-xs uppercase tracking-wide text-text-secondary">
+            Total position value
+          </p>
+          <p class="mt-cmn-1 font-mono text-cmn-3xl font-bold tabular-nums text-text-primary">
+            {{ store.totalPositionsValue() | currencyAmount }}
+          </p>
+          <p class="mt-cmn-1 text-cmn-sm text-text-secondary">
+            {{ store.positions().length }} position{{
+              store.positions().length !== 1 ? 's' : ''
+            }}
+            across {{ store.positionsByAssetClass().length }} asset
+            {{ store.positionsByAssetClass().length !== 1 ? 'classes' : 'class' }}
+          </p>
 
-    @if (store.isPositionsLoading()) {
-      <div class="h-64 bg-neutral-100 dark:bg-neutral-800 rounded-xl animate-pulse"></div>
-    } @else if (store.positionsErrorMessage()) {
-      <cmn-alert variant="error">{{ store.positionsErrorMessage() }}</cmn-alert>
-    } @else if (store.positionsByAssetClass().length === 0) {
-      <cmn-card>
-        <div class="py-cmn-8 text-center text-text-secondary text-cmn-sm">
-          No positions yet. Connect a brokerage or crypto account to see holdings.
-        </div>
-      </cmn-card>
-    } @else {
-      <cmn-card class="block">
-        <div class="flex flex-col gap-cmn-6 md:flex-row md:items-center">
-          <div class="min-w-0 flex-1">
-            <p class="text-cmn-xs uppercase tracking-wide text-text-secondary">
-              Total position value
-            </p>
-            <p class="mt-cmn-1 font-mono text-cmn-3xl font-bold tabular-nums text-text-primary">
-              {{ store.totalPositionsValue() | currencyAmount }}
-            </p>
-            <p class="mt-cmn-1 text-cmn-sm text-text-secondary">
-              {{ store.positions().length }} position{{
-                store.positions().length !== 1 ? 's' : ''
-              }}
-              across {{ store.positionsByAssetClass().length }} asset
-              {{ store.positionsByAssetClass().length !== 1 ? 'classes' : 'class' }}
-            </p>
-
-            <div class="mt-cmn-5 space-y-cmn-3 border-t border-border-default pt-cmn-4">
-              @for (row of store.allocationBreakdown(); track row.label) {
-                <div class="flex items-center gap-cmn-3">
-                  <span
-                    [style.background-color]="row.color"
-                    class="h-2.5 w-2.5 shrink-0 rounded-full"
-                  ></span>
-                  <span class="text-cmn-sm text-text-primary">{{ row.label }}</span>
-                  <span class="text-cmn-xs tabular-nums text-text-secondary"
-                    >{{ row.percent | number: '1.0-0' }}%</span
-                  >
-                  <span class="ml-auto font-mono text-cmn-sm tabular-nums text-text-primary">
-                    {{ row.value | currencyAmount }}
-                  </span>
-                </div>
-              }
-            </div>
-          </div>
-
-          <div class="w-full md:w-[240px] md:shrink-0">
-            <cmn-donut-chart
-              [segments]="store.allocationSegments()"
-              [chrome]="false"
-              [showLegend]="false"
-              currency="USD"
-            />
-          </div>
-        </div>
-      </cmn-card>
-
-      @for (group of store.positionsByAssetClass(); track group.assetClass) {
-        <cmn-card class="grid gap-cmn-4">
-          <div class="flex items-baseline justify-between">
-            <h2 class="font-headline text-cmn-lg font-semibold text-text-primary">
-              {{ group.label }}
-            </h2>
-            <span class="font-mono tabular-nums text-cmn-sm text-text-secondary">
-              {{ group.totalValue | currencyAmount }}
-            </span>
-          </div>
-
-          <cmn-data-table [rows]="group.rows">
-            <cmn-column key="symbol" header="Symbol">
-              <ng-template let-row cmnCell>
-                <span class="inline-flex items-center gap-cmn-2">
-                  <cmn-institution-avatar
-                    [name]="row.symbol"
-                    [logoUrl]="row.symbol | assetLogo: row.provider"
-                    size="sm"
-                  />
-                  <span class="font-semibold text-text-primary">{{ row.symbol }}</span>
-                </span>
-              </ng-template>
-            </cmn-column>
-            <cmn-column key="provider" header="Provider">
-              <ng-template let-row cmnCell>
-                <span class="text-text-secondary">{{ row.provider }}</span>
-              </ng-template>
-            </cmn-column>
-            <cmn-column key="quantity" header="Quantity" align="right">
-              <ng-template let-row cmnCell>
-                <span class="font-mono tabular-nums">{{ row.quantity | number: '1.0-8' }}</span>
-              </ng-template>
-            </cmn-column>
-            <cmn-column key="price" header="Price" align="right">
-              <ng-template let-row cmnCell>
-                <span class="font-mono tabular-nums">{{ row.currentPrice | currencyAmount }}</span>
-              </ng-template>
-            </cmn-column>
-            <cmn-column key="value" header="Value" align="right">
-              <ng-template let-row cmnCell>
-                <span class="font-mono tabular-nums font-semibold">{{
-                  row.currentValue | currencyAmount
-                }}</span>
-              </ng-template>
-            </cmn-column>
-            <cmn-column key="pnl" header="P&L %" align="right">
-              <ng-template let-row cmnCell>
-                @if (row.pnlPercent === null) {
-                  <span
-                    class="font-mono tabular-nums text-text-secondary"
-                    title="No cost basis reported by provider"
-                    >—</span
-                  >
-                } @else {
-                  <span
-                    [class]="row.pnlPercent >= 0 ? pnlPositiveClass : pnlNegativeClass"
-                    class="font-mono tabular-nums"
-                    >{{ row.pnlPercent | number: '1.2-2' }}%</span
-                  >
-                }
-              </ng-template>
-            </cmn-column>
-            <cmn-column key="weight" header="Weight" align="right">
-              <ng-template let-row cmnCell>
-                <span class="font-mono tabular-nums text-text-secondary"
-                  >{{ row.weightPercent | number: '1.1-1' }}%</span
+          <div class="mt-cmn-5 space-y-cmn-3 border-t border-border-default pt-cmn-4">
+            @for (row of store.allocationBreakdown(); track row.label) {
+              <div class="flex items-center gap-cmn-3">
+                <span
+                  [style.background-color]="row.color"
+                  class="h-2.5 w-2.5 shrink-0 rounded-full"
+                ></span>
+                <span class="text-cmn-sm text-text-primary">{{ row.label }}</span>
+                <span class="text-cmn-xs tabular-nums text-text-secondary"
+                  >{{ row.percent | number: '1.0-0' }}%</span
                 >
-              </ng-template>
-            </cmn-column>
-          </cmn-data-table>
-        </cmn-card>
-      }
+                <span class="ml-auto font-mono text-cmn-sm tabular-nums text-text-primary">
+                  {{ row.value | currencyAmount }}
+                </span>
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="w-full md:w-[240px] md:shrink-0">
+          <cmn-donut-chart
+            [segments]="store.allocationSegments()"
+            [chrome]="false"
+            [showLegend]="false"
+            currency="USD"
+          />
+        </div>
+      </div>
+    </cmn-card>
+
+    @for (group of store.positionsByAssetClass(); track group.assetClass) {
+      <cmn-card class="grid gap-cmn-4">
+        <div class="flex items-baseline justify-between">
+          <h2 class="font-headline text-cmn-lg font-semibold text-text-primary">
+            {{ group.label }}
+          </h2>
+          <span class="font-mono tabular-nums text-cmn-sm text-text-secondary">
+            {{ group.totalValue | currencyAmount }}
+          </span>
+        </div>
+
+        <cmn-data-table [rows]="group.rows">
+          <cmn-column key="symbol" header="Symbol">
+            <ng-template let-row cmnCell>
+              <span class="inline-flex items-center gap-cmn-2">
+                <cmn-institution-avatar
+                  [name]="row.symbol"
+                  [logoUrl]="row.symbol | assetLogo: row.provider"
+                  size="sm"
+                />
+                <span class="font-semibold text-text-primary">{{ row.symbol }}</span>
+              </span>
+            </ng-template>
+          </cmn-column>
+          <cmn-column key="provider" header="Provider">
+            <ng-template let-row cmnCell>
+              <span class="text-text-secondary">{{ row.provider }}</span>
+            </ng-template>
+          </cmn-column>
+          <cmn-column key="quantity" header="Quantity" align="right">
+            <ng-template let-row cmnCell>
+              <span class="font-mono tabular-nums">{{ row.quantity | number: '1.0-8' }}</span>
+            </ng-template>
+          </cmn-column>
+          <cmn-column key="price" header="Price" align="right">
+            <ng-template let-row cmnCell>
+              <span class="font-mono tabular-nums">{{ row.currentPrice | currencyAmount }}</span>
+            </ng-template>
+          </cmn-column>
+          <cmn-column key="value" header="Value" align="right">
+            <ng-template let-row cmnCell>
+              <span class="font-mono tabular-nums font-semibold">{{
+                row.currentValue | currencyAmount
+              }}</span>
+            </ng-template>
+          </cmn-column>
+          <cmn-column key="pnl" header="P&L %" align="right">
+            <ng-template let-row cmnCell>
+              @if (row.pnlPercent === null) {
+                <span
+                  class="font-mono tabular-nums text-text-secondary"
+                  title="No cost basis reported by provider"
+                  >—</span
+                >
+              } @else {
+                <span
+                  [class]="row.pnlPercent >= 0 ? pnlPositiveClass : pnlNegativeClass"
+                  class="font-mono tabular-nums"
+                  >{{ row.pnlPercent | number: '1.2-2' }}%</span
+                >
+              }
+            </ng-template>
+          </cmn-column>
+          <cmn-column key="weight" header="Weight" align="right">
+            <ng-template let-row cmnCell>
+              <span class="font-mono tabular-nums text-text-secondary"
+                >{{ row.weightPercent | number: '1.1-1' }}%</span
+              >
+            </ng-template>
+          </cmn-column>
+        </cmn-data-table>
+      </cmn-card>
     }
-  </div>
+  }
 </div>

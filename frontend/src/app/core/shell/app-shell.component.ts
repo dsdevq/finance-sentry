@@ -23,7 +23,7 @@ const PALETTE_ITEMS: CommandPaletteItem[] = [
   {id: AppRoute.Dashboard, label: 'Dashboard', icon: 'LayoutDashboard', group: 'Pages'},
   {id: AppRoute.AccountsList, label: 'Accounts', icon: 'Building2', group: 'Pages'},
   {id: AppRoute.Transactions, label: 'Transactions', icon: 'ArrowLeftRight', group: 'Pages'},
-  {id: AppRoute.Investments, label: 'Investments', icon: 'TrendingUp', group: 'Pages'},
+  {id: AppRoute.AccountsInvestments, label: 'Investments', icon: 'TrendingUp', group: 'Pages'},
   {id: AppRoute.Budgets, label: 'Budgets', icon: 'Zap', group: 'Pages'},
   {id: AppRoute.Subscriptions, label: 'Subscriptions', icon: 'RefreshCw', group: 'Pages'},
   {id: AppRoute.Alerts, label: 'Alerts', icon: 'Bell', group: 'Pages'},
@@ -81,9 +81,8 @@ export class AppShellComponent {
   public readonly versionLabel = `v${APP_VERSION}`;
   public readonly navItems: NavItem[] = [
     {label: 'Dashboard', icon: 'LayoutDashboard', route: AppRoute.Dashboard},
-    {label: 'Accounts', icon: 'Building2', route: AppRoute.AccountsList},
+    {label: 'Accounts', icon: 'Building2', route: AppRoute.Accounts},
     {label: 'Transactions', icon: 'ArrowLeftRight', route: AppRoute.Transactions},
-    {label: 'Investments', icon: 'TrendingUp', route: AppRoute.Investments},
     {label: 'Budgets', icon: 'Zap', route: AppRoute.Budgets},
     {label: 'Subscriptions', icon: 'RefreshCw', route: AppRoute.Subscriptions},
     {

@@ -8,7 +8,6 @@ import {
   DataTableComponent,
   DonutChartComponent,
   InstitutionAvatarComponent,
-  PageHeaderComponent,
 } from '@dsdevq-common/ui';
 
 import {AssetLogoPipe} from '../../../../shared/pipes/asset-logo.pipe';
@@ -28,7 +27,6 @@ import {HoldingsStore} from '../../store/holdings.store';
     DecimalPipe,
     DonutChartComponent,
     InstitutionAvatarComponent,
-    PageHeaderComponent,
   ],
   templateUrl: './holdings.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
