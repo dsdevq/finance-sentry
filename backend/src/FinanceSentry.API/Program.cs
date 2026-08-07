@@ -1,6 +1,7 @@
 using Serilog;
 using FinanceSentry.API.Commands;
 using FinanceSentry.API.Conventions;
+using FinanceSentry.API.Integration;
 using FinanceSentry.API.Hangfire;
 using FinanceSentry.API.Migrations;
 using FinanceSentry.API.Modules;
@@ -45,6 +46,9 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 builder.Services.AddAllModules(builder.Configuration);
+
+// 039: cross-module read ports (adapters live in the host — neither module references the other).
+builder.Services.AddCrossModulePorts();
 
 builder.Services.AddExchangeRates(builder.Configuration);
 

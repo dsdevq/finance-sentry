@@ -19,7 +19,6 @@ public record SaveIpsCommand(
     string? SellDiscipline,
     int? CoolingOffDays,
     IReadOnlyList<string> Exclusions,
-    decimal? MaxSinglePositionPct,
     string? ReviewCadence) : ICommand<IpsDto>;
 
 public class SaveIpsCommandHandler(IIpsRepository repo) : ICommandHandler<SaveIpsCommand, IpsDto>
@@ -46,7 +45,6 @@ public class SaveIpsCommandHandler(IIpsRepository repo) : ICommandHandler<SaveIp
             ContributionPlan = cmd.ContributionPlan,
             SellDiscipline = cmd.SellDiscipline?.Trim(),
             Exclusions = cmd.Exclusions.ToList(),
-            MaxSinglePositionPct = cmd.MaxSinglePositionPct,
             ReviewCadence = string.IsNullOrWhiteSpace(cmd.ReviewCadence)
                 ? DefaultReviewCadence
                 : cmd.ReviewCadence.Trim(),
@@ -63,7 +61,7 @@ public class SaveIpsCommandHandler(IIpsRepository repo) : ICommandHandler<SaveIp
             ips.Id, ips.Version, ips.IsCurrent, ips.Goals, ips.PrimaryHorizonYears,
             ips.EmergencyCushionUsd, ips.RiskTolerance, ips.RiskCapacity, ips.MaxDrawdownTolerancePct,
             ips.AllocationTargets, ips.RebalancingRule, ips.ContributionPlan, ips.SellDiscipline,
-            ips.CoolingOffDays, ips.Exclusions, ips.MaxSinglePositionPct, ips.ReviewCadence,
+            ips.CoolingOffDays, ips.Exclusions, ips.ReviewCadence,
             ips.LastReviewedAt, ips.CreatedAt, ips.UpdatedAt);
     }
 }

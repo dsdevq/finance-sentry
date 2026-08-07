@@ -18,7 +18,6 @@ public record IpsDto(
     string? SellDiscipline,
     int CoolingOffDays,
     IReadOnlyList<string> Exclusions,
-    decimal? MaxSinglePositionPct,
     string ReviewCadence,
     DateTimeOffset? LastReviewedAt,
     DateTimeOffset CreatedAt,

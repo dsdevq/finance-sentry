@@ -20,7 +20,7 @@ public class GetIpsQueryHandler(IIpsRepository repo) : IQueryHandler<GetIpsQuery
             ips.Id, ips.Version, ips.IsCurrent, ips.Goals, ips.PrimaryHorizonYears,
             ips.EmergencyCushionUsd, ips.RiskTolerance, ips.RiskCapacity, ips.MaxDrawdownTolerancePct,
             ips.AllocationTargets, ips.RebalancingRule, ips.ContributionPlan, ips.SellDiscipline,
-            ips.CoolingOffDays, ips.Exclusions, ips.MaxSinglePositionPct, ips.ReviewCadence,
+            ips.CoolingOffDays, ips.Exclusions, ips.ReviewCadence,
             ips.LastReviewedAt, ips.CreatedAt, ips.UpdatedAt);
     }
 }

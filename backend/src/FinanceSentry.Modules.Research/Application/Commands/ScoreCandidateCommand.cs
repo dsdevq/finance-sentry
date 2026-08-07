@@ -4,6 +4,7 @@ using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Modules.Research.Application.Services;
 using FinanceSentry.Modules.Research.Domain.Opportunity;
+using FinanceSentry.Modules.Research.Domain.Ports;
 using FinanceSentry.Modules.Research.Domain.Repositories;
 using FinanceSentry.Modules.Research.Domain.Scoring;
 using FinanceSentry.Modules.Research.Domain;
@@ -28,6 +29,7 @@ public sealed class ScoreCandidateCommandHandler(
     IMarketStructureReader structureReader,
     ISecEdgarService secEdgar,
     IIpsRepository ipsRepo,
+    IPositionCapSource positionCapSource,
     IBrokerageHoldingsReader holdingsReader,
     IRadarSignalWriter signalWriter,
     IThesisEventRecorder eventRecorder,
@@ -65,6 +67,8 @@ public sealed class ScoreCandidateCommandHandler(
         var structureSnapshot = await structureReader.GetStructureAsync(ticker, ct);
         var fundamentalFacts = await secEdgar.GetFundamentalsAsync(ticker, MaxFactsPerConcept, ct);
         var ips = await ipsRepo.GetCurrentAsync(command.UserId, ct);
+        // 039: the single-position cap now lives in its single home (the Risk rule set), read via port.
+        var maxPositionCap = await positionCapSource.GetMaxPositionWeightAsync(command.UserId, ct);
         var holdings = await holdingsReader.GetHoldingsAsync(command.UserId, ct);
 
         var (structureScore, structureReasons) = StructureScorer.Score(structureSnapshot);
@@ -73,7 +77,7 @@ public sealed class ScoreCandidateCommandHandler(
         var crowding = CrowdingClassifier.Classify(
             structureSnapshot?.ExtensionFromMa50, structureSnapshot?.VolumeRatio, _options);
 
-        var ipsFit = BuildIpsFit(ticker, ips, holdings);
+        var ipsFit = BuildIpsFit(ticker, ips, maxPositionCap, holdings);
 
         var evidence = new ScoreEvidence(
             structureSnapshot?.RsByWindow ?? new Dictionary<int, decimal?>(),
@@ -151,7 +155,10 @@ public sealed class ScoreCandidateCommandHandler(
     }
 
     private static IpsFitFacts BuildIpsFit(
-        string ticker, InvestmentPolicyStatement? ips, IReadOnlyList<BrokerageHoldingSummary> holdings)
+        string ticker,
+        InvestmentPolicyStatement? ips,
+        decimal? maxPositionCap,
+        IReadOnlyList<BrokerageHoldingSummary> holdings)
     {
         var totalUsd = holdings.Sum(h => h.UsdValue);
         var tickerUsd = holdings.Where(h => string.Equals(h.Symbol, ticker, StringComparison.OrdinalIgnoreCase)).Sum(h => h.UsdValue);
@@ -162,14 +169,16 @@ public sealed class ScoreCandidateCommandHandler(
             return new IpsFitFacts(currentWeight, null, null, true, "unknown", NoIpsNote);
         }
 
+        // 039: cap sourced from the Risk rule set (single home), fraction-vs-fraction comparison —
+        // consistent with Risk enforcement.
         var withinConcentration = currentWeight is null
-            || ips.MaxSinglePositionPct is null
-            || currentWeight <= ips.MaxSinglePositionPct;
+            || maxPositionCap is null
+            || currentWeight <= maxPositionCap;
 
         var assetClassFit = ips.Exclusions.Any(e => string.Equals(e, ticker, StringComparison.OrdinalIgnoreCase))
             ? "excluded_by_ips"
             : "not_classified";
 
-        return new IpsFitFacts(currentWeight, null, ips.MaxSinglePositionPct, withinConcentration, assetClassFit);
+        return new IpsFitFacts(currentWeight, null, maxPositionCap, withinConcentration, assetClassFit);
     }
 }

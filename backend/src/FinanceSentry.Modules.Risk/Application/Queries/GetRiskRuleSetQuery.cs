@@ -13,12 +13,11 @@ public record RiskRuleSetDto(
     decimal? MaxLossPerThesisPct,
     decimal? MaxNewPositionPct,
     int? TurnoverBudgetPerQuarter,
-    IReadOnlyList<AllocationTargetEntry> AllocationTargets,
     DateTimeOffset CreatedAt)
 {
     public static RiskRuleSetDto FromEntity(RiskRuleSet r) => new(
         r.UserId, r.Version, r.MaxPositionWeightPct, r.MaxSleeveWeightPct, r.MinCashBufferPct,
-        r.MaxLossPerThesisPct, r.MaxNewPositionPct, r.TurnoverBudgetPerQuarter, r.AllocationTargets, r.CreatedAt);
+        r.MaxLossPerThesisPct, r.MaxNewPositionPct, r.TurnoverBudgetPerQuarter, r.CreatedAt);
 }
 
 public record GetRiskRuleSetQuery(Guid UserId) : IQuery<RiskRuleSetDto?>;

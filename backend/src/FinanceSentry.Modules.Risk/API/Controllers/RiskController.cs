@@ -42,8 +42,7 @@ public class RiskController(
                     body.MinCashBufferPct,
                     body.MaxLossPerThesisPct,
                     body.MaxNewPositionPct,
-                    body.TurnoverBudgetPerQuarter,
-                    body.AllocationTargets),
+                    body.TurnoverBudgetPerQuarter),
                 ct);
             return Ok(saved);
         }
@@ -113,8 +112,7 @@ public record SaveRiskRulesRequest(
     decimal? MinCashBufferPct,
     decimal? MaxLossPerThesisPct,
     decimal? MaxNewPositionPct,
-    int? TurnoverBudgetPerQuarter,
-    IReadOnlyList<AllocationTargetEntry>? AllocationTargets);
+    int? TurnoverBudgetPerQuarter);
 
 public record CheckProposalRequest(string Ticker, decimal ProposedUsd, bool Override = false);
 

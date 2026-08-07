@@ -4,16 +4,24 @@ using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Modules.Research.Application.Commands;
 using FinanceSentry.Modules.Research.Application.Services;
 using FinanceSentry.Modules.Research.Domain;
+using FinanceSentry.Modules.Research.Domain.Ports;
 using FluentAssertions;
 using Microsoft.Extensions.Options;
 using Xunit;
 
 public sealed class ScoreCandidateHandlerTests
 {
+    // 039: the single-position cap is read from its single home (the Risk rule set) via this port.
+    private sealed class FakePositionCapSource(decimal? cap) : IPositionCapSource
+    {
+        public Task<decimal?> GetMaxPositionWeightAsync(Guid userId, CancellationToken ct) => Task.FromResult(cap);
+    }
+
     private static ScoreCandidateCommandHandler BuildHandler(
         FakeCandidateRepository candidates,
         FakeCandidateScoreRepository scores,
         InvestmentPolicyStatement? ips = null,
+        decimal? maxPositionCap = null,
         IReadOnlyList<BrokerageHoldingSummary>? holdings = null,
         IReadOnlyList<FundamentalFact>? facts = null,
         MarketStructureSnapshot? structure = null)
@@ -23,6 +31,7 @@ public sealed class ScoreCandidateHandlerTests
             new FakeMarketStructureReader(structure),
             new FakeSecEdgarService(facts),
             new FakeIpsRepository(ips),
+            new FakePositionCapSource(maxPositionCap),
             new FakeBrokerageHoldingsReader(holdings),
             new RecordingRadarSignalWriter(),
             new RecordingThesisEventRecorder(),
@@ -52,20 +61,44 @@ public sealed class ScoreCandidateHandlerTests
     public async Task Handle_FlagsIpsConcentration_WhenHeldTickerExceedsMaxSinglePosition()
     {
         var userId = Guid.NewGuid();
-        var ips = new InvestmentPolicyStatement { UserId = userId, MaxSinglePositionPct = 0.10m };
+        // 039: an IPS exists (so IpsFit is evaluated) and the position cap now comes from the Risk
+        // rule set — a fraction — via IPositionCapSource. Fraction-vs-fraction comparison.
+        var ips = new InvestmentPolicyStatement { UserId = userId };
         var holdings = new List<BrokerageHoldingSummary>
         {
             new("MSFT", "STK", 100m, 8_000m, DateTime.UtcNow, "ibkr"),
             new("AAPL", "STK", 100m, 2_000m, DateTime.UtcNow, "ibkr"),
         };
 
-        var handler = BuildHandler(new FakeCandidateRepository(), new FakeCandidateScoreRepository(), ips, holdings);
+        var handler = BuildHandler(
+            new FakeCandidateRepository(), new FakeCandidateScoreRepository(), ips, maxPositionCap: 0.10m, holdings: holdings);
         var result = await handler.Handle(new ScoreCandidateCommand(userId, "MSFT"), CancellationToken.None);
 
         // MSFT is 80% of the $10k book vs a 10% cap → concentration flag trips.
         result.Scorecard.IpsFit.CurrentWeight.Should().Be(0.80m);
         result.Scorecard.IpsFit.MaxSinglePositionPct.Should().Be(0.10m);
         result.Scorecard.IpsFit.WithinConcentration.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Handle_WithinConcentration_WhenCapAbsent_FromRiskPort()
+    {
+        var userId = Guid.NewGuid();
+        var ips = new InvestmentPolicyStatement { UserId = userId };
+        var holdings = new List<BrokerageHoldingSummary>
+        {
+            new("MSFT", "STK", 100m, 8_000m, DateTime.UtcNow, "ibkr"),
+            new("AAPL", "STK", 100m, 2_000m, DateTime.UtcNow, "ibkr"),
+        };
+
+        // 039/FR-007: no cap on file → permissive, exactly as before the repoint.
+        var handler = BuildHandler(
+            new FakeCandidateRepository(), new FakeCandidateScoreRepository(), ips, maxPositionCap: null, holdings: holdings);
+        var result = await handler.Handle(new ScoreCandidateCommand(userId, "MSFT"), CancellationToken.None);
+
+        result.Scorecard.IpsFit.CurrentWeight.Should().Be(0.80m);
+        result.Scorecard.IpsFit.MaxSinglePositionPct.Should().BeNull();
+        result.Scorecard.IpsFit.WithinConcentration.Should().BeTrue();
     }
 
     [Fact]
