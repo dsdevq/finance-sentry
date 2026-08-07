@@ -9,7 +9,6 @@ import {
   DonutChartComponent,
   InstitutionAvatarComponent,
   PageHeaderComponent,
-  StatCardComponent,
 } from '@dsdevq-common/ui';
 
 import {AssetLogoPipe} from '../../../../shared/pipes/asset-logo.pipe';
@@ -30,7 +29,6 @@ import {HoldingsStore} from '../../store/holdings.store';
     DonutChartComponent,
     InstitutionAvatarComponent,
     PageHeaderComponent,
-    StatCardComponent,
   ],
   templateUrl: './holdings.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

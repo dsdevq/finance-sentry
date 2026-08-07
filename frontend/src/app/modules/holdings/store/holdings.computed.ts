@@ -33,6 +33,13 @@ export interface PositionAssetGroup {
   totalValue: number;
 }
 
+export interface AllocationBreakdownRow {
+  label: string;
+  color: string;
+  value: number;
+  percent: number;
+}
+
 const ASSET_CLASS_ORDER: readonly AssetClass[] = ['equity', 'crypto'];
 
 const ASSET_CLASS_LABEL: Record<AssetClass, string> = {
@@ -111,5 +118,15 @@ export function holdingsComputed(store: StateSignals) {
         color: ASSET_CLASS_COLOR[group.assetClass],
       }))
     ),
+    allocationBreakdown: computed((): AllocationBreakdownRow[] => {
+      const groups = positionsByAssetClass();
+      const total = groups.reduce((sum, g) => sum + g.totalValue, 0);
+      return groups.map(group => ({
+        label: group.label,
+        color: ASSET_CLASS_COLOR[group.assetClass],
+        value: group.totalValue,
+        percent: total > 0 ? (group.totalValue / total) * WEIGHT_TO_PERCENT : 0,
+      }));
+    }),
   };
 }

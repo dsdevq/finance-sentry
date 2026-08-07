@@ -3,7 +3,8 @@ import {signal} from '@angular/core';
 import {TestBed} from '@angular/core/testing';
 import {beforeEach, describe, expect, it} from 'vitest';
 
-import {type PositionAssetGroup} from '../../store/holdings.computed';
+import {type Position} from '../../models/position/position.model';
+import {type AllocationBreakdownRow, type PositionAssetGroup} from '../../store/holdings.computed';
 import {HoldingsStore} from '../../store/holdings.store';
 import {InvestmentsComponent} from './holdings.component';
 
@@ -45,18 +46,42 @@ describe('InvestmentsComponent — positions view', () => {
   let mockStore: {
     isPositionsLoading: ReturnType<typeof signal<boolean>>;
     positionsErrorMessage: ReturnType<typeof signal<string>>;
+    positions: ReturnType<typeof signal<Position[]>>;
     positionsByAssetClass: ReturnType<typeof signal<PositionAssetGroup[]>>;
     totalPositionsValue: ReturnType<typeof signal<number>>;
     allocationSegments: ReturnType<typeof signal<never[]>>;
+    allocationBreakdown: ReturnType<typeof signal<AllocationBreakdownRow[]>>;
   };
 
   beforeEach(async () => {
     mockStore = {
       isPositionsLoading: signal(false),
       positionsErrorMessage: signal(''),
+      positions: signal<Position[]>([
+        {
+          symbol: 'DRAM',
+          provider: 'ibkr',
+          quantity: 10,
+          currentValue: 100,
+          currentPrice: 10,
+          pnlPercent: 25.3,
+        },
+        {
+          symbol: 'SOL',
+          provider: 'binance',
+          quantity: 1,
+          currentValue: 50,
+          currentPrice: 50,
+          pnlPercent: null,
+        },
+      ]),
       positionsByAssetClass: signal<PositionAssetGroup[]>([EQUITY_GROUP, CRYPTO_GROUP]),
       totalPositionsValue: signal(150),
       allocationSegments: signal([]),
+      allocationBreakdown: signal<AllocationBreakdownRow[]>([
+        {label: 'Equities', color: '#6366f1', value: 100, percent: 67},
+        {label: 'Crypto', color: '#f59e0b', value: 50, percent: 33},
+      ]),
     };
 
     await TestBed.configureTestingModule({
