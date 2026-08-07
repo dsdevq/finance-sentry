@@ -34,7 +34,10 @@ const SHORT_SPAN_DAYS = 92;
 const MS_PER_DAY = 86_400_000;
 
 const SLEEVE_COLOR = {banking: '#10b981', brokerage: '#6366f1', crypto: '#f59e0b'} as const;
-const SPENDING_COLOR = '#6366f1';
+const INCOME_COLOR = '#10b981';
+const SPENDING_COLOR = '#ef4444';
+const SAVINGS_COLOR = '#6366f1';
+const PERCENT = 100;
 
 // Need at least a start and end snapshot to state a change over the window.
 const MIN_POINTS_FOR_DELTA = 2;
@@ -50,22 +53,33 @@ function formatMonthKey(key: string): string {
   return MONTH_FORMATTER.format(new Date(Date.UTC(year, month - 1, 1)));
 }
 
-/** Collapse the per-currency monthly rows into one USD outflow per month, sorted chronologically. */
-function groupMonthlyOutflow(rows: MonthlyFlow[]): [string, number][] {
-  const byMonth = new Map<string, number>();
+interface MonthTotals {
+  inflow: number;
+  outflow: number;
+}
+
+/** Collapse the per-currency monthly rows into one USD inflow/outflow per month, sorted. */
+function groupMonthly(rows: MonthlyFlow[]): [string, MonthTotals][] {
+  const byMonth = new Map<string, MonthTotals>();
   for (const r of rows) {
-    byMonth.set(r.month, (byMonth.get(r.month) ?? 0) + r.outflowUsd);
+    const cur = byMonth.get(r.month) ?? {inflow: 0, outflow: 0};
+    cur.inflow += r.inflowUsd;
+    cur.outflow += r.outflowUsd;
+    byMonth.set(r.month, cur);
   }
   return [...byMonth.entries()].sort(([a], [b]) => a.localeCompare(b));
 }
 
-function currentMonthOutflow(rows: MonthlyFlow[]): Nullable<number> {
+function currentMonth(rows: MonthlyFlow[]): Nullable<MonthTotals> {
   const key = currentMonthKey();
   const forMonth = rows.filter(r => r.month === key);
   if (forMonth.length === 0) {
     return null;
   }
-  return forMonth.reduce((sum, r) => sum + r.outflowUsd, 0);
+  return forMonth.reduce<MonthTotals>(
+    (acc, r) => ({inflow: acc.inflow + r.inflowUsd, outflow: acc.outflow + r.outflowUsd}),
+    {inflow: 0, outflow: 0}
+  );
 }
 
 export function dashboardComputed(store: StateSignals) {
@@ -104,21 +118,13 @@ export function dashboardComputed(store: StateSignals) {
     }),
 
     monthlySpendingFormatted: computed(() => {
-      const spend = currentMonthOutflow(store.data()?.monthlyFlow ?? []);
-      return spend != null ? COMPACT_FORMATTER.format(spend) : '—';
+      const cur = currentMonth(store.data()?.monthlyFlow ?? []);
+      return cur ? COMPACT_FORMATTER.format(cur.outflow) : '—';
     }),
 
-    topCategoryLabel: computed(() => {
-      const top = store.data()?.topCategories?.[0];
-      if (!top) {
-        return 'Top Category';
-      }
-      return categoryStore.labelMap()[top.category] ?? MerchantCategoryUtils.format(top.category);
-    }),
-
-    topCategoryFormatted: computed(() => {
-      const top = store.data()?.topCategories?.[0];
-      return top ? (currency.transform(top.totalSpend) ?? '—') : '—';
+    monthlyInflowFormatted: computed(() => {
+      const cur = currentMonth(store.data()?.monthlyFlow ?? []);
+      return cur ? COMPACT_FORMATTER.format(cur.inflow) : '—';
     }),
 
     // Stacked net-worth composition (banking / brokerage / crypto) over time — the snapshots
@@ -163,21 +169,39 @@ export function dashboardComputed(store: StateSignals) {
       ];
     }),
 
-    monthlySpendingBars: computed((): BarSeries[] => {
-      const grouped = groupMonthlyOutflow(store.data()?.monthlyFlow ?? []);
+    incomeVsSpendingBars: computed((): BarSeries[] => {
+      const grouped = groupMonthly(store.data()?.monthlyFlow ?? []);
       if (grouped.length === 0) {
         return [];
       }
       return [
         {
+          label: 'Income',
+          color: INCOME_COLOR,
+          points: grouped.map(([key, v]) => ({label: formatMonthKey(key), value: v.inflow})),
+        },
+        {
           label: 'Spending',
           color: SPENDING_COLOR,
-          points: grouped.map(([key, value]) => ({label: formatMonthKey(key), value})),
+          points: grouped.map(([key, v]) => ({label: formatMonthKey(key), value: v.outflow})),
         },
       ];
     }),
 
-    hasSpending: computed(() => (store.data()?.monthlyFlow ?? []).length > 0),
+    // Only months with real income yield a savings rate; a near-zero-inflow month would
+    // send net/inflow to absurd magnitudes (the old chart read -500,000%), so skip those.
+    savingsRateBars: computed((): BarSeries[] => {
+      const points = groupMonthly(store.data()?.monthlyFlow ?? [])
+        .filter(([, v]) => v.inflow > 0)
+        .map(([key, v]) => ({
+          label: formatMonthKey(key),
+          value: ((v.inflow - v.outflow) / v.inflow) * PERCENT,
+        }));
+      return points.length > 0 ? [{label: 'Savings rate', color: SAVINGS_COLOR, points}] : [];
+    }),
+
+    hasCashFlow: computed(() => (store.data()?.monthlyFlow ?? []).length > 0),
+    hasIncome: computed(() => (store.data()?.monthlyFlow ?? []).some(r => r.inflowUsd > 0)),
 
     categoryChartData: computed((): DonutSegment[] =>
       (store.data()?.topCategories ?? []).map(c => ({
