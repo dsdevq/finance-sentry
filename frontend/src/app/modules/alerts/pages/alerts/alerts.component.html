@@ -1,51 +1,51 @@
-<div class="p-cmn-6">
-  <div class="mx-auto max-w-[860px] space-y-cmn-5">
-    <cmn-page-header
-      [subtitle]="alertsSubtitle()"
-      [actionLabel]="store.unreadCount() > 0 ? 'Mark all read' : null"
-      (actionClick)="markAllRead()"
-      title="Alerts"
-      actionIcon="CheckCheck"
-    />
+<div class="mx-auto flex h-full w-full max-w-[860px] flex-col p-cmn-6">
+  <cmn-page-header
+    [subtitle]="alertsSubtitle()"
+    [actionLabel]="store.unreadCount() > 0 ? 'Mark all read' : null"
+    (actionClick)="markAllRead()"
+    title="Alerts"
+    actionIcon="CheckCheck"
+  />
 
-    <div class="flex flex-wrap gap-cmn-2">
-      @for (opt of filterOptions; track opt.id) {
-        <cmn-chip [selected]="store.filter() === opt.id" (clicked)="store.setFilter(opt.id)">
-          {{ opt.label() }}
-        </cmn-chip>
-      }
-    </div>
+  <div class="mt-cmn-5 flex flex-wrap gap-cmn-2">
+    @for (opt of filterOptions; track opt.id) {
+      <cmn-chip [selected]="store.filter() === opt.id" (clicked)="store.setFilter(opt.id)">
+        {{ opt.label() }}
+      </cmn-chip>
+    }
+  </div>
 
-    @if (filtered().length === 0) {
+  @if (filtered().length === 0) {
+    <div class="flex min-h-0 flex-1 items-center justify-center">
       <cmn-empty-state
         [message]="emptyTitle()"
         [subMessage]="emptySubtext()"
         icon="CheckCircle2"
         iconClass="text-status-success"
       />
-    } @else {
-      <div class="space-y-cmn-2">
-        @for (alert of filtered(); track alert.id) {
-          <button
-            (click)="openAlert(alert)"
-            class="block w-full text-left rounded-cmn-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
-            type="button"
-          >
-            <cmn-alert-item
-              [title]="alert.title"
-              [message]="alert.message"
-              [severity]="severityFor(alert.severity)"
-              [icon]="iconFor(alert.type)"
-              [badgeLabel]="typeLabel(alert.type)"
-              [description]="typeDescription(alert.type)"
-              [referenceLabel]="alert.referenceLabel"
-              [timestamp]="alert.createdAt"
-              [isRead]="alert.isRead"
-              (dismissed)="dismiss(alert.id)"
-            />
-          </button>
-        }
-      </div>
-    }
-  </div>
+    </div>
+  } @else {
+    <div class="mt-cmn-5 min-h-0 flex-1 space-y-cmn-2 overflow-auto pr-cmn-1">
+      @for (alert of filtered(); track alert.id) {
+        <button
+          (click)="openAlert(alert)"
+          class="block w-full text-left rounded-cmn-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border-focus"
+          type="button"
+        >
+          <cmn-alert-item
+            [title]="alert.title"
+            [message]="alert.message"
+            [severity]="severityFor(alert.severity)"
+            [icon]="iconFor(alert.type)"
+            [badgeLabel]="typeLabel(alert.type)"
+            [description]="typeDescription(alert.type)"
+            [referenceLabel]="alert.referenceLabel"
+            [timestamp]="alert.createdAt"
+            [isRead]="alert.isRead"
+            (dismissed)="dismiss(alert.id)"
+          />
+        </button>
+      }
+    </div>
+  }
 </div>

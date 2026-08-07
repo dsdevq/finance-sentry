@@ -39,6 +39,7 @@ function severityFor(severity: AlertSeverity): AlertItemSeverity {
   selector: 'fns-alerts',
   imports: [AlertItemComponent, ChipComponent, EmptyStateComponent, PageHeaderComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {class: 'block h-full'},
   templateUrl: './alerts.component.html',
 })
 export class AlertsComponent {

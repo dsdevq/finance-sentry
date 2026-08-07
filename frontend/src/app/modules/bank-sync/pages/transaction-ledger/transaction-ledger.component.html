@@ -1,4 +1,4 @@
-<div class="p-cmn-8 max-w-[1200px] mx-auto">
+<div class="mx-auto flex h-full w-full max-w-[1200px] flex-col p-cmn-8">
   <div class="mb-cmn-8">
     <h1 class="font-headline text-cmn-2xl font-bold text-text-primary">Transaction Ledger</h1>
     <p class="text-cmn-sm text-text-secondary mt-cmn-1">
@@ -51,7 +51,7 @@
   }
 
   @if (store.isLoading()) {
-    <cmn-card>
+    <cmn-card class="min-h-0 flex-1">
       <div class="p-cmn-4 space-y-cmn-3">
         @for (_ of skeletonRows; track $index) {
           <div class="flex gap-cmn-4">
@@ -64,62 +64,62 @@
         }
       </div>
     </cmn-card>
-  }
-
-  @if (!store.isLoading() && store.isEmpty()) {
-    <cmn-empty-state
-      message="No transactions found"
-      subMessage="Connect an account to see your transaction history."
-    />
-  }
-
-  @if (!store.isLoading() && !store.isEmpty()) {
-    <cmn-card>
-      <table class="w-full text-cmn-sm" aria-label="Transaction ledger">
-        <thead>
-          <tr
-            class="border-b border-border-default text-cmn-xs text-text-secondary uppercase tracking-wide"
-          >
-            <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Date</th>
-            <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Description</th>
-            <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Category</th>
-            <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Account</th>
-            <th class="text-right py-cmn-3 px-cmn-4 font-medium" scope="col">Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (t of displayedTransactions(); track t.transactionId) {
+  } @else if (store.isEmpty()) {
+    <div class="flex min-h-0 flex-1 items-center justify-center">
+      <cmn-empty-state
+        message="No transactions found"
+        subMessage="Connect an account to see your transaction history."
+      />
+    </div>
+  } @else {
+    <cmn-card [fill]="true" padding="none" class="min-h-0 flex-1">
+      <div class="min-h-0 flex-1 overflow-auto">
+        <table class="w-full text-cmn-sm" aria-label="Transaction ledger">
+          <thead class="sticky top-0 z-10">
             <tr
-              (click)="openDrawer(t)"
-              class="cursor-pointer border-b border-border-default last:border-0 hover:bg-surface-bg transition-colors"
+              class="border-b border-border-default bg-surface-card text-cmn-xs text-text-secondary uppercase tracking-wide"
             >
-              <td class="py-cmn-4 px-cmn-4 text-text-secondary whitespace-nowrap">
-                {{ t.postedDate ?? t.date | date: 'MMM d, y' }}
-                @if (t.isPending) {
-                  <span class="ml-1 text-cmn-xs text-amber-500">Pending</span>
-                }
-              </td>
-              <td class="py-cmn-4 px-cmn-4 text-text-primary max-w-[280px] truncate">
-                {{ t.description }}
-              </td>
-              <td class="py-cmn-4 px-cmn-4">
-                @if (t.merchantCategory) {
-                  <cmn-tag variant="neutral">{{ t.merchantCategory | merchantCategory }}</cmn-tag>
-                } @else {
-                  <span class="text-text-secondary text-cmn-xs">—</span>
-                }
-              </td>
-              <td class="py-cmn-4 px-cmn-4 text-text-secondary">{{ t.bankName }}</td>
-              <td
-                [class]="t | transactionAmountClass"
-                class="py-cmn-4 px-cmn-4 text-right font-mono tabular-nums font-medium"
-              >
-                {{ t | transactionAmount }}
-              </td>
+              <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Date</th>
+              <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Description</th>
+              <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Category</th>
+              <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Account</th>
+              <th class="text-right py-cmn-3 px-cmn-4 font-medium" scope="col">Amount</th>
             </tr>
-          }
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            @for (t of displayedTransactions(); track t.transactionId) {
+              <tr
+                (click)="openDrawer(t)"
+                class="cursor-pointer border-b border-border-default last:border-0 hover:bg-surface-bg transition-colors"
+              >
+                <td class="py-cmn-4 px-cmn-4 text-text-secondary whitespace-nowrap">
+                  {{ t.postedDate ?? t.date | date: 'MMM d, y' }}
+                  @if (t.isPending) {
+                    <span class="ml-1 text-cmn-xs text-amber-500">Pending</span>
+                  }
+                </td>
+                <td class="py-cmn-4 px-cmn-4 text-text-primary max-w-[280px] truncate">
+                  {{ t.description }}
+                </td>
+                <td class="py-cmn-4 px-cmn-4">
+                  @if (t.merchantCategory) {
+                    <cmn-tag variant="neutral">{{ t.merchantCategory | merchantCategory }}</cmn-tag>
+                  } @else {
+                    <span class="text-text-secondary text-cmn-xs">—</span>
+                  }
+                </td>
+                <td class="py-cmn-4 px-cmn-4 text-text-secondary">{{ t.bankName }}</td>
+                <td
+                  [class]="t | transactionAmountClass"
+                  class="py-cmn-4 px-cmn-4 text-right font-mono tabular-nums font-medium"
+                >
+                  {{ t | transactionAmount }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
 
       @if (store.hasMore()) {
         <div class="flex justify-center p-cmn-4 border-t border-border-default">
