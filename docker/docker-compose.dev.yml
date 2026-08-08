@@ -48,6 +48,8 @@ services:
       AnalystSources__Finnhub__ApiKey: ${FINNHUB_API_KEY:-}
       # FRED yield-curve source (feature 021 market regime). Empty = rates axis silent.
       Regime__Fred__ApiKey: ${FRED_API_KEY:-}
+      # In-app finance agent / browser Ledger (feature 040). Empty = agent disabled (keyless-graceful).
+      Agent__Anthropic__ApiKey: ${ANTHROPIC_API_KEY:-}
       # Off-host encrypted backups (feature 024). Empty = backup jobs no-op.
       Backup__R2Endpoint: ${BACKUP_R2_ENDPOINT:-}
       Backup__R2Bucket: ${BACKUP_R2_BUCKET:-}

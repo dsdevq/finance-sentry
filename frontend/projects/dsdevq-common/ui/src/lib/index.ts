@@ -8,6 +8,8 @@ export * from './components/badge/badge.component';
 export * from './components/bar-chart/bar-chart.component';
 export * from './components/button/button.component';
 export * from './components/card/card.component';
+export * from './components/chat/chat-input.component';
+export * from './components/chat/chat-message.component';
 export * from './components/chip/chip.component';
 export * from './components/command-palette/command-palette.component';
 export type * from './components/command-palette/command-palette-item.model';

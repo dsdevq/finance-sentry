@@ -44,7 +44,29 @@
     <ProjectReference Include="..\FinanceSentry.Modules.Companion\FinanceSentry.Modules.Companion.csproj" />
     <ProjectReference Include="..\FinanceSentry.Modules.Analytics\FinanceSentry.Modules.Analytics.csproj" />
     <ProjectReference Include="..\FinanceSentry.Modules.Retention\FinanceSentry.Modules.Retention.csproj" />
+    <ProjectReference Include="..\FinanceSentry.Modules.Agent\FinanceSentry.Modules.Agent.csproj" />
     <ProjectReference Include="..\FinanceSentry.Integration\FinanceSentry.Integration.csproj" />
   </ItemGroup>
+
+  <!-- 040: ship the versioned Ledger persona (persona-as-code, US1) with the app so PersonaComposer
+       can compose the browser system prompt at runtime in the container. -->
+  <ItemGroup>
+    <Content Include="..\..\..\agent\ledger\**\*.md"
+             Link="agent\ledger\%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- 040: the API transitively references the FinanceSentry.Mcp Exe (for the browser agent's tool
+       bridge). That Exe contributes its own appsettings*.json as copy-to-output content, which would
+       collide with THIS project's appsettings.json on publish (NETSDK1152). Drop the Mcp-originated
+       copies from the API publish set — the API keeps its own; the MCP host keeps its own via
+       Dockerfile.mcp. -->
+  <Target Name="DropTransitiveMcpAppSettings" AfterTargets="ComputeFilesToPublish">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)"
+        Condition="$([System.String]::Copy('%(ResolvedFileToPublish.RelativePath)').StartsWith('appsettings')) and $([System.String]::Copy('%(ResolvedFileToPublish.FullPath)').Replace('\','/').Contains('/FinanceSentry.Mcp/'))" />
+    </ItemGroup>
+  </Target>
 
 </Project>

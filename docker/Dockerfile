@@ -7,6 +7,9 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
 WORKDIR /src
 
 COPY backend/ backend/
+# 040: the versioned Ledger persona lives at the repo root (outside backend/); the API project links
+# these files into its publish output so PersonaComposer can compose the system prompt at runtime.
+COPY agent/ agent/
 
 WORKDIR /src/backend
 RUN --mount=type=cache,target=/root/.nuget/packages \

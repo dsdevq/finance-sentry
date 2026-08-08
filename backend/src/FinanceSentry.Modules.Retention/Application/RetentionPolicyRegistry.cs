@@ -26,6 +26,7 @@ public static class RetentionPolicyRegistry
     private const string Auth = "auth";
     private const string Public = "public";
     private const string Retention = "retention";
+    private const string Agent = "agent";
 
     /// <summary>
     /// Every <c>DbContext</c> the retention policy set must account for. The coverage-guard test
@@ -37,7 +38,7 @@ public static class RetentionPolicyRegistry
         "AuthDbContext", "BankSyncDbContext", "CryptoSyncDbContext", "BrokerageSyncDbContext",
         "AlertsDbContext", "BudgetsDbContext", "SubscriptionsDbContext", "WealthDbContext",
         "ResearchDbContext", "RadarDbContext", "RiskDbContext", "CompanionDbContext",
-        "AnalyticsDbContext", "RetentionDbContext",
+        "AnalyticsDbContext", "RetentionDbContext", "AgentDbContext",
     };
 
     /// <summary>All retention decisions — exactly one per persistent table.</summary>
@@ -106,6 +107,10 @@ public static class RetentionPolicyRegistry
 
         Keep(Risk, "risk_rule_sets", "User risk rules."),
         Keep(Risk, "policy_violation_acks", "User acknowledgements."),
+
+        // Agent (040): browser Ledger chat threads — user-facing financial-context conversations.
+        Keep(Agent, "agent_conversations", "User agent conversations; user-facing, keep by decision."),
+        Keep(Agent, "agent_messages", "Agent conversation messages; cascade with their conversation."),
 
         // Auth: identity + tokens. Small; managed by the auth flow. Keep by decision.
         Keep(Auth, "AspNetUsers", "Identity."),
