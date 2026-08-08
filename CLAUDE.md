@@ -376,6 +376,8 @@ After **all tasks in a feature are complete**, act as a QA engineer: spin up the
 - PostgreSQL 14 — **new `RetentionDbContext`** (schema `retention`, history (024-data-retention)
 - C# 14 / .NET 10 (backend only — no frontend changes) + ASP.NET Core, EF Core 10 (Npgsql), `FinanceSentry.Core.Cqrs` (hand-rolled `ICommand`/`IQuery` — **no MediatR**), `ModelContextProtocol` (existing `FinanceSentry.Mcp` project). No new NuGet packages. (039-ips-risk-boundary)
 - PostgreSQL 14 — a single physical DB hosting both schemas: `research` (`ResearchDbContext`, table `investment_policy_statements`) and `risk` (`RiskDbContext`, table `risk_rule_sets`). Next migrations: Research **M012**, Risk **M002**. (039-ips-risk-boundary)
+- C# 14 / .NET 10 (backend host; matches `Directory.Build.props` `net10.0`) + `Yarp.ReverseProxy` (reverse proxy), `LettuceEncrypt` (ACME/Let's Encrypt, config-gated), ASP.NET Core built-in `RateLimiter`, OpenTelemetry (metrics → Prometheus exporter) — the same OTel stack the API already uses (025-edge-gateway)
+- None (stateless proxy). ACME certificate cache persisted to a Docker volume when TLS is enabled. (025-edge-gateway)
 
 - `@ngrx/signals` 21.1.0 (NgRx SignalStore) — pilot AuthStore 2026-04-24, extended to DashboardStore + AccountsStore same day
 - C# 13 / .NET 9 (backend) · TypeScript 5.x strict (frontend) + ASP.NET Core 9, EF Core 9, MediatR, ASP.NET Core Identity (`Microsoft.AspNetCore.Identity.EntityFrameworkCore`), Npgsql.EF Core (backend) · Angular 20, RxJS, Angular standalone routing (frontend) (003-auth-flow)
