@@ -1,4 +1,4 @@
-namespace FinanceSentry.API.Integration;
+namespace FinanceSentry.Integration;
 
 using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Modules.Research.Domain.Ports;

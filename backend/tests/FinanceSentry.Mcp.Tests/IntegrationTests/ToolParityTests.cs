@@ -37,6 +37,7 @@ using FinanceSentry.Modules.Subscriptions.Domain;
 using FinanceSentry.Modules.Subscriptions.Domain.Repositories;
 using FinanceSentry.Modules.Subscriptions.Infrastructure.Persistence;
 using FinanceSentry.Modules.Subscriptions.Infrastructure.Persistence.Repositories;
+using FinanceSentry.Integration;
 using FinanceSentry.Modules.Wealth.Domain;
 using FinanceSentry.Modules.Wealth.Domain.Repositories;
 using FinanceSentry.Modules.Wealth.Infrastructure.Persistence;
@@ -121,6 +122,8 @@ public sealed class ToolParityTests
         services.AddScoped<IStructureQueryService, StructureQueryService>();
         services.AddScoped<IRadarSignalWriter, RadarSignalWriter>();
         services.AddScoped<IRadarSignalReader, RadarSignalReader>();
+        services.AddScoped<IMarketRegimeSource, MarketRegimeSource>();
+        services.AddScoped<IRegimeReadingRepository, RegimeReadingRepository>();
         services.AddSingleton<IMarketHistorySource>(new FakeMarketHistorySource());
         services.Configure<RadarOptions>(_ => { });
 
@@ -169,6 +172,10 @@ public sealed class ToolParityTests
         services.AddScoped<IRiskEvaluationService, RiskEvaluationService>();
         services.AddScoped<ITurnoverTracker, TurnoverTracker>();
         services.Configure<RiskOptions>(_ => { });
+
+        // 039: cross-module read-port adapters (IPS↔Risk) from the shared composition lib, matching the
+        // host graph so risk/allocation tools resolve IAllocationPolicySource / IPositionCapSource.
+        services.AddCrossModulePorts();
 
         // Domain service needed by GetBudgetSummaryQueryHandler.
         services.AddScoped<ICategoryNormalizationService, CategoryNormalizationService>();
