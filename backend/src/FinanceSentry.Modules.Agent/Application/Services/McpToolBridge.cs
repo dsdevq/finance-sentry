@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Schema;
+using System.Text.Json.Serialization.Metadata;
 using FinanceSentry.Mcp;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -24,18 +25,30 @@ public sealed class McpToolBridge
 {
     private const string UserIdParameterName = "userId";
 
-    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
+    // JsonSchemaExporter requires an explicit type-info resolver on the options.
+    private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web)
+    {
+        TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
+    };
 
     private readonly AgentOptions _options;
     private readonly ILogger<McpToolBridge> _logger;
+    private readonly IReadOnlyList<Assembly> _toolAssemblies;
     private readonly Lock _sync = new();
     private IReadOnlyList<LlmTool>? _tools;
     private IReadOnlyDictionary<string, ToolEntry>? _catalog;
 
     public McpToolBridge(IOptions<AgentOptions> options, ILogger<McpToolBridge> logger)
+        : this(options, logger, McpServiceRegistration.McpAssembly)
+    {
+    }
+
+    // Test seam: dispatch/schema over an explicit tool assembly set instead of the MCP assembly.
+    internal McpToolBridge(IOptions<AgentOptions> options, ILogger<McpToolBridge> logger, params Assembly[] toolAssemblies)
     {
         _options = options.Value;
         _logger = logger;
+        _toolAssemblies = toolAssemblies is { Length: > 0 } ? toolAssemblies : [McpServiceRegistration.McpAssembly];
     }
 
     /// <summary>The Anthropic tool catalog (built once, cached).</summary>
@@ -116,7 +129,8 @@ public sealed class McpToolBridge
         var tools = new List<LlmTool>();
         var catalog = new Dictionary<string, ToolEntry>(StringComparer.Ordinal);
 
-        foreach (var toolType in McpServiceRegistration.McpAssembly.GetTypes()
+        foreach (var toolType in _toolAssemblies
+            .SelectMany(a => a.GetTypes())
             .Where(t => t is { IsAbstract: false, IsInterface: false }
                 && t.GetCustomAttribute<McpServerToolTypeAttribute>() is not null)
             .OrderBy(t => t.Name, StringComparer.Ordinal))

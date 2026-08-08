@@ -15,4 +15,8 @@
     <ProjectReference Include="..\FinanceSentry.Mcp\FinanceSentry.Mcp.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="FinanceSentry.Modules.Agent.Tests" />
+  </ItemGroup>
+
 </Project>
