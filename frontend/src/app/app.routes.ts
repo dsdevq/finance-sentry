@@ -73,6 +73,13 @@ export const APP_ROUTES: Routes = [
           import('./modules/alerts/pages/alerts/alerts.component').then(m => m.AlertsComponent),
       },
       {
+        path: AppRoute.Ledger.slice(1),
+        loadComponent: () =>
+          import('./modules/agent/pages/ledger-chat/ledger-chat.component').then(
+            m => m.LedgerChatComponent
+          ),
+      },
+      {
         path: AppRoute.Settings.slice(1),
         loadComponent: () =>
           import('./modules/settings/pages/settings/settings.component').then(

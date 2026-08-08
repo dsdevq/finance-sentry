@@ -30,4 +30,11 @@ export const ERROR_MESSAGES_REGISTRY: ErrorMessagesMap = {
   BUDGET_INVALID_LIMIT: 'Budget limit must be greater than zero.',
   BUDGET_INVALID_PERIOD: 'Invalid budget period.',
   SUBSCRIPTION_NOT_FOUND: 'Subscription not found.',
+  // Feature 040 agent error codes are lowercase snake_case by contract (chat-endpoint.md).
+  /* eslint-disable @typescript-eslint/naming-convention */
+  agent_not_configured:
+    'Ledger is not configured. An Anthropic API key must be set on the server to enable chat.',
+  llm_unavailable: 'Ledger is temporarily unavailable. Please try again in a moment.',
+  conversation_not_found: 'Conversation not found.',
+  /* eslint-enable @typescript-eslint/naming-convention */
 };

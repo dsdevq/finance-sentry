@@ -12,5 +12,6 @@ export enum AppRoute {
   Budgets = '/budgets',
   Subscriptions = '/subscriptions',
   Alerts = '/alerts',
+  Ledger = '/ledger',
   Settings = '/settings',
 }
