@@ -1,0 +1,25 @@
+namespace FinanceSentry.Modules.Agent.Application.Services;
+
+/// <summary>Typed events the agent loop yields; the controller relays them to the client as SSE.</summary>
+public abstract record AgentStreamEvent;
+
+/// <summary>Sent first — the (new or existing) conversation id.</summary>
+public sealed record AgentConversationEvent(Guid ConversationId) : AgentStreamEvent;
+
+/// <summary>An assistant token delta — append in order.</summary>
+public sealed record AgentTextEvent(string Delta) : AgentStreamEvent;
+
+/// <summary>A tool call started/finished (<c>phase</c> = <c>start</c>|<c>end</c>) — progressive feedback (SC-007).</summary>
+public sealed record AgentToolEvent(string Name, string Phase) : AgentStreamEvent;
+
+/// <summary>A recoverable error; the stream then ends.</summary>
+public sealed record AgentErrorEvent(string Code, string Message) : AgentStreamEvent;
+
+/// <summary>Final assistant message persisted; stream closes.</summary>
+public sealed record AgentDoneEvent(Guid MessageId) : AgentStreamEvent;
+
+/// <summary>
+/// Internal terminal event carrying the assembled final answer for persistence — consumed by the
+/// command handler, never forwarded to the client.
+/// </summary>
+public sealed record AgentCompletionEvent(string FinalText, string? ToolCallsJson) : AgentStreamEvent;

@@ -44,7 +44,17 @@
     <ProjectReference Include="..\FinanceSentry.Modules.Companion\FinanceSentry.Modules.Companion.csproj" />
     <ProjectReference Include="..\FinanceSentry.Modules.Analytics\FinanceSentry.Modules.Analytics.csproj" />
     <ProjectReference Include="..\FinanceSentry.Modules.Retention\FinanceSentry.Modules.Retention.csproj" />
+    <ProjectReference Include="..\FinanceSentry.Modules.Agent\FinanceSentry.Modules.Agent.csproj" />
     <ProjectReference Include="..\FinanceSentry.Integration\FinanceSentry.Integration.csproj" />
+  </ItemGroup>
+
+  <!-- 040: ship the versioned Ledger persona (persona-as-code, US1) with the app so PersonaComposer
+       can compose the browser system prompt at runtime in the container. -->
+  <ItemGroup>
+    <Content Include="..\..\..\agent\ledger\**\*.md"
+             Link="agent\ledger\%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
