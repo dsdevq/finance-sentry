@@ -1,6 +1,7 @@
 using System.Reflection;
 using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Core.Interfaces;
+using FinanceSentry.Integration;
 using FinanceSentry.Mcp.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -52,6 +53,11 @@ public static class McpServiceRegistration
                 registrar.Register(services, config);
             }
         }
+
+        // 039: the cross-module read-port adapters (IPS↔Risk) live in the shared FinanceSentry.Integration
+        // composition lib so every host — API and this MCP host — registers them. Without this the MCP host
+        // leaves IAllocationPolicySource / IPositionCapSource unregistered and risk/allocation tools throw.
+        services.AddCrossModulePorts();
 
         services.AddHttpContextAccessor();
         services.AddSingleton<LocalMcpCredentialStore>();

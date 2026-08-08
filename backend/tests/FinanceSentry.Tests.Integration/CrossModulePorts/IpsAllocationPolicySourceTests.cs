@@ -1,6 +1,6 @@
 namespace FinanceSentry.Tests.Integration.CrossModulePorts;
 
-using FinanceSentry.API.Integration;
+using FinanceSentry.Integration;
 using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Modules.Research.API.Responses;
 using FinanceSentry.Modules.Research.Application.Queries;

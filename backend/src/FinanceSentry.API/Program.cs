@@ -1,7 +1,7 @@
 using Serilog;
 using FinanceSentry.API.Commands;
 using FinanceSentry.API.Conventions;
-using FinanceSentry.API.Integration;
+using FinanceSentry.Integration;
 using FinanceSentry.API.Hangfire;
 using FinanceSentry.API.Migrations;
 using FinanceSentry.API.Modules;

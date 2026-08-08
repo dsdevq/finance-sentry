@@ -1,7 +1,8 @@
-namespace FinanceSentry.API.Integration;
+namespace FinanceSentry.Integration;
 
 using FinanceSentry.Modules.Research.Domain.Ports;
 using FinanceSentry.Modules.Risk.Domain.Ports;
+using Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
 /// 039: wires the cross-module read ports whose adapters live in the host. The Risk and Research
