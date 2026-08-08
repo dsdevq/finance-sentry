@@ -19,7 +19,7 @@
 | `024-data-retention` | Platform | 023 | Retention policies + verified off-host backups |
 | `025-edge-gateway` | Platform | — | Single reverse-proxy entrypoint, TLS, rate limits |
 | `026-event-bus-outbox` | Platform | 023 | In-monolith broker + transactional outbox (031 is a focused precursor) |
-| `027-k8s-migration` | Platform | 025; 023/024 advised | Single-node cluster replaces compose in prod |
+| `027-k8s-migration` | Platform | 025; 023/024 advised | Single-node cluster replaces compose in prod. **Carries 025 fast-fail fix** (short connect-timeout / split long-poll cluster — see 025 spec Known Limitation) |
 | `028-extract-market-data-service` | Platform | 026, 025, radar stable | First module extracted to its own service |
 | `029-grpc-internal-contract` | Platform | 028 | One internal call goes contract-first RPC |
 
@@ -166,7 +166,7 @@ Separate from the Radar program: a deliberate production-engineering ladder (obs
 | `024-data-retention` | Per-table retention policies + off-host verified backups | 023 (visibility) |
 | `025-edge-gateway` | Single reverse-proxy entrypoint, TLS, rate limits | — |
 | `026-event-bus-outbox` | Broker + transactional outbox inside the monolith | 023 |
-| `027-k8s-migration` | Single-node cluster replaces compose in prod | 025; 023/024 strongly advised |
+| `027-k8s-migration` | Single-node cluster replaces compose in prod (also lands the deferred 025 fast-fail fix) | 025; 023/024 strongly advised |
 | `028-extract-market-data-service` | Radar/market-data becomes its own service | 026, 025, radar (018) stable |
 | `029-grpc-internal-contract` | One internal call goes contract-first RPC | 028 |
 
