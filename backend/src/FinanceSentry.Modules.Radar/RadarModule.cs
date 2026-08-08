@@ -96,6 +96,7 @@ public static class RadarModule
                 "Mozilla/5.0 (compatible; FinanceSentry/1.0; +https://finance-sentry.local)");
         });
         services.AddScoped<IYieldCurveSource, FredYieldCurveSource>();
+        services.AddScoped<IMarketRegimeSource, MarketRegimeSource>();
         services.AddScoped<RegimeComputeJob>();
 
         services.AddSingleton<IJobRegistrar, JobRegistrar>();

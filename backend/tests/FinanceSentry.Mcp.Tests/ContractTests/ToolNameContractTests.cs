@@ -23,6 +23,7 @@ public sealed class ToolNameContractTests
         "get_ips",
         "get_macro_calendar",
         "get_market_breadth",
+        "get_market_regime",
         "get_market_structure",
         "get_net_worth_history",
         "get_news_for_ticker",
