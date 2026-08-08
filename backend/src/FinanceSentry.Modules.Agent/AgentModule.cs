@@ -39,14 +39,30 @@ public static class AgentModule
 
         services.AddScoped<IConversationRepository, ConversationRepository>();
         services.AddScoped<ILlmClient, AnthropicLlmClient>();
-        services.AddScoped<IAgentConversationService, AgentConversationService>();
         services.AddSingleton<McpToolBridge>();
         services.AddSingleton<PersonaComposer>();
 
-        var anthropic = config.GetSection(AgentOptions.SectionName).Get<AgentOptions>() ?? new AgentOptions();
+        var agentOptions = config.GetSection(AgentOptions.SectionName).Get<AgentOptions>() ?? new AgentOptions();
+
+        // Two interchangeable brains (040), resolved from config at startup. OpenClaw delegates the turn
+        // to the existing Ledger agent (no Anthropic key); Anthropic runs FS's own persona + tool loop.
+        if (agentOptions.Provider == AgentProvider.OpenClaw)
+        {
+            services.AddScoped<IAgentConversationService, OpenClawAgentConversationService>();
+            services.AddHttpClient(OpenClawAgentConversationService.HttpClientName, client =>
+            {
+                client.BaseAddress = new Uri(agentOptions.OpenClaw.BaseUrl!.TrimEnd('/') + "/");
+                client.Timeout = TimeSpan.FromMinutes(5);
+            });
+        }
+        else
+        {
+            services.AddScoped<IAgentConversationService, AgentConversationService>();
+        }
+
         services.AddHttpClient(AnthropicLlmClient.HttpClientName, client =>
         {
-            client.BaseAddress = new Uri(anthropic.Anthropic.BaseUrl.TrimEnd('/') + "/");
+            client.BaseAddress = new Uri(agentOptions.Anthropic.BaseUrl.TrimEnd('/') + "/");
             client.Timeout = TimeSpan.FromMinutes(5);
         });
 
