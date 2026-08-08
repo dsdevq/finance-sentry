@@ -50,6 +50,10 @@ services:
       Regime__Fred__ApiKey: ${FRED_API_KEY:-}
       # In-app finance agent / browser Ledger (feature 040). Empty = agent disabled (keyless-graceful).
       Agent__Anthropic__ApiKey: ${ANTHROPIC_API_KEY:-}
+      # Alt brain: delegate the chat to the existing OpenClaw Ledger (finance) agent — no Anthropic key
+      # needed. Set BaseUrl+Token to enable (auto-selected when no Anthropic key is present).
+      Agent__OpenClaw__BaseUrl: ${OPENCLAW_GATEWAY_URL:-}
+      Agent__OpenClaw__Token: ${OPENCLAW_GATEWAY_TOKEN:-}
       # Off-host encrypted backups (feature 024). Empty = backup jobs no-op.
       Backup__R2Endpoint: ${BACKUP_R2_ENDPOINT:-}
       Backup__R2Bucket: ${BACKUP_R2_BUCKET:-}

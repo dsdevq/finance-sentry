@@ -14,6 +14,7 @@ import {
 } from '@dsdevq-common/ui';
 import {filter, map} from 'rxjs';
 
+import {ChatWidgetComponent} from '../../modules/agent/components/chat-widget/chat-widget.component';
 import {AlertsStore} from '../../modules/alerts/store/alerts/alerts.store';
 import {AuthStore} from '../../modules/auth/store/auth.store';
 import {APP_VERSION} from '../../shared/constants/version/version.constants';
@@ -41,7 +42,7 @@ const AVATAR_MENU_ITEMS: MenuItem[] = [
 
 @Component({
   selector: 'fns-app-shell',
-  imports: [AppLayoutComponent, RouterOutlet],
+  imports: [AppLayoutComponent, RouterOutlet, ChatWidgetComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <cmn-app-layout
@@ -58,6 +59,8 @@ const AVATAR_MENU_ITEMS: MenuItem[] = [
     >
       <router-outlet />
     </cmn-app-layout>
+
+    <fns-chat-widget />
   `,
 })
 export class AppShellComponent {
