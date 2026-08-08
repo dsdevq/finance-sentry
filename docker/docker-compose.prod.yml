@@ -133,6 +133,45 @@ services:
       driver: json-file
       options: { max-size: "10m", max-file: "3" }
 
+  # --- Edge gateway (025) — single YARP reverse-proxy front door -----------------------------------
+  # ADDITIVE rollout: this runs ALONGSIDE the existing stack. The frontend/api/mcp direct ports above
+  # are intentionally LEFT PUBLISHED — the destructive cutover (closing them, making the gateway the
+  # sole entrypoint) is a separate operator-approved step (see specs/025-edge-gateway/quickstart.md).
+  #
+  # TLS: default is Tailscale-terminated — the gateway serves plain HTTP on loopback:8080 and
+  # `tailscale serve` fronts it. To switch to public-domain ACME instead, set the LettuceEncrypt env
+  # below (DomainNames + EmailAddress + AcceptTermsOfService=true) and uncomment the 80/443 ports.
+  gateway:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.gateway
+      platforms: [linux/arm64]
+    image: finance-sentry/gateway:local
+    container_name: finance-sentry-gateway
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      # Public-domain ACME (leave empty for Tailscale-terminated mode):
+      LettuceEncrypt__DomainNames__0: ${GATEWAY_DOMAIN:-}
+      LettuceEncrypt__EmailAddress: ${GATEWAY_ACME_EMAIL:-}
+      LettuceEncrypt__AcceptTermsOfService: ${GATEWAY_ACME_ACCEPT_TOS:-false}
+    ports:
+      - "127.0.0.1:${GATEWAY_PORT:-8080}:8080"
+      # ACME cutover: uncomment to publish the public TLS ports (requires GATEWAY_DOMAIN + DNS).
+      # - "80:80"
+      # - "443:443"
+    volumes:
+      - gateway_acme:/root/.aspnet/DataProtection-Keys
+    depends_on:
+      api:
+        condition: service_started
+    networks:
+      - finance-sentry
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
   postgres:
     image: postgres:14-alpine
     container_name: finance-sentry-postgres
@@ -224,6 +263,7 @@ volumes:
   loki_data:
   prometheus_data:
   grafana_data:
+  gateway_acme:   # ACME cert + data-protection key cache (025) — only used when TLS/ACME is enabled
 
 networks:
   finance-sentry:
