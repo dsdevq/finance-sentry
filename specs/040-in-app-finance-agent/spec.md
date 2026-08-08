@@ -2,7 +2,7 @@
 
 **Feature Branch**: `040-in-app-finance-agent`
 **Created**: 2026-08-08
-**Status**: Draft
+**Status**: US1 shipped · US2 + US3 implemented (browser Ledger + parity)
 **Input**: User description: "Bring the Ledger finance agent into Finance Sentry as canonical persona-as-code (runtime-agnostic core + OpenClaw and browser adapters), plus a Phase-2 in-browser interactive agent over the existing finance tool surface; coexists with the OpenClaw Ledger sharing one persona core."
 
 ## Overview
