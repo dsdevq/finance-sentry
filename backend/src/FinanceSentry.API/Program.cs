@@ -14,6 +14,7 @@ using FinanceSentry.Modules.BankSync.Infrastructure.Jobs;
 using Hangfire;
 using Hangfire.Dashboard;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 using Microsoft.OpenApi;
@@ -22,6 +23,19 @@ using DashboardObservability = FinanceSentry.Infrastructure.Observability.Hangfi
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseSerilog(SerilogConfiguration.Configure);
+
+// Edge gateway (025, FR-006): honor X-Forwarded-* set by the reverse proxy so the real client IP
+// and scheme reach Serilog request logs and any IP-based logic — instead of the gateway's bridge
+// address. KnownIPNetworks/KnownProxies are cleared because the only hop in front of the API is the
+// trusted in-network gateway (itself fronted by Tailscale Serve).
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor
+        | ForwardedHeaders.XForwardedProto
+        | ForwardedHeaders.XForwardedHost;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 builder.Services.AddCors(options =>
     options.AddPolicy("Frontend", policy => policy
@@ -111,6 +125,8 @@ if (args.Length > 0 && RetentionCommand.Handles(args[0]))
     return;
 }
 
+// Must run before request logging so logs capture the real client IP (025, FR-006).
+app.UseForwardedHeaders();
 app.UseSerilogRequestLogging();
 app.UseCors("Frontend");
 app.UseMiddleware<ErrorHandlingMiddleware>();

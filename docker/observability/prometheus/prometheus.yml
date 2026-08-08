@@ -9,3 +9,9 @@ scrape_configs:
     metrics_path: /metrics
     static_configs:
       - targets: ['api:5000']
+
+  # Edge gateway (025) — request counts, upstream/proxy latency, rate-limit rejections (FR-007).
+  - job_name: finance-sentry-gateway
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['gateway:8080']

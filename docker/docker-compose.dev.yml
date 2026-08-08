@@ -99,6 +99,26 @@ services:
     networks:
       - finance-sentry-network
 
+  # --- Edge gateway (025) — single YARP reverse-proxy front door ------------------------------------
+  # ADDITIVE: the direct frontend (4200) and api (5001) ports above stay published, so dev can use
+  # the gateway path (http://localhost:8080) OR bypass it directly (dev parity, FR-008).
+  gateway:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.gateway
+    container_name: finance-sentry-gateway
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - finance-sentry-network
+
   postgres:
     image: postgres:14-alpine
     container_name: finance-sentry-postgres
