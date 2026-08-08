@@ -2,6 +2,7 @@ namespace FinanceSentry.Modules.Radar.Infrastructure.Persistence;
 
 using System.Text.Json;
 using FinanceSentry.Modules.Radar.Domain;
+using FinanceSentry.Modules.Radar.Domain.Regime;
 using Microsoft.EntityFrameworkCore;
 
 public class RadarDbContext(DbContextOptions<RadarDbContext> options) : DbContext(options)
@@ -11,6 +12,8 @@ public class RadarDbContext(DbContextOptions<RadarDbContext> options) : DbContex
     public DbSet<RadarSignal> RadarSignals { get; set; } = null!;
 
     public DbSet<RadarUniverseMember> UniverseMembers { get; set; } = null!;
+
+    public DbSet<RegimeReading> RegimeReadings { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -65,5 +68,24 @@ public class RadarDbContext(DbContextOptions<RadarDbContext> options) : DbContex
         mem.Property(x => x.Source).IsRequired().HasConversion<string>().HasMaxLength(10);
         mem.Property(x => x.Active).IsRequired();
         mem.HasIndex(x => x.Ticker).IsUnique().HasDatabaseName("idx_radar_universe_ticker");
+
+        var reg = modelBuilder.Entity<RegimeReading>();
+        reg.ToTable("regime_readings");
+        reg.HasKey(x => x.Id);
+        reg.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
+        reg.Property(x => x.ComputedAt).IsRequired();
+        reg.Property(x => x.VolatilityAvailable).IsRequired();
+        reg.Property(x => x.VolatilityRegime).HasConversion<string>().HasMaxLength(20);
+        reg.Property(x => x.VixLevel).HasColumnType("numeric(10,4)");
+        reg.Property(x => x.VixSma).HasColumnType("numeric(10,4)");
+        reg.Property(x => x.VixTrend).HasConversion<string>().HasMaxLength(20);
+        reg.Property(x => x.RatesAvailable).IsRequired();
+        reg.Property(x => x.RatesRegime).HasConversion<string>().HasMaxLength(20);
+        reg.Property(x => x.Dgs10).HasColumnType("numeric(10,4)");
+        reg.Property(x => x.Dgs2).HasColumnType("numeric(10,4)");
+        reg.Property(x => x.Spread).HasColumnType("numeric(10,4)");
+        reg.Property(x => x.RecessionWarning).IsRequired();
+        reg.Property(x => x.GrowthValueTilt).HasMaxLength(80);
+        reg.HasIndex(x => x.ComputedAt).IsDescending().HasDatabaseName("idx_regime_readings_computed_at");
     }
 }

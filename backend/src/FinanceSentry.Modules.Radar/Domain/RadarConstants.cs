@@ -4,6 +4,9 @@ namespace FinanceSentry.Modules.Radar.Domain;
 public static class RadarScanners
 {
     public const string MarketStructure = "market_structure";
+
+    /// <summary>Feature 021 — daily macro regime read (VIX + yield curve).</summary>
+    public const string MarketRegime = "market_regime";
 }
 
 public static class RadarSignalTypes
@@ -13,6 +16,11 @@ public static class RadarSignalTypes
     public const string Breadth = "breadth";
     public const string UnusualMove = "unusual_move";
     public const string Extended = "extended";
+
+    // Feature 021 regime signals (scanner market_regime).
+    public const string RegimeVolatility = "regime_volatility";
+    public const string RegimeRates = "regime_rates";
+    public const string RegimeChange = "regime_change";
 }
 
 public static class RadarSubjectTypes
