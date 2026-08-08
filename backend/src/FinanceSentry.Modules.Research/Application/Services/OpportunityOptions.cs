@@ -52,4 +52,14 @@ public sealed class OpportunityOptions
 
     /// <summary>Hour (UTC) the daily opportunity scan runs — after Radar's 23:00 UTC compute job has refreshed structure.</summary>
     public int ScanHourUtc { get; set; } = 0;
+
+    // ── 021 regime context (structure-score haircuts; context only, never actions) ──
+    /// <summary>Structure-score haircut for an Extended-crowding candidate in a Panic volatility regime.</summary>
+    public int RegimePanicExtendedHaircut { get; set; } = 15;
+
+    /// <summary>Structure-score haircut for an Extended-crowding candidate in a Stressed volatility regime.</summary>
+    public int RegimeStressedExtendedHaircut { get; set; } = 8;
+
+    /// <summary>Additional structure-score haircut for an Extended-crowding candidate when the curve is Inverted.</summary>
+    public int RegimeInvertedExtendedHaircut { get; set; } = 5;
 }

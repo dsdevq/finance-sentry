@@ -41,6 +41,7 @@ services:
       TrueLayer__FrontendRedirectBase: ${TRUELAYER_FRONTEND_REDIRECT_BASE:-https://lifekit-vps.tail1cb676.ts.net:4200}
       TrueLayer__CallbackPath: /api/v1/accounts/truelayer/callback
       AnalystSources__Finnhub__ApiKey: ${FINNHUB_API_KEY:-}
+      Regime__Fred__ApiKey: ${FRED_API_KEY:-}
       # Off-host encrypted backups (feature 024). Empty = backup jobs no-op (dev/local safe).
       Backup__R2Endpoint: ${BACKUP_R2_ENDPOINT:-}
       Backup__R2Bucket: ${BACKUP_R2_BUCKET:-}

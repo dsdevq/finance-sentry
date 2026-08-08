@@ -27,6 +27,12 @@ public static class RadarModule
         {
             var mgr = sp.GetRequiredService<IRecurringJobManager>();
             var options = sp.GetRequiredService<IOptions<RadarOptions>>().Value;
+            var regimeOptions = sp.GetRequiredService<IOptions<RegimeOptions>>().Value;
+
+            mgr.AddOrUpdate<RegimeComputeJob>(
+                "regime-compute",
+                job => job.ExecuteAsync(CancellationToken.None),
+                Cron.Daily(regimeOptions.ComputeHourUtc));
 
             mgr.AddOrUpdate<RadarIngestionJob>(
                 "radar-ingestion",
@@ -54,10 +60,12 @@ public static class RadarModule
                 b => b.MigrationsHistoryTable("__ef_migrations_history_radar", "public")));
 
         services.Configure<RadarOptions>(config.GetSection(RadarOptions.SectionName));
+        services.Configure<RegimeOptions>(config.GetSection(RegimeOptions.SectionName));
 
         services.AddScoped<IDailyBarRepository, DailyBarRepository>();
         services.AddScoped<IRadarSignalRepository, RadarSignalRepository>();
         services.AddScoped<IRadarUniverseRepository, RadarUniverseRepository>();
+        services.AddScoped<IRegimeReadingRepository, RegimeReadingRepository>();
 
         services.AddScoped<IRadarUniverseService, RadarUniverseService>();
         services.AddScoped<IStructureQueryService, StructureQueryService>();
@@ -77,6 +85,19 @@ public static class RadarModule
                 "Mozilla/5.0 (compatible; FinanceSentry/1.0; +https://finance-sentry.local)");
         });
         services.AddScoped<IMarketHistorySource, YahooMarketHistorySource>();
+
+        // Feature 021 — market regime: keyless-silent FRED yield-curve source + read-only port.
+        var regimeOptions = config.GetSection(RegimeOptions.SectionName).Get<RegimeOptions>() ?? new RegimeOptions();
+        services.AddHttpClient(FredYieldCurveSource.HttpClientName, client =>
+        {
+            client.BaseAddress = new Uri(regimeOptions.Fred.BaseUrl.TrimEnd('/') + "/");
+            client.Timeout = TimeSpan.FromSeconds(10);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd(
+                "Mozilla/5.0 (compatible; FinanceSentry/1.0; +https://finance-sentry.local)");
+        });
+        services.AddScoped<IYieldCurveSource, FredYieldCurveSource>();
+        services.AddScoped<IMarketRegimeSource, MarketRegimeSource>();
+        services.AddScoped<RegimeComputeJob>();
 
         services.AddSingleton<IJobRegistrar, JobRegistrar>();
 

@@ -17,6 +17,13 @@ public sealed class ScoreCandidateHandlerTests
         public Task<decimal?> GetMaxPositionWeightAsync(Guid userId, CancellationToken ct) => Task.FromResult(cap);
     }
 
+    // 021: regime is optional context. A null latest reading ⇒ no adjustment (raw == adjusted),
+    // so these pre-existing scoring assertions are unaffected.
+    private sealed class FakeMarketRegimeSource(MarketRegimeSnapshot? snapshot = null) : IMarketRegimeSource
+    {
+        public Task<MarketRegimeSnapshot?> GetLatestAsync(CancellationToken ct = default) => Task.FromResult(snapshot);
+    }
+
     private static ScoreCandidateCommandHandler BuildHandler(
         FakeCandidateRepository candidates,
         FakeCandidateScoreRepository scores,
@@ -24,7 +31,8 @@ public sealed class ScoreCandidateHandlerTests
         decimal? maxPositionCap = null,
         IReadOnlyList<BrokerageHoldingSummary>? holdings = null,
         IReadOnlyList<FundamentalFact>? facts = null,
-        MarketStructureSnapshot? structure = null)
+        MarketStructureSnapshot? structure = null,
+        MarketRegimeSnapshot? regime = null)
         => new(
             candidates,
             scores,
@@ -34,6 +42,7 @@ public sealed class ScoreCandidateHandlerTests
             new FakePositionCapSource(maxPositionCap),
             new FakeBrokerageHoldingsReader(holdings),
             new RecordingRadarSignalWriter(),
+            new FakeMarketRegimeSource(regime),
             new RecordingThesisEventRecorder(),
             new FakeOpportunityAlertGenerator(),
             Options.Create(new OpportunityOptions()));
@@ -112,5 +121,68 @@ public sealed class ScoreCandidateHandlerTests
         // Not-evaluable is labeled null, never faked to a neutral number (FR-002/FR-006).
         result.Scorecard.StructureScore.Should().BeNull();
         result.Scorecard.FundamentalsScore.Should().BeNull();
+    }
+
+    // 021: a Panic/Inverted regime haircuts the regime-adjusted structure score of an Extended
+    // candidate while the RAW (persisted) structure score is preserved. Regime is context, not action.
+    [Fact]
+    public async Task Handle_PanicInvertedRegime_HaircutsExtendedCandidate_RawScorePreserved()
+    {
+        var userId = Guid.NewGuid();
+        // Extended crowding: extension >= 0.20 and volume >= 1.5; plus RS so a structure score exists.
+        var structure = new MarketStructureSnapshot(
+            "MSFT",
+            new Dictionary<int, decimal?> { [21] = 0.1m },
+            new Dictionary<int, decimal?> { [21] = 0.1m },
+            ExtensionFromMa50: 0.25m,
+            TodayZScore: 1.0m,
+            VolumeRatio: 2.0m,
+            Ma50: 100m,
+            Ma200: 90m,
+            Stale: false);
+
+        var regime = new MarketRegimeSnapshot(
+            DateTimeOffset.UtcNow,
+            true, "Panic", 34m, "Rising",
+            true, "Inverted", -0.3m, true, "quality/defensive (recession-warning)",
+            null, null);
+
+        var scores = new FakeCandidateScoreRepository();
+        var handler = BuildHandler(
+            new FakeCandidateRepository(), scores, structure: structure, regime: regime);
+        var result = await handler.Handle(new ScoreCandidateCommand(userId, "MSFT"), CancellationToken.None);
+
+        result.Scorecard.Crowding.Should().Be(FinanceSentry.Modules.Research.Domain.Opportunity.CrowdingClass.Extended);
+        result.Scorecard.Regime.Should().NotBeNull();
+        result.Scorecard.Regime!.AdjustmentPoints.Should().BeLessThan(0);
+        result.Scorecard.Regime.AdjustedStructureScore.Should().BeLessThan(result.Scorecard.StructureScore!.Value);
+        result.Scorecard.Regime.Rationale.Should().Contain("volatility:Panic");
+        result.Scorecard.Regime.Rationale.Should().Contain("rates:Inverted");
+
+        // Raw structure score is what gets persisted (formula-version integrity) — not the adjusted one.
+        result.Scorecard.Regime.RawStructureScore.Should().Be(result.Scorecard.StructureScore);
+    }
+
+    [Fact]
+    public async Task Handle_NoRegimeReading_LeavesScoreUnadjusted()
+    {
+        var structure = new MarketStructureSnapshot(
+            "MSFT",
+            new Dictionary<int, decimal?> { [21] = 0.1m },
+            new Dictionary<int, decimal?> { [21] = 0.1m },
+            ExtensionFromMa50: 0.25m,
+            TodayZScore: 1.0m,
+            VolumeRatio: 2.0m,
+            Ma50: 100m,
+            Ma200: 90m,
+            Stale: false);
+
+        var handler = BuildHandler(
+            new FakeCandidateRepository(), new FakeCandidateScoreRepository(), structure: structure, regime: null);
+        var result = await handler.Handle(new ScoreCandidateCommand(Guid.NewGuid(), "MSFT"), CancellationToken.None);
+
+        result.Scorecard.Regime.Should().NotBeNull();
+        result.Scorecard.Regime!.Rationale.Should().Contain("no_regime_data");
+        result.Scorecard.Regime.AdjustedStructureScore.Should().Be(result.Scorecard.StructureScore);
     }
 }

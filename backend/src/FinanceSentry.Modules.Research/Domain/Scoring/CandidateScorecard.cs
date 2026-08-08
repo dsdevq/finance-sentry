@@ -7,13 +7,20 @@ using FinanceSentry.Modules.Research.Domain.Opportunity;
 /// (missing data, insufficient history, divide-by-zero) — never faked or defaulted (FR-002/FR-006).
 /// No composite/aggregate field exists here or anywhere downstream (FR-007).
 /// </summary>
+/// <remarks>
+/// <c>StructureScore</c> is always the <b>raw</b> value (governed by <c>FormulaVersion</c>). The
+/// 021 <c>Regime</c> context, when present, carries the regime-adjusted structure score + rationale
+/// alongside it — regime modulates the presented/ranked score without ever overwriting the raw one
+/// (and never actions). Null when regime coupling produced nothing to attach.
+/// </remarks>
 public sealed record CandidateScorecard(
     int? StructureScore,
     int? FundamentalsScore,
     CrowdingClass Crowding,
     IpsFitFacts IpsFit,
     ScoreEvidence Evidence,
-    int FormulaVersion);
+    int FormulaVersion,
+    RegimeAdjustment? Regime = null);
 
 /// <summary>Facts about how a candidate would sit against the user's IPS if promoted (FR-011a).</summary>
 public sealed record IpsFitFacts(

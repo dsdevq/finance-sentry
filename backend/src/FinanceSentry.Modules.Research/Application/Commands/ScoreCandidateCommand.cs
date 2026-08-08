@@ -32,6 +32,7 @@ public sealed class ScoreCandidateCommandHandler(
     IPositionCapSource positionCapSource,
     IBrokerageHoldingsReader holdingsReader,
     IRadarSignalWriter signalWriter,
+    IMarketRegimeSource marketRegimeSource,
     IThesisEventRecorder eventRecorder,
     IAlertGeneratorService alertGenerator,
     IOptions<OpportunityOptions> options)
@@ -79,6 +80,12 @@ public sealed class ScoreCandidateCommandHandler(
 
         var ipsFit = BuildIpsFit(ticker, ips, maxPositionCap, holdings);
 
+        // 021: regime is CONTEXT only — haircut the presented/ranked structure score for speculative
+        // candidates in risk-off macro conditions. Raw structureScore is preserved (and persisted);
+        // regime never actions (no cash/sell/promotion change). Null regime ⇒ raw == adjusted.
+        var regimeSnapshot = await marketRegimeSource.GetLatestAsync(ct);
+        var regime = RegimeScoreAdjuster.Adjust(structureScore, crowding, regimeSnapshot, _options);
+
         var evidence = new ScoreEvidence(
             structureSnapshot?.RsByWindow ?? new Dictionary<int, decimal?>(),
             structureSnapshot?.ReturnByWindow ?? new Dictionary<int, decimal?>(),
@@ -96,11 +103,13 @@ public sealed class ScoreCandidateCommandHandler(
             DistanceFrom63dHigh: structureSnapshot?.DistanceFrom63dHigh);
 
         var scorecard = new CandidateScorecard(
-            structureScore, fundamentalsScore, crowding, ipsFit, evidence, _options.FormulaVersion);
+            structureScore, fundamentalsScore, crowding, ipsFit, evidence, _options.FormulaVersion, regime);
 
         await scoreRepo.AppendAsync(new CandidateScore
         {
             CandidateId = candidate.Id,
+            // Persist the RAW structure score (formula-version integrity); the regime-adjusted score
+            // is time-varying context returned on the scorecard, never the canonical persisted value.
             StructureScore = structureScore,
             FundamentalsScore = fundamentalsScore,
             CrowdingClass = crowding,
