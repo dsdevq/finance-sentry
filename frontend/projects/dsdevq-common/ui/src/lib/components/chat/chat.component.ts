@@ -4,6 +4,7 @@ import {
   computed,
   CUSTOM_ELEMENTS_SCHEMA,
   input,
+  signal,
 } from '@angular/core';
 import {type Subscription} from 'rxjs';
 
@@ -37,9 +38,12 @@ const UNAVAILABLE_ERROR = 'The agent is unavailable right now. Please try again.
  * shadow root, so CSS custom properties (`var(--color-*)`) inherit through and keep it theme-aware.
  *
  * The `<deep-chat>` custom element is registered by a lazy `import()` in the constructor, so its
- * ~300&nbsp;kB bundle is a separate chunk fetched only when a chat surface first mounts (custom
- * elements upgrade retroactively once defined). The self-contained bundle also sidesteps Deep Chat's
- * package `.d.ts`, whose transitive `speech-to-element` subpath type won't resolve here.
+ * ~400&nbsp;kB bundle is a separate chunk fetched only when a chat surface first mounts. Crucially the
+ * element is rendered only AFTER that import resolves (`ready`): Deep Chat doesn't reclaim properties
+ * set before upgrade, so binding `connect`/`introMessage`/`messageStyles` to a not-yet-defined element
+ * would be silently dropped and it would boot with its default (unthemed, no-connect) demo state. The
+ * self-contained bundle also sidesteps Deep Chat's package `.d.ts`, whose transitive `speech-to-element`
+ * subpath type won't resolve here.
  */
 @Component({
   selector: 'cmn-chat',
@@ -47,21 +51,23 @@ const UNAVAILABLE_ERROR = 'The agent is unavailable right now. Please try again.
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   host: {class: 'block h-full w-full min-h-0'},
   template: `
-    <deep-chat
-      [style.width]="'100%'"
-      [style.height]="'100%'"
-      [style.border]="'none'"
-      [style.borderRadius]="'0'"
-      [style.backgroundColor]="'transparent'"
-      [connect]="connect"
-      [history]="history()"
-      [introMessage]="introMessageObj()"
-      [messageStyles]="messageStyles"
-      [textInput]="textInput()"
-      [inputAreaStyle]="inputAreaStyle"
-      [submitButtonStyles]="submitButtonStyles"
-      [auxiliaryStyle]="auxiliaryStyle"
-    />
+    @if (ready()) {
+      <deep-chat
+        [style.width]="'100%'"
+        [style.height]="'100%'"
+        [style.border]="'none'"
+        [style.borderRadius]="'0'"
+        [style.backgroundColor]="'transparent'"
+        [connect]="connect"
+        [history]="history()"
+        [introMessage]="introMessageObj()"
+        [messageStyles]="messageStyles"
+        [textInput]="textInput()"
+        [inputAreaStyle]="inputAreaStyle"
+        [submitButtonStyles]="submitButtonStyles"
+        [auxiliaryStyle]="auxiliaryStyle"
+      />
+    }
   `,
 })
 export class ChatComponent {
@@ -137,11 +143,14 @@ export class ChatComponent {
     this.introMessage() ? {text: this.introMessage()} : undefined
   );
 
+  // Only true once <deep-chat> is defined, so bindings hit an upgraded element (see class docs).
+  protected readonly ready = signal(false);
+
   constructor() {
     // Register the <deep-chat> element on demand — a separate lazy chunk (see class docs).
     // @ts-expect-error - the self-contained bundle ships no type declarations; used only for its
     // custom-element registration side effect, so an untyped module is correct here.
-    void import('deep-chat/dist/deepChat.bundle.js');
+    void import('deep-chat/dist/deepChat.bundle.js').then(() => this.ready.set(true));
   }
 
   private runTurn(body: DeepChatRequestBody, signals: DeepChatSignals): void {
