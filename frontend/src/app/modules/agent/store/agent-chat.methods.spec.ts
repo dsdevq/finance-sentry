@@ -10,64 +10,31 @@ function build() {
 }
 
 describe('agentChatMethods', () => {
-  it('appends a user message then an assistant placeholder', () => {
+  it('sets the active conversation id without remounting (no nonce bump)', () => {
     const {store, methods} = build();
-    methods.appendUserMessage('why is my book down?');
-    methods.beginAssistantMessage();
+    methods.setActiveConversationId('c1');
 
-    const messages = store.messages();
-    expect(messages).toHaveLength(2);
-    expect(messages[0]).toMatchObject({role: 'user', text: 'why is my book down?'});
-    expect(messages[1]).toMatchObject({role: 'assistant', text: '', streaming: true});
+    expect(store.activeConversationId()).toBe('c1');
+    expect(store.threadNonce()).toBe(0);
   });
 
-  it('concatenates streamed deltas onto the last assistant message', () => {
+  it('resetThread clears the thread and bumps the nonce to force a remount', () => {
     const {store, methods} = build();
-    methods.beginAssistantMessage();
-    methods.appendAssistantDelta('Hel');
-    methods.appendAssistantDelta('lo');
+    methods.setActiveConversationId('c1');
+    methods.resetThread();
 
-    expect(store.messages().at(-1)?.text).toBe('Hello');
+    expect(store.activeConversationId()).toBeNull();
+    expect(store.history()).toEqual([]);
+    expect(store.threadNonce()).toBe(1);
   });
 
-  it('tracks tool activity start/end on the assistant message', () => {
+  it('openConversation loads history, sets the id, and bumps the nonce', () => {
     const {store, methods} = build();
-    methods.beginAssistantMessage();
-    methods.setToolActivity('get_ips', 'start');
-    expect(store.messages().at(-1)?.tools).toEqual([{name: 'get_ips', running: true}]);
+    methods.openConversation('c1', [{role: 'user', text: 'hi'}]);
 
-    methods.setToolActivity('get_ips', 'end');
-    expect(store.messages().at(-1)?.tools).toEqual([{name: 'get_ips', running: false}]);
-  });
-
-  it('finishes the assistant message with the persisted id', () => {
-    const {store, methods} = build();
-    methods.beginAssistantMessage();
-    methods.appendAssistantDelta('done');
-    methods.finishAssistantMessage('msg-1');
-
-    const last = store.messages().at(-1);
-    expect(last).toMatchObject({id: 'msg-1', streaming: false});
-  });
-
-  it('drops an empty assistant placeholder on error', () => {
-    const {store, methods} = build();
-    methods.appendUserMessage('hi');
-    methods.beginAssistantMessage();
-    methods.endStreamingOnError();
-
-    const messages = store.messages();
-    expect(messages).toHaveLength(1);
-    expect(messages[0].role).toBe('user');
-  });
-
-  it('keeps a partially streamed message on error but stops streaming', () => {
-    const {store, methods} = build();
-    methods.beginAssistantMessage();
-    methods.appendAssistantDelta('partial');
-    methods.endStreamingOnError();
-
-    expect(store.messages().at(-1)).toMatchObject({text: 'partial', streaming: false});
+    expect(store.activeConversationId()).toBe('c1');
+    expect(store.history()).toEqual([{role: 'user', text: 'hi'}]);
+    expect(store.threadNonce()).toBe(1);
   });
 
   it('removes a conversation and clears the thread when it was active', () => {
@@ -76,13 +43,27 @@ describe('agentChatMethods', () => {
       {id: 'c1', title: 'a', updatedAt: '', modelId: 'm'},
       {id: 'c2', title: 'b', updatedAt: '', modelId: 'm'},
     ]);
-    methods.setActiveConversationId('c1');
-    methods.appendUserMessage('hello');
+    methods.openConversation('c1', [{role: 'ai', text: 'hello'}]);
 
     methods.removeConversationLocally('c1');
 
     expect(store.conversations().map(c => c.id)).toEqual(['c2']);
     expect(store.activeConversationId()).toBeNull();
-    expect(store.messages()).toHaveLength(0);
+    expect(store.history()).toEqual([]);
+  });
+
+  it('removes a non-active conversation without touching the open thread', () => {
+    const {store, methods} = build();
+    methods.setConversations([
+      {id: 'c1', title: 'a', updatedAt: '', modelId: 'm'},
+      {id: 'c2', title: 'b', updatedAt: '', modelId: 'm'},
+    ]);
+    methods.openConversation('c1', [{role: 'ai', text: 'hello'}]);
+
+    methods.removeConversationLocally('c2');
+
+    expect(store.conversations().map(c => c.id)).toEqual(['c1']);
+    expect(store.activeConversationId()).toBe('c1');
+    expect(store.history()).toEqual([{role: 'ai', text: 'hello'}]);
   });
 });

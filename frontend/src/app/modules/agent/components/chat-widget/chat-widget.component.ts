@@ -1,20 +1,9 @@
-import {
-  afterRenderEffect,
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  type ElementRef,
-  inject,
-  signal,
-  viewChild,
-} from '@angular/core';
+import {ChangeDetectionStrategy, Component, computed, inject, signal} from '@angular/core';
 import {toSignal} from '@angular/core/rxjs-interop';
 import {NavigationEnd, Router} from '@angular/router';
 import {
-  AlertComponent,
-  ChatInputComponent,
-  ChatMessageComponent,
-  EmptyStateComponent,
+  ChatComponent,
+  type CmnChatStreamFn,
   IconComponent,
   type LucideIconName,
 } from '@dsdevq-common/ui';
@@ -27,17 +16,10 @@ import {AgentChatStore} from '../../store/agent-chat.store';
   selector: 'fns-chat-widget',
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [AgentChatStore],
-  imports: [
-    AlertComponent,
-    ChatInputComponent,
-    ChatMessageComponent,
-    EmptyStateComponent,
-    IconComponent,
-  ],
+  imports: [ChatComponent, IconComponent],
   templateUrl: './chat-widget.component.html',
 })
 export class ChatWidgetComponent {
-  private readonly scrollContainer = viewChild<ElementRef<HTMLElement>>('scrollContainer');
   private readonly router = inject(Router);
   private readonly routerUrl = toSignal(
     this.router.events.pipe(
@@ -55,28 +37,11 @@ export class ChatWidgetComponent {
   protected readonly openIcon: LucideIconName = 'Sparkles';
   protected readonly closeIcon: LucideIconName = 'X';
   protected readonly newChatIcon: LucideIconName = 'Plus';
-  protected readonly emptyIcon: LucideIconName = 'Sparkles';
 
-  constructor() {
-    // Keep the newest message in view as text streams in (a render concern, not state).
-    afterRenderEffect(() => {
-      this.store.messages();
-      if (!this.isOpen()) {
-        return;
-      }
-      const element = this.scrollContainer()?.nativeElement;
-      if (element) {
-        element.scrollTop = element.scrollHeight;
-      }
-    });
-  }
+  public readonly chatStream: CmnChatStreamFn = text => this.store.stream(text);
 
   public toggle(): void {
     this.isOpen.update(open => !open);
-  }
-
-  public onSend(text: string): void {
-    this.store.send(text);
   }
 
   public onNewChat(): void {

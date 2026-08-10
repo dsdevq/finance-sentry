@@ -1,5 +1,3 @@
-import {type ChatToolActivity} from '@dsdevq-common/ui';
-
 /** Payload sent to POST /agent/chat. */
 export interface SendChatRequest {
   conversationId: string | null;
@@ -13,12 +11,3 @@ export type AgentSseEvent =
   | {type: 'tool'; name: string; phase: 'start' | 'end'}
   | {type: 'error'; code: string; message: string}
   | {type: 'done'; messageId: string};
-
-/** A message as rendered in the chat log. */
-export interface ChatMessageView {
-  id: string;
-  role: 'user' | 'assistant';
-  text: string;
-  streaming: boolean;
-  tools: ChatToolActivity[];
-}

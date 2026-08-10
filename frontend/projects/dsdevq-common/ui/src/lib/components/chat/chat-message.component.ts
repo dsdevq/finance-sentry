@@ -8,9 +8,11 @@ export interface ChatToolActivity {
   running: boolean;
 }
 
+// The width cap lives on the column wrapper (a flex item in the w-full row → a *definite*
+// percentage basis), not on the bubble. Capping an inline-block against a shrink-wrapped parent
+// collapses `max-w-[85%]` toward zero and makes `break-words` wrap every character.
 const BUBBLE_BASE =
-  'inline-block max-w-[85%] rounded-cmn-lg px-cmn-4 py-cmn-3 text-cmn-md font-base ' +
-  'whitespace-pre-wrap break-words';
+  'w-fit rounded-cmn-lg px-cmn-4 py-cmn-3 text-cmn-md font-base whitespace-pre-wrap break-words';
 
 const USER_BUBBLE = 'bg-accent-default text-text-inverse';
 const ASSISTANT_BUBBLE = 'bg-surface-raised text-text-primary border border-border-default';
@@ -20,7 +22,7 @@ const ASSISTANT_BUBBLE = 'bg-surface-raised text-text-primary border border-bord
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div [class]="rowClasses()">
-      <div [class.items-end]="isUser()" class="flex flex-col gap-cmn-2">
+      <div [class.items-end]="isUser()" class="flex flex-col gap-cmn-2 max-w-[85%]">
         <div [class]="bubbleClasses()">
           @if (text()) {
             <span>{{ text() }}</span>

@@ -1,6 +1,6 @@
-import {HttpErrorResponse} from '@angular/common/http';
 import {TestBed} from '@angular/core/testing';
-import {of, throwError} from 'rxjs';
+import {type CmnChatStreamEvent} from '@dsdevq-common/ui';
+import {of} from 'rxjs';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 
 import {type AgentSseEvent} from '../models/chat/chat.model';
@@ -11,22 +11,10 @@ import {agentChatEffects} from './agent-chat.effects';
 function buildStore(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     activeConversationId: vi.fn().mockReturnValue(null),
-    canSend: vi.fn().mockReturnValue(true),
     setConversations: vi.fn(),
     setActiveConversationId: vi.fn(),
-    setStreaming: vi.fn(),
-    resetThread: vi.fn(),
-    loadHistory: vi.fn(),
-    appendUserMessage: vi.fn(),
-    beginAssistantMessage: vi.fn(),
-    appendAssistantDelta: vi.fn(),
-    setToolActivity: vi.fn(),
-    finishAssistantMessage: vi.fn(),
-    endStreamingOnError: vi.fn(),
+    openConversation: vi.fn(),
     removeConversationLocally: vi.fn(),
-    setError: vi.fn(),
-    setLoading: vi.fn(),
-    setSuccess: vi.fn(),
     ...overrides,
   };
 }
@@ -49,7 +37,7 @@ function configure(service: ReturnType<typeof buildService>): void {
 describe('agentChatEffects', () => {
   beforeEach(() => TestBed.resetTestingModule());
 
-  it('send: streams deltas + tool events, then finishes and reloads', () => {
+  it('stream: maps text deltas, captures the new conversation id, and reloads on completion', () => {
     const store = buildStore();
     const service = buildService();
     const events: AgentSseEvent[] = [
@@ -57,28 +45,29 @@ describe('agentChatEffects', () => {
       {type: 'text', delta: 'Hel'},
       {type: 'text', delta: 'lo'},
       {type: 'tool', name: 'get_ips', phase: 'start'},
-      {type: 'tool', name: 'get_ips', phase: 'end'},
       {type: 'done', messageId: 'm1'},
     ];
     service.streamChat.mockReturnValue(of(...events));
     configure(service);
 
-    TestBed.runInInjectionContext(() => agentChatEffects(store).send('hi'));
+    const emitted: CmnChatStreamEvent[] = [];
+    TestBed.runInInjectionContext(() =>
+      agentChatEffects(store)
+        .stream('hi')
+        .subscribe(e => emitted.push(e))
+    );
 
-    expect(store.appendUserMessage).toHaveBeenCalledWith('hi');
-    expect(store.beginAssistantMessage).toHaveBeenCalledOnce();
+    expect(service.streamChat).toHaveBeenCalledWith({conversationId: null, message: 'hi'});
     expect(store.setActiveConversationId).toHaveBeenCalledWith('c1');
-    expect(store.appendAssistantDelta).toHaveBeenNthCalledWith(1, 'Hel');
-    expect(store.appendAssistantDelta).toHaveBeenNthCalledWith(2, 'lo');
-    expect(store.setToolActivity).toHaveBeenCalledWith('get_ips', 'start');
-    expect(store.setToolActivity).toHaveBeenCalledWith('get_ips', 'end');
-    expect(store.finishAssistantMessage).toHaveBeenCalledWith('m1');
-    expect(store.setStreaming).toHaveBeenCalledWith(true);
-    expect(store.setStreaming).toHaveBeenLastCalledWith(false);
+    // Only text/error events surface to <cmn-chat>; conversation/tool/done are filtered out.
+    expect(emitted).toEqual([
+      {type: 'text', delta: 'Hel'},
+      {type: 'text', delta: 'lo'},
+    ]);
     expect(service.listConversations).toHaveBeenCalled();
   });
 
-  it('send: maps an error event to setError and stops streaming', () => {
+  it('stream: maps an error event to a CmnChatStreamEvent error', () => {
     const store = buildStore();
     const service = buildService();
     service.streamChat.mockReturnValue(
@@ -86,39 +75,17 @@ describe('agentChatEffects', () => {
     );
     configure(service);
 
-    TestBed.runInInjectionContext(() => agentChatEffects(store).send('hi'));
-
-    expect(store.setError).toHaveBeenCalledWith('agent_not_configured');
-    expect(store.endStreamingOnError).toHaveBeenCalledOnce();
-    expect(store.setStreaming).toHaveBeenLastCalledWith(false);
-  });
-
-  it('send: maps a transport failure to an error code', () => {
-    const store = buildStore();
-    const service = buildService();
-    service.streamChat.mockReturnValue(
-      throwError(() => new HttpErrorResponse({error: {errorCode: 'llm_unavailable'}, status: 500}))
+    const emitted: CmnChatStreamEvent[] = [];
+    TestBed.runInInjectionContext(() =>
+      agentChatEffects(store)
+        .stream('hi')
+        .subscribe(e => emitted.push(e))
     );
-    configure(service);
 
-    TestBed.runInInjectionContext(() => agentChatEffects(store).send('hi'));
-
-    expect(store.setError).toHaveBeenCalledWith('llm_unavailable');
-    expect(store.endStreamingOnError).toHaveBeenCalled();
+    expect(emitted).toEqual([{type: 'error', message: 'nope'}]);
   });
 
-  it('send: does nothing while already streaming', () => {
-    const store = buildStore({canSend: vi.fn().mockReturnValue(false)});
-    const service = buildService();
-    configure(service);
-
-    TestBed.runInInjectionContext(() => agentChatEffects(store).send('hi'));
-
-    expect(store.appendUserMessage).not.toHaveBeenCalled();
-    expect(service.streamChat).not.toHaveBeenCalled();
-  });
-
-  it('selectConversation: loads history for the chosen thread', () => {
+  it('selectConversation: loads and maps history for the chosen thread', () => {
     const store = buildStore();
     const service = buildService();
     const detail: ConversationDetail = {
@@ -136,6 +103,22 @@ describe('agentChatEffects', () => {
           toolResultsJson: null,
           createdAt: '',
         },
+        {
+          id: 'm2',
+          role: 'assistant',
+          content: 'hey',
+          toolCallsJson: null,
+          toolResultsJson: null,
+          createdAt: '',
+        },
+        {
+          id: 'm3',
+          role: 'tool',
+          content: 'noise',
+          toolCallsJson: null,
+          toolResultsJson: null,
+          createdAt: '',
+        },
       ],
     };
     service.getConversation.mockReturnValue(of(detail));
@@ -143,8 +126,10 @@ describe('agentChatEffects', () => {
 
     TestBed.runInInjectionContext(() => agentChatEffects(store).selectConversation('c1'));
 
-    expect(store.setActiveConversationId).toHaveBeenCalledWith('c1');
-    expect(store.loadHistory).toHaveBeenCalledWith(detail.messages);
+    expect(store.openConversation).toHaveBeenCalledWith('c1', [
+      {role: 'user', text: 'hi'},
+      {role: 'ai', text: 'hey'},
+    ]);
   });
 
   it('deleteConversation: removes locally and reloads', () => {
