@@ -17,6 +17,16 @@ using Microsoft.Extensions.Options;
 /// browser chat is the real Ledger with no Anthropic key in FS. Conversations are independent: FS is the
 /// source of truth for browser threads and replays full history each turn, so the gateway is driven
 /// statelessly (no OpenAI <c>user</c> session key) and browser/Telegram memories never cross.
+///
+/// <para>
+/// Ledger's persona is tuned for proactive Telegram/cron use where "silence is the correct default": on a
+/// content-free message (a greeting, an ack) it emits the OpenClaw <c>NO_REPLY</c> sentinel to stay quiet.
+/// That is right for a channel but wrong for a browser chat where the user is staring at the widget waiting
+/// for a reply — rendering the raw sentinel is the "NO_REPLY" bug. The <c>system</c> role is ignored by
+/// this endpoint (Ledger owns its persona), so we can't disable the behaviour upstream; instead this service
+/// suppresses the sentinel client-side — swapping in a greeting when the whole reply is silence, and
+/// stripping a leading <c>NO_REPLY</c> if the agent self-corrects. Substantive replies stream untouched.
+/// </para>
 /// </summary>
 public sealed class OpenClawAgentConversationService(
     IHttpClientFactory httpClientFactory,
@@ -24,6 +34,14 @@ public sealed class OpenClawAgentConversationService(
     ILogger<OpenClawAgentConversationService> logger) : IAgentConversationService
 {
     public const string HttpClientName = "agent-openclaw";
+
+    /// <summary>OpenClaw's "stay silent" sentinel — never rendered in the interactive browser chat.</summary>
+    private const string SilenceSentinel = "NO_REPLY";
+
+    /// <summary>Shown when Ledger would otherwise stay silent, so the widget is never left blank.</summary>
+    private const string SilenceFallback =
+        "Hey Denys 👋 I'm Ledger — your finance agent. Ask me anything about your book: "
+        + "positioning, a specific name, risk flags, or what's moved. What do you want to look at?";
 
     private const int MaxLoggedBody = 500;
 
@@ -84,7 +102,13 @@ public sealed class OpenClawAgentConversationService(
 
             await using var stream = await response.Content.ReadAsStreamAsync(ct);
             using var reader = new StreamReader(stream, Encoding.UTF8);
-            var builder = new StringBuilder();
+
+            // `visible` is what we actually emit to the client; `held` buffers the opening text while it's
+            // still ambiguous whether the whole reply is just the NO_REPLY silence sentinel. Once `decided`,
+            // deltas pass straight through.
+            var visible = new StringBuilder();
+            var held = new StringBuilder();
+            var decided = false;
 
             while (true)
             {
@@ -134,14 +158,51 @@ public sealed class OpenClawAgentConversationService(
                 }
 
                 var delta = ExtractDelta(data);
-                if (!string.IsNullOrEmpty(delta))
+                if (string.IsNullOrEmpty(delta))
                 {
-                    builder.Append(delta);
+                    continue;
+                }
+
+                if (decided)
+                {
+                    visible.Append(delta);
                     yield return new AgentTextEvent(delta);
+                    continue;
+                }
+
+                held.Append(delta);
+                var trimmed = held.ToString().TrimStart();
+
+                // Any prefix of "NO_REPLY" (including the full sentinel) could still be pure silence — keep
+                // holding, emit nothing yet.
+                if (trimmed.Length == 0 || SilenceSentinel.StartsWith(trimmed, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                // The reply diverged from the sentinel. If it opened with NO_REPLY the agent self-corrected —
+                // drop the sentinel prefix and emit the rest; otherwise emit the buffered text as-is.
+                decided = true;
+                var emit = trimmed.StartsWith(SilenceSentinel, StringComparison.Ordinal)
+                    ? trimmed[SilenceSentinel.Length..].TrimStart()
+                    : trimmed;
+                held.Clear();
+                if (emit.Length > 0)
+                {
+                    visible.Append(emit);
+                    yield return new AgentTextEvent(emit);
                 }
             }
 
-            yield return new AgentCompletionEvent(builder.ToString(), null);
+            // Nothing rendered — the whole reply was the silence sentinel (or empty). Never leave the widget
+            // blank or show the raw sentinel: greet instead.
+            if (visible.Length == 0)
+            {
+                visible.Append(SilenceFallback);
+                yield return new AgentTextEvent(SilenceFallback);
+            }
+
+            yield return new AgentCompletionEvent(visible.ToString(), null);
         }
     }
 
