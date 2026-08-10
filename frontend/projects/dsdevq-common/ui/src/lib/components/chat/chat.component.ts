@@ -53,6 +53,7 @@ const UNAVAILABLE_ERROR = 'The agent is unavailable right now. Please try again.
   template: `
     @if (ready()) {
       <deep-chat
+        [style.display]="'block'"
         [style.width]="'100%'"
         [style.height]="'100%'"
         [style.border]="'none'"
