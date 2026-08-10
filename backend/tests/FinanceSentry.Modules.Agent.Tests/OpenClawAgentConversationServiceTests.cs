@@ -65,6 +65,57 @@ public sealed class OpenClawAgentConversationServiceTests
     }
 
     [Fact]
+    public async Task RunAsync_SwapsBareNoReplySentinel_ForGreeting()
+    {
+        // Ledger stays silent on trivial openers ("hi") by emitting NO_REPLY — the browser widget must never
+        // render the raw sentinel.
+        var sse = string.Concat(
+            "data: {\"choices\":[{\"delta\":{\"content\":\"NO\"}}]}\n",
+            "data: {\"choices\":[{\"delta\":{\"content\":\"_REPLY\"}}]}\n",
+            "data: [DONE]\n");
+        var service = CreateSut(new StubHandler(_ => Sse(sse)));
+
+        var events = await DrainAsync(service, "hi");
+
+        var text = string.Concat(events.OfType<AgentTextEvent>().Select(e => e.Delta));
+        text.Should().NotContain("NO_REPLY");
+        text.Should().StartWith("Hey Denys");
+        var completion = events.OfType<AgentCompletionEvent>().Should().ContainSingle().Subject;
+        completion.FinalText.Should().Be(text);
+    }
+
+    [Fact]
+    public async Task RunAsync_StripsLeadingNoReply_WhenAgentSelfCorrects()
+    {
+        var sse = string.Concat(
+            "data: {\"choices\":[{\"delta\":{\"content\":\"NO_REPLY\"}}]}\n",
+            "data: {\"choices\":[{\"delta\":{\"content\":\" Morning, Denys.\"}}]}\n",
+            "data: [DONE]\n");
+        var service = CreateSut(new StubHandler(_ => Sse(sse)));
+
+        var events = await DrainAsync(service, "hi");
+
+        var text = string.Concat(events.OfType<AgentTextEvent>().Select(e => e.Delta));
+        text.Should().Be("Morning, Denys.");
+    }
+
+    [Fact]
+    public async Task RunAsync_PreservesRealReply_ContainingNoReplySubstring()
+    {
+        // A genuine reply that merely mentions the sentinel mid-sentence must pass through untouched.
+        var sse = string.Concat(
+            "data: {\"choices\":[{\"delta\":{\"content\":\"You'll see \"}}]}\n",
+            "data: {\"choices\":[{\"delta\":{\"content\":\"NO_REPLY when I stay quiet.\"}}]}\n",
+            "data: [DONE]\n");
+        var service = CreateSut(new StubHandler(_ => Sse(sse)));
+
+        var events = await DrainAsync(service, "what does NO_REPLY mean?");
+
+        var completion = events.OfType<AgentCompletionEvent>().Should().ContainSingle().Subject;
+        completion.FinalText.Should().Be("You'll see NO_REPLY when I stay quiet.");
+    }
+
+    [Fact]
     public async Task RunAsync_RoutesToLedgerAgent_WithBearer_AndFullHistory()
     {
         var handler = new StubHandler(_ => Sse("data: [DONE]\n"));
