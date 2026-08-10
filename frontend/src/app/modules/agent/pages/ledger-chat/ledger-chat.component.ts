@@ -1,17 +1,8 @@
+import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
 import {
-  afterRenderEffect,
-  ChangeDetectionStrategy,
-  Component,
-  type ElementRef,
-  inject,
-  viewChild,
-} from '@angular/core';
-import {
-  AlertComponent,
   ButtonComponent,
-  ChatInputComponent,
-  ChatMessageComponent,
-  EmptyStateComponent,
+  ChatComponent,
+  type CmnChatStreamFn,
   type LucideIconName,
 } from '@dsdevq-common/ui';
 
@@ -23,38 +14,16 @@ import {AgentChatStore} from '../../store/agent-chat.store';
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {class: 'block h-full'},
   providers: [AgentChatStore],
-  imports: [
-    AlertComponent,
-    ButtonComponent,
-    ChatInputComponent,
-    ChatMessageComponent,
-    EmptyStateComponent,
-  ],
+  imports: [ButtonComponent, ChatComponent],
   templateUrl: './ledger-chat.component.html',
 })
 export class LedgerChatComponent {
-  private readonly scrollContainer = viewChild<ElementRef<HTMLElement>>('scrollContainer');
-
   public readonly store = inject(AgentChatStore);
 
   protected readonly newChatIcon: LucideIconName = 'Plus';
   protected readonly deleteIcon: LucideIconName = 'Trash2';
-  protected readonly emptyIcon: LucideIconName = 'Sparkles';
 
-  constructor() {
-    // Keep the newest message in view as text streams in (a render concern, not state).
-    afterRenderEffect(() => {
-      this.store.messages();
-      const element = this.scrollContainer()?.nativeElement;
-      if (element) {
-        element.scrollTop = element.scrollHeight;
-      }
-    });
-  }
-
-  public onSend(text: string): void {
-    this.store.send(text);
-  }
+  public readonly chatStream: CmnChatStreamFn = text => this.store.stream(text);
 
   public onNewChat(): void {
     this.store.resetThread();

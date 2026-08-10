@@ -1,7 +1,17 @@
 import {inject} from '@angular/core';
-import {extractErrorCode} from '@dsdevq-common/core';
+import {type CmnChatMessage, type CmnChatStreamEvent} from '@dsdevq-common/ui';
 import {rxMethod} from '@ngrx/signals/rxjs-interop';
-import {catchError, EMPTY, filter, finalize, pipe, switchMap, tap} from 'rxjs';
+import {
+  catchError,
+  EMPTY,
+  filter,
+  finalize,
+  map,
+  type Observable,
+  pipe,
+  switchMap,
+  tap,
+} from 'rxjs';
 
 import {type AgentSseEvent} from '../models/chat/chat.model';
 import {
@@ -12,22 +22,17 @@ import {AgentService} from '../services/agent.service';
 
 interface EffectsStore {
   activeConversationId: () => string | null;
-  canSend: () => boolean;
   setConversations: (conversations: ConversationSummary[]) => void;
   setActiveConversationId: (id: string | null) => void;
-  setStreaming: (streaming: boolean) => void;
-  resetThread: () => void;
-  loadHistory: (messages: AgentMessage[]) => void;
-  appendUserMessage: (text: string) => void;
-  beginAssistantMessage: () => void;
-  appendAssistantDelta: (delta: string) => void;
-  setToolActivity: (name: string, phase: 'start' | 'end') => void;
-  finishAssistantMessage: (messageId: string) => void;
-  endStreamingOnError: () => void;
+  openConversation: (id: string, history: CmnChatMessage[]) => void;
   removeConversationLocally: (id: string) => void;
-  setError: (code: string | null) => void;
-  setLoading: () => void;
-  setSuccess: () => void;
+}
+
+/** Maps persisted history to Deep Chat's roles; tool rows aren't shown as chat bubbles. */
+function toHistory(messages: AgentMessage[]): CmnChatMessage[] {
+  return messages
+    .filter(m => m.role === 'user' || m.role === 'assistant')
+    .map(m => ({role: m.role === 'assistant' ? 'ai' : 'user', text: m.content}));
 }
 
 export function agentChatEffects(store: EffectsStore) {
@@ -44,67 +49,12 @@ export function agentChatEffects(store: EffectsStore) {
     )
   );
 
-  const handleEvent = (event: AgentSseEvent): void => {
-    switch (event.type) {
-      case 'conversation':
-        store.setActiveConversationId(event.conversationId);
-        break;
-      case 'text':
-        store.appendAssistantDelta(event.delta);
-        break;
-      case 'tool':
-        store.setToolActivity(event.name, event.phase);
-        break;
-      case 'error':
-        store.setError(event.code);
-        store.endStreamingOnError();
-        break;
-      case 'done':
-        store.finishAssistantMessage(event.messageId);
-        break;
-    }
-  };
-
-  const send = rxMethod<string>(
-    pipe(
-      filter(() => store.canSend()),
-      tap(text => {
-        store.setSuccess();
-        store.appendUserMessage(text);
-        store.beginAssistantMessage();
-        store.setStreaming(true);
-      }),
-      switchMap(text =>
-        agentService.streamChat({conversationId: store.activeConversationId(), message: text}).pipe(
-          tap(event => handleEvent(event)),
-          catchError((err: unknown) => {
-            store.setError(extractErrorCode(err));
-            store.endStreamingOnError();
-            return EMPTY;
-          }),
-          finalize(() => {
-            store.setStreaming(false);
-            loadConversations();
-          })
-        )
-      )
-    )
-  );
-
   const selectConversation = rxMethod<string>(
     pipe(
-      tap(() => store.setLoading()),
       switchMap(id =>
         agentService.getConversation(id).pipe(
-          tap(detail => {
-            store.setActiveConversationId(detail.id);
-            store.loadHistory(detail.messages);
-            store.setSuccess();
-          }),
-          catchError((err: unknown) => {
-            store.setError(extractErrorCode(err));
-            return EMPTY;
-          })
+          tap(detail => store.openConversation(detail.id, toHistory(detail.messages))),
+          catchError(() => EMPTY)
         )
       )
     )
@@ -118,16 +68,34 @@ export function agentChatEffects(store: EffectsStore) {
             store.removeConversationLocally(id);
             loadConversations();
           }),
-          catchError((err: unknown) => {
-            store.setError(extractErrorCode(err));
-            return EMPTY;
-          })
+          catchError(() => EMPTY)
         )
       )
     )
   );
 
-  return {loadConversations, send, selectConversation, deleteConversation};
+  // One assistant turn for <cmn-chat>. Threads the conversation id (captured mid-stream when the
+  // server assigns a new thread) and refreshes the sidebar list once the turn settles.
+  const stream = (text: string): Observable<CmnChatStreamEvent> =>
+    agentService.streamChat({conversationId: store.activeConversationId(), message: text}).pipe(
+      tap(event => {
+        if (event.type === 'conversation') {
+          store.setActiveConversationId(event.conversationId);
+        }
+      }),
+      filter(
+        (event): event is Extract<AgentSseEvent, {type: 'text'} | {type: 'error'}> =>
+          event.type === 'text' || event.type === 'error'
+      ),
+      map(event =>
+        event.type === 'text'
+          ? ({type: 'text', delta: event.delta} as const)
+          : ({type: 'error', message: event.message} as const)
+      ),
+      finalize(() => loadConversations())
+    );
+
+  return {loadConversations, selectConversation, deleteConversation, stream};
 }
 
 export function agentChatHooks(store: {loadConversations: () => void}) {

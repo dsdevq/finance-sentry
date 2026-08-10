@@ -39,34 +39,16 @@
   </aside>
 
   <!-- Chat surface -->
-  <section class="flex min-w-0 flex-1 flex-col">
-    <div #scrollContainer class="flex-1 overflow-y-auto">
-      @if (store.hasMessages()) {
-        <div class="flex flex-col gap-cmn-4 p-cmn-2">
-          @for (message of store.messages(); track message.id) {
-            <cmn-chat-message
-              [role]="message.role"
-              [text]="message.text"
-              [streaming]="message.streaming"
-              [tools]="message.tools"
-            />
-          }
-        </div>
-      } @else {
-        <cmn-empty-state
-          [icon]="emptyIcon"
-          message="Ask Ledger"
-          subMessage="Your finance agent, grounded in your real book. Ask about allocation drift, risk, the regime, or a position."
-        />
-      }
-    </div>
-
-    @if (store.hasError()) {
-      <cmn-alert variant="error" class="mt-cmn-2">{{ store.errorMessage() }}</cmn-alert>
+  <section
+    class="flex min-w-0 flex-1 flex-col overflow-hidden rounded-cmn-lg border border-border-default bg-surface-card"
+  >
+    @for (key of [store.historyKey()]; track key) {
+      <cmn-chat
+        [history]="store.history()"
+        [stream]="chatStream"
+        placeholder="Ask Ledger…"
+        introMessage="I'm Ledger — your finance agent, grounded in your real book. Ask about allocation drift, risk, the regime, or a position."
+      />
     }
-
-    <div class="mt-cmn-3">
-      <cmn-chat-input [loading]="store.isStreaming()" (send)="onSend($event)" />
-    </div>
   </section>
 </div>
