@@ -66,8 +66,7 @@ services:
       TrueLayer__Scopes: "info accounts balance transactions cards offline_access"
       # Ship structured logs to Loki (fire-and-forget); empty disables the sink.
       Observability__Loki__Url: ${OBSERVABILITY_LOKI_URL:-http://loki:3100}
-    ports:
-      - "127.0.0.1:${API_PORT:-5001}:5000"
+    # No host port — reachable only via the gateway (025 cutover, 2026-08-12).
     depends_on:
       postgres:
         condition: service_healthy
@@ -123,8 +122,7 @@ services:
     image: finance-sentry/frontend:local
     container_name: finance-sentry-frontend
     restart: unless-stopped
-    ports:
-      - "127.0.0.1:${FRONTEND_PORT:-4200}:4200"
+    # No host port — reachable only via the gateway (025 cutover, 2026-08-12).
     depends_on:
       # Ordering only — NOT service_healthy. During a recreate the old and new api
       # containers briefly overlap and contend on the ~14 per-context EF migration
@@ -141,9 +139,9 @@ services:
       options: { max-size: "10m", max-file: "3" }
 
   # --- Edge gateway (025) — single YARP reverse-proxy front door -----------------------------------
-  # ADDITIVE rollout: this runs ALONGSIDE the existing stack. The frontend/api/mcp direct ports above
-  # are intentionally LEFT PUBLISHED — the destructive cutover (closing them, making the gateway the
-  # sole entrypoint) is a separate operator-approved step (see specs/025-edge-gateway/quickstart.md).
+  # CUTOVER DONE (2026-08-12): the gateway is the sole entrypoint. Tailscale Serve fronts
+  # loopback:8080 on :4200 and :5001 (both URLs kept working, now path-routed by YARP); the
+  # frontend/api host ports are closed. Rollback: re-add the ports: blocks and repoint serve.
   #
   # TLS: default is Tailscale-terminated — the gateway serves plain HTTP on loopback:8080 and
   # `tailscale serve` fronts it. To switch to public-domain ACME instead, set the LettuceEncrypt env
