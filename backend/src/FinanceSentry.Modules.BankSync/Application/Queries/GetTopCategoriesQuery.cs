@@ -6,9 +6,10 @@ using FinanceSentry.Core.Cqrs;
 // ── Query ──────────────────────────────────────────────────────────────────────
 
 /// <summary>
-/// Returns the top spending categories for a user sorted by total spend DESC.
+/// Returns the top spending categories for a user over the last <see cref="Months"/>
+/// calendar months, sorted by total spend DESC.
 /// </summary>
-public record GetTopCategoriesQuery(Guid UserId, int Limit = 10) : IQuery<IReadOnlyList<CategoryStat>>;
+public record GetTopCategoriesQuery(Guid UserId, int Limit = 10, int Months = 6) : IQuery<IReadOnlyList<CategoryStat>>;
 
 // ── Handler ────────────────────────────────────────────────────────────────────
 
@@ -19,6 +20,6 @@ public class GetTopCategoriesQueryHandler(IMerchantCategoryStatisticsService ser
     public async Task<IReadOnlyList<CategoryStat>> Handle(
           GetTopCategoriesQuery request, CancellationToken cancellationToken)
     {
-        return await _service.GetTopCategoriesAsync(request.UserId, request.Limit, cancellationToken);
+        return await _service.GetTopCategoriesAsync(request.UserId, request.Limit, request.Months, cancellationToken);
     }
 }

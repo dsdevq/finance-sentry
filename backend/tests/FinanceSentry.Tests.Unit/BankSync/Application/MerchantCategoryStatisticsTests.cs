@@ -35,7 +35,7 @@ public class MerchantCategoryStatisticsTests
         IEnumerable<Transaction> transactions, IEnumerable<BankAccount> accounts)
     {
         var txRepoMock = new Mock<ITransactionRepository>();
-        txRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
+        txRepoMock.Setup(r => r.GetByUserIdSinceAsync(UserId, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
                   .ReturnsAsync(transactions.ToList());
 
         var acctRepoMock = new Mock<IBankAccountRepository>();
@@ -118,5 +118,35 @@ public class MerchantCategoryStatisticsTests
 
         // 100 + (10000 × 0.024) = 340, not 10100
         result.Single(c => c.Category == "Food").TotalSpend.Should().Be(340m);
+    }
+
+    [Fact]
+    public async Task GetTopCategories_QueriesOnlyTheRequestedMonthsWindow()
+    {
+        // The breakdown must be windowed, not all-time — the repository has to be asked
+        // for transactions since ~N months ago, not for the user's full history.
+        var (account, accountId) = MakeAccount();
+        var transactions = new List<Transaction>
+        {
+            MakeTx(accountId, 40m, "debit", DateTime.UtcNow.AddDays(-10), category: "Food"),
+        };
+
+        var txRepoMock = new Mock<ITransactionRepository>();
+        DateTime? capturedSince = null;
+        txRepoMock.Setup(r => r.GetByUserIdSinceAsync(UserId, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+                  .Callback<Guid, DateTime, CancellationToken>((_, since, _) => capturedSince = since)
+                  .ReturnsAsync(transactions);
+
+        var acctRepoMock = new Mock<IBankAccountRepository>();
+        acctRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
+                    .ReturnsAsync([account]);
+
+        var sut = new MerchantCategoryStatisticsService(
+            txRepoMock.Object, acctRepoMock.Object, new TransferDetectionService());
+
+        await sut.GetTopCategoriesAsync(UserId, limit: 10, months: 3);
+
+        capturedSince.Should().NotBeNull();
+        capturedSince!.Value.Should().BeCloseTo(DateTime.UtcNow.AddMonths(-3), TimeSpan.FromDays(1));
     }
 }

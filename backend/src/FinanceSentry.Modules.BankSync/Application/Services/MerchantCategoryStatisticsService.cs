@@ -15,11 +15,12 @@ public record CategoryStat(string Category, decimal TotalSpend, decimal PercentO
 public interface IMerchantCategoryStatisticsService
 {
     /// <summary>
-    /// Returns the top <paramref name="limit"/> spending categories sorted by TotalSpend DESC.
+    /// Returns the top <paramref name="limit"/> spending categories over the last
+    /// <paramref name="months"/> calendar months, sorted by TotalSpend DESC.
     /// Only posted (non-pending), active debit transactions are included.
     /// </summary>
     Task<IReadOnlyList<CategoryStat>> GetTopCategoriesAsync(
-        Guid userId, int limit = 10, CancellationToken ct = default);
+        Guid userId, int limit = 10, int months = 6, CancellationToken ct = default);
 }
 
 /// <inheritdoc />
@@ -34,9 +35,12 @@ public class MerchantCategoryStatisticsService(
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<CategoryStat>> GetTopCategoriesAsync(
-          Guid userId, int limit = 10, CancellationToken ct = default)
+          Guid userId, int limit = 10, int months = 6, CancellationToken ct = default)
     {
-        var txList = await _transactions.GetByUserIdAsync(userId, ct);
+        // Windowed to match the money-flow charts — an all-time breakdown silently mixes
+        // years of history into what reads as a current spending mix.
+        var since = DateTime.UtcNow.AddMonths(-months);
+        var txList = await _transactions.GetByUserIdSinceAsync(userId, since, ct);
 
         // Convert each transaction to USD by its account currency — accounts span UAH/EUR/…,
         // so summing native Amount would mix currencies and inflate the spend total.
