@@ -34,9 +34,9 @@ docker compose -f docker/docker-compose.prod.yml --env-file docker/.env up -d --
 echo "[deploy] prune dangling images (free disk on the VPS)"
 docker image prune -f >/dev/null
 
-echo "[deploy] wait for api health"
+echo "[deploy] wait for api health (via gateway — direct api port closed in 025 cutover)"
 deadline=$((SECONDS + 120))
-until curl -sf http://127.0.0.1:5001/api/v1/health >/dev/null 2>&1; do
+until curl -sf http://127.0.0.1:8080/api/v1/health >/dev/null 2>&1; do
   if [[ $SECONDS -gt $deadline ]]; then
     echo "error: api health check timed out after 120s" >&2
     docker compose -f docker/docker-compose.prod.yml logs --tail 60 api
@@ -45,4 +45,4 @@ until curl -sf http://127.0.0.1:5001/api/v1/health >/dev/null 2>&1; do
   sleep 2
 done
 
-echo "[deploy] ok — api reachable on 127.0.0.1:5001"
+echo "[deploy] ok — api reachable via gateway on 127.0.0.1:8080"
