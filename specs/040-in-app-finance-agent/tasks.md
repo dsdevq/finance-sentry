@@ -65,7 +65,7 @@
 
 - [x] T026 [P] Register `agent_conversations` / `agent_messages` in the Retention policy registry (024) with a sensible purge/keep decision; confirm the reflection coverage-guard test passes.
 - [x] T027 [P] Update `CLAUDE.md` "Current App State" (040 US2/US3 done: module, endpoint, `/ledger` page, `agent` schema/M001, Anthropic key) and flip `specs/040-in-app-finance-agent/spec.md` Status.
-- [ ] T028 QA golden path (quickstart.md) via Playwright once an `ANTHROPIC_API_KEY` is present — grounded answer, three-layer, progressive feedback, guardrail, context, scope. If no key at build time, run all key-independent checks (keyless state, auth, list/delete, UI) and note the live-chat check as pending the key.
+- [x] T028 QA golden path (quickstart.md) via Playwright — ran 2026-08-12 against production (OpenClaw-brain transport, no Anthropic key needed). All six criteria PASS: grounded drift answer (real book via get_allocation_vs_target, needsRebalance:false), three-layer market answer (moves → rotation → book impact), progressive feedback (incremental stream deltas, UI responsive throughout), guardrail ("sell my NVDA" → refused, read-only by design, escalated for rationale; also caught NVDA isn't a Sentry holding), context (follow-up reconciled answers #1/#3 incl. the cash-definition gap), scope (test account's book only). History restores via sidebar conversation select; fresh page intentionally starts a new chat.
 
 ## Dependencies
 
