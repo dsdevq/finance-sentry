@@ -1,0 +1,113 @@
+# Frontend Rules (mandatory gates)
+
+## Frontend ESLint — mandatory gate
+
+After writing or modifying **any** Angular `.ts` file, run `npx eslint <file>` from `frontend/` and fix all errors before moving on. Non-negotiable rules (see constitution § II for the full list):
+- `inject()` only — no constructor parameter injection
+- `ChangeDetectionStrategy.OnPush` on every component
+- Do **not** add `standalone: true` to `@Component` / `@Pipe` / `@Directive` — it is the default in Angular 19+ and is dead boilerplate
+- Selector prefix: `fns-` (e.g. `fns-login`, `fns-dashboard`)
+- Explicit access modifiers on all class members (`public`/`private`)
+- No magic numbers — extract to named constants
+- camelCase class properties, no underscore prefix
+- Run `eslint --fix` after writing imports (auto-sorts + auto-formats)
+
+---
+
+## UI Component Library Rule
+
+**Any new UI component MUST be created in `@dsdevq-common/ui` first.** Components are never built directly in the host Angular app (`frontend/`). This applies to all future features, starting with 005-ui-component-library. The `cmn-` selector prefix is reserved for library components.
+
+**Before writing any Angular template or UI element**, always check `frontend/projects/dsdevq-common/ui/src/lib/components/` first. Use `cmn-button`, `cmn-input`, `cmn-form-field`, `cmn-alert`, `cmn-card`, etc. — never raw `<input>`, `<button>`, or `<div class="error">` when the library already has the component.
+
+---
+
+## File Organisation Rule (Frontend)
+
+In Angular modules, each concept lives in its own file — no mixing:
+- **Interfaces / types** → `models/<entity>/<entity>.model.ts` (or `*.types.ts` for type-alias-only files)
+- **Domain constants** → `constants/<entity>/<entity>.constants.ts` (separate sibling tree to `models/`); page-only UI constants → `<page>.constants.ts` next to the page
+- **Component class** → `*.component.ts` (no inline interface or constant definitions)
+- **Service class** → `*.service.ts` (HTTP-only; no state, no inline interfaces — import from model files)
+- **State** → `<feature>/store/*.state.ts` · `*.computed.ts` · `*.methods.ts` · `*.effects.ts` · `*.store.ts` (see State Management rule)
+- **Validators** → `<feature>/validators/*.validator.ts`
+
+**Shared rule**: any type, constant, utility, or enum used by more than one feature module MUST live in `frontend/src/app/shared/`. Never define cross-module concerns inside a feature folder. If a piece of code is imported by two or more modules, move it to `shared/` in the same PR.
+
+This is a **hard gate** — inline interfaces in component files and cross-module code outside `shared/` block PR merge (see constitution Principle VI.5). Use `/frontend-code-quality` for an audit sweep.
+
+---
+
+## Frontend State Management — NgRx SignalStore
+
+State belongs in a `signalStore()` under `modules/<feature>/store/`, **never** in component classes. Components are declarative: form definitions, template bindings, one-line dispatch handlers. No `ngOnInit` fetches, no `effect()` in components, no local `isLoading`/`errorMessage` fields.
+
+**Mandatory file split** (per store):
+
+| File | Role |
+|---|---|
+| `<name>.state.ts` | `interface <Name>State`, literal unions, `initial<Name>State` |
+| `<name>.computed.ts` | `<name>Computed(store)` — pure derivations (`isLoading`, `errorMessage`, etc.) |
+| `<name>.methods.ts` | `<name>Methods(store)` — synchronous `patchState` mutations only |
+| `<name>.effects.ts` | `<name>Effects(store)` — `rxMethod`s for HTTP/async; `<name>Hooks(store)` for router subscriptions and signal effects |
+| `<name>.store.ts` | `signalStore(..., withState(initial), withMethods(methods), withComputed(computed), withMethods(effects), withHooks({onInit: hooks}))` |
+
+Rules:
+- **Do not annotate return types on `*Methods`, `*Computed`, `*Effects` factories** — `withMethods` composition collapses explicit interfaces to `MethodsDictionary` and breaks `inject`. The `eslint.config.mjs` override for `**/store/**/*.ts` turns off `explicit-module-boundary-types` exactly for this reason.
+- **App-wide stores** (e.g. `AuthStore`) use `{providedIn: 'root'}`. **Page-scoped stores** (e.g. `DashboardStore`) are provided on the component via `providers: [Store]` — they tear down with the route.
+- **No `setInterval`.** Periodic refresh uses `timer(ms, ms).pipe(switchMap(...))` inside an `rxMethod` in `*.effects.ts`, kicked off by `onInit`.
+- **No component subscriptions.** Components inject the store and bind `store.someSignal()` in templates. For flows, call `store.someMethod(payload)` and rely on computed signals for loading/error feedback.
+- Unit tests live next to the files (`*.spec.ts`), use `TestBed.runInInjectionContext` and `signalState(initialState)` for lightweight fixtures. Run with `npx ng test --watch=false` (Vitest via `@angular/build:unit-test`).
+
+---
+
+## Type Unification — extract narrow shared bases as duplication appears
+
+When ≥3 model interfaces share the same fields with identical types, extract a structural base into `shared/models/<base-name>/<base-name>.model.ts` and refactor consumers to `extends`. Currently in place: `AccountIdentity` (account identifier fields) and `Timestamped` (`createdAt`). The `frontend-type-unification` skill covers the audit + extract loop and the criteria for *refusing* to extract (type divergence, optional/required mismatch, n=2 duplication, etc.). Don't unify aggressively — duplication of two is fine, hiding legitimate type divergence behind a base is not.
+
+---
+
+## Utility Helpers — always a `*.utils.ts` class
+
+Pure helper functions are NEVER bare `export function`s in a random file. Each helper lives in `<domain>.utils.ts` (e.g. `error.utils.ts`, `time.utils.ts`) under `frontend/src/app/shared/utils/` (cross-module) or `frontend/src/app/modules/<feature>/utils/` (feature-local), as a class with `public static` methods:
+
+```ts
+export class TimeUtils {
+  public static getRelativeTime(timestamp: Nullable<string>): string { ... }
+}
+```
+
+Rules:
+- One domain per file. `error.utils.ts` holds error helpers, `time.utils.ts` holds time helpers — never mix.
+- Methods are `public static`, no instance state, no DI, no `inject()`. If you need DI, make it a service in `services/` instead.
+- **Template-bound helpers must have a thin pipe wrapper.** If any `*.html` calls the helper, create `shared/pipes/<name>.pipe.ts` (or `modules/<feature>/pipes/`) whose `transform()` just delegates to the static method. Templates use the pipe; components don't expose the function via `public readonly fooFn = fooFn`.
+- Every `*.utils.ts` ships with `<domain>.utils.spec.ts` (Vitest) — one branch per `it`, edge cases (null/undefined/empty), `vi.useFakeTimers()` for time-dependent helpers. Coverage on the util file: 100%.
+
+The `frontend-utils-creation` skill covers the full mechanics; trigger it whenever you're tempted to write a bare helper function.
+
+---
+
+## Custom Providers — always extract
+
+Any provider beyond Angular's built-in `provideX()` helpers (`ErrorHandler`, custom injection tokens, `APP_INITIALIZER`, class-based `HTTP_INTERCEPTORS`, etc.) MUST be extracted to `frontend/src/app/core/providers/<name>.provider.ts`:
+
+```ts
+export function provideX(): EnvironmentProviders {
+  return makeEnvironmentProviders([{ provide: TOKEN, useValue: ... }]);
+}
+```
+
+`app.config.ts` then lists `provideX()` calls only. One provider concern per file. Feature-scoped providers live under `modules/<feature>/providers/`. The `angular-provider-extraction` skill enforces this.
+
+---
+
+## Error Message Resolution
+
+Error-code → user-message mapping is centralized. **Do not** add an `if/else` ladder in a component or store.
+
+- Mechanism lives in `@dsdevq-common/ui`: `ERROR_MESSAGES` injection token + `ErrorMessageService.resolve(code)` → `string | null`.
+- App provides the registry: `src/app/core/errors/error-messages.registry.ts` holds the flat `Record<string, string>` covering all backend `errorCode` values. Wired via `provideErrorMessages()` in `app.config.ts`.
+- Stores consume via `inject(ErrorMessageService)` inside `*.computed.ts`, falling back to a feature-specific default (`'Failed to load dashboard data.'`, `'Invalid email or password.'`, etc.) when `resolve()` returns `null`.
+- **When adding a new error code on the backend:** append the message to the registry in the same PR. The `error?.errorCode` extraction helper stays local to `*.effects.ts` (the `extractErrorCode(err)` pattern).
+
+---
