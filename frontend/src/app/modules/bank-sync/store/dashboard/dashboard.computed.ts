@@ -25,10 +25,16 @@ const COMPACT_FORMATTER = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 1,
 });
 
-const MONTH_FORMATTER = new Intl.DateTimeFormat('en-US', {month: 'short', year: '2-digit'});
+const MONTH_FORMATTER = new Intl.DateTimeFormat('en-US', {month: 'short'});
 const DAY_FORMATTER = new Intl.DateTimeFormat('en-US', {month: 'short', day: 'numeric'});
+const YEAR_SUFFIX_DIGITS = 2;
 
-// Below this span the snapshots are effectively daily, so month-year labels ("Jul 26")
+// "Jun '26", not "Jun 26" — a bare 2-digit year reads as a day of the month.
+function formatMonthYear(date: Date): string {
+  return `${MONTH_FORMATTER.format(date)} '${String(date.getUTCFullYear()).slice(-YEAR_SUFFIX_DIGITS)}`;
+}
+
+// Below this span the snapshots are effectively daily, so month-year labels ("Jul '26")
 // collapse to a single repeated value — use day-level labels ("Jul 5") instead.
 const SHORT_SPAN_DAYS = 92;
 const MS_PER_DAY = 86_400_000;
@@ -50,7 +56,7 @@ function currentMonthKey(): string {
 
 function formatMonthKey(key: string): string {
   const [year, month] = key.split('-').map(Number);
-  return MONTH_FORMATTER.format(new Date(Date.UTC(year, month - 1, 1)));
+  return formatMonthYear(new Date(Date.UTC(year, month - 1, 1)));
 }
 
 interface MonthTotals {
@@ -97,8 +103,9 @@ export function dashboardComputed(store: StateSignals) {
     }
     const times = history.map(s => new Date(s.snapshotDate).getTime());
     const spanDays = (Math.max(...times) - Math.min(...times)) / MS_PER_DAY;
-    const formatter = spanDays <= SHORT_SPAN_DAYS ? DAY_FORMATTER : MONTH_FORMATTER;
-    return s => formatter.format(new Date(s.snapshotDate));
+    const label =
+      spanDays <= SHORT_SPAN_DAYS ? (d: Date): string => DAY_FORMATTER.format(d) : formatMonthYear;
+    return s => label(new Date(s.snapshotDate));
   });
 
   return {
