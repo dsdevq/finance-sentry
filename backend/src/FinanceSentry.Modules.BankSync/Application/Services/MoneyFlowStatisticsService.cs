@@ -57,8 +57,9 @@ public class MoneyFlowStatisticsService(
         // 2. Fetch transactions in window
         var txList = await _transactions.GetByUserIdSinceAsync(userId, since, ct);
 
-        // 3. Detect internal transfer pairs so they don't inflate inflow / outflow
-        var transferIds = _transferDetection.DetectTransferTransactionIds(txList.ToList());
+        // 3. Detect internal transfer pairs so they don't inflate inflow / outflow.
+        // Currency map enables cross-currency pairing (e.g. Revolut EUR → Monobank UAH).
+        var transferIds = _transferDetection.DetectTransferTransactionIds(txList.ToList(), accountCurrencies);
 
         // 4. Group by (currency, year-month) and sum inflow/outflow
         var result = txList
