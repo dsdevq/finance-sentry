@@ -336,6 +336,19 @@ After **all tasks in a feature are complete**, act as a QA engineer: spin up the
 
 ---
 
+## Naming & Planning Conventions (adopted 2026-08-12)
+
+| Thing | Convention | Example |
+|---|---|---|
+| Branch | `<type>/<issue#>-<slug>` — type is a conventional-commit type; create via `gh issue develop <n> -b` so the branch links to the issue | `feat/411-canonical-book-figures` |
+| Commit / PR title | Conventional commits, scope = module or spec number (release-please parses these) | `feat(mcp): …`, `fix(040): …` |
+| Issue title | Imperative sentence, **no priority prefix** — priority lives in the `P1`/`P2` label and the Project field | `Asset Dossier — per-holding page …` |
+| Issue body | Traceability first (destination / source — why this exists), then acceptance criteria (**P1 issues only**; P2/P3 stay one-liners until promoted), then shape in PR count | see #411 |
+| Issue metadata | Type (Feature/Bug/Task) + milestone + `P1`/`P2` label + Project "Finance Sentry" Priority/Size fields. Size only on P1 (S=1 PR, M=2–3, L=4+) — never size the fog | — |
+| Milestone | `M<n> — <outcome>` — named for the outcome, never a date | `M1 — Ledger earns its keep` |
+
+Backlog planning happens in dedicated sessions (plan-backlog skill); every issue must trace to a destination. Main is protected — all changes land via PR (squash), including agent work.
+
 ## Collaboration Style
 
 - Responses must be short and direct. No trailing summaries — Denys can read the diff.
