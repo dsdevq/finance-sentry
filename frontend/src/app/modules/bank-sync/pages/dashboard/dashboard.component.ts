@@ -168,7 +168,7 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
             <div>
               <cmn-donut-chart
                 [segments]="store.categoryChartData()"
-                label="Top Spending Categories"
+                label="Top Spending Categories (6M)"
                 currency="USD"
               />
             </div>

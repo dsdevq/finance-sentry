@@ -51,7 +51,8 @@ public class DashboardQueryService(
         var bankTotalUsd = await _aggregation.GetTotalNetWorthUsdAsync(userId, ct);
         var byType = await _aggregation.GetAccountCountByTypeAsync(userId, ct);
         var flow = await _moneyFlow.GetMonthlyFlowAsync(userId, 6, ct);
-        var topCats = await _categories.GetTopCategoriesAsync(userId, 10, ct);
+        // Same 6-month window as the money-flow charts so the dashboard tells one story.
+        var topCats = await _categories.GetTopCategoriesAsync(userId, limit: 10, months: 6, ct);
         var lastSync = await _syncJobs.GetLatestSuccessfulByUserIdAsync(userId, ct);
 
         var cryptoHoldings = _cryptoHoldingsReader is not null
