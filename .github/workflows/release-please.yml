@@ -3,6 +3,10 @@ name: Release Please
 on:
   push:
     branches: [main]
+  # Dispatched by weekly-release.yml after it merges the release PR: a merge done with
+  # GITHUB_TOKEN does not fire push workflows, so the tag/release step must be invoked
+  # explicitly (workflow_dispatch is exempt from that restriction).
+  workflow_dispatch:
 
 permissions:
   contents: write
