@@ -10,6 +10,12 @@ public class MonobankAdapter(MonobankHttpClient client, ICategoryResolver catego
     private readonly MonobankHttpClient _client = client;
     private readonly ICategoryResolver _categoryResolver = categoryResolver;
 
+    /// <summary>Monobank rejects statement ranges longer than 31 days (+1h) with a 400.</summary>
+    private const int MaxStatementWindowDays = 31;
+
+    /// <summary>How far back the first-ever import of an account reaches.</summary>
+    private const int InitialImportDays = 90;
+
     public string ProviderName => "monobank";
 
     public async Task<IReadOnlyList<MonobankAccountInfo>> ConnectAsync(
@@ -59,30 +65,18 @@ public class MonobankAdapter(MonobankHttpClient client, ICategoryResolver catego
         var now = DateTimeOffset.UtcNow;
         var candidates = new List<TransactionCandidate>();
 
-        if (since.HasValue)
-        {
-            var from = new DateTimeOffset(since.Value.AddSeconds(1), TimeSpan.Zero);
-            if (from < now)
-            {
-                var txns = await _client.GetStatementsAsync(credential, externalAccountId, from, now, ct);
-                candidates.AddRange(MapTransactions(txns, accountId, userId));
-            }
-        }
-        else
-        {
-            // 90-day initial import: 3 × 31-day windows
-            var windows = new[]
-            {
-                (now.AddDays(-90), now.AddDays(-59)),
-                (now.AddDays(-59), now.AddDays(-28)),
-                (now.AddDays(-28), now)
-            };
+        var start = since.HasValue
+            ? new DateTimeOffset(since.Value.AddSeconds(1), TimeSpan.Zero)
+            : now.AddDays(-InitialImportDays);
 
-            foreach (var (from, to) in windows)
-            {
-                var txns = await _client.GetStatementsAsync(credential, externalAccountId, from, to, ct);
-                candidates.AddRange(MapTransactions(txns, accountId, userId));
-            }
+        // The statement endpoint rejects ranges longer than 31 days with a 400, so any
+        // span — the 90-day initial import or an incremental catch-up after a long gap —
+        // must be fetched as consecutive ≤31-day windows.
+        for (var from = start; from < now; from = from.AddDays(MaxStatementWindowDays))
+        {
+            var to = from.AddDays(MaxStatementWindowDays) < now ? from.AddDays(MaxStatementWindowDays) : now;
+            var txns = await _client.GetStatementsAsync(credential, externalAccountId, from, to, ct);
+            candidates.AddRange(MapTransactions(txns, accountId, userId));
         }
 
         return (candidates, DateTime.UtcNow);
