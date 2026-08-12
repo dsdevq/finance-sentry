@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component} from '@angular/core';
+import {ChangeDetectionStrategy, Component, signal} from '@angular/core';
 import {type ComponentFixture, TestBed} from '@angular/core/testing';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 
@@ -140,7 +140,9 @@ describe('EditableFieldComponent', () => {
   template: '<cmn-editable-field [(value)]="label" ariaLabel="label" />',
 })
 class TwoWayHostComponent {
-  public label = 'Initial';
+  // A signal, not a plain property: under zoneless change detection a mutated plain
+  // property never marks the OnPush host dirty, so the view would not re-render.
+  public readonly label = signal('Initial');
 }
 
 describe('EditableFieldComponent — two-way model binding', () => {
@@ -162,11 +164,11 @@ describe('EditableFieldComponent — two-way model binding', () => {
     const saveButton: HTMLButtonElement = fixture.nativeElement.querySelectorAll('button')[0];
     saveButton.click();
     fixture.detectChanges();
-    expect(fixture.componentInstance.label).toBe('Updated');
+    expect(fixture.componentInstance.label()).toBe('Updated');
   });
 
   it('should reflect host property changes in view mode', () => {
-    fixture.componentInstance.label = 'External update';
+    fixture.componentInstance.label.set('External update');
     fixture.detectChanges();
     const button: HTMLButtonElement | null = fixture.nativeElement.querySelector('button');
     expect(button?.textContent).toContain('External update');

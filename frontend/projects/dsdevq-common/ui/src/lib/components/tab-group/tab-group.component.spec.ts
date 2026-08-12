@@ -1,4 +1,4 @@
-import {ChangeDetectionStrategy, Component} from '@angular/core';
+import {ChangeDetectionStrategy, Component, signal} from '@angular/core';
 import {type ComponentFixture, TestBed} from '@angular/core/testing';
 import {beforeEach, describe, expect, it} from 'vitest';
 
@@ -129,7 +129,9 @@ describe('TabGroupComponent', () => {
 })
 class TwoWayHostComponent {
   public tabs: CmnTab[] = SAMPLE_TABS;
-  public current = 'overview';
+  // A signal, not a plain property: under zoneless change detection a mutated plain
+  // property never marks the OnPush host dirty, so the view would not re-render.
+  public readonly current = signal('overview');
 }
 
 describe('TabGroupComponent — two-way model binding', () => {
@@ -146,11 +148,11 @@ describe('TabGroupComponent — two-way model binding', () => {
       fixture.nativeElement.querySelectorAll('[role="tab"]');
     buttons[2].click();
     fixture.detectChanges();
-    expect(fixture.componentInstance.current).toBe('history');
+    expect(fixture.componentInstance.current()).toBe('history');
   });
 
   it('should reflect host property change in the rendered active tab', () => {
-    fixture.componentInstance.current = 'details';
+    fixture.componentInstance.current.set('details');
     fixture.detectChanges();
     const buttons: NodeListOf<HTMLButtonElement> =
       fixture.nativeElement.querySelectorAll('[role="tab"]');
@@ -193,7 +195,12 @@ describe('TabGroupComponent — content projection', () => {
     const host: HTMLElement = fixture.nativeElement.querySelector('cmn-tab-group');
     const allChildren = Array.from(host.children);
     const tablistIdx = allChildren.findIndex(el => el.getAttribute('role') === 'tablist');
-    const panelIdx = allChildren.findIndex(el => el.querySelector('[data-testid="panel"]'));
+    // The projected <p> is itself the child element, so match it directly —
+    // querySelector alone only searches descendants and would miss it.
+    const panelIdx = allChildren.findIndex(
+      el =>
+        el.matches('[data-testid="panel"]') || el.querySelector('[data-testid="panel"]') !== null
+    );
     expect(tablistIdx).toBeGreaterThanOrEqual(0);
     expect(panelIdx).toBeGreaterThanOrEqual(0);
     expect(tablistIdx).toBeLessThan(panelIdx);
