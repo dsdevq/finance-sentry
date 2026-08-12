@@ -38,6 +38,14 @@ public class BankAccount : Entity
 
     public string? LastSyncError { get; set; }
 
+    /// <summary>
+    /// Per-account transaction-sync watermark. Null means the account has never completed a
+    /// transaction import and the next sync must run the provider's initial-history window.
+    /// Deliberately per-account: a credential/connection-level timestamp lets the first-synced
+    /// account starve its siblings' fetch windows (the "white card never syncs" bug).
+    /// </summary>
+    public DateTime? LastTransactionSyncAt { get; set; }
+
     public bool IsActive { get; set; } = true;
 
     public Guid? CreatedBy { get; set; }

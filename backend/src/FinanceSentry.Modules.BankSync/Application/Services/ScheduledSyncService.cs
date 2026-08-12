@@ -261,13 +261,18 @@ public class ScheduledSyncService(
 
         var provider = _providerFactory.Resolve("monobank");
 
-        var since = cred.LastSyncAt;
+        // Per-account watermark, NOT cred.LastSyncAt: the credential is shared by every card
+        // on the token, so a shared timestamp lets the first-synced card starve the others'
+        // fetch windows (cards added later never received their initial history import).
+        var since = account.LastTransactionSyncAt;
         var (candidates, _) = await provider.SyncTransactionsAsync(
             plainToken, account.ExternalAccountId, account.Id, account.UserId, since, ct);
 
         var entities = await PersistAndReconcileAsync(account.Id, candidates, ct);
 
-        // T031: update last sync timestamp on credential
+        account.LastTransactionSyncAt = DateTime.UtcNow;
+
+        // T031: update last sync timestamp on credential (kept for display/reaper purposes)
         cred.LastSyncAt = DateTime.UtcNow;
         await _monobankCredentials.UpdateAsync(cred, ct);
 
@@ -342,7 +347,10 @@ public class ScheduledSyncService(
             ?? throw new InvalidOperationException($"TrueLayer connection {connectionId} not found.");
 
         var provider = _providerFactory.Resolve("truelayer");
-        var since = connection.LastSyncAt;
+        // Per-account watermark, NOT connection.LastSyncAt: a connection can back several
+        // accounts, and a shared timestamp lets the first-synced account starve the others'
+        // fetch windows (accounts added later never received their initial history import).
+        var since = account.LastTransactionSyncAt;
 
         IReadOnlyList<Domain.Transaction> entities;
         int candidateCount;
@@ -354,6 +362,9 @@ public class ScheduledSyncService(
             entities = await PersistAndReconcileAsync(account.Id, candidates, ct);
             candidateCount = candidates.Count;
 
+            account.LastTransactionSyncAt = DateTime.UtcNow;
+
+            // Kept for display/reaper purposes; no longer drives fetch windows.
             connection.LastSyncAt = DateTime.UtcNow;
             await _truelayerConnections.UpdateAsync(connection, ct);
         }
