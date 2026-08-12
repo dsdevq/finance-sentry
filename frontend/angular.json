@@ -83,7 +83,10 @@
           "builder": "@angular/build:dev-server",
           "options": {
             "proxyConfig": "proxy.conf.json",
-            "allowedHosts": ["frontend", "localhost"]
+            "allowedHosts": [
+              "frontend",
+              "localhost"
+            ]
           },
           "configurations": {
             "production": {
@@ -121,10 +124,14 @@
           "configurations": {
             "ci": {
               "watch": false,
-              "browsers": [
-                "ChromeHeadless"
-              ],
+              "headless": true,
               "coverage": true,
+              "coverageThresholds": {
+                "statements": 38,
+                "branches": 38,
+                "functions": 30,
+                "lines": 38
+              },
               "coverageExclude": [
                 "src/environments/**",
                 "src/main.ts",
@@ -172,6 +179,19 @@
             "browsers": [
               "chromium"
             ]
+          },
+          "configurations": {
+            "ci": {
+              "watch": false,
+              "headless": true,
+              "coverage": true,
+              "coverageThresholds": {
+                "statements": 84,
+                "branches": 85,
+                "functions": 74,
+                "lines": 84
+              }
+            }
           }
         },
         "lint": {
@@ -238,6 +258,19 @@
             "browsers": [
               "chromium"
             ]
+          },
+          "configurations": {
+            "ci": {
+              "watch": false,
+              "headless": true,
+              "coverage": true,
+              "coverageThresholds": {
+                "statements": 95,
+                "branches": 95,
+                "functions": 95,
+                "lines": 95
+              }
+            }
           }
         },
         "lint": {

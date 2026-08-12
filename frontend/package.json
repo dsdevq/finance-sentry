@@ -8,7 +8,7 @@
     "build:prod": "ng build --configuration production",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "test:ci": "ng test --watch=false --code-coverage --browsers=ChromeHeadless",
+    "test:ci": "ng test finance-sentry --configuration ci && ng test @dsdevq-common/ui --configuration ci && ng test @dsdevq-common/core --configuration ci",
     "lint": "ng lint",
     "format": "prettier --write \"src/**/*.{ts,html,scss}\"",
     "format:check": "prettier --check \"src/**/*.{ts,html,scss}\"",
