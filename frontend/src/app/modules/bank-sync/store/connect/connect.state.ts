@@ -3,13 +3,7 @@ import {type InstitutionType} from '../../../../shared/models/provider/provider.
 import {type ModalStep} from '../../models/connect/connect.model';
 
 export type ConnectStatus =
-  | 'idle'
-  | 'initializing'
-  | 'ready'
-  | 'syncing'
-  | 'polling'
-  | 'error'
-  | 'success';
+  'idle' | 'initializing' | 'ready' | 'syncing' | 'polling' | 'error' | 'success';
 
 export interface ConnectState {
   selectedProvider: Provider;

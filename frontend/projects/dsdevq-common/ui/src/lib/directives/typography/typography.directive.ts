@@ -1,16 +1,7 @@
 import {Directive, effect, ElementRef, inject, input, Renderer2} from '@angular/core';
 
 export type TypographyLevel =
-  | 'display'
-  | 'h1'
-  | 'h2'
-  | 'h3'
-  | 'h4'
-  | 'body'
-  | 'small'
-  | 'caption'
-  | 'label'
-  | 'code';
+  'display' | 'h1' | 'h2' | 'h3' | 'h4' | 'body' | 'small' | 'caption' | 'label' | 'code';
 
 const LEVEL_CLASSES: Record<TypographyLevel, string[]> = {
   display: ['font-headline', 'text-cmn-4xl', 'font-bold', 'leading-tight', 'tracking-tight'],
