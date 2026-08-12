@@ -37,12 +37,13 @@ public class MerchantCategoryStatisticsService(
           Guid userId, int limit = 10, CancellationToken ct = default)
     {
         var txList = await _transactions.GetByUserIdAsync(userId, ct);
-        var transferIds = _transferDetection.DetectTransferTransactionIds(txList.ToList());
 
         // Convert each transaction to USD by its account currency — accounts span UAH/EUR/…,
         // so summing native Amount would mix currencies and inflate the spend total.
         var accountList = await _accounts.GetByUserIdAsync(userId, ct);
         var currencyByAccount = accountList.ToDictionary(a => a.Id, a => a.Currency);
+
+        var transferIds = _transferDetection.DetectTransferTransactionIds(txList.ToList(), currencyByAccount);
         decimal ToUsd(Transaction t) =>
             CurrencyConverter.ToUsd(t.Amount, currencyByAccount.TryGetValue(t.AccountId, out var c) ? c : "USD");
 

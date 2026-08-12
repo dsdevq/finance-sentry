@@ -11,10 +11,12 @@ using Microsoft.AspNetCore.Mvc;
 public class DashboardController(
     IDashboardQueryService dashboard,
     ITransactionRepository transactions,
+    IBankAccountRepository accounts,
     ITransferDetectionService transferDetection) : ControllerBase
 {
     private readonly IDashboardQueryService _dashboard = dashboard ?? throw new ArgumentNullException(nameof(dashboard));
     private readonly ITransactionRepository _transactions = transactions ?? throw new ArgumentNullException(nameof(transactions));
+    private readonly IBankAccountRepository _accounts = accounts ?? throw new ArgumentNullException(nameof(accounts));
     private readonly ITransferDetectionService _transferDetection = transferDetection ?? throw new ArgumentNullException(nameof(transferDetection));
 
     // ── GET /api/dashboard/aggregated ── T408 ─────────────────────────────────
@@ -31,8 +33,11 @@ public class DashboardController(
     [HttpGet("transfers")]
     public async Task<IActionResult> GetTransfers(CancellationToken ct)
     {
-        var allTx = (await _transactions.GetByUserIdAsync(User.RequireUserId(), ct)).ToList();
-        var transferIds = _transferDetection.DetectTransferTransactionIds(allTx);
+        var userId = User.RequireUserId();
+        var allTx = (await _transactions.GetByUserIdAsync(userId, ct)).ToList();
+        var accountCurrencies = (await _accounts.GetByUserIdAsync(userId, ct))
+            .ToDictionary(a => a.Id, a => a.Currency);
+        var transferIds = _transferDetection.DetectTransferTransactionIds(allTx, accountCurrencies);
 
         var byId = allTx.ToDictionary(t => t.Id);
         var consumedCredits = new HashSet<Guid>();
@@ -43,7 +48,10 @@ public class DashboardController(
             foreach (var credit in allTx.Where(t => t.TransactionType == "credit" && transferIds.Contains(t.Id)))
             {
                 if (consumedCredits.Contains(credit.Id)) continue;
-                if (!_transferDetection.IsLikelyTransfer(debit, credit)) continue;
+                if (!_transferDetection.IsLikelyTransfer(
+                        debit, credit,
+                        accountCurrencies.GetValueOrDefault(debit.AccountId),
+                        accountCurrencies.GetValueOrDefault(credit.AccountId))) continue;
 
                 pairs.Add(new TransferPairDto(
                     new TransferItemDto(

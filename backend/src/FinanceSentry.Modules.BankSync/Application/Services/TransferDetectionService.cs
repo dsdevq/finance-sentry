@@ -1,5 +1,6 @@
 namespace FinanceSentry.Modules.BankSync.Application.Services;
 
+using FinanceSentry.Core.Utils;
 using FinanceSentry.Modules.BankSync.Domain;
 
 /// <summary>
@@ -11,16 +12,22 @@ public interface ITransferDetectionService
     /// Returns true if the two transactions are likely an internal transfer pair.
     /// Criteria: same absolute amount (±0.01), dates within 2 days, different accounts,
     /// and at least one is type "transfer" or the descriptions share similarity.
+    /// Without currency information only same-currency (exact-amount) pairs can match.
     /// </summary>
-    bool IsLikelyTransfer(Transaction debit, Transaction credit);
+    bool IsLikelyTransfer(Transaction debit, Transaction credit, string? debitCurrency = null, string? creditCurrency = null);
 
     /// <summary>
     /// Detects all likely internal transfers within a batch and returns the union of
     /// matched debit + credit transaction Ids. Each credit is consumed by at most one
     /// debit so an ambiguous credit is not double-counted. Pending / inactive rows are
     /// ignored — the caller does not need to pre-filter.
+    /// When <paramref name="accountCurrencies"/> is provided, cross-currency pairs
+    /// (e.g. a EUR debit funding a UAH credit) are also matched by comparing the
+    /// USD-converted amounts within an FX tolerance.
     /// </summary>
-    HashSet<Guid> DetectTransferTransactionIds(IReadOnlyCollection<Transaction> transactions);
+    HashSet<Guid> DetectTransferTransactionIds(
+        IReadOnlyCollection<Transaction> transactions,
+        IReadOnlyDictionary<Guid, string>? accountCurrencies = null);
 }
 
 /// <inheritdoc />
@@ -29,8 +36,13 @@ public class TransferDetectionService : ITransferDetectionService
     private const decimal AmountTolerance = 0.01m;
     private const int MaxDateDifferenceInDays = 2;
 
+    // Cross-currency legs never match exactly: the sending and receiving banks apply their
+    // own rates and spreads, and our rate table refreshes on its own schedule. 5% absorbs
+    // typical retail FX spread + a day of rate drift without pairing unrelated amounts.
+    private const decimal CrossCurrencyRelativeTolerance = 0.05m;
+
     /// <inheritdoc />
-    public bool IsLikelyTransfer(Transaction debit, Transaction credit)
+    public bool IsLikelyTransfer(Transaction debit, Transaction credit, string? debitCurrency = null, string? creditCurrency = null)
     {
         if (debit == null) throw new ArgumentNullException(nameof(debit));
         if (credit == null) throw new ArgumentNullException(nameof(credit));
@@ -41,9 +53,20 @@ public class TransferDetectionService : ITransferDetectionService
         if (debit.AccountId == credit.AccountId)
             return false;
 
-        // Amounts must match within tolerance
-        if (Math.Abs(debit.Amount - credit.Amount) > AmountTolerance)
+        // Without both currencies the legs are assumed same-currency (legacy behaviour).
+        var sameCurrency = debitCurrency is null || creditCurrency is null
+            || string.Equals(debitCurrency, creditCurrency, StringComparison.OrdinalIgnoreCase);
+
+        if (sameCurrency)
+        {
+            // Amounts must match within tolerance
+            if (Math.Abs(debit.Amount - credit.Amount) > AmountTolerance)
+                return false;
+        }
+        else if (!AmountsMatchAcrossCurrencies(debit.Amount, debitCurrency!, credit.Amount, creditCurrency!))
+        {
             return false;
+        }
 
         // Dates must be within 2 calendar days of each other
         var debitDate  = (debit.PostedDate  ?? debit.TransactionDate).Date;
@@ -59,12 +82,25 @@ public class TransferDetectionService : ITransferDetectionService
         if (eitherIsTransferType)
             return true;
 
+        // Cross-currency legs live at different banks, often in different languages
+        // ("To UAH account" vs «Від: …»), so shared wording is rare. A transfer category
+        // on either leg (MCC 4829, directional-prefix classification, …) is accepted as
+        // the confirming signal instead — the categorised leg is already excluded from
+        // cash-flow, and the match extends that exclusion to its uncategorised twin.
+        if (!sameCurrency &&
+            (CategoryKeys.IsTransfer(debit.MerchantCategory) || CategoryKeys.IsTransfer(credit.MerchantCategory)))
+        {
+            return true;
+        }
+
         // Fallback: check description similarity (shared significant words)
         return HaveSimilarDescriptions(debit.Description, credit.Description);
     }
 
     /// <inheritdoc />
-    public HashSet<Guid> DetectTransferTransactionIds(IReadOnlyCollection<Transaction> transactions)
+    public HashSet<Guid> DetectTransferTransactionIds(
+        IReadOnlyCollection<Transaction> transactions,
+        IReadOnlyDictionary<Guid, string>? accountCurrencies = null)
     {
         if (transactions == null) throw new ArgumentNullException(nameof(transactions));
 
@@ -85,13 +121,18 @@ public class TransferDetectionService : ITransferDetectionService
         if (debits.Count == 0 || credits.Count == 0)
             return matched;
 
+        string? CurrencyOf(Transaction tx) =>
+            accountCurrencies is not null && accountCurrencies.TryGetValue(tx.AccountId, out var currency)
+                ? currency
+                : null;
+
         var consumedCredits = new HashSet<Guid>();
         foreach (var debit in debits)
         {
             foreach (var credit in credits)
             {
                 if (consumedCredits.Contains(credit.Id)) continue;
-                if (!IsLikelyTransfer(debit, credit)) continue;
+                if (!IsLikelyTransfer(debit, credit, CurrencyOf(debit), CurrencyOf(credit))) continue;
 
                 matched.Add(debit.Id);
                 matched.Add(credit.Id);
@@ -101,6 +142,26 @@ public class TransferDetectionService : ITransferDetectionService
         }
 
         return matched;
+    }
+
+    /// <summary>
+    /// Compares two amounts in different currencies by converting both to USD. Unknown
+    /// currencies never match: <see cref="CurrencyConverter.ToUsd"/> silently falls back
+    /// to 1:1 for them, which would compare unrelated magnitudes as if equal.
+    /// </summary>
+    private static bool AmountsMatchAcrossCurrencies(
+        decimal debitAmount, string debitCurrency, decimal creditAmount, string creditCurrency)
+    {
+        if (!CurrencyConverter.IsKnown(debitCurrency) || !CurrencyConverter.IsKnown(creditCurrency))
+            return false;
+
+        var debitUsd = CurrencyConverter.ToUsd(debitAmount, debitCurrency);
+        var creditUsd = CurrencyConverter.ToUsd(creditAmount, creditCurrency);
+        var larger = Math.Max(debitUsd, creditUsd);
+        if (larger <= 0)
+            return false;
+
+        return Math.Abs(debitUsd - creditUsd) / larger <= CrossCurrencyRelativeTolerance;
     }
 
     private static bool HaveSimilarDescriptions(string a, string b)
