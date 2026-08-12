@@ -417,6 +417,31 @@ public sealed class ToolParityTests
     }
 
     [Fact]
+    public async Task GetPortfolioSnapshot_BucketsIdleBrokerageCashAsCash_NotAsPosition()
+    {
+        var userId = Guid.NewGuid();
+        await using var sp = BuildProvider(Guid.NewGuid().ToString("N"));
+        await using var scope = sp.CreateAsyncScope();
+        var svc = scope.ServiceProvider;
+
+        var brokerageDb = svc.GetRequiredService<BrokerageSyncDbContext>();
+        brokerageDb.BrokerageHoldings.Add(new BrokerageHolding(userId, "AAPL", "STK", 10m, 1_900m, "ibkr"));
+        // Idle currency balance — must land in cash (same bucketing as the allocation-drift tool).
+        brokerageDb.BrokerageHoldings.Add(new BrokerageHolding(userId, "EUR", "CASH", 800m, 923m, "ibkr"));
+        await brokerageDb.SaveChangesAsync();
+
+        var tool = svc.GetRequiredService<GetPortfolioSnapshotTool>();
+        var result = await tool.ExecuteAsync(userId);
+
+        result.Positions.Should().ContainSingle(e => e.Symbol == "AAPL");
+        result.Positions.Should().NotContain(e => e.Symbol == "EUR");
+        result.BrokerageCashUsd.Should().Be(923m);
+        result.CashUsd.Should().Be(result.BankingCashUsd + result.BrokerageCashUsd);
+        result.InvestedValueUsd.Should().Be(1_900m);
+        result.TotalValueUsd.Should().Be(result.InvestedValueUsd + result.CashUsd);
+    }
+
+    [Fact]
     public async Task ListSubscriptions_ReturnsNonEmpty_WhenActiveSubscriptionSeeded()
     {
         var userId = Guid.NewGuid();

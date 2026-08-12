@@ -4,6 +4,7 @@ using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Mcp.Abstractions;
 using FinanceSentry.Modules.BrokerageSync.Application.Queries;
 using FinanceSentry.Modules.CryptoSync.Application.Queries;
+using FinanceSentry.Modules.Research.Domain;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 
@@ -24,7 +25,7 @@ public sealed class GetPortfolioSnapshotTool(
     private readonly ILogger<GetPortfolioSnapshotTool> _logger = logger;
 
     [McpServerTool(Name = "get_portfolio_snapshot")]
-    [Description("Unified portfolio snapshot: IBKR brokerage positions + Binance crypto holdings, each with unrealized P&L (USD and %) when cost basis is known, PLUS cash held in banking accounts (USD). Returns per-position rows and book-level totals (invested value, cash, total value, total cost basis, total unrealized P&L). unrealizedPnlUsd/Pct are null when cost basis is unavailable. Defaults to the authenticated MCP identity when userId is omitted.")]
+    [Description("Unified portfolio snapshot: IBKR brokerage positions + Binance crypto holdings, each with unrealized P&L (USD and %) when cost basis is known, PLUS total cash (USD). cashUsd counts banking balances AND idle brokerage cash (uninvested currency balances) — the same definition the allocation-drift tool uses; bankingCashUsd/brokerageCashUsd give the split. Idle brokerage cash is NOT listed under positions or investedValueUsd. Returns per-position rows and book-level totals (invested value, cash, total value, total cost basis, total unrealized P&L). unrealizedPnlUsd/Pct are null when cost basis is unavailable. Defaults to the authenticated MCP identity when userId is omitted.")]
     public async Task<PortfolioSnapshot> ExecuteAsync(
         [Description("Optional user GUID. Defaults to the authenticated MCP identity.")] Guid? userId = null,
         CancellationToken cancellationToken = default)
@@ -38,12 +39,24 @@ public sealed class GetPortfolioSnapshotTool(
         var userIdVal = effective.Value;
         var positions = new List<PortfolioSnapshotEntry>();
 
-        // IBKR brokerage positions
+        // IBKR brokerage positions. Idle currency balances (instrument type "CASH") are cash, not
+        // investments — bucketing them the same way the allocation-drift tool does keeps the two
+        // tools' cash figures identical.
+        var brokerageCashUsd = 0m;
         try
         {
             var response = await _brokerageHandler.Handle(new GetBrokerageHoldingsQuery(userIdVal), cancellationToken);
-            positions.AddRange(response.Positions.Select(p => BuildEntry(
-                p.Symbol, p.InstrumentType, p.Quantity, p.CostBasisUsd, p.UsdValue, response.Provider)));
+            foreach (var p in response.Positions)
+            {
+                if (AssetClassNormalizer.Normalize(p.InstrumentType) == AssetClassNormalizer.Cash)
+                {
+                    brokerageCashUsd += p.UsdValue;
+                }
+                else
+                {
+                    positions.Add(BuildEntry(p.Symbol, p.InstrumentType, p.Quantity, p.CostBasisUsd, p.UsdValue, response.Provider));
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -63,17 +76,18 @@ public sealed class GetPortfolioSnapshotTool(
         }
 
         // Cash held across banking accounts (USD).
-        var cashUsd = 0m;
+        var bankingCashUsd = 0m;
         try
         {
             var accounts = await _bankingReader.GetAccountSummariesAsync(userIdVal, cancellationToken);
-            cashUsd = accounts.Sum(a => a.BalanceUsd ?? 0m);
+            bankingCashUsd = accounts.Sum(a => a.BalanceUsd ?? 0m);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "BankSync provider unavailable for user {UserId}; cash contributes 0.", userIdVal);
         }
 
+        var cashUsd = bankingCashUsd + brokerageCashUsd;
         var investedValueUsd = positions.Sum(p => p.CurrentValue);
 
         // Totals for unrealized P&L only cover positions whose cost basis is known.
@@ -87,6 +101,8 @@ public sealed class GetPortfolioSnapshotTool(
         return new PortfolioSnapshot(
             Positions: positions.OrderByDescending(p => p.CurrentValue).ToList(),
             CashUsd: cashUsd,
+            BankingCashUsd: bankingCashUsd,
+            BrokerageCashUsd: brokerageCashUsd,
             InvestedValueUsd: investedValueUsd,
             TotalValueUsd: investedValueUsd + cashUsd,
             TotalCostBasisUsd: totalCostBasisUsd,
@@ -125,11 +141,13 @@ public sealed record PortfolioSnapshotEntry(
 public sealed record PortfolioSnapshot(
     IReadOnlyList<PortfolioSnapshotEntry> Positions,
     decimal CashUsd,
+    decimal BankingCashUsd,
+    decimal BrokerageCashUsd,
     decimal InvestedValueUsd,
     decimal TotalValueUsd,
     decimal? TotalCostBasisUsd,
     decimal? TotalUnrealizedPnlUsd,
     decimal? TotalUnrealizedPnlPct)
 {
-    public static PortfolioSnapshot Empty { get; } = new([], 0m, 0m, 0m, null, null, null);
+    public static PortfolioSnapshot Empty { get; } = new([], 0m, 0m, 0m, 0m, 0m, null, null, null);
 }
