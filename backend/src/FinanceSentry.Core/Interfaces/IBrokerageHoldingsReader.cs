@@ -11,4 +11,5 @@ public sealed record BrokerageHoldingSummary(
     decimal Quantity,
     decimal UsdValue,
     DateTime SyncedAt,
-    string Provider);
+    string Provider,
+    decimal? CostBasisUsd = null);

@@ -1,9 +1,9 @@
 namespace FinanceSentry.Modules.Research.Application.Queries;
 
 using FinanceSentry.Core.Cqrs;
+using FinanceSentry.Core.Domain;
 using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Modules.Research.API.Responses;
-using FinanceSentry.Modules.Research.Domain;
 using FinanceSentry.Modules.Research.Domain.Repositories;
 using Microsoft.Extensions.Logging;
 
@@ -11,9 +11,7 @@ public record GetAllocationDriftQuery(Guid UserId) : IQuery<AllocationDriftDto>;
 
 public class GetAllocationDriftQueryHandler(
     IIpsRepository ipsRepo,
-    ICryptoHoldingsReader cryptoReader,
-    IBrokerageHoldingsReader brokerageReader,
-    IBankingAccountsReader bankingReader,
+    IBookFiguresService bookFigures,
     ILogger<GetAllocationDriftQueryHandler> logger)
     : IQueryHandler<GetAllocationDriftQuery, AllocationDriftDto>
 {
@@ -27,6 +25,7 @@ public class GetAllocationDriftQueryHandler(
     public async Task<AllocationDriftDto> Handle(GetAllocationDriftQuery query, CancellationToken ct)
     {
         var ips = await ipsRepo.GetCurrentAsync(query.UserId, ct);
+        var book = await bookFigures.ReadAsync(query.UserId, ct);
 
         var byClass = new Dictionary<string, decimal>(StringComparer.Ordinal);
         void Add(string canonical, decimal usd)
@@ -35,34 +34,16 @@ public class GetAllocationDriftQueryHandler(
             byClass[canonical] = byClass.GetValueOrDefault(canonical) + usd;
         }
 
-        try
-        {
-            foreach (var h in await cryptoReader.GetHoldingsAsync(query.UserId, ct))
-            {
-                Add(AssetClassNormalizer.Crypto, h.UsdValue);
-            }
-        }
-        catch (Exception ex) { logger.LogWarning(ex, "Crypto holdings unavailable for drift calc; skipping."); }
+        foreach (var p in book.Positions)
+            Add(p.AssetClass, p.UsdValue);
 
-        try
-        {
-            foreach (var h in await brokerageReader.GetHoldingsAsync(query.UserId, ct))
-            {
-                Add(AssetClassNormalizer.Normalize(h.InstrumentType), h.UsdValue);
-            }
-        }
-        catch (Exception ex) { logger.LogWarning(ex, "Brokerage holdings unavailable for drift calc; skipping."); }
+        if (book.CashUsd > 0)
+            Add(AssetClassNormalizer.Cash, book.CashUsd);
 
-        try
-        {
-            foreach (var a in await bankingReader.GetAccountSummariesAsync(query.UserId, ct))
-            {
-                Add(AssetClassNormalizer.Cash, a.BalanceUsd ?? 0m);
-            }
-        }
-        catch (Exception ex) { logger.LogWarning(ex, "Banking balances unavailable for drift calc; skipping."); }
+        if (book.IsStale)
+            logger.LogWarning("Book figures are stale for user {UserId}; stale sources: {Sources}.", query.UserId, string.Join(", ", book.StaleSources));
 
-        var total = byClass.Values.Sum();
+        var total = book.TotalValueUsd;
 
         if (ips is null)
         {
@@ -88,7 +69,6 @@ public class GetAllocationDriftQueryHandler(
             var actualUsd = byClass.GetValueOrDefault(canonical);
             var actualPct = Percent(actualUsd, total);
 
-            // Effective bands: explicit min/max if set, else derived from the 5/25-style rule.
             var band = Math.Max(rule.AbsoluteBandPct, target.TargetPct * rule.RelativeBandPct / 100m);
             var min = target.MinPct > 0 ? target.MinPct : Math.Max(0m, target.TargetPct - band);
             var max = target.MaxPct > 0 ? target.MaxPct : target.TargetPct + band;
@@ -101,7 +81,6 @@ public class GetAllocationDriftQueryHandler(
                 actualPct, actualUsd, Math.Round(actualPct - target.TargetPct, 2), status));
         }
 
-        // Exposure the policy doesn't account for.
         foreach (var kv in byClass.Where(kv => !covered.Contains(kv.Key)))
         {
             var actualPct = Percent(kv.Value, total);

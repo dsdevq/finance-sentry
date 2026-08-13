@@ -47,6 +47,7 @@ using FinanceSentry.Modules.Radar.Domain;
 using FinanceSentry.Modules.Radar.Domain.Repositories;
 using FinanceSentry.Modules.Radar.Infrastructure.Persistence;
 using FinanceSentry.Modules.Radar.Infrastructure.Persistence.Repositories;
+using FinanceSentry.Core.Services;
 using FinanceSentry.Modules.Risk.Application.Services;
 using FinanceSentry.Modules.Risk.Domain;
 using FinanceSentry.Modules.Risk.Domain.Repositories;
@@ -164,6 +165,9 @@ public sealed class ToolParityTests
         services.AddScoped<ICryptoHoldingsReader, CryptoHoldingsReader>();
         services.AddScoped<IBrokerageHoldingsReader, BrokerageHoldingsReader>();
 
+        // Canonical book-figures service — single source for cash/invested/total across all surfaces.
+        services.AddScoped<IBookFiguresService, BookFiguresService>();
+
         // Risk (022): repositories + pure evaluation services backing the 3 risk MCP tools.
         services.AddScoped<IRiskRuleSetRepository, RiskRuleSetRepository>();
         services.AddScoped<IPolicyViolationAckRepository, PolicyViolationAckRepository>();
@@ -228,6 +232,7 @@ public sealed class ToolParityTests
         services.AddScoped<ListCandidatesTool>();
         services.AddScoped<PromoteCandidateTool>();
         services.AddScoped<RejectCandidateTool>();
+        services.AddScoped<GetAllocationVsTargetTool>();
 
         return services.BuildServiceProvider();
     }
@@ -439,6 +444,70 @@ public sealed class ToolParityTests
         result.CashUsd.Should().Be(result.BankingCashUsd + result.BrokerageCashUsd);
         result.InvestedValueUsd.Should().Be(1_900m);
         result.TotalValueUsd.Should().Be(result.InvestedValueUsd + result.CashUsd);
+    }
+
+    /// <summary>
+    /// Parity test (AC-2): all three surfaces that previously computed book figures
+    /// independently now agree exactly because they all read from one IBookFiguresService.
+    /// Seeds a multi-currency book with idle brokerage cash and asserts that
+    /// cashUsd / investedValueUsd / totalValueUsd are identical across all three consumers.
+    /// BookSnapshotReader (the Risk surface) is verified directly since CheckRiskRulesTool
+    /// does not surface the raw totals in its DTO.
+    /// </summary>
+    [Fact]
+    public async Task BookFigures_AllThreeSurfaces_AgreeOnCashInvestedAndTotal()
+    {
+        var userId = Guid.NewGuid();
+        await using var sp = BuildProvider(Guid.NewGuid().ToString("N"));
+        await using var scope = sp.CreateAsyncScope();
+        var svc = scope.ServiceProvider;
+
+        // Seed: one brokerage equity + idle EUR cash + one crypto holding + one banking account.
+        var brokerageDb = svc.GetRequiredService<BrokerageSyncDbContext>();
+        brokerageDb.BrokerageHoldings.Add(new BrokerageHolding(userId, "AAPL", "STK", 10m, 1_900m, "ibkr"));
+        brokerageDb.BrokerageHoldings.Add(new BrokerageHolding(userId, "EUR", "CASH", 500m, 550m, "ibkr"));
+        await brokerageDb.SaveChangesAsync();
+
+        var cryptoDb = svc.GetRequiredService<CryptoSyncDbContext>();
+        cryptoDb.CryptoHoldings.Add(CryptoHolding.Create(userId, "BTC", 0.05m, 0m, 3_200m));
+        await cryptoDb.SaveChangesAsync();
+
+        var bankDb = svc.GetRequiredService<BankSyncDbContext>();
+        var account = new BankAccount(userId, "ext-parity-001", "Chase", "checking", "9999", "Test User", "USD", userId);
+        account.BeginSync();
+        account.MarkActive(2_000m);
+        bankDb.BankAccounts.Add(account);
+        await bankDb.SaveChangesAsync();
+
+        // Expected figures (deterministic from the seed above):
+        //   bankingCash    = 2_000
+        //   brokerageCash  =   550  (EUR/CASH bucketed, not a position)
+        //   investedValue  = 1_900 (AAPL) + 3_200 (BTC) = 5_100
+        //   cashUsd        = 2_000 + 550 = 2_550
+        //   totalValue     = 5_100 + 2_550 = 7_650
+        const decimal expectedCashUsd = 2_550m;
+        const decimal expectedInvestedUsd = 5_100m;
+        const decimal expectedTotalUsd = 7_650m;
+
+        // Surface 1: GetPortfolioSnapshot
+        var snapshotTool = svc.GetRequiredService<GetPortfolioSnapshotTool>();
+        var snapshot = await snapshotTool.ExecuteAsync(userId);
+        snapshot.CashUsd.Should().Be(expectedCashUsd, "portfolio snapshot cash must match canonical figures");
+        snapshot.InvestedValueUsd.Should().Be(expectedInvestedUsd, "portfolio snapshot invested must match canonical figures");
+        snapshot.TotalValueUsd.Should().Be(expectedTotalUsd, "portfolio snapshot total must match canonical figures");
+
+        // Surface 2: GetAllocationVsTarget — with no IPS the handler returns total via TotalValueUsd.
+        var allocationTool = svc.GetRequiredService<GetAllocationVsTargetTool>();
+        var drift = await allocationTool.ExecuteAsync(userId);
+        drift.Should().NotBeNull();
+        drift!.TotalValueUsd.Should().Be(expectedTotalUsd, "allocation drift total must match canonical figures");
+
+        // Surface 3: BookSnapshotReader (the internal risk book — CheckRiskRulesTool reads via this).
+        // Verified directly because CheckRiskRulesResponseDto does not surface raw totals.
+        var bookReader = svc.GetRequiredService<IBookSnapshotReader>();
+        var bookSnapshot = await bookReader.ReadAsync(userId);
+        bookSnapshot.TotalUsd.Should().Be(expectedTotalUsd, "risk book snapshot total must match canonical figures");
+        bookSnapshot.CashUsd.Should().Be(expectedCashUsd, "risk book snapshot cash must match canonical figures");
     }
 
     [Fact]
