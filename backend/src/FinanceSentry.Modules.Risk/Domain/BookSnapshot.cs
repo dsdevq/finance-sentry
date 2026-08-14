@@ -4,11 +4,13 @@ namespace FinanceSentry.Modules.Risk.Domain;
 public sealed record BookSnapshot(
     decimal TotalUsd,
     decimal CashUsd,
+    decimal BankingCashUsd,
+    decimal BrokerageCashUsd,
     IReadOnlyList<BookPosition> Positions,
     bool IsStale,
     IReadOnlyList<string> StaleSources)
 {
-    public static BookSnapshot Empty { get; } = new(0m, 0m, [], false, []);
+    public static BookSnapshot Empty { get; } = new(0m, 0m, 0m, 0m, [], false, []);
 }
 
 public sealed record BookPosition(string Symbol, string Sleeve, decimal Quantity, decimal UsdValue, decimal WeightPct);

@@ -1,110 +1,49 @@
 using System.ComponentModel;
-using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Mcp.Abstractions;
-using FinanceSentry.Modules.BrokerageSync.Application.Queries;
-using FinanceSentry.Modules.CryptoSync.Application.Queries;
-using FinanceSentry.Modules.Research.Domain;
-using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 
 namespace FinanceSentry.Mcp.Tools;
 
 [McpServerToolType]
 public sealed class GetPortfolioSnapshotTool(
-    IQueryHandler<GetBrokerageHoldingsQuery, BrokerageHoldingsResponse> brokerageHandler,
-    IQueryHandler<GetCryptoHoldingsQuery, CryptoHoldingsResponse> cryptoHandler,
-    IBankingAccountsReader bankingReader,
-    IIdentityResolver identity,
-    ILogger<GetPortfolioSnapshotTool> logger)
+    IBookFiguresReader bookFiguresReader,
+    IIdentityResolver identity)
 {
-    private readonly IQueryHandler<GetBrokerageHoldingsQuery, BrokerageHoldingsResponse> _brokerageHandler = brokerageHandler;
-    private readonly IQueryHandler<GetCryptoHoldingsQuery, CryptoHoldingsResponse> _cryptoHandler = cryptoHandler;
-    private readonly IBankingAccountsReader _bankingReader = bankingReader;
-    private readonly IIdentityResolver _identity = identity;
-    private readonly ILogger<GetPortfolioSnapshotTool> _logger = logger;
-
     [McpServerTool(Name = "get_portfolio_snapshot")]
     [Description("Unified portfolio snapshot: IBKR brokerage positions + Binance crypto holdings, each with unrealized P&L (USD and %) when cost basis is known, PLUS total cash (USD). cashUsd counts banking balances AND idle brokerage cash (uninvested currency balances) — the same definition the allocation-drift tool uses; bankingCashUsd/brokerageCashUsd give the split. Idle brokerage cash is NOT listed under positions or investedValueUsd. Returns per-position rows and book-level totals (invested value, cash, total value, total cost basis, total unrealized P&L). unrealizedPnlUsd/Pct are null when cost basis is unavailable. Defaults to the authenticated MCP identity when userId is omitted.")]
     public async Task<PortfolioSnapshot> ExecuteAsync(
         [Description("Optional user GUID. Defaults to the authenticated MCP identity.")] Guid? userId = null,
         CancellationToken cancellationToken = default)
     {
-        var effective = userId ?? _identity.GetUserId();
+        var effective = userId ?? identity.GetUserId();
         if (effective is null)
         {
             return PortfolioSnapshot.Empty;
         }
 
-        var userIdVal = effective.Value;
-        var positions = new List<PortfolioSnapshotEntry>();
+        var figures = await bookFiguresReader.ReadAsync(effective.Value, cancellationToken);
 
-        // IBKR brokerage positions. Idle currency balances (instrument type "CASH") are cash, not
-        // investments — bucketing them the same way the allocation-drift tool does keeps the two
-        // tools' cash figures identical.
-        var brokerageCashUsd = 0m;
-        try
-        {
-            var response = await _brokerageHandler.Handle(new GetBrokerageHoldingsQuery(userIdVal), cancellationToken);
-            foreach (var p in response.Positions)
-            {
-                if (AssetClassNormalizer.Normalize(p.InstrumentType) == AssetClassNormalizer.Cash)
-                {
-                    brokerageCashUsd += p.UsdValue;
-                }
-                else
-                {
-                    positions.Add(BuildEntry(p.Symbol, p.InstrumentType, p.Quantity, p.CostBasisUsd, p.UsdValue, response.Provider));
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "BrokerageSync query unavailable for user {UserId}; contributing empty list.", userIdVal);
-        }
+        var entries = figures.Positions
+            .OrderByDescending(p => p.UsdValue)
+            .Select(p => BuildEntry(p.Symbol, p.AssetClass, p.Quantity, p.CostBasisUsd, p.UsdValue, p.Provider))
+            .ToList();
 
-        // Binance crypto holdings
-        try
-        {
-            var response = await _cryptoHandler.Handle(new GetCryptoHoldingsQuery(userIdVal), cancellationToken);
-            positions.AddRange(response.Holdings.Select(h => BuildEntry(
-                h.Asset, "Crypto", h.FreeQuantity + h.LockedQuantity, h.CostBasisUsd, h.UsdValue, response.Provider)));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "CryptoSync query unavailable for user {UserId}; contributing empty list.", userIdVal);
-        }
-
-        // Cash held across banking accounts (USD).
-        var bankingCashUsd = 0m;
-        try
-        {
-            var accounts = await _bankingReader.GetAccountSummariesAsync(userIdVal, cancellationToken);
-            bankingCashUsd = accounts.Sum(a => a.BalanceUsd ?? 0m);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "BankSync provider unavailable for user {UserId}; cash contributes 0.", userIdVal);
-        }
-
-        var cashUsd = bankingCashUsd + brokerageCashUsd;
-        var investedValueUsd = positions.Sum(p => p.CurrentValue);
-
-        // Totals for unrealized P&L only cover positions whose cost basis is known.
-        var withBasis = positions.Where(p => p.CostBasis is > 0m).ToList();
-        decimal? totalCostBasisUsd = withBasis.Count > 0 ? withBasis.Sum(p => p.CostBasis!.Value) : null;
-        decimal? totalPnlUsd = withBasis.Count > 0 ? withBasis.Sum(p => p.CurrentValue - p.CostBasis!.Value) : null;
+        // P&L totals only cover positions whose cost basis is known.
+        var withBasis = entries.Where(e => e.CostBasis is > 0m).ToList();
+        decimal? totalCostBasisUsd = withBasis.Count > 0 ? withBasis.Sum(e => e.CostBasis!.Value) : null;
+        decimal? totalPnlUsd = withBasis.Count > 0 ? withBasis.Sum(e => e.CurrentValue - e.CostBasis!.Value) : null;
         decimal? totalPnlPct = totalCostBasisUsd is > 0m
             ? Math.Round(totalPnlUsd!.Value / totalCostBasisUsd.Value * 100m, 2)
             : null;
 
         return new PortfolioSnapshot(
-            Positions: positions.OrderByDescending(p => p.CurrentValue).ToList(),
-            CashUsd: cashUsd,
-            BankingCashUsd: bankingCashUsd,
-            BrokerageCashUsd: brokerageCashUsd,
-            InvestedValueUsd: investedValueUsd,
-            TotalValueUsd: investedValueUsd + cashUsd,
+            Positions: entries,
+            CashUsd: figures.CashUsd,
+            BankingCashUsd: figures.BankingCashUsd,
+            BrokerageCashUsd: figures.BrokerageCashUsd,
+            InvestedValueUsd: figures.InvestedValueUsd,
+            TotalValueUsd: figures.TotalUsd,
             TotalCostBasisUsd: totalCostBasisUsd,
             TotalUnrealizedPnlUsd: totalPnlUsd,
             TotalUnrealizedPnlPct: totalPnlPct);

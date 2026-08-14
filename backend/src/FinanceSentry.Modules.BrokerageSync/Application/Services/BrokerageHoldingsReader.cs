@@ -24,7 +24,9 @@ public sealed class BrokerageHoldingsReader : IBrokerageHoldingsReader
                 h.Quantity,
                 h.UsdValue,
                 h.SyncedAt,
-                h.Provider))
+                h.Provider,
+                h.CostBasisUsd,
+                h.AverageCostUsd))
             .ToList();
     }
 }

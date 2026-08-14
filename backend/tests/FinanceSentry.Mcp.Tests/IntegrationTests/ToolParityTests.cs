@@ -168,6 +168,7 @@ public sealed class ToolParityTests
         services.AddScoped<IRiskRuleSetRepository, RiskRuleSetRepository>();
         services.AddScoped<IPolicyViolationAckRepository, PolicyViolationAckRepository>();
         services.AddScoped<IHoldingSnapshotRepository, HoldingSnapshotRepository>();
+        services.AddScoped<IBookFiguresReader, BookFiguresReader>();
         services.AddScoped<IBookSnapshotReader, BookSnapshotReader>();
         services.AddScoped<IRiskEvaluationService, RiskEvaluationService>();
         services.AddScoped<ITurnoverTracker, TurnoverTracker>();
@@ -1306,5 +1307,102 @@ public sealed class ToolParityTests
         packet.Groups.Should().ContainSingle(g => g.Name == "recent_news");
         packet.Groups.SelectMany(g => g.Items)
             .Should().OnlyContain(i => i.DocumentId != Guid.Empty && i.ChunkId != Guid.Empty);
+    }
+
+    // ── Book-figures parity (AC2 of #411) ────────────────────────────────────────────────────────
+    // Verifies that get_portfolio_snapshot, get_allocation_vs_target, and the Risk book snapshot
+    // all return IDENTICAL cashUsd / investedValueUsd / totalValueUsd for the same seeded book.
+    // The seed intentionally includes an idle brokerage CASH holding to exercise the split that
+    // was previously computed independently (and inconsistently) across these three paths.
+
+    [Fact]
+    public async Task BookFiguresParity_AllThreeSurfaces_AgreeOnCashInvestedTotal()
+    {
+        var userId = Guid.NewGuid();
+        await using var sp = BuildProvider(Guid.NewGuid().ToString("N"));
+        await using var scope = sp.CreateAsyncScope();
+        var svc = scope.ServiceProvider;
+
+        // ── Seed: multi-currency book with idle brokerage CASH ────────────────────────────────
+        // Banking: Chase, $5 000 USD
+        var bankDb = svc.GetRequiredService<BankSyncDbContext>();
+        var chaseAccount = new BankAccount(userId, "ext-parity-001", "Chase", "checking", "0001", "Test User", "USD", userId);
+        chaseAccount.BeginSync();
+        chaseAccount.MarkActive(5_000m);
+        bankDb.BankAccounts.Add(chaseAccount);
+        await bankDb.SaveChangesAsync();
+
+        // Brokerage: AAPL (STK, invested, $1 900) + EUR idle CASH ($923)
+        var brokerageDb = svc.GetRequiredService<BrokerageSyncDbContext>();
+        brokerageDb.BrokerageHoldings.Add(new BrokerageHolding(userId, "AAPL", "STK", 10m, 1_900m, "ibkr"));
+        brokerageDb.BrokerageHoldings.Add(new BrokerageHolding(userId, "EUR", "CASH", 800m, 923m, "ibkr"));
+        await brokerageDb.SaveChangesAsync();
+
+        // Crypto: ETH, $9 000
+        var cryptoDb = svc.GetRequiredService<CryptoSyncDbContext>();
+        cryptoDb.CryptoHoldings.Add(CryptoHolding.Create(userId, "ETH", 2.5m, 0m, 9_000m));
+        await cryptoDb.SaveChangesAsync();
+
+        // Expected book figures (canonical values)
+        const decimal ExpectedBankingCash = 5_000m;
+        const decimal ExpectedBrokerageCash = 923m;
+        const decimal ExpectedCash = ExpectedBankingCash + ExpectedBrokerageCash;     // 5 923
+        const decimal ExpectedInvested = 1_900m + 9_000m;                             // 10 900
+        const decimal ExpectedTotal = ExpectedCash + ExpectedInvested;                // 16 823
+
+        // ── Surface 1: get_portfolio_snapshot ─────────────────────────────────────────────────
+        var snapshotTool = svc.GetRequiredService<GetPortfolioSnapshotTool>();
+        var snapshot = await snapshotTool.ExecuteAsync(userId);
+
+        snapshot.CashUsd.Should().Be(ExpectedCash,    "portfolio snapshot: cash must equal banking + brokerage idle");
+        snapshot.BankingCashUsd.Should().Be(ExpectedBankingCash);
+        snapshot.BrokerageCashUsd.Should().Be(ExpectedBrokerageCash);
+        snapshot.InvestedValueUsd.Should().Be(ExpectedInvested, "portfolio snapshot: investedValue excludes idle cash");
+        snapshot.TotalValueUsd.Should().Be(ExpectedTotal,        "portfolio snapshot: total = invested + cash");
+
+        // EUR idle CASH must not appear as a position
+        snapshot.Positions.Should().NotContain(p => p.Symbol == "EUR");
+        snapshot.Positions.Should().Contain(p => p.Symbol == "AAPL");
+        snapshot.Positions.Should().Contain(p => p.Symbol == "ETH");
+
+        // ── Surface 2: get_allocation_vs_target (via AllocationDriftDto) ──────────────────────
+        var driftHandler = svc.GetRequiredService<IQueryHandler<
+            FinanceSentry.Modules.Research.Application.Queries.GetAllocationDriftQuery,
+            FinanceSentry.Modules.Research.API.Responses.AllocationDriftDto>>();
+        var drift = await driftHandler.Handle(
+            new FinanceSentry.Modules.Research.Application.Queries.GetAllocationDriftQuery(userId),
+            CancellationToken.None);
+
+        drift.TotalValueUsd.Should().Be(ExpectedTotal,
+            "allocation drift: TotalValueUsd must match the canonical total");
+
+        // The "Cash" sleeve holds banking + idle brokerage cash combined.
+        var cashSleeve = drift.Sleeves.SingleOrDefault(s => s.AssetClass == "Cash");
+        cashSleeve.Should().NotBeNull("allocation drift must include a Cash sleeve");
+        cashSleeve!.ActualValueUsd.Should().Be(ExpectedCash,
+            "allocation drift: Cash sleeve must equal banking + brokerage idle cash");
+
+        // InvestedValueUsd = total − cash, derived from the allocation drift shape.
+        var driftInvested = drift.TotalValueUsd - cashSleeve.ActualValueUsd;
+        driftInvested.Should().Be(ExpectedInvested,
+            "allocation drift: non-cash total must equal investedValueUsd");
+
+        // ── Surface 3: Risk book snapshot (IBookSnapshotReader) ───────────────────────────────
+        var bookSnapshotReader = svc.GetRequiredService<IBookSnapshotReader>();
+        var bookSnapshot = await bookSnapshotReader.ReadAsync(userId);
+
+        bookSnapshot.TotalUsd.Should().Be(ExpectedTotal,
+            "risk book snapshot: TotalUsd must match canonical total");
+        bookSnapshot.CashUsd.Should().Be(ExpectedCash,
+            "risk book snapshot: CashUsd must include banking + idle brokerage cash");
+        bookSnapshot.BankingCashUsd.Should().Be(ExpectedBankingCash);
+        bookSnapshot.BrokerageCashUsd.Should().Be(ExpectedBrokerageCash);
+
+        var bookInvested = bookSnapshot.TotalUsd - bookSnapshot.CashUsd;
+        bookInvested.Should().Be(ExpectedInvested,
+            "risk book snapshot: invested value must equal total − cash");
+
+        // EUR idle CASH must not appear as a position in the risk book snapshot either.
+        bookSnapshot.Positions.Should().NotContain(p => p.Symbol == "EUR");
     }
 }

@@ -11,4 +11,6 @@ public sealed record CryptoHoldingSummary(
     decimal LockedQuantity,
     decimal UsdValue,
     DateTime SyncedAt,
-    string Provider);
+    string Provider,
+    decimal? CostBasisUsd = null,
+    decimal? AverageBuyPriceUsd = null);

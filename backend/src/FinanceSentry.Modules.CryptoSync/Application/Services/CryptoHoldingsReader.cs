@@ -25,7 +25,9 @@ public sealed class CryptoHoldingsReader : ICryptoHoldingsReader
                 h.LockedQuantity,
                 h.UsdValue,
                 h.SyncedAt,
-                h.Provider))
+                h.Provider,
+                h.CostBasisUsd,
+                h.AverageBuyPriceUsd))
             .ToList();
     }
 }

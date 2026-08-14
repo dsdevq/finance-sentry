@@ -47,6 +47,7 @@ public static class RiskModule
         services.AddScoped<IPolicyViolationAckRepository, PolicyViolationAckRepository>();
         services.AddScoped<IHoldingSnapshotRepository, HoldingSnapshotRepository>();
 
+        services.AddScoped<IBookFiguresReader, BookFiguresReader>();
         services.AddScoped<IBookSnapshotReader, BookSnapshotReader>();
         services.AddScoped<IRiskEvaluationService, RiskEvaluationService>();
         services.AddScoped<ITurnoverTracker, TurnoverTracker>();

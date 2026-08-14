@@ -2,8 +2,8 @@ namespace FinanceSentry.Modules.Research.Application.Queries;
 
 using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Core.Interfaces;
+using FinanceSentry.Core.Utils;
 using FinanceSentry.Modules.Research.API.Responses;
-using FinanceSentry.Modules.Research.Domain;
 using FinanceSentry.Modules.Research.Domain.Repositories;
 using Microsoft.Extensions.Logging;
 
@@ -11,9 +11,7 @@ public record GetAllocationDriftQuery(Guid UserId) : IQuery<AllocationDriftDto>;
 
 public class GetAllocationDriftQueryHandler(
     IIpsRepository ipsRepo,
-    ICryptoHoldingsReader cryptoReader,
-    IBrokerageHoldingsReader brokerageReader,
-    IBankingAccountsReader bankingReader,
+    IBookFiguresReader bookFiguresReader,
     ILogger<GetAllocationDriftQueryHandler> logger)
     : IQueryHandler<GetAllocationDriftQuery, AllocationDriftDto>
 {
@@ -28,6 +26,10 @@ public class GetAllocationDriftQueryHandler(
     {
         var ips = await ipsRepo.GetCurrentAsync(query.UserId, ct);
 
+        // Canonical book figures: cash and positions already split correctly (idle brokerage CASH
+        // is in BrokerageCashUsd, not in positions). One source of truth for all three surfaces.
+        var figures = await bookFiguresReader.ReadAsync(query.UserId, ct);
+
         var byClass = new Dictionary<string, decimal>(StringComparer.Ordinal);
         void Add(string canonical, decimal usd)
         {
@@ -35,32 +37,19 @@ public class GetAllocationDriftQueryHandler(
             byClass[canonical] = byClass.GetValueOrDefault(canonical) + usd;
         }
 
-        try
+        foreach (var p in figures.Positions)
         {
-            foreach (var h in await cryptoReader.GetHoldingsAsync(query.UserId, ct))
-            {
-                Add(AssetClassNormalizer.Crypto, h.UsdValue);
-            }
+            Add(p.AssetClass, p.UsdValue);
         }
-        catch (Exception ex) { logger.LogWarning(ex, "Crypto holdings unavailable for drift calc; skipping."); }
 
-        try
-        {
-            foreach (var h in await brokerageReader.GetHoldingsAsync(query.UserId, ct))
-            {
-                Add(AssetClassNormalizer.Normalize(h.InstrumentType), h.UsdValue);
-            }
-        }
-        catch (Exception ex) { logger.LogWarning(ex, "Brokerage holdings unavailable for drift calc; skipping."); }
+        // Cash sleeve: banking accounts + idle brokerage balances.
+        Add(AssetClassNormalizer.Cash, figures.CashUsd);
 
-        try
+        if (figures.IsStale)
         {
-            foreach (var a in await bankingReader.GetAccountSummariesAsync(query.UserId, ct))
-            {
-                Add(AssetClassNormalizer.Cash, a.BalanceUsd ?? 0m);
-            }
+            logger.LogWarning("Book figures are stale (sources: {Sources}); drift may be approximate.",
+                string.Join(", ", figures.StaleSources));
         }
-        catch (Exception ex) { logger.LogWarning(ex, "Banking balances unavailable for drift calc; skipping."); }
 
         var total = byClass.Values.Sum();
 

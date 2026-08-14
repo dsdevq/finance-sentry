@@ -2,68 +2,43 @@ namespace FinanceSentry.Modules.Risk.Application.Services;
 
 using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Modules.Risk.Domain;
-using Microsoft.Extensions.Logging;
 
 /// <summary>
-/// Aggregates crypto/brokerage/banking sources into a <see cref="BookSnapshot"/>, degrading
-/// gracefully (per-source try/catch → staleness flag) when one sync is unavailable — mirrors
-/// Research's <c>GetAllocationDriftQueryHandler</c> established pattern.
+/// Adapts <see cref="IBookFiguresReader"/> — the canonical book-figures service — into the
+/// Risk-module-local <see cref="BookSnapshot"/> shape. Risk's internal domain (evaluation service,
+/// jobs, tests) consumes BookSnapshot; this adapter keeps that surface unchanged while ensuring all
+/// cash / invested-value figures come from the single source of truth.
 /// </summary>
-public sealed class BookSnapshotReader(
-    ICryptoHoldingsReader cryptoReader,
-    IBrokerageHoldingsReader brokerageReader,
-    IBankingTotalsReader bankingReader,
-    ILogger<BookSnapshotReader> logger) : IBookSnapshotReader
+public sealed class BookSnapshotReader(IBookFiguresReader bookFiguresReader) : IBookSnapshotReader
 {
     public async Task<BookSnapshot> ReadAsync(Guid userId, CancellationToken ct = default)
     {
-        var positions = new List<BookPosition>();
-        var staleSources = new List<string>();
-        var cashUsd = 0m;
+        var figures = await bookFiguresReader.ReadAsync(userId, ct);
 
-        try
-        {
-            foreach (var h in await cryptoReader.GetHoldingsAsync(userId, ct))
-            {
-                var qty = h.FreeQuantity + h.LockedQuantity;
-                positions.Add(new BookPosition(h.Asset, RiskSleeve.Crypto, qty, h.UsdValue, 0m));
-            }
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Crypto holdings unavailable for risk check; marking stale.");
-            staleSources.Add("crypto");
-        }
-
-        try
-        {
-            foreach (var h in await brokerageReader.GetHoldingsAsync(userId, ct))
-            {
-                positions.Add(new BookPosition(h.Symbol, RiskSleeve.Brokerage, h.Quantity, h.UsdValue, 0m));
-            }
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Brokerage holdings unavailable for risk check; marking stale.");
-            staleSources.Add("brokerage");
-        }
-
-        try
-        {
-            cashUsd = await bankingReader.GetTotalUsdAsync(userId, ct);
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Banking totals unavailable for risk check; marking stale.");
-            staleSources.Add("banking");
-        }
-
-        var total = positions.Sum(p => p.UsdValue) + cashUsd;
-
-        var weighted = positions
-            .Select(p => p with { WeightPct = total > 0 ? p.UsdValue / total : 0m })
+        // Map BookFiguresPosition → BookPosition, preserving the Sleeve concept the risk
+        // evaluation service uses for sleeve-weight rules (brokerage/crypto).
+        var positions = figures.Positions
+            .Select(p => new BookPosition(
+                p.Symbol,
+                ToRiskSleeve(p.AssetClass),
+                p.Quantity,
+                p.UsdValue,
+                p.WeightPct))
             .ToList();
 
-        return new BookSnapshot(total, cashUsd, weighted, staleSources.Count > 0, staleSources);
+        return new BookSnapshot(
+            TotalUsd: figures.TotalUsd,
+            CashUsd: figures.CashUsd,
+            BankingCashUsd: figures.BankingCashUsd,
+            BrokerageCashUsd: figures.BrokerageCashUsd,
+            Positions: positions,
+            IsStale: figures.IsStale,
+            StaleSources: figures.StaleSources);
     }
+
+    private static string ToRiskSleeve(string assetClass) => assetClass switch
+    {
+        Core.Utils.AssetClassNormalizer.Crypto => RiskSleeve.Crypto,
+        _ => RiskSleeve.Brokerage,
+    };
 }
