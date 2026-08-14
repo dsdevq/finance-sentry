@@ -265,14 +265,23 @@ public sealed class RiskEvaluationService : IRiskEvaluationService
                 continue;
             }
 
-            var worsenedPastStep = violation.ObservedValue - ack.ObservedAtAck > ack.WorseningStepPct;
             result.Add(violation with
             {
-                Status = worsenedPastStep ? PolicyViolationStatus.Worsened : PolicyViolationStatus.Acknowledged,
+                Status = HasWorsenedPastStep(violation, ack) ? PolicyViolationStatus.Worsened : PolicyViolationStatus.Acknowledged,
                 RemediationNote = ack.RemediationNote,
             });
         }
 
         return result;
+    }
+
+    // MinCashBuffer is breached downward: a lower cashPct is a worse violation, so the worsening
+    // delta must be negated relative to all other rules (which are breached upward).
+    private static bool HasWorsenedPastStep(PolicyViolation violation, PolicyViolationAck ack)
+    {
+        var delta = violation.RuleKey == RiskRuleKeys.MinCashBuffer
+            ? ack.ObservedAtAck - violation.ObservedValue   // cash dropped further below minimum
+            : violation.ObservedValue - ack.ObservedAtAck;  // weight/drift rose further above limit
+        return delta > ack.WorseningStepPct;
     }
 }

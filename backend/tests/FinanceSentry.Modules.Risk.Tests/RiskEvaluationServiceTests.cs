@@ -258,4 +258,73 @@ public sealed class RiskEvaluationServiceTests
         verdict.Decision.Should().Be(RiskDecision.Refused);
         verdict.RuleKey.Should().Be(RiskRuleKeys.Turnover);
     }
+
+    // Regression: MinCashBuffer worsening direction was inverted — cash dropping further below the
+    // minimum was silently treated as Acknowledged instead of Worsened (direction bug #417).
+
+    [Fact]
+    public void Evaluate_MinCashBuffer_CashDropsFurtherBelowMinimum_ReopensAsWorsened()
+    {
+        // Acked at 4% cash; cash has since dropped to 2% — clearly worse, should reopen.
+        var book = new BookSnapshot(10000m, 200m,
+            [new BookPosition("AAPL", RiskSleeve.Brokerage, 1m, 9800m, 0.98m)], false, []);
+        var ruleSet = new RiskRuleSet { UserId = UserId, MinCashBufferPct = 0.05m };
+        var ack = new PolicyViolationAck
+        {
+            UserId = UserId,
+            RuleKey = RiskRuleKeys.MinCashBuffer,
+            Subject = "CASH",
+            ObservedAtAck = 0.04m,     // acked when cash was 4% (bad, but less bad)
+            WorseningStepPct = 0.01m,  // reopen if cash drops ≥1 pp further
+        };
+
+        var report = _service.Evaluate(book, ruleSet, [], [ack]);
+
+        // cashPct now = 200/10000 = 2%; delta = 4% − 2% = 2% > 1% step → Worsened
+        report.Violations.Should().ContainSingle().Which.Status.Should().Be(PolicyViolationStatus.Worsened);
+    }
+
+    [Fact]
+    public void Evaluate_MinCashBuffer_CashImprovesButStillViolating_RemainsAcknowledged()
+    {
+        // Acked at 3% cash; cash has improved to 4% — still below the 5% minimum but not worse.
+        var book = new BookSnapshot(10000m, 400m,
+            [new BookPosition("AAPL", RiskSleeve.Brokerage, 1m, 9600m, 0.96m)], false, []);
+        var ruleSet = new RiskRuleSet { UserId = UserId, MinCashBufferPct = 0.05m };
+        var ack = new PolicyViolationAck
+        {
+            UserId = UserId,
+            RuleKey = RiskRuleKeys.MinCashBuffer,
+            Subject = "CASH",
+            ObservedAtAck = 0.03m,     // acked when cash was 3%
+            WorseningStepPct = 0.01m,
+        };
+
+        var report = _service.Evaluate(book, ruleSet, [], [ack]);
+
+        // cashPct now = 400/10000 = 4%; delta = 3% − 4% = -1% (improving) → Acknowledged
+        report.Violations.Should().ContainSingle().Which.Status.Should().Be(PolicyViolationStatus.Acknowledged);
+    }
+
+    [Fact]
+    public void Evaluate_MinCashBuffer_SustainedViolationWithinStep_RemainsAcknowledged()
+    {
+        // Acked at 3% cash; still at 3% (no change) — violation is sustained but not worsened.
+        var book = new BookSnapshot(10000m, 300m,
+            [new BookPosition("AAPL", RiskSleeve.Brokerage, 1m, 9700m, 0.97m)], false, []);
+        var ruleSet = new RiskRuleSet { UserId = UserId, MinCashBufferPct = 0.05m };
+        var ack = new PolicyViolationAck
+        {
+            UserId = UserId,
+            RuleKey = RiskRuleKeys.MinCashBuffer,
+            Subject = "CASH",
+            ObservedAtAck = 0.03m,
+            WorseningStepPct = 0.01m,
+        };
+
+        var report = _service.Evaluate(book, ruleSet, [], [ack]);
+
+        // cashPct now = 300/10000 = 3%; delta = 3% − 3% = 0% ≤ 1% step → Acknowledged (sustained)
+        report.Violations.Should().ContainSingle().Which.Status.Should().Be(PolicyViolationStatus.Acknowledged);
+    }
 }
