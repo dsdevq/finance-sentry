@@ -5,6 +5,26 @@ All notable changes to Finance Sentry are documented here. The format follows
 [Semantic Versioning](https://semver.org/). Entries from v0.12.0 onward are
 generated automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [1.2.0](https://github.com/lifekit-hq/finance-sentry/compare/v1.1.0...v1.2.0) (2026-08-12)
+
+
+### Features
+
+* **ci:** weekly automated releases — merge the Release Please PR on a Monday cron ([#408](https://github.com/lifekit-hq/finance-sentry/issues/408)) ([47114f6](https://github.com/lifekit-hq/finance-sentry/commit/47114f6631968dd4e89420e2b31b7cc2ff8f14d2))
+
+
+### Bug Fixes
+
+* **monobank:** window incremental statement fetches to 31 days ([#410](https://github.com/lifekit-hq/finance-sentry/issues/410)) ([7e51b72](https://github.com/lifekit-hq/finance-sentry/commit/7e51b728db4928b0b20e800fb2bfb10e3c6a7cf3))
+
+
+### Documentation
+
+* **032:** spec — agent-as-code (Ledger definition lives in the repo) ([#441](https://github.com/lifekit-hq/finance-sentry/issues/441)) ([a3fabb9](https://github.com/lifekit-hq/finance-sentry/commit/a3fabb9229cec4c2aa75cead46925b16aa67f320))
+* adopt naming & planning conventions (branches, issues, milestones, project fields) ([#427](https://github.com/lifekit-hq/finance-sentry/issues/427)) ([078991f](https://github.com/lifekit-hq/finance-sentry/commit/078991f93dbb88bff1a36aceeba86fa3aad7acf1))
+* CLAUDE.md diet — 424→101 lines; split into docs/claude/, stop speckit appends ([#436](https://github.com/lifekit-hq/finance-sentry/issues/436)) ([80ceb7d](https://github.com/lifekit-hq/finance-sentry/commit/80ceb7d5dd0914e62290edcf131121496356ee90))
+* land draft specs 034 (research-rag) + 038 (earnings-stance-engine) on main ([#442](https://github.com/lifekit-hq/finance-sentry/issues/442)) ([ccddc74](https://github.com/lifekit-hq/finance-sentry/commit/ccddc7449db97e3f1222585ee8719fd9e90710bc))
+
 ## [1.1.0](https://github.com/lifekit-hq/finance-sentry/compare/v1.0.0...v1.1.0) (2026-08-12)
 
 
