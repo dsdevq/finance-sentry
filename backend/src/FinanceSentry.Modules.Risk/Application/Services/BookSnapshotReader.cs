@@ -24,7 +24,7 @@ public sealed class BookSnapshotReader(
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Book figures unavailable for risk check of user {UserId}; returning empty snapshot.", userId);
-            return new BookSnapshot(0m, 0m, [], true, ["all"]);
+            return new BookSnapshot(0m, 0m, [], true, ["all"], 0m);
         }
 
         if (book.IsStale)

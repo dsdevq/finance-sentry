@@ -158,12 +158,9 @@ Separate from the Radar program: a deliberate production-engineering ladder (obs
 
 | Spec | Feature | Depends on |
 |---|---|---|
-| `023-observability-stack` | Metrics + log aggregation + dashboards on the VPS | — |
-| `024-data-retention` | Per-table retention policies + off-host verified backups | 023 (visibility) |
-| `025-edge-gateway` | Single reverse-proxy entrypoint, TLS, rate limits | — |
-| `026-event-bus-outbox` | Broker + transactional outbox inside the monolith | 023 |
-| `027-k8s-migration` | Single-node cluster replaces compose in prod (also lands the deferred 025 fast-fail fix) | 025; 023/024 strongly advised |
-| `028-extract-market-data-service` | Radar/market-data becomes its own service | 026, 025, radar (018) stable |
+| `026-event-bus-outbox` | Broker + transactional outbox inside the monolith | — |
+| `027-k8s-migration` | Single-node cluster replaces compose in prod (also lands the deferred 025 fast-fail fix) | — |
+| `028-extract-market-data-service` | Radar/market-data becomes its own service | 026, radar (018) stable |
 | `029-grpc-internal-contract` | One internal call goes contract-first RPC | 028 |
 
 ### 024 follow-ups (implemented; deferred bits)

@@ -2,7 +2,7 @@
 
 **Feature Branch**: `037-structured-data-sources`
 **Created**: 2026-08-05
-**Status**: Planned (2026-08-05) — see Decision Log: free re-scope
+**Status**: Implemented
 
 ## Decision Log
 
