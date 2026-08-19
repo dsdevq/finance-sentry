@@ -265,7 +265,11 @@ public sealed class RiskEvaluationService : IRiskEvaluationService
                 continue;
             }
 
-            var worsenedPastStep = violation.ObservedValue - ack.ObservedAtAck > ack.WorseningStepPct;
+            // MinCashBuffer worsens as cashPct falls (lower = worse); every other rule worsens as
+            // the observed value rises (higher = worse). Without this direction flip an acknowledged
+            // MinCashBuffer violation that keeps deteriorating never re-opens as Worsened.
+            var direction = violation.RuleKey == RiskRuleKeys.MinCashBuffer ? -1m : 1m;
+            var worsenedPastStep = direction * (violation.ObservedValue - ack.ObservedAtAck) > ack.WorseningStepPct;
             result.Add(violation with
             {
                 Status = worsenedPastStep ? PolicyViolationStatus.Worsened : PolicyViolationStatus.Acknowledged,
