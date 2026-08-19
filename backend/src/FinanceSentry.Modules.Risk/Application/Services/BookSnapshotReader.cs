@@ -39,7 +39,7 @@ public sealed class BookSnapshotReader(
                 book.TotalValueUsd > 0 ? p.UsdValue / book.TotalValueUsd : 0m))
             .ToList();
 
-        return new BookSnapshot(book.TotalValueUsd, book.CashUsd, positions, book.IsStale, book.StaleSources);
+        return new BookSnapshot(book.TotalValueUsd, book.CashUsd, positions, book.IsStale, book.StaleSources, book.InvestedValueUsd);
     }
 
     private static string ToRiskSleeve(string assetClass) => assetClass == AssetClassNormalizer.Crypto

@@ -500,14 +500,17 @@ public sealed class ToolParityTests
         var allocationTool = svc.GetRequiredService<GetAllocationVsTargetTool>();
         var drift = await allocationTool.ExecuteAsync(userId);
         drift.Should().NotBeNull();
-        drift!.TotalValueUsd.Should().Be(expectedTotalUsd, "allocation drift total must match canonical figures");
+        drift!.CashUsd.Should().Be(expectedCashUsd, "allocation drift cash must match canonical figures");
+        drift.InvestedValueUsd.Should().Be(expectedInvestedUsd, "allocation drift invested must match canonical figures");
+        drift.TotalValueUsd.Should().Be(expectedTotalUsd, "allocation drift total must match canonical figures");
 
         // Surface 3: BookSnapshotReader (the internal risk book — CheckRiskRulesTool reads via this).
         // Verified directly because CheckRiskRulesResponseDto does not surface raw totals.
         var bookReader = svc.GetRequiredService<IBookSnapshotReader>();
         var bookSnapshot = await bookReader.ReadAsync(userId);
-        bookSnapshot.TotalUsd.Should().Be(expectedTotalUsd, "risk book snapshot total must match canonical figures");
         bookSnapshot.CashUsd.Should().Be(expectedCashUsd, "risk book snapshot cash must match canonical figures");
+        bookSnapshot.InvestedUsd.Should().Be(expectedInvestedUsd, "risk book snapshot invested must match canonical figures");
+        bookSnapshot.TotalUsd.Should().Be(expectedTotalUsd, "risk book snapshot total must match canonical figures");
     }
 
     [Fact]

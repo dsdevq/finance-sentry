@@ -53,7 +53,7 @@ public class GetAllocationDriftQueryHandler(
                     Percent(kv.Value, total), kv.Value, Percent(kv.Value, total), StatusUnplanned))
                 .OrderByDescending(s => s.ActualValueUsd)
                 .ToList();
-            return new AllocationDriftDto(false, total, false, currentOnly, "n/a");
+            return new AllocationDriftDto(false, total, book.CashUsd, book.InvestedValueUsd, false, currentOnly, "n/a");
         }
 
         var rule = ips.RebalancingRule;
@@ -90,7 +90,7 @@ public class GetAllocationDriftQueryHandler(
         }
 
         return new AllocationDriftDto(
-            true, total, needsRebalance,
+            true, total, book.CashUsd, book.InvestedValueUsd, needsRebalance,
             sleeves.OrderByDescending(s => s.ActualValueUsd).ToList(),
             ips.ReviewCadence);
     }

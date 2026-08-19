@@ -6,7 +6,8 @@ public sealed record BookSnapshot(
     decimal CashUsd,
     IReadOnlyList<BookPosition> Positions,
     bool IsStale,
-    IReadOnlyList<string> StaleSources)
+    IReadOnlyList<string> StaleSources,
+    decimal InvestedUsd = 0m)
 {
     public static BookSnapshot Empty { get; } = new(0m, 0m, [], false, []);
 }
