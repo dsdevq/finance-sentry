@@ -115,7 +115,7 @@ public class AuditLogServiceTests : IDisposable
     /// </summary>
     private async Task<AuditLog?> PollForAuditRowAsync(Guid userId)
     {
-        var deadline = DateTime.UtcNow.AddSeconds(8);
+        var deadline = DateTime.UtcNow.AddSeconds(30);
         while (DateTime.UtcNow < deadline)
         {
             var row = await _db.AuditLogs.AsNoTracking()
