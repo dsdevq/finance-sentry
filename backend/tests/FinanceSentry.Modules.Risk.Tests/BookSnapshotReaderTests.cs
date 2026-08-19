@@ -47,6 +47,7 @@ public sealed class BookSnapshotReaderTests
         book.IsStale.Should().BeFalse();
         book.TotalUsd.Should().Be(10_000m);
         book.CashUsd.Should().Be(1_000m);
+        book.InvestedUsd.Should().Be(9_000m);
         book.Positions.Should().HaveCount(2);
         book.Positions.Should().ContainSingle(p => p.Symbol == "BTC" && p.Sleeve == RiskSleeve.Crypto);
         book.Positions.Should().ContainSingle(p => p.Symbol == "NVDA" && p.Sleeve == RiskSleeve.Brokerage);

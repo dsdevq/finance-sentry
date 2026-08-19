@@ -2,7 +2,7 @@
 
 **Feature Branch**: `034-research-rag`
 **Created**: 2026-07-22
-**Status**: Draft (research done — see research.md)
+**Status**: Superseded — delivered by 036 (research-retrieval-rag)
 **Input**: User description: "Semantic search over my financial text corpus — news, SEC filings, my own thesis/decision notes — so Ledger can reason over research with citations. Numbers never come from fuzzy retrieval; RAG only locates and cites text."
 
 ## Overview

@@ -1,6 +1,7 @@
 namespace FinanceSentry.Modules.Research.Application.Queries;
 
 using FinanceSentry.Core.Cqrs;
+using FinanceSentry.Core.Domain;
 using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Modules.Research.API.Responses;
 using FinanceSentry.Modules.Research.Domain;

@@ -2,7 +2,7 @@
 
 **Feature Branch**: `036-research-retrieval-rag`
 **Created**: 2026-07-26
-**Status**: Draft
+**Status**: Implemented
 **Input**: User description: "Add DB-backed research retrieval and RAG context tools for Ledger. Keep Finance Sentry DB-first; use retrieval for stored research context, not for authoritative balances/holdings."
 
 ## Overview
