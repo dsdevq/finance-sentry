@@ -14,7 +14,7 @@ public sealed class RiskEvaluationServiceTests
     [Fact]
     public void Evaluate_NoRuleSet_ReturnsNoRulesOnFile_NoInferredViolations()
     {
-        var book = new BookSnapshot(15000m, 0m, [new BookPosition("DRAM", RiskSleeve.Brokerage, 100m, 6900m, 0.46m)], false, []);
+        var book = new BookSnapshot(15000m, 0m, [new BookPosition("DRAM", RiskSleeve.Brokerage, 100m, 6900m, 0.46m)], false, [], 0m);
 
         var report = _service.Evaluate(book, null, [], []);
 
@@ -26,7 +26,7 @@ public sealed class RiskEvaluationServiceTests
     public void Evaluate_SeededDram46PercentVs25PercentCap_ProducesExactlyOneViolation()
     {
         // The real seeded case: ~$15k book, one position (DRAM) at ~46%, cap at 25%.
-        var book = new BookSnapshot(15000m, 1000m, [new BookPosition("DRAM", RiskSleeve.Brokerage, 100m, 6900m, 0.46m)], false, []);
+        var book = new BookSnapshot(15000m, 1000m, [new BookPosition("DRAM", RiskSleeve.Brokerage, 100m, 6900m, 0.46m)], false, [], 0m);
         var ruleSet = new RiskRuleSet { UserId = UserId, MaxPositionWeightPct = 0.25m };
 
         var report = _service.Evaluate(book, ruleSet, [], []);
@@ -44,7 +44,7 @@ public sealed class RiskEvaluationServiceTests
     [Fact]
     public void Evaluate_CompliantBook_ReturnsEmptyViolations()
     {
-        var book = new BookSnapshot(10000m, 3000m, [new BookPosition("AAPL", RiskSleeve.Brokerage, 10m, 2000m, 0.2m)], false, []);
+        var book = new BookSnapshot(10000m, 3000m, [new BookPosition("AAPL", RiskSleeve.Brokerage, 10m, 2000m, 0.2m)], false, [], 0m);
         var ruleSet = new RiskRuleSet { UserId = UserId, MaxPositionWeightPct = 0.25m };
 
         var report = _service.Evaluate(book, ruleSet, [], []);
@@ -62,7 +62,7 @@ public sealed class RiskEvaluationServiceTests
                 new BookPosition("NVDA", RiskSleeve.Brokerage, 1m, 4000m, 0.4m),
                 new BookPosition("AAPL", RiskSleeve.Brokerage, 1m, 4000m, 0.4m),
             ],
-            false, []);
+            false, [], 0m);
         var ruleSet = new RiskRuleSet { UserId = UserId, MaxSleeveWeightPct = 0.5m };
 
         var report = _service.Evaluate(book, ruleSet, [], []);
@@ -73,7 +73,7 @@ public sealed class RiskEvaluationServiceTests
     [Fact]
     public void Evaluate_MinCashBufferBreach_IsFlagged()
     {
-        var book = new BookSnapshot(10000m, 200m, [new BookPosition("AAPL", RiskSleeve.Brokerage, 1m, 9800m, 0.98m)], false, []);
+        var book = new BookSnapshot(10000m, 200m, [new BookPosition("AAPL", RiskSleeve.Brokerage, 1m, 9800m, 0.98m)], false, [], 0m);
         var ruleSet = new RiskRuleSet { UserId = UserId, MinCashBufferPct = 0.1m };
 
         var report = _service.Evaluate(book, ruleSet, [], []);
@@ -84,7 +84,7 @@ public sealed class RiskEvaluationServiceTests
     [Fact]
     public void Evaluate_AcknowledgedViolation_ReportsAcknowledged_NotNew()
     {
-        var book = new BookSnapshot(15000m, 1000m, [new BookPosition("DRAM", RiskSleeve.Brokerage, 100m, 6900m, 0.46m)], false, []);
+        var book = new BookSnapshot(15000m, 1000m, [new BookPosition("DRAM", RiskSleeve.Brokerage, 100m, 6900m, 0.46m)], false, [], 0m);
         var ruleSet = new RiskRuleSet { UserId = UserId, MaxPositionWeightPct = 0.25m };
         var ack = new PolicyViolationAck
         {
@@ -106,7 +106,7 @@ public sealed class RiskEvaluationServiceTests
     [Fact]
     public void Evaluate_AcknowledgedViolation_WorsensPastStep_ReopensAsWorsened()
     {
-        var book = new BookSnapshot(15000m, 1000m, [new BookPosition("DRAM", RiskSleeve.Brokerage, 100m, 8000m, 0.55m)], false, []);
+        var book = new BookSnapshot(15000m, 1000m, [new BookPosition("DRAM", RiskSleeve.Brokerage, 100m, 8000m, 0.55m)], false, [], 0m);
         var ruleSet = new RiskRuleSet { UserId = UserId, MaxPositionWeightPct = 0.25m };
         var ack = new PolicyViolationAck
         {
@@ -126,7 +126,7 @@ public sealed class RiskEvaluationServiceTests
     [Fact]
     public void Evaluate_StaleBook_FlagsReportStale_ButDoesNotAutoClearViolations()
     {
-        var book = new BookSnapshot(15000m, 1000m, [new BookPosition("DRAM", RiskSleeve.Brokerage, 100m, 6900m, 0.46m)], true, ["brokerage"]);
+        var book = new BookSnapshot(15000m, 1000m, [new BookPosition("DRAM", RiskSleeve.Brokerage, 100m, 6900m, 0.46m)], true, ["brokerage"], 0m);
         var ruleSet = new RiskRuleSet { UserId = UserId, MaxPositionWeightPct = 0.25m };
 
         var report = _service.Evaluate(book, ruleSet, [], []);
@@ -144,7 +144,7 @@ public sealed class RiskEvaluationServiceTests
         var book = new BookSnapshot(
             10000m, 0m,
             [new BookPosition("DRAM", RiskSleeve.Brokerage, 100m, 4600m, 0.46m)],
-            false, []);
+            false, [], 0m);
         var ruleSet = new RiskRuleSet { UserId = UserId, MaxPositionWeightPct = 0.50m };
         AllocationDriftTarget[] targets = [new(RiskSleeve.Brokerage, 0.30m, 0.05m)];
 
@@ -164,7 +164,7 @@ public sealed class RiskEvaluationServiceTests
         var book = new BookSnapshot(
             10000m, 0m,
             [new BookPosition("DRAM", RiskSleeve.Brokerage, 100m, 3200m, 0.32m)],
-            false, []);
+            false, [], 0m);
         var ruleSet = new RiskRuleSet { UserId = UserId, MaxPositionWeightPct = 0.50m };
         AllocationDriftTarget[] targets = [new(RiskSleeve.Brokerage, 0.30m, 0.05m)];
 
@@ -179,7 +179,7 @@ public sealed class RiskEvaluationServiceTests
         var book = new BookSnapshot(
             10000m, 0m,
             [new BookPosition("DRAM", RiskSleeve.Brokerage, 100m, 4600m, 0.46m)],
-            false, []);
+            false, [], 0m);
         var ruleSet = new RiskRuleSet { UserId = UserId, MaxPositionWeightPct = 0.50m };
 
         var report = _service.Evaluate(book, ruleSet, [], []);
@@ -190,7 +190,7 @@ public sealed class RiskEvaluationServiceTests
     [Fact]
     public void EvaluateProposal_NoRuleSet_ReturnsAllowed()
     {
-        var book = new BookSnapshot(10000m, 5000m, [], false, []);
+        var book = new BookSnapshot(10000m, 5000m, [], false, [], 0m);
 
         var verdict = _service.EvaluateProposal(book, null, "NVDA", 1000m, 0);
 
@@ -200,7 +200,7 @@ public sealed class RiskEvaluationServiceTests
     [Fact]
     public void EvaluateProposal_WithinLimits_ReturnsAllowedWithHeadroom()
     {
-        var book = new BookSnapshot(10000m, 5000m, [], false, []);
+        var book = new BookSnapshot(10000m, 5000m, [], false, [], 0m);
         var ruleSet = new RiskRuleSet { UserId = UserId, MaxPositionWeightPct = 0.25m };
 
         var verdict = _service.EvaluateProposal(book, ruleSet, "NVDA", 500m, 0);
@@ -212,7 +212,7 @@ public sealed class RiskEvaluationServiceTests
     [Fact]
     public void EvaluateProposal_BreachesMaxPositionWeight_ReturnsRefusedWithMaxCompliantSize()
     {
-        var book = new BookSnapshot(10000m, 5000m, [], false, []);
+        var book = new BookSnapshot(10000m, 5000m, [], false, [], 0m);
         var ruleSet = new RiskRuleSet { UserId = UserId, MaxPositionWeightPct = 0.25m };
 
         var verdict = _service.EvaluateProposal(book, ruleSet, "NVDA", 5000m, 0);
@@ -226,7 +226,7 @@ public sealed class RiskEvaluationServiceTests
     [Fact]
     public void EvaluateProposal_BreachesMinCashBuffer_ReturnsRefused()
     {
-        var book = new BookSnapshot(10000m, 1500m, [], false, []);
+        var book = new BookSnapshot(10000m, 1500m, [], false, [], 0m);
         var ruleSet = new RiskRuleSet { UserId = UserId, MinCashBufferPct = 0.1m };
 
         var verdict = _service.EvaluateProposal(book, ruleSet, "NVDA", 1000m, 0);
@@ -238,7 +238,7 @@ public sealed class RiskEvaluationServiceTests
     [Fact]
     public void EvaluateProposal_BreachesMaxNewPosition_ReturnsRefused()
     {
-        var book = new BookSnapshot(10000m, 5000m, [], false, []);
+        var book = new BookSnapshot(10000m, 5000m, [], false, [], 0m);
         var ruleSet = new RiskRuleSet { UserId = UserId, MaxNewPositionPct = 0.1m };
 
         var verdict = _service.EvaluateProposal(book, ruleSet, "NVDA", 5000m, 0);
@@ -250,7 +250,7 @@ public sealed class RiskEvaluationServiceTests
     [Fact]
     public void EvaluateProposal_TurnoverBudgetAtCap_ReturnsRefusedTurnover()
     {
-        var book = new BookSnapshot(10000m, 5000m, [], false, []);
+        var book = new BookSnapshot(10000m, 5000m, [], false, [], 0m);
         var ruleSet = new RiskRuleSet { UserId = UserId, TurnoverBudgetPerQuarter = 5 };
 
         var verdict = _service.EvaluateProposal(book, ruleSet, "NVDA", 100m, turnoverCountThisQuarter: 5);

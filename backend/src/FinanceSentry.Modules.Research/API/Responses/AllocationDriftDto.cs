@@ -3,6 +3,8 @@ namespace FinanceSentry.Modules.Research.API.Responses;
 public record AllocationDriftDto(
     bool HasIps,
     decimal TotalValueUsd,
+    decimal CashUsd,
+    decimal InvestedValueUsd,
     bool NeedsRebalance,
     IReadOnlyList<AllocationSleeveDrift> Sleeves,
     string RebalancingCadence);

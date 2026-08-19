@@ -2,7 +2,7 @@
 
 **Feature Branch**: `023-observability-stack`
 **Created**: 2026-07-09
-**Status**: Planning — alerting slice pulled into v1 (2026-08-05); prerequisites added from live-log investigation
+**Status**: Implemented
 **Input**: User description: "Observability stack: OpenTelemetry metrics in the ASP.NET Core API exposed via /metrics, Prometheus + Grafana + Loki containers on the VPS, Serilog shipping to Loki, dashboards for sync jobs, HTTP latency/errors, Hangfire job health"
 
 ## User Scenarios & Testing *(mandatory)*

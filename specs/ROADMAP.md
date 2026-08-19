@@ -11,16 +11,10 @@
 
 | Spec | Kind | Depends on | Note |
 |---|---|---|---|
-| `033-analytics-query-tool` | Feature | — | **Planned — ready to implement.** Guarded read-only query tool (escape-hatch for the long tail; relieves tool sprawl) |
-| `034-research-rag` | Feature | — | Spec + **research done**; ready to plan/implement. Semantic search over the text corpus (news/filings/notes); complements 033 (prose vs numbers) |
 | `032-agent-as-code` | Architecture | 031 (proves the pattern) | Draft — agent definition in the repo, CI-deployed to the runtime |
-| `023-observability-stack` | Platform | — | Don't orchestrate what you can't observe — do this rung first. **Alerting slice pulled into v1 (2026-08-05)** after a 13-day silent cron outage |
-| `037-structured-data-sources` | Platform | — | Retire brittle scraping (Yahoo `quoteSummary`, MarketBeat) → free-tier structured APIs (Finnhub/FMP). Analyst-actions first. Origin: 2026-08-05 reliability session |
-| `024-data-retention` | Platform | 023 | Retention policies + verified off-host backups |
-| `025-edge-gateway` | Platform | — | Single reverse-proxy entrypoint, TLS, rate limits |
-| `026-event-bus-outbox` | Platform | 023 | In-monolith broker + transactional outbox (031 is a focused precursor) |
-| `027-k8s-migration` | Platform | 025; 023/024 advised | Single-node cluster replaces compose in prod. **Carries 025 fast-fail fix** (short connect-timeout / split long-poll cluster — see 025 spec Known Limitation) |
-| `028-extract-market-data-service` | Platform | 026, 025, radar stable | First module extracted to its own service |
+| `026-event-bus-outbox` | Platform | — | In-monolith broker + transactional outbox (031 is a focused precursor) |
+| `027-k8s-migration` | Platform | — | Single-node cluster replaces compose in prod. **Carries 025 fast-fail fix** (short connect-timeout / split long-poll cluster — see 025 spec Known Limitation) |
+| `028-extract-market-data-service` | Platform | 026, radar stable | First module extracted to its own service |
 | `029-grpc-internal-contract` | Platform | 028 | One internal call goes contract-first RPC |
 
 *(`002-investment-tracking` is `Superseded` — delivered under 008/009/010 + the research suite — not backlog.)*
@@ -164,12 +158,9 @@ Separate from the Radar program: a deliberate production-engineering ladder (obs
 
 | Spec | Feature | Depends on |
 |---|---|---|
-| `023-observability-stack` | Metrics + log aggregation + dashboards on the VPS | — |
-| `024-data-retention` | Per-table retention policies + off-host verified backups | 023 (visibility) |
-| `025-edge-gateway` | Single reverse-proxy entrypoint, TLS, rate limits | — |
-| `026-event-bus-outbox` | Broker + transactional outbox inside the monolith | 023 |
-| `027-k8s-migration` | Single-node cluster replaces compose in prod (also lands the deferred 025 fast-fail fix) | 025; 023/024 strongly advised |
-| `028-extract-market-data-service` | Radar/market-data becomes its own service | 026, 025, radar (018) stable |
+| `026-event-bus-outbox` | Broker + transactional outbox inside the monolith | — |
+| `027-k8s-migration` | Single-node cluster replaces compose in prod (also lands the deferred 025 fast-fail fix) | — |
+| `028-extract-market-data-service` | Radar/market-data becomes its own service | 026, radar (018) stable |
 | `029-grpc-internal-contract` | One internal call goes contract-first RPC | 028 |
 
 ### 024 follow-ups (implemented; deferred bits)

@@ -2,7 +2,7 @@
 
 **Feature Branch**: `024-data-retention`
 **Created**: 2026-07-09
-**Status**: Roadmap — spec only, not yet planned or implemented
+**Status**: Implemented
 **Input**: User description: "Data retention and rotation: bounded growth for logs, Hangfire storage, and domain tables (audit events, daily bars, snapshots, scores) via per-module purge/downsample policies, plus automated off-host database backups with restore verification"
 
 ## User Scenarios & Testing *(mandatory)*

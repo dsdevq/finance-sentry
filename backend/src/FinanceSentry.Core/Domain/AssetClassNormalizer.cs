@@ -1,4 +1,4 @@
-namespace FinanceSentry.Modules.Research.Domain;
+namespace FinanceSentry.Core.Domain;
 
 /// <summary>
 /// Maps raw provider instrument types and free-form IPS asset-class labels onto a
