@@ -2,6 +2,7 @@ namespace FinanceSentry.Integration;
 
 using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Core.Services;
+using FinanceSentry.Modules.Radar.Domain.Ports;
 using FinanceSentry.Modules.Research.Domain.Ports;
 using FinanceSentry.Modules.Risk.Domain.Ports;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,6 +20,9 @@ public static class CrossModulePortRegistration
 
         services.AddScoped<IAllocationPolicySource, IpsAllocationPolicySource>();
         services.AddScoped<IPositionCapSource, RiskPositionCapSource>();
+
+        // 412: portfolio value source for book-vs-benchmark TWR; bridges Wealth snapshots → Radar.
+        services.AddScoped<IPortfolioValueSource, RadarPortfolioValueSource>();
         return services;
     }
 }

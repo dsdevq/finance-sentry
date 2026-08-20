@@ -22,6 +22,8 @@ public class AlertGeneratorService(IAlertRepository alerts) : IAlertGeneratorSer
     // Backstop only — the failure filter already guarantees one call per streak. Short enough that a
     // genuine success-then-new-streak re-alerts, long enough to absorb an accidental double-call.
     private static readonly TimeSpan JobFailureSilenceWindow = TimeSpan.FromMinutes(15);
+    // 6 days: weekly cron fires each Monday; prevents a re-run or drift from double-alerting.
+    private static readonly TimeSpan PerformanceBriefSilenceWindow = TimeSpan.FromDays(6);
 
     private readonly IAlertRepository _alerts = alerts;
 
@@ -300,6 +302,25 @@ public class AlertGeneratorService(IAlertRepository alerts) : IAlertGeneratorSer
             Message = $"Scheduled job '{jobName}' has failed {consecutiveCount} times in a row.{detail}",
             ReferenceId = referenceId,
             ReferenceLabel = jobName,
+        }, ct);
+    }
+
+    public async Task GeneratePerformanceBriefAlertAsync(
+        Guid userId, string headline, string body, CancellationToken ct = default)
+    {
+        var quietSince = DateTimeOffset.UtcNow - PerformanceBriefSilenceWindow;
+        if (await _alerts.HasRecentAsync(userId, AlertType.PerformanceBrief, null, "weekly", quietSince, ct))
+            return;
+
+        await _alerts.AddAsync(new Alert
+        {
+            UserId = userId,
+            Type = AlertType.PerformanceBrief,
+            Severity = AlertSeverity.Info,
+            Title = headline,
+            Message = body,
+            ReferenceId = null,
+            ReferenceLabel = "weekly",
         }, ct);
     }
 

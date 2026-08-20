@@ -181,6 +181,7 @@ internal sealed class FakeOpportunityAlertGenerator : IAlertGeneratorService
     public Task GenerateMarketStructureFreshnessAlertAsync(Guid userId, Guid referenceId, string reason, CancellationToken ct = default) => Task.CompletedTask;
     public Task GeneratePolicyViolationAlertAsync(Guid userId, string ruleKey, string subject, decimal observedValue, decimal limitValue, bool isOverride = false, CancellationToken ct = default) => Task.CompletedTask;
     public Task ResolvePolicyViolationAlertAsync(Guid userId, string ruleKey, string subject, CancellationToken ct = default) => Task.CompletedTask;
+    public Task GeneratePerformanceBriefAlertAsync(Guid userId, string headline, string body, CancellationToken ct = default) => Task.CompletedTask;
 }
 
 internal sealed class FakeRiskPolicyGate(RiskGateVerdict verdict) : IRiskPolicyGate
