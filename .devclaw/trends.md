@@ -16,3 +16,15 @@ observes; the human encodes.
 **Proposed action:** _(none — pattern noted, no action recommended)_
 
 ---
+## [2026-08-19T21:13:14+00:00] D3 — drift
+
+A new top-level `backend` directory appeared in finance-sentry since the last bookmark. Given the project's documented architecture (ASP.NET Core 9 API + Angular frontend under Docker Compose), this could be a legitimate new service boundary or an ad-hoc restructuring — without file-level detail it's not possible to tell whether this respects the existing modular CQRS layout or introduces a parallel, undocumented structure.
+
+**Evidence:**
+- `git diff --diff-filter=A --name-only f45ae8af0ed9f95c5d292d4fc8306411eb3939f5..HEAD`
+- `backend/`
+
+**Proposed action:** Confirm the `backend/` directory's purpose and, if it's a durable structural addition, document it in the project's module map (or equivalent onboarding doc) so it isn't mistaken for scaffolding.
+
+---
+

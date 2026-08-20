@@ -107,3 +107,4 @@ backend/packages/
 # Stray agent worktree copies and QA scratch — never commit
 .claude/worktrees/
 frontend/.qa-tmp.mjs
+/.devclaw/
