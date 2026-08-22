@@ -316,5 +316,8 @@ public class RunThesisMonitorHandlerTests
         public Task GenerateOpportunityAlertAsync(
             Guid userId, Guid referenceId, string ticker, string reason, CancellationToken ct = default)
             => Task.CompletedTask;
+
+        public Task GeneratePerformanceBriefAlertAsync(Guid userId, string headline, string body, CancellationToken ct = default)
+            => Task.CompletedTask;
     }
 }

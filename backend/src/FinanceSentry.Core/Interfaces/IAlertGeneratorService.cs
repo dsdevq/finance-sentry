@@ -129,4 +129,14 @@ public interface IAlertGeneratorService
         int consecutiveCount,
         string? lastError,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Raises a weekly performance-brief Info alert (412) summarising the book's TWR versus SPY.
+    /// Silenced for 6 days so the weekly cron doesn't repeat on a re-run.
+    /// </summary>
+    Task GeneratePerformanceBriefAlertAsync(
+        Guid userId,
+        string headline,
+        string body,
+        CancellationToken ct = default);
 }

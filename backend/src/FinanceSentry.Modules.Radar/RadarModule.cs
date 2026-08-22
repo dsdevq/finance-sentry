@@ -48,6 +48,12 @@ public static class RadarModule
                 "radar-freshness-watchdog",
                 job => job.ExecuteAsync(CancellationToken.None),
                 Cron.Daily(options.ComputeHourUtc));
+
+            // 412: weekly book-vs-SPY TWR brief; Monday 08:00 UTC.
+            mgr.AddOrUpdate<BookPerformanceBriefJob>(
+                "book-performance-brief",
+                job => job.ExecuteAsync(CancellationToken.None),
+                "0 8 * * 1");
         }
     }
 
@@ -73,6 +79,8 @@ public static class RadarModule
         services.AddScoped<IRadarSignalReader, RadarSignalReader>();
         services.AddScoped<IMarketStructureReader, MarketStructureReader>();
 
+        services.AddScoped<IBookPerformanceService, BookPerformanceService>();
+        services.AddScoped<BookPerformanceBriefJob>();
         services.AddScoped<RadarIngestionJob>();
         services.AddScoped<RadarComputeJob>();
         services.AddScoped<RadarFreshnessWatchdogJob>();

@@ -11,4 +11,5 @@ public static class AlertType
     public const string Opportunity = "Opportunity";
     public const string ConsentExpiring = "ConsentExpiring";
     public const string JobFailure = "JobFailure";
+    public const string PerformanceBrief = "PerformanceBrief";
 }
