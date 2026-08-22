@@ -5,6 +5,13 @@ All notable changes to Finance Sentry are documented here. The format follows
 [Semantic Versioning](https://semver.org/). Entries from v0.12.0 onward are
 generated automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [1.4.0](https://github.com/lifekit-hq/finance-sentry/compare/v1.3.0...v1.4.0) (2026-08-22)
+
+
+### Features
+
+* Implement finance-sentry [#412](https://github.com/lifekit-hq/finance-sentry/issues/412) — book-vs-benchmark TWR scoreboard… ([#451](https://github.com/lifekit-hq/finance-sentry/issues/451)) ([6e51a78](https://github.com/lifekit-hq/finance-sentry/commit/6e51a78ca22f4937688edad0d8dd17aac329d408))
+
 ## [1.3.0](https://github.com/lifekit-hq/finance-sentry/compare/v1.2.0...v1.3.0) (2026-08-19)
 
 
