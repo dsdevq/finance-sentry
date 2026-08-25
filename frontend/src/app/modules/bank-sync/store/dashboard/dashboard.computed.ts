@@ -1,6 +1,6 @@
 import {CurrencyPipe} from '@angular/common';
 import {computed, inject, type Signal} from '@angular/core';
-import {type AreaSeries, type BarSeries, type DonutSegment} from '@dsdevq-common/ui';
+import {type AreaSeries, type BarSeries, type DonutSegment} from '@lifekit-hq/ui';
 
 import {CategoryStore} from '../../../../shared/store/categories/categories.store';
 import {MerchantCategoryUtils} from '../../../../shared/utils/merchant-category.utils';

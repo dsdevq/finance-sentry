@@ -1,5 +1,5 @@
 import {computed, type Signal} from '@angular/core';
-import {type DonutSegment} from '@dsdevq-common/ui';
+import {type DonutSegment} from '@lifekit-hq/ui';
 
 import {
   type AccountCategory,

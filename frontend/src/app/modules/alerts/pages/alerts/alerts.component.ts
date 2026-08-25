@@ -8,7 +8,7 @@ import {
   type LucideIconName,
   PageHeaderComponent,
   ToastService,
-} from '@dsdevq-common/ui';
+} from '@lifekit-hq/ui';
 
 import {AppRoute} from '../../../../shared/enums/app-route/app-route.enum';
 import {

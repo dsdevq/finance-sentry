@@ -4,7 +4,7 @@ import {
   ChatComponent,
   type CmnChatStreamFn,
   type LucideIconName,
-} from '@dsdevq-common/ui';
+} from '@lifekit-hq/ui';
 
 import {type ConversationSummary} from '../../models/conversation/conversation.model';
 import {AgentChatStore} from '../../store/agent-chat.store';

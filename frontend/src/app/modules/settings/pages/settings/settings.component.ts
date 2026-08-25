@@ -10,7 +10,7 @@ import {
   SelectComponent,
   ToastService,
   ToggleComponent,
-} from '@dsdevq-common/ui';
+} from '@lifekit-hq/ui';
 import {take} from 'rxjs';
 
 import {AuthStore} from '../../../auth/store/auth.store';

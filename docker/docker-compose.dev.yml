@@ -3,6 +3,7 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.frontend
+      secrets: [npm_token]
     container_name: finance-sentry-frontend
     restart: unless-stopped
     ports:
@@ -211,3 +212,10 @@ volumes:
 networks:
   finance-sentry-network:
     driver: bridge
+
+# GitHub Packages token for @lifekit-hq/* installs (BuildKit secret — not in layers).
+# Locally: export NODE_AUTH_TOKEN=$(gh auth token)  (needs read:packages scope).
+# CI/deploy: the workflow passes secrets.GITHUB_TOKEN.
+secrets:
+  npm_token:
+    environment: NODE_AUTH_TOKEN

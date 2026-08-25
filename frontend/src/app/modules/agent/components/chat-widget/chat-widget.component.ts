@@ -6,7 +6,7 @@ import {
   type CmnChatStreamFn,
   IconComponent,
   type LucideIconName,
-} from '@dsdevq-common/ui';
+} from '@lifekit-hq/ui';
 import {filter, map} from 'rxjs';
 
 import {AppRoute} from '../../../../shared/enums/app-route/app-route.enum';

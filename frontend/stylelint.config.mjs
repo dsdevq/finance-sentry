@@ -1,1 +1,1 @@
-export {default} from '@dsdevq-common/config/stylelint';
+export {default} from '@lifekit-hq/config/stylelint';

@@ -1,7 +1,7 @@
 import {inject, type Signal, untracked} from '@angular/core';
 import {toObservable} from '@angular/core/rxjs-interop';
 import {ActivatedRoute, Router} from '@angular/router';
-import {extractErrorCode} from '@dsdevq-common/core';
+import {extractErrorCode} from '@lifekit-hq/core';
 import {rxMethod} from '@ngrx/signals/rxjs-interop';
 import {catchError, EMPTY, pipe, switchMap, tap, timer} from 'rxjs';
 

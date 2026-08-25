@@ -8,7 +8,7 @@ import {
   DataTableComponent,
   DonutChartComponent,
   InstitutionAvatarComponent,
-} from '@dsdevq-common/ui';
+} from '@lifekit-hq/ui';
 
 import {AssetLogoPipe} from '../../../../shared/pipes/asset-logo.pipe';
 import {CurrencyAmountPipe} from '../../pipes/currency-amount.pipe';

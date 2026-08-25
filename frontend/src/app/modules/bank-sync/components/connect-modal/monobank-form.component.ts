@@ -7,7 +7,7 @@ import {
   DialogActionsComponent,
   FormFieldComponent,
   InputComponent,
-} from '@dsdevq-common/ui';
+} from '@lifekit-hq/ui';
 
 import {AccountsStore} from '../../store/accounts/accounts.store';
 import {ConnectStore} from '../../store/connect/connect.store';

@@ -1,5 +1,5 @@
 import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
-import {ButtonComponent, DialogActionsComponent} from '@dsdevq-common/ui';
+import {ButtonComponent, DialogActionsComponent} from '@lifekit-hq/ui';
 
 import {ConnectStore} from '../../store/connect/connect.store';
 import {CONNECT_STRATEGY} from '../../strategies/connect-strategy.token';

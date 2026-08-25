@@ -32,7 +32,7 @@
             ],
             "styles": [
               "src/styles.scss",
-              "projects/dsdevq-common/ui/src/styles/theme.css"
+              "node_modules/@lifekit-hq/tokens/theme.css"
             ],
             "browser": "src/main.ts"
           },
@@ -71,10 +71,6 @@
               "extractLicenses": false,
               "sourceMap": true,
               "namedChunks": true
-            },
-            "storybook": {
-              "assets": [],
-              "tsConfig": "projects/dsdevq-common/ui/tsconfig.storybook.json"
             }
           },
           "defaultConfiguration": "production"
@@ -149,137 +145,6 @@
             "production": {
               "devServerTarget": "finance-sentry:serve:production"
             }
-          }
-        }
-      }
-    },
-    "@dsdevq-common/ui": {
-      "projectType": "library",
-      "root": "projects/dsdevq-common/ui",
-      "sourceRoot": "projects/dsdevq-common/ui/src",
-      "prefix": "cmn",
-      "architect": {
-        "build": {
-          "builder": "@angular/build:ng-packagr",
-          "configurations": {
-            "production": {
-              "tsConfig": "projects/dsdevq-common/ui/tsconfig.lib.prod.json"
-            },
-            "development": {
-              "tsConfig": "projects/dsdevq-common/ui/tsconfig.lib.json"
-            }
-          },
-          "defaultConfiguration": "production"
-        },
-        "test": {
-          "builder": "@angular/build:unit-test",
-          "options": {
-            "tsConfig": "projects/dsdevq-common/ui/tsconfig.spec.json",
-            "coverage": true,
-            "browsers": [
-              "chromium"
-            ]
-          },
-          "configurations": {
-            "ci": {
-              "watch": false,
-              "headless": true,
-              "coverage": true,
-              "coverageThresholds": {
-                "statements": 84,
-                "branches": 85,
-                "functions": 74,
-                "lines": 84
-              }
-            }
-          }
-        },
-        "lint": {
-          "builder": "@angular-eslint/builder:lint",
-          "options": {
-            "eslintConfig": "projects/dsdevq-common/ui/eslint.config.mjs",
-            "lintFilePatterns": [
-              "projects/dsdevq-common/ui/src/**/*.ts",
-              "projects/dsdevq-common/ui/src/**/*.html"
-            ]
-          }
-        },
-        "storybook": {
-          "builder": "@storybook/angular:start-storybook",
-          "options": {
-            "configDir": "projects/dsdevq-common/ui/.storybook",
-            "browserTarget": "finance-sentry:build:storybook",
-            "tsConfig": "projects/dsdevq-common/ui/tsconfig.storybook.json",
-            "port": 6006,
-            "compodoc": false,
-            "styles": [
-              "projects/dsdevq-common/ui/src/styles/theme.css"
-            ]
-          }
-        },
-        "build-storybook": {
-          "builder": "@storybook/angular:build-storybook",
-          "options": {
-            "configDir": "projects/dsdevq-common/ui/.storybook",
-            "browserTarget": "finance-sentry:build:storybook",
-            "tsConfig": "projects/dsdevq-common/ui/tsconfig.storybook.json",
-            "outputDir": "projects/dsdevq-common/ui/storybook-static",
-            "compodoc": false,
-            "styles": [
-              "projects/dsdevq-common/ui/src/styles/theme.css"
-            ]
-          }
-        }
-      }
-    },
-    "@dsdevq-common/core": {
-      "projectType": "library",
-      "root": "projects/dsdevq-common/core",
-      "sourceRoot": "projects/dsdevq-common/core/src",
-      "prefix": "cmn",
-      "architect": {
-        "build": {
-          "builder": "@angular/build:ng-packagr",
-          "configurations": {
-            "production": {
-              "tsConfig": "projects/dsdevq-common/core/tsconfig.lib.prod.json"
-            },
-            "development": {
-              "tsConfig": "projects/dsdevq-common/core/tsconfig.lib.json"
-            }
-          },
-          "defaultConfiguration": "production"
-        },
-        "test": {
-          "builder": "@angular/build:unit-test",
-          "options": {
-            "tsConfig": "projects/dsdevq-common/core/tsconfig.spec.json",
-            "coverage": true,
-            "browsers": [
-              "chromium"
-            ]
-          },
-          "configurations": {
-            "ci": {
-              "watch": false,
-              "headless": true,
-              "coverage": true,
-              "coverageThresholds": {
-                "statements": 95,
-                "branches": 95,
-                "functions": 95,
-                "lines": 95
-              }
-            }
-          }
-        },
-        "lint": {
-          "builder": "@angular-eslint/builder:lint",
-          "options": {
-            "eslintConfig": "projects/dsdevq-common/core/eslint.config.mjs",
-            "lintFilePatterns": [
-              "projects/dsdevq-common/core/src/**/*.ts"
-            ]
           }
         }
       }
