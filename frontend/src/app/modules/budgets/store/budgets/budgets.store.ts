@@ -1,4 +1,4 @@
-import {withUrlSync} from '@dsdevq-common/core';
+import {withUrlSync} from '@lifekit-hq/core';
 import {signalStore, withComputed, withHooks, withMethods, withState} from '@ngrx/signals';
 
 import {budgetsComputed} from './budgets.computed';

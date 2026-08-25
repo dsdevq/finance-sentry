@@ -11,7 +11,7 @@ import {
   SkeletonComponent,
   StatusIndicatorComponent,
   ToastService,
-} from '@dsdevq-common/ui';
+} from '@lifekit-hq/ui';
 import {take} from 'rxjs';
 
 import {type Institution} from '../../../../shared/models/wealth/wealth.model';

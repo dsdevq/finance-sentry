@@ -1,6 +1,6 @@
 import {computed, inject, type Signal} from '@angular/core';
-import {ErrorMessageService} from '@dsdevq-common/core';
-import {type DonutSegment} from '@dsdevq-common/ui';
+import {ErrorMessageService} from '@lifekit-hq/core';
+import {type DonutSegment} from '@lifekit-hq/ui';
 
 import {type Position} from '../models/position/position.model';
 import {type HoldingsState} from './holdings.state';

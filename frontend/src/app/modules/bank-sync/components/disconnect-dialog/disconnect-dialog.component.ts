@@ -1,6 +1,6 @@
 import {DialogRef} from '@angular/cdk/dialog';
 import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
-import {ButtonComponent, CMN_DIALOG_DATA, DialogActionsComponent} from '@dsdevq-common/ui';
+import {ButtonComponent, CMN_DIALOG_DATA, DialogActionsComponent} from '@lifekit-hq/ui';
 
 import {type DisconnectDialogData} from '../../models/disconnect-dialog/disconnect-dialog.model';
 

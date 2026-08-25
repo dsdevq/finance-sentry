@@ -1,6 +1,6 @@
 import {TestBed} from '@angular/core/testing';
 import {Router} from '@angular/router';
-import {ERROR_MESSAGES} from '@dsdevq-common/core';
+import {ERROR_MESSAGES} from '@lifekit-hq/core';
 import {of, Subject, throwError} from 'rxjs';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 

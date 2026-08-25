@@ -1,4 +1,4 @@
-import {withAsyncStatus, withPagination, withUrlSync} from '@dsdevq-common/core';
+import {withAsyncStatus, withPagination, withUrlSync} from '@lifekit-hq/core';
 import {signalStore, withComputed, withHooks, withMethods, withState} from '@ngrx/signals';
 
 import {transactionsComputed} from './transactions.computed';

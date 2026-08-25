@@ -1,5 +1,5 @@
 import {Injectable} from '@angular/core';
-import {ApiService} from '@dsdevq-common/core';
+import {ApiService} from '@lifekit-hq/core';
 import {Observable, timer} from 'rxjs';
 import {shareReplay, switchMap, takeWhile} from 'rxjs/operators';
 

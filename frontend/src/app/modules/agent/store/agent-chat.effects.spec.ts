@@ -1,5 +1,5 @@
 import {TestBed} from '@angular/core/testing';
-import {type CmnChatStreamEvent} from '@dsdevq-common/ui';
+import {type CmnChatStreamEvent} from '@lifekit-hq/ui';
 import {of} from 'rxjs';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 

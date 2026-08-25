@@ -12,7 +12,7 @@ import {
   SkeletonComponent,
   StatCardComponent,
   TagComponent,
-} from '@dsdevq-common/ui';
+} from '@lifekit-hq/ui';
 import {map} from 'rxjs';
 
 import {MerchantCategoryPipe} from '../../../../shared/pipes/merchant-category.pipe';

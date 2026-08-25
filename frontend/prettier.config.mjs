@@ -1,1 +1,1 @@
-export {default} from '@dsdevq-common/config/prettier';
+export {default} from '@lifekit-hq/config/prettier';

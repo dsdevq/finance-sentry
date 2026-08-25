@@ -11,7 +11,7 @@ import {
   ListItemRowComponent,
   PageHeaderComponent,
   StatCardComponent,
-} from '@dsdevq-common/ui';
+} from '@lifekit-hq/ui';
 import {take} from 'rxjs';
 
 import {AppCurrencyPipe} from '../../../../core/pipes/app-currency.pipe';

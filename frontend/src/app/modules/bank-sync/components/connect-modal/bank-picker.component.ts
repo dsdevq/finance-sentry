@@ -5,7 +5,7 @@ import {
   DialogActionsComponent,
   SelectableCardComponent,
   TagComponent,
-} from '@dsdevq-common/ui';
+} from '@lifekit-hq/ui';
 
 import {
   HIDDEN_PROVIDERS,

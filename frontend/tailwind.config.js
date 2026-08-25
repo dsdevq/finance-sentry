@@ -1,5 +1,5 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  presets: [require('@dsdevq-common/config/tailwind')],
-  content: ['./src/**/*.{ts,html}', './projects/**/*.{ts,html}'],
+  presets: [require('@lifekit-hq/tokens/tailwind')],
+  content: ['./src/**/*.{ts,html}', './node_modules/@lifekit-hq/ui/fesm2022/*.mjs'],
 };

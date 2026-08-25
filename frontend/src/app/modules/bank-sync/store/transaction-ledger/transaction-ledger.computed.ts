@@ -1,5 +1,5 @@
 import {computed, inject, type Signal} from '@angular/core';
-import {ErrorMessageService} from '@dsdevq-common/core';
+import {ErrorMessageService} from '@lifekit-hq/core';
 
 import {MerchantCategoryUtils} from '../../../../shared/utils/merchant-category.utils';
 import {type GlobalTransactionDto} from '../../models/transaction/transaction.model';

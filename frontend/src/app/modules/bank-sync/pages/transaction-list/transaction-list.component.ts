@@ -9,7 +9,7 @@ import {
   CmnCellDirective,
   CmnColumnComponent,
   DataTableComponent,
-} from '@dsdevq-common/ui';
+} from '@lifekit-hq/ui';
 
 import {MerchantCategoryPipe} from '../../../../shared/pipes/merchant-category.pipe';
 import {TransactionAmountPipe} from '../../pipes/transaction-amount.pipe';

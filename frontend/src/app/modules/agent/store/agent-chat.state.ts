@@ -1,4 +1,4 @@
-import {type CmnChatMessage} from '@dsdevq-common/ui';
+import {type CmnChatMessage} from '@lifekit-hq/ui';
 
 import {type ConversationSummary} from '../models/conversation/conversation.model';
 

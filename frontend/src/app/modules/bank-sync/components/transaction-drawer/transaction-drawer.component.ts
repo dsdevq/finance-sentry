@@ -1,6 +1,6 @@
 import {DatePipe} from '@angular/common';
 import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
-import {CMN_DRAWER_DATA, TagComponent} from '@dsdevq-common/ui';
+import {CMN_DRAWER_DATA, TagComponent} from '@lifekit-hq/ui';
 
 import {MerchantCategoryPipe} from '../../../../shared/pipes/merchant-category.pipe';
 import {type GlobalTransactionDto} from '../../models/transaction/transaction.model';

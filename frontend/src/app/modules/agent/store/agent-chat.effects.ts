@@ -1,5 +1,5 @@
 import {inject} from '@angular/core';
-import {type CmnChatMessage, type CmnChatStreamEvent} from '@dsdevq-common/ui';
+import {type CmnChatMessage, type CmnChatStreamEvent} from '@lifekit-hq/ui';
 import {rxMethod} from '@ngrx/signals/rxjs-interop';
 import {
   catchError,

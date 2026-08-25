@@ -1,5 +1,5 @@
 import {ChangeDetectionStrategy, Component, computed, inject} from '@angular/core';
-import {SelectableCardComponent, TagComponent} from '@dsdevq-common/ui';
+import {SelectableCardComponent, TagComponent} from '@lifekit-hq/ui';
 
 import {type Provider} from '../../../../shared/models/provider/provider.model';
 import {type InstitutionType} from '../../../../shared/models/provider/provider.model';
