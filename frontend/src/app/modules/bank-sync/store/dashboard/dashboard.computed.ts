@@ -195,11 +195,15 @@ export function dashboardComputed(store: StateSignals) {
       ];
     }),
 
-    // Only months with real income yield a savings rate; a near-zero-inflow month would
-    // send net/inflow to absurd magnitudes (the old chart read -500,000%), so skip those.
+    // Only completed months with real income yield a savings rate. A near-zero-inflow
+    // month sends net/inflow to absurd magnitudes (the old chart read -500,000%), and the
+    // in-progress month is exactly that case for most of its span: salary posts on the
+    // last day, so until then the month holds a full run of spending against stray
+    // small credits and reads ~-400%. Rate is only meaningful once the month closes.
     savingsRateBars: computed((): BarSeries[] => {
+      const inProgress = currentMonthKey();
       const points = groupMonthly(store.data()?.monthlyFlow ?? [])
-        .filter(([, v]) => v.inflow > 0)
+        .filter(([key, v]) => key !== inProgress && v.inflow > 0)
         .map(([key, v]) => ({
           label: formatMonthKey(key),
           value: ((v.inflow - v.outflow) / v.inflow) * PERCENT,
