@@ -69,6 +69,7 @@ public class ResearchDbContext(DbContextOptions<ResearchDbContext> options) : Db
         tb.Property(x => x.ThesisText).IsRequired().HasMaxLength(4000);
         tb.Property(x => x.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
         tb.Property(x => x.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+        tb.Property(x => x.EntryPrice).HasColumnType("numeric(18,6)");
         tb.Property(x => x.BrokenReason).HasMaxLength(1000);
         tb.Property(x => x.KeyDataPoints)
             .HasColumnType("jsonb")

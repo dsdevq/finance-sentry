@@ -3,6 +3,7 @@ using System;
 using FinanceSentry.Modules.Research.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FinanceSentry.Modules.Research.Migrations
 {
     [DbContext(typeof(ResearchDbContext))]
-    partial class ResearchDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260827000000_M013_ThesisEntryPrice")]
+    partial class M013_ThesisEntryPrice
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -271,12 +274,12 @@ namespace FinanceSentry.Modules.Research.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
+                    b.Property<decimal?>("EntryPrice")
+                        .HasColumnType("numeric(18,6)");
+
                     b.Property<string>("Catalysts")
                         .IsRequired()
                         .HasColumnType("jsonb");
-
-                    b.Property<decimal?>("EntryPrice")
-                        .HasColumnType("numeric(18,6)");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .ValueGeneratedOnAdd()

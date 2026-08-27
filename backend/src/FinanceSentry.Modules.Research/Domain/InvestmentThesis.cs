@@ -6,6 +6,8 @@ public class InvestmentThesis
     public Guid UserId { get; set; }
     public string Ticker { get; set; } = string.Empty;
     public string ThesisText { get; set; } = string.Empty;
+    // Anchor for price_drawdown triggers. If null, drawdown falls back to the first daily close on or after CreatedAt.
+    public decimal? EntryPrice { get; set; }
     public List<ThesisDataPoint> KeyDataPoints { get; set; } = [];
     public List<ThesisCatalyst> Catalysts { get; set; } = [];
     public List<ThesisInvalidationTrigger> InvalidationTriggers { get; set; } = [];

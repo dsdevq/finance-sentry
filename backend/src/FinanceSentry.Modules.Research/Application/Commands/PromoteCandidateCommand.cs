@@ -86,8 +86,9 @@ public sealed class PromoteCandidateCommandHandler(
                 PromotionThesisText,
                 KeyDataPoints: [],
                 Catalysts: [],
-                triggers,
-                command.DecisionNote),
+                InvalidationTriggers: triggers,
+                EntryPrice: null,
+                DecisionNote: command.DecisionNote),
             ct);
 
         candidate.PromotedThesisId = thesis.Id;

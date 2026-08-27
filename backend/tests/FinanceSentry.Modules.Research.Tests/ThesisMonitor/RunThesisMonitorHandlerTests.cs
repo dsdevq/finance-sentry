@@ -184,6 +184,48 @@ public class RunThesisMonitorHandlerTests
         summary.ThesesEvaluated.Should().Be(2);
     }
 
+    // ── Bug 2 regression: clearing all triggers must resolve orphaned breaks ──
+
+    [Fact]
+    public async Task ZeroTriggers_BrokenThesis_ClearsBreakAndResolvesAlert()
+    {
+        // Thesis was broken, then all triggers were removed. The next monitor run must clear the break.
+        var thesis = Thesis([]);
+        thesis.BrokenAt = DateTimeOffset.UtcNow.AddDays(-5);
+        thesis.BrokenReason = "gross_margin lessThan 0.35 — observed [0.30] over [2026Q1]";
+
+        var repo = new FakeThesisRepository([thesis]);
+        var alerts = new FakeAlertGeneratorService();
+        var handler = BuildHandler(repo, new FakeSecEdgarService([]), alerts);
+
+        var summary = await handler.Handle(new RunThesisMonitorCommand(UserId), CancellationToken.None);
+
+        summary.BreaksCleared.Should().Be(1);
+        summary.BreaksRaised.Should().Be(0);
+        alerts.ResolveCalls.Should().Be(1);
+        thesis.BrokenAt.Should().BeNull();
+        thesis.BrokenReason.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ZeroTriggers_NotBrokenThesis_SkipsWithNoSideEffects()
+    {
+        // Thesis was never broken and has no triggers — should be silently skipped.
+        var thesis = Thesis([]);
+
+        var repo = new FakeThesisRepository([thesis]);
+        var alerts = new FakeAlertGeneratorService();
+        var handler = BuildHandler(repo, new FakeSecEdgarService([]), alerts);
+
+        var summary = await handler.Handle(new RunThesisMonitorCommand(UserId), CancellationToken.None);
+
+        summary.BreaksCleared.Should().Be(0);
+        summary.BreaksRaised.Should().Be(0);
+        summary.Skipped.Should().Be(1);
+        alerts.ResolveCalls.Should().Be(0);
+        thesis.BrokenAt.Should().BeNull();
+    }
+
     // ── Fakes ────────────────────────────────────────────────────────────────
 
     private sealed class FakeThesisRepository(IReadOnlyList<InvestmentThesis> theses) : IThesisRepository
