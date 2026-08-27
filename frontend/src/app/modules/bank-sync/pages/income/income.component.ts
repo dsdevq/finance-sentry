@@ -8,7 +8,7 @@ import {
   EmptyStateComponent,
   SkeletonComponent,
   StatCardComponent,
-} from '@dsdevq-common/ui';
+} from '@lifekit-hq/ui';
 
 import {TransactionAmountPipe} from '../../pipes/transaction-amount.pipe';
 import {TransactionAmountClassPipe} from '../../pipes/transaction-amount-class.pipe';

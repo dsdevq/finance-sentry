@@ -1,6 +1,6 @@
 import {CurrencyPipe} from '@angular/common';
 import {computed, inject, type Signal} from '@angular/core';
-import {type BarSeries} from '@dsdevq-common/ui';
+import {type BarSeries} from '@lifekit-hq/ui';
 
 import {type MonthlyFlow} from '../../models/dashboard/dashboard.model';
 import {type GlobalTransactionDto} from '../../models/transaction/transaction.model';
