@@ -11,6 +11,30 @@ dotnet build FinanceSentry.sln --no-restore -c Release
 dotnet test FinanceSentry.sln --no-build -c Release --filter "Category!=Integration"
 ```
 
+### Frontend Playwright e2e (required when touching app-surface UI)
+
+```bash
+# Requires NODE_AUTH_TOKEN (read:packages) for @lifekit-hq/* install and Angular build.
+# Also requires libXfixes.so.3 — see the "Frontend test environment gotcha" section below.
+cd frontend
+npm ci
+npm run build
+LD_LIBRARY_PATH=/tmp:$LD_LIBRARY_PATH npx playwright test --reporter=json
+```
+
+Sandbox shortcut (no NODE_AUTH_TOKEN): install @playwright/test separately, create the dist from
+the in-workspace dist (if already generated), then point NODE_PATH at the temp install:
+
+```bash
+mkdir -p /tmp/pw-runner && echo '{"dependencies":{"@playwright/test":"^1.62.1"}}' > /tmp/pw-runner/package.json
+cd /tmp/pw-runner && npm install
+# Extract libXfixes.so.3 (one-time — see below), then:
+cd /workspace/frontend
+NODE_PATH=/tmp/pw-runner/node_modules PLAYWRIGHT_BROWSERS_PATH=/home/agent/.cache/ms-playwright \
+LD_LIBRARY_PATH=/tmp:$LD_LIBRARY_PATH /tmp/pw-runner/node_modules/.bin/playwright test --reporter=json
+# Report written to frontend/playwright-report/results.json
+```
+
 ## Project layout
 
 ```

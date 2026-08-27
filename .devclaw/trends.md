@@ -40,3 +40,16 @@ A new top-level `backend` directory appeared in finance-sentry, echoing the prio
 
 ---
 
+## [2026-08-27T23:13:42+00:00] D3 — drift
+
+A new top-level `frontend` directory appeared, following two prior unresolved D3 notes (2026-08-19, 2026-08-22) about an unexplained top-level `backend` directory. Taken together, this now reads as a deliberate `backend/` + `frontend/` monorepo restructuring rather than three independent one-offs — but neither occurrence was ever confirmed or documented, so the open question from the first note still stands.
+
+**Evidence:**
+- `git diff --diff-filter=A --name-only ae8f6cddce1f5e64ed5531e2fd36e4b9f5d2965d..HEAD`
+- `frontend/`
+- `backend/ (2026-08-19, 2026-08-22 D3 entries)`
+
+**Proposed action:** Confirm whether finance-sentry has been restructured into top-level backend/ + frontend/ directories (vs. the previously documented layout) and, if so, update the project's module map/onboarding doc once, closing out all three open D3 notes at the same time.
+
+---
+
