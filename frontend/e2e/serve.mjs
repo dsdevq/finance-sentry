@@ -25,7 +25,14 @@ const server = http.createServer((req, res) => {
   let reqPath = req.url.split('?')[0];
   if (reqPath === '/') reqPath = '/index.html';
 
-  const fullPath = path.join(distDir, reqPath);
+  const relativeReqPath = reqPath.replace(/^\/+/, '');
+  const fullPath = path.resolve(distDir, relativeReqPath);
+  const relFromRoot = path.relative(distDir, fullPath);
+  if (relFromRoot.startsWith('..') || path.isAbsolute(relFromRoot)) {
+    res.writeHead(403);
+    res.end('Forbidden');
+    return;
+  }
 
   // SPA fallback: serve index.html for non-asset routes
   const ext = path.extname(reqPath);
