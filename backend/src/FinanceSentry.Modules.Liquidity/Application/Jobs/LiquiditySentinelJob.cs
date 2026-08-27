@@ -40,7 +40,7 @@ public class LiquiditySentinelJob(
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "LiquiditySentinel: error processing user {UserId}", userId);
+                _logger.LogError(ex, "LiquiditySentinel: error processing user.");
             }
         }
     }
