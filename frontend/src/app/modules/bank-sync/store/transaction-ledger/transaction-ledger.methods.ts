@@ -37,5 +37,8 @@ export function transactionLedgerMethods(store: WritableStateSource<TransactionL
         errorCode: null,
       }));
     },
+    setMonthlyOutflowUsd(value: number | null): void {
+      patchState(store, {monthlyOutflowUsd: value});
+    },
   };
 }

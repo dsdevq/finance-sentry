@@ -10,6 +10,7 @@ interface StateSignals {
   hasMore: Signal<boolean>;
   status: Signal<AsyncStatus>;
   errorCode: Signal<Nullable<string>>;
+  monthlyOutflowUsd: Signal<number | null>;
 }
 
 const DEFAULT_ERROR = 'Failed to load transactions. Please try again.';
@@ -26,17 +27,7 @@ export function transactionLedgerComputed(store: StateSignals) {
       }
       return errorMessages.resolve(store.errorCode()) ?? DEFAULT_ERROR;
     }),
-    monthlyOutflow: computed(() => {
-      const now = new Date();
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      return store
-        .transactions()
-        ?.filter(t => {
-          const date = new Date(t.postedDate ?? t.date);
-          return t.transactionType === 'debit' && date >= monthStart;
-        })
-        .reduce((sum, t) => sum + Math.abs(t.amountUsd), 0);
-    }),
+    monthlyOutflow: computed(() => store.monthlyOutflowUsd()),
     topCategory: computed(() => {
       const counts: Record<string, number> = {};
       for (const t of store.transactions()) {
