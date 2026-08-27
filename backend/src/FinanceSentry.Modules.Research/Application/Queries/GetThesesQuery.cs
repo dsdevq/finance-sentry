@@ -16,7 +16,7 @@ public class GetThesesQueryHandler(IThesisRepository repo)
             .Select(t => new ThesisDto(
                 t.Id, t.Ticker, t.ThesisText,
                 t.KeyDataPoints, t.Catalysts, t.InvalidationTriggers,
-                t.CreatedAt, t.UpdatedAt, t.BrokenAt, t.BrokenReason))
+                t.CreatedAt, t.UpdatedAt, t.BrokenAt, t.BrokenReason, t.EntryPrice))
             .ToList();
     }
 }

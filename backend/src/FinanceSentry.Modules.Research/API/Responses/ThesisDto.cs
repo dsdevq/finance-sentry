@@ -12,4 +12,5 @@ public record ThesisDto(
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
     DateTimeOffset? BrokenAt,
-    string? BrokenReason);
+    string? BrokenReason,
+    decimal? EntryPrice = null);

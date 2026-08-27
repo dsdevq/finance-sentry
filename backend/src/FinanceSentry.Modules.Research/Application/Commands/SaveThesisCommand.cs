@@ -16,6 +16,7 @@ public record SaveThesisCommand(
     IReadOnlyList<ThesisDataPoint> KeyDataPoints,
     IReadOnlyList<ThesisCatalyst> Catalysts,
     IReadOnlyList<ThesisInvalidationTrigger> InvalidationTriggers,
+    decimal? EntryPrice = null,
     string? DecisionNote = null) : ICommand<ThesisDto>;
 
 public class SaveThesisCommandHandler(IThesisRepository repo, IThesisEventRecorder eventRecorder)
@@ -41,6 +42,7 @@ public class SaveThesisCommandHandler(IThesisRepository repo, IThesisEventRecord
 
         thesis.Ticker = cmd.Ticker.Trim().ToUpperInvariant();
         thesis.ThesisText = cmd.ThesisText.Trim();
+        thesis.EntryPrice = cmd.EntryPrice;
         thesis.KeyDataPoints = cmd.KeyDataPoints.ToList();
         thesis.Catalysts = cmd.Catalysts.ToList();
         thesis.InvalidationTriggers = cmd.InvalidationTriggers.ToList();
@@ -64,6 +66,6 @@ public class SaveThesisCommandHandler(IThesisRepository repo, IThesisEventRecord
         return new ThesisDto(
             thesis.Id, thesis.Ticker, thesis.ThesisText,
             thesis.KeyDataPoints, thesis.Catalysts, thesis.InvalidationTriggers,
-            thesis.CreatedAt, thesis.UpdatedAt, thesis.BrokenAt, thesis.BrokenReason);
+            thesis.CreatedAt, thesis.UpdatedAt, thesis.BrokenAt, thesis.BrokenReason, thesis.EntryPrice);
     }
 }

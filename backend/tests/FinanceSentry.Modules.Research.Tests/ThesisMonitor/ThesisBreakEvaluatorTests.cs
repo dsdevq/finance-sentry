@@ -136,4 +136,61 @@ public class ThesisBreakEvaluatorTests
         // evaluator (see RunThesisMonitorCommandHandler). Nothing to assert on the evaluator itself.
         Assert.True(true);
     }
+
+    // ── Bug 1 regression: price_drawdown must anchor to entry price, not all-time peak ──────────
+
+    [Fact]
+    public void PriceDrawdown_EntryPriceProvided_AnchoredToEntry_NoBreach()
+    {
+        // MHPC scenario: entry $7.90, current $7.10 (~9.9% drawdown from entry).
+        // Historical peak was much higher, which previously yielded a spurious 0.84 drawdown and
+        // tripped a >0.50 trigger. With entry-price anchoring, drawdown should be ~0.101.
+        const decimal entryPrice = 7.90m;
+        var closes = new List<DailyClose>
+        {
+            new(new DateOnly(2026, 1, 1), 8.20m),  // price moved above entry after creation
+            new(new DateOnly(2026, 1, 2), 7.50m),
+            new(new DateOnly(2026, 1, 3), 7.10m),  // current — 9.9% below entry
+        };
+
+        var trigger = new ThesisInvalidationTrigger(ThesisMetric.PriceDrawdown, "greaterThan", 0.50m, ConsecutivePeriods: 1);
+        var verdict = ThesisBreakEvaluator.Evaluate(trigger, CreatedAt, [], closes, entryPrice);
+
+        verdict.Should().BeOfType<TriggerVerdict.Held>();
+    }
+
+    [Fact]
+    public void PriceDrawdown_EntryPriceProvided_ExceedsThreshold_Breaches()
+    {
+        // 60% drawdown from entry should fire a >0.50 trigger.
+        const decimal entryPrice = 10.00m;
+        var closes = new List<DailyClose>
+        {
+            new(new DateOnly(2026, 1, 1), 10.00m),
+            new(new DateOnly(2026, 1, 2), 3.80m),  // 62% below entry
+        };
+
+        var trigger = new ThesisInvalidationTrigger(ThesisMetric.PriceDrawdown, "greaterThan", 0.50m, ConsecutivePeriods: 1);
+        var verdict = ThesisBreakEvaluator.Evaluate(trigger, CreatedAt, [], closes, entryPrice);
+
+        var breached = verdict.Should().BeOfType<TriggerVerdict.Breached>().Subject;
+        breached.ObservedValues[0].Should().BeApproximately(0.62m, 0.001m);
+    }
+
+    [Fact]
+    public void PriceDrawdown_NoEntryPrice_FallsBackToFirstClose_NoBreach()
+    {
+        // When no entry price is set, the first close after thesis creation is used as the anchor.
+        // This is safer than the historical peak and ensures a beaten-down name doesn't false-fire.
+        var closes = new List<DailyClose>
+        {
+            new(new DateOnly(2026, 1, 1), 7.90m),  // first close on/after creation ≈ entry
+            new(new DateOnly(2026, 1, 2), 7.10m),  // ~10% drawdown from first close
+        };
+
+        var trigger = new ThesisInvalidationTrigger(ThesisMetric.PriceDrawdown, "greaterThan", 0.50m, ConsecutivePeriods: 1);
+        var verdict = ThesisBreakEvaluator.Evaluate(trigger, CreatedAt, [], closes, entryPrice: null);
+
+        verdict.Should().BeOfType<TriggerVerdict.Held>();
+    }
 }

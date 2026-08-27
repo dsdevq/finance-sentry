@@ -24,7 +24,8 @@ public static class ThesisBreakEvaluator
         ThesisInvalidationTrigger trigger,
         DateTimeOffset thesisCreatedAt,
         IReadOnlyList<FundamentalFact> fundamentals,
-        IReadOnlyList<DailyClose> dailyCloses)
+        IReadOnlyList<DailyClose> dailyCloses,
+        decimal? entryPrice = null)
     {
         if (!ThesisMetric.Contains(trigger.Metric))
         {
@@ -32,7 +33,7 @@ public static class ThesisBreakEvaluator
         }
 
         return ThesisMetric.IsPriceMetric(trigger.Metric)
-            ? EvaluatePrice(trigger, thesisCreatedAt, dailyCloses)
+            ? EvaluatePrice(trigger, thesisCreatedAt, dailyCloses, entryPrice)
             : EvaluateFundamentals(trigger, fundamentals);
     }
 
@@ -170,7 +171,10 @@ public static class ThesisBreakEvaluator
     }
 
     private static TriggerVerdict EvaluatePrice(
-        ThesisInvalidationTrigger trigger, DateTimeOffset thesisCreatedAt, IReadOnlyList<DailyClose> dailyCloses)
+        ThesisInvalidationTrigger trigger,
+        DateTimeOffset thesisCreatedAt,
+        IReadOnlyList<DailyClose> dailyCloses,
+        decimal? entryPrice = null)
     {
         var since = DateOnly.FromDateTime(thesisCreatedAt.UtcDateTime);
         var closes = dailyCloses.Where(c => c.Date >= since).OrderBy(c => c.Date).ToList();
@@ -192,10 +196,22 @@ public static class ThesisBreakEvaluator
         for (var i = 0; i < trailing.Count; i++)
         {
             var day = trailing[i];
-            var upToDay = closes.Where(c => c.Date <= day.Date).ToList();
-            var baseline = trigger.Metric == ThesisMetric.PriceDrawdown
-                ? upToDay.Max(c => c.Close)
-                : upToDay[0].Close;
+
+            // price_drawdown: anchor to entryPrice when recorded (FR-draw-1).
+            // If entryPrice is absent, fall back to the first close on/after thesis creation — a
+            // closer proxy to entry than the rolling max, which was anchored to the all-time peak
+            // and caused false breaks for beaten-down names (e.g. MHPC reported 0.84 vs ~0.10).
+            // price_return always anchors to the first close (unchanged behaviour).
+            decimal baseline;
+            if (trigger.Metric == ThesisMetric.PriceDrawdown)
+            {
+                baseline = entryPrice ?? closes[0].Close;
+            }
+            else
+            {
+                var upToDay = closes.Where(c => c.Date <= day.Date).ToList();
+                baseline = upToDay[0].Close;
+            }
 
             if (baseline == 0)
             {

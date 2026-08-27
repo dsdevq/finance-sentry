@@ -14,13 +14,14 @@ public sealed class SaveThesisTool(
     IIdentityResolver identity)
 {
     [McpServerTool(Name = "save_thesis")]
-    [Description("Creates or updates an investment thesis. Pass id=null to create; pass an existing id to update. At least one invalidationTrigger is expected for thesis-break detection to work.")]
+    [Description("Creates or updates an investment thesis. Pass id=null to create; pass an existing id to update. At least one invalidationTrigger is expected for thesis-break detection to work. Provide entryPrice so that price_drawdown triggers are anchored to your entry, not the asset's historical peak.")]
     public async Task<ThesisDto?> ExecuteAsync(
         [Description("Ticker symbol the thesis is about.")] string ticker,
         [Description("Free-form thesis narrative — the investment case in Denys's words.")] string thesisText,
         [Description("Structured key data points that back the thesis.")] IReadOnlyList<ThesisDataPoint> keyDataPoints,
         [Description("Upcoming catalysts (dates + events) that could confirm or break the thesis.")] IReadOnlyList<ThesisCatalyst> catalysts,
-        [Description("Invalidation triggers — quantitative conditions that mark the thesis broken (e.g. gross_margin<40).")] IReadOnlyList<ThesisInvalidationTrigger> invalidationTriggers,
+        [Description("Invalidation triggers — quantitative conditions that mark the thesis broken (e.g. price_drawdown greaterThan 0.30 means 30% loss from entry).")] IReadOnlyList<ThesisInvalidationTrigger> invalidationTriggers,
+        [Description("Entry price per share (the price you paid, not the asset's historical peak). Required for price_drawdown triggers to be anchored to entry.")] decimal? entryPrice = null,
         [Description("Thesis id when updating; null to create.")] Guid? id = null,
         [Description("Optional contemporaneous reasoning captured at creation time (FR-008b decision journal). Only applied on create.")] string? decisionNote = null,
         [Description("Optional user GUID. Defaults to the authenticated MCP identity.")] Guid? userId = null,
@@ -41,6 +42,7 @@ public sealed class SaveThesisTool(
                 keyDataPoints ?? [],
                 catalysts ?? [],
                 invalidationTriggers ?? [],
+                entryPrice,
                 decisionNote),
             cancellationToken);
     }

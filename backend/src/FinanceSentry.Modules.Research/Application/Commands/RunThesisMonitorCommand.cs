@@ -45,7 +45,23 @@ public class RunThesisMonitorCommandHandler(
         {
             if (thesis.InvalidationTriggers.Count == 0)
             {
-                skipped++;
+                // Bug fix: a thesis with zero triggers must not retain an orphaned break.
+                // Previously this path unconditionally skipped, leaving BrokenAt/BrokenReason
+                // stuck even after the offending trigger was deleted.
+                if (thesis.BrokenAt is not null)
+                {
+                    thesis.BrokenAt = null;
+                    thesis.BrokenReason = null;
+                    await thesisRepo.UpsertAsync(thesis, ct);
+                    await alertGenerator.ResolveThesisBreakAlertAsync(thesis.UserId, thesis.Id, ct);
+                    await TryRecordEventAsync(thesis, ThesisEventType.Unbroken, decisionNote: null, ct);
+                    breaksCleared++;
+                }
+                else
+                {
+                    skipped++;
+                }
+
                 continue;
             }
 
@@ -122,7 +138,7 @@ public class RunThesisMonitorCommandHandler(
         if (ThesisMetric.IsPriceMetric(trigger.Metric))
         {
             var closes = await GetClosesAsync(targetTicker, thesis.CreatedAt, closesCache, ct);
-            return ThesisBreakEvaluator.Evaluate(trigger, thesis.CreatedAt, [], closes);
+            return ThesisBreakEvaluator.Evaluate(trigger, thesis.CreatedAt, [], closes, thesis.EntryPrice);
         }
 
         var facts = await GetFundamentalsAsync(targetTicker, fundamentalsCache, ct);

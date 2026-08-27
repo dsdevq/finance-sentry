@@ -44,6 +44,7 @@ public class ThesisRepository(ResearchDbContext db) : IThesisRepository
             existing.Catalysts = thesis.Catalysts;
             existing.InvalidationTriggers = thesis.InvalidationTriggers;
             existing.UpdatedAt = DateTimeOffset.UtcNow;
+            existing.EntryPrice = thesis.EntryPrice;
             existing.BrokenAt = thesis.BrokenAt;
             existing.BrokenReason = thesis.BrokenReason;
         }
