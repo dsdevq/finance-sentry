@@ -1,5 +1,5 @@
 import {Injectable} from '@angular/core';
-import {ApiService} from '@dsdevq-common/core';
+import {ApiService} from '@lifekit-hq/core';
 import {Observable} from 'rxjs';
 
 import {type AgentSseEvent, type SendChatRequest} from '../models/chat/chat.model';

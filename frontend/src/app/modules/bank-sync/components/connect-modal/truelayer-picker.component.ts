@@ -9,7 +9,7 @@ import {
   InputComponent,
   SelectableCardComponent,
   SkeletonComponent,
-} from '@dsdevq-common/ui';
+} from '@lifekit-hq/ui';
 import {finalize, type Subscription} from 'rxjs';
 
 import {type TrueLayerProvider} from '../../models/truelayer/truelayer.model';

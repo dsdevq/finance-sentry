@@ -19,6 +19,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Deploy
+        env:
+          # @lifekit-hq/* npm installs inside the frontend image build
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./docker/deploy.sh
 
       - name: Logs on failure

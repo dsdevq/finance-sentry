@@ -11,7 +11,7 @@ import {
   type NavItem,
   type PaletteResult,
   ThemeService,
-} from '@dsdevq-common/ui';
+} from '@lifekit-hq/ui';
 import {filter, map} from 'rxjs';
 
 import {ChatWidgetComponent} from '../../modules/agent/components/chat-widget/chat-widget.component';

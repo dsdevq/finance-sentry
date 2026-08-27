@@ -1,6 +1,6 @@
 import {DialogRef} from '@angular/cdk/dialog';
 import {TestBed} from '@angular/core/testing';
-import {CMN_DIALOG_DATA} from '@dsdevq-common/ui';
+import {CMN_DIALOG_DATA} from '@lifekit-hq/ui';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 
 import {type DisconnectDialogData} from '../../models/disconnect-dialog/disconnect-dialog.model';

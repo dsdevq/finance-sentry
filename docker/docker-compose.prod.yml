@@ -119,6 +119,7 @@ services:
       context: ..
       dockerfile: docker/Dockerfile.frontend.prod
       platforms: [linux/arm64]
+      secrets: [npm_token]
     image: finance-sentry/frontend:local
     container_name: finance-sentry-frontend
     restart: unless-stopped
@@ -276,3 +277,10 @@ networks:
   openclaw:
     external: true
     name: compose_default       # OpenClaw + devclaw + gateway live on this bridge on the VPS
+
+# GitHub Packages token for @lifekit-hq/* installs (BuildKit secret — not in layers).
+# Locally: export NODE_AUTH_TOKEN=$(gh auth token)  (needs read:packages scope).
+# CI/deploy: the workflow passes secrets.GITHUB_TOKEN.
+secrets:
+  npm_token:
+    environment: NODE_AUTH_TOKEN

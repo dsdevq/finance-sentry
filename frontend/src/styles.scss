@@ -1,3 +1,11 @@
+/* Pipeline concerns — the published @lifekit-hq/tokens theme.css is pure custom
+   properties; the tailwind directives and cdk overlay stylesheet live here. */
+@import '@angular/cdk/overlay-prebuilt.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* Global Styles */
 html,
 body {

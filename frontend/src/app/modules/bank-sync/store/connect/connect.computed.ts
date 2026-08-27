@@ -1,5 +1,5 @@
 import {computed, inject, type Signal} from '@angular/core';
-import {ErrorMessageService} from '@dsdevq-common/core';
+import {ErrorMessageService} from '@lifekit-hq/core';
 
 import {type Provider} from '../../../../shared/models/provider/provider.model';
 import {type ModalStep} from '../../models/connect/connect.model';

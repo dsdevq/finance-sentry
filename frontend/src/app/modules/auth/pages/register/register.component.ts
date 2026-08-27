@@ -9,7 +9,7 @@ import {
   FormFieldComponent,
   GoogleSignInButtonComponent,
   InputComponent,
-} from '@dsdevq-common/ui';
+} from '@lifekit-hq/ui';
 
 import {environment} from '../../../../../environments/environment';
 import {AppRoute} from '../../../../shared/enums/app-route/app-route.enum';

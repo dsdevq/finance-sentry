@@ -1,7 +1,7 @@
 import {provideHttpClient, withInterceptors} from '@angular/common/http';
 import {type ApplicationConfig} from '@angular/core';
 import {provideRouter} from '@angular/router';
-import {provideApiBaseUrl} from '@dsdevq-common/core';
+import {provideApiBaseUrl} from '@lifekit-hq/core';
 
 import {environment} from '../environments/environment';
 import {APP_ROUTES} from './app.routes';

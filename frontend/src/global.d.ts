@@ -1,14 +1,22 @@
-/// <reference path="../projects/dsdevq-common/ui/src/global.d.ts" />
+import {
+  type PlaidHandler,
+  type PlaidLinkOptions,
+} from '@modules/bank-sync/models/plaid/plaid.model';
 
-import type {
-  PlaidHandler,
-  PlaidLinkOptions,
-} from './app/modules/bank-sync/models/plaid/plaid.model';
-
+/* App-wide ambient types. The @lifekit-hq/ui type rollup uses these same names
+   but ng-packagr drops `declare global` blocks from published .d.ts (tracked as
+   lifekit-common bug) — so the app declares them itself. */
 declare global {
+  type Nullable<T> = T | null;
+  type Maybe<T> = Nullable<T> | undefined;
+
+  type AsyncStatus = 'idle' | 'loading' | 'error';
+
   interface Window {
     Plaid?: {
       create: (options: PlaidLinkOptions) => PlaidHandler;
     };
   }
 }
+
+export {};

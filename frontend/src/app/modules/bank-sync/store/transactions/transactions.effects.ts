@@ -1,6 +1,6 @@
 import {inject, type Signal} from '@angular/core';
 import {ActivatedRoute} from '@angular/router';
-import {extractErrorCode} from '@dsdevq-common/core';
+import {extractErrorCode} from '@lifekit-hq/core';
 import {rxMethod} from '@ngrx/signals/rxjs-interop';
 import {catchError, EMPTY, pipe, switchMap, tap} from 'rxjs';
 

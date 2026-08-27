@@ -5,6 +5,13 @@ All notable changes to Finance Sentry are documented here. The format follows
 [Semantic Versioning](https://semver.org/). Entries from v0.12.0 onward are
 generated automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [1.5.0](https://github.com/lifekit-hq/finance-sentry/compare/v1.4.0...v1.5.0) (2026-08-24)
+
+
+### Features
+
+* **liquidity:** 30-day cash-flow projection + shortfall sentinel (041) ([185efed](https://github.com/lifekit-hq/finance-sentry/commit/185efedb67284ba12db8a927c50780dffa86faf7))
+
 ## [1.4.0](https://github.com/lifekit-hq/finance-sentry/compare/v1.3.0...v1.4.0) (2026-08-22)
 
 

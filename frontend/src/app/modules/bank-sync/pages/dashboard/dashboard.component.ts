@@ -12,7 +12,7 @@ import {
   DonutChartComponent,
   IconComponent,
   StatCardComponent,
-} from '@dsdevq-common/ui';
+} from '@lifekit-hq/ui';
 
 import {AppCurrencyPipe} from '../../../../core/pipes/app-currency.pipe';
 import {AppDecimalPipe} from '../../../../core/pipes/app-decimal.pipe';

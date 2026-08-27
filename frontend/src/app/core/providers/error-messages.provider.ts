@@ -1,5 +1,5 @@
 import {type EnvironmentProviders, makeEnvironmentProviders} from '@angular/core';
-import {ERROR_MESSAGES} from '@dsdevq-common/core';
+import {ERROR_MESSAGES} from '@lifekit-hq/core';
 
 import {ERROR_MESSAGES_REGISTRY} from '../errors/error-messages.registry';
 

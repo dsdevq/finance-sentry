@@ -1,6 +1,5 @@
-import {createEslintConfig} from '@dsdevq-common/config/eslint';
+import {createEslintConfig} from '@lifekit-hq/config/eslint';
 
 export default createEslintConfig({
   selectorPrefix: 'fns',
-  ignores: ['projects/**'],
 });

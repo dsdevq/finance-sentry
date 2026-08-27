@@ -1,4 +1,4 @@
-import {type LucideIconName} from '@dsdevq-common/ui';
+import {type LucideIconName} from '@lifekit-hq/ui';
 
 import {type AlertType} from '../models/alert/alert.model';
 

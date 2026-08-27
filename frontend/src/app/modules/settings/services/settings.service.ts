@@ -1,5 +1,5 @@
 import {Injectable} from '@angular/core';
-import {ApiService} from '@dsdevq-common/core';
+import {ApiService} from '@lifekit-hq/core';
 import {type Observable} from 'rxjs';
 
 import {type UpdateProfileRequest, type UserProfile} from '../models/settings/settings.model';

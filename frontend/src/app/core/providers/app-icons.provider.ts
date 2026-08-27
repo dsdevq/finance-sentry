@@ -1,5 +1,5 @@
 import {type EnvironmentProviders} from '@angular/core';
-import {provideCustomIcons} from '@dsdevq-common/ui';
+import {provideCustomIcons} from '@lifekit-hq/ui';
 
 export function provideAppIcons(): EnvironmentProviders {
   return provideCustomIcons({

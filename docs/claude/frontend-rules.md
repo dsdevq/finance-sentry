@@ -16,9 +16,13 @@ After writing or modifying **any** Angular `.ts` file, run `npx eslint <file>` f
 
 ## UI Component Library Rule
 
-**Any new UI component MUST be created in `@dsdevq-common/ui` first.** Components are never built directly in the host Angular app (`frontend/`). This applies to all future features, starting with 005-ui-component-library. The `cmn-` selector prefix is reserved for library components.
+**Any new UI component MUST be created in [`lifekit-hq/lifekit-common`](https://github.com/lifekit-hq/lifekit-common) first** (`@lifekit-hq/ui`, Storybook-first — see that repo's CLAUDE.md), then consumed here as a published package. Components are never built directly in the host Angular app (`frontend/`). The `cmn-` selector prefix is reserved for library components.
 
-**Before writing any Angular template or UI element**, always check `frontend/projects/dsdevq-common/ui/src/lib/components/` first. Use `cmn-button`, `cmn-input`, `cmn-form-field`, `cmn-alert`, `cmn-card`, etc. — never raw `<input>`, `<button>`, or `<div class="error">` when the library already has the component.
+**Before writing any Angular template or UI element**, check the component catalog first — the hosted Storybook at https://lifekit-hq.github.io/lifekit-common/ or `node_modules/@lifekit-hq/ui`. Use `cmn-button`, `cmn-input`, `cmn-form-field`, `cmn-alert`, `cmn-card`, etc. — never raw `<input>`, `<button>`, or `<div class="error">` when the library already has the component.
+
+**Registry auth**: `@lifekit-hq/*` installs from GitHub Packages — `frontend/.npmrc` expects `NODE_AUTH_TOKEN` in the environment (`export NODE_AUTH_TOKEN=$(gh auth token)`, token needs `read:packages`). CI and deploy pass `secrets.GITHUB_TOKEN`; Docker builds take it as the `npm_token` BuildKit secret.
+
+**Local iteration against unpublished library changes**: in `lifekit-common` run `npm run build && npm pack ./dist/lifekit-hq/ui`, then here `npm install <tarball>` (repeat per iteration; never commit a tarball reference). Day-to-day component development happens in lifekit-common's Storybook, not by running this app.
 
 ---
 
@@ -105,7 +109,7 @@ export function provideX(): EnvironmentProviders {
 
 Error-code → user-message mapping is centralized. **Do not** add an `if/else` ladder in a component or store.
 
-- Mechanism lives in `@dsdevq-common/ui`: `ERROR_MESSAGES` injection token + `ErrorMessageService.resolve(code)` → `string | null`.
+- Mechanism lives in `@lifekit-hq/ui`: `ERROR_MESSAGES` injection token + `ErrorMessageService.resolve(code)` → `string | null`.
 - App provides the registry: `src/app/core/errors/error-messages.registry.ts` holds the flat `Record<string, string>` covering all backend `errorCode` values. Wired via `provideErrorMessages()` in `app.config.ts`.
 - Stores consume via `inject(ErrorMessageService)` inside `*.computed.ts`, falling back to a feature-specific default (`'Failed to load dashboard data.'`, `'Invalid email or password.'`, etc.) when `resolve()` returns `null`.
 - **When adding a new error code on the backend:** append the message to the registry in the same PR. The `error?.errorCode` extraction helper stays local to `*.effects.ts` (the `extractErrorCode(err)` pattern).
