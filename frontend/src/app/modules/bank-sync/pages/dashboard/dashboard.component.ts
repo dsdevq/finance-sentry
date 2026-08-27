@@ -18,7 +18,7 @@ import {AppCurrencyPipe} from '../../../../core/pipes/app-currency.pipe';
 import {AppDecimalPipe} from '../../../../core/pipes/app-decimal.pipe';
 import {AppRoute} from '../../../../shared/enums/app-route/app-route.enum';
 import {MerchantCategoryPipe} from '../../../../shared/pipes/merchant-category.pipe';
-import {type HistoryRange} from '../../models/dashboard/dashboard.model';
+import {type CategoryStat, type HistoryRange} from '../../models/dashboard/dashboard.model';
 import {DashboardStore} from '../../store/dashboard/dashboard.store';
 
 const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
@@ -88,18 +88,32 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
               label="Net Worth"
               icon="Wallet"
             />
-            <cmn-stat-card
-              [value]="store.monthlyInflowFormatted()"
-              [loading]="store.isLoading()"
-              label="Income this month"
-              icon="TrendingUp"
-            />
-            <cmn-stat-card
-              [value]="store.monthlySpendingFormatted()"
-              [loading]="store.isLoading()"
-              label="Spending this month"
-              icon="TrendingDown"
-            />
+            <button
+              (click)="goToIncome()"
+              type="button"
+              class="w-full cursor-pointer text-left transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-default focus-visible:ring-offset-2"
+              aria-label="View income details"
+            >
+              <cmn-stat-card
+                [value]="store.monthlyInflowFormatted()"
+                [loading]="store.isLoading()"
+                label="Income this month"
+                icon="TrendingUp"
+              />
+            </button>
+            <button
+              (click)="goToSpending()"
+              type="button"
+              class="w-full cursor-pointer text-left transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-default focus-visible:ring-offset-2"
+              aria-label="View spending details"
+            >
+              <cmn-stat-card
+                [value]="store.monthlySpendingFormatted()"
+                [loading]="store.isLoading()"
+                label="Spending this month"
+                icon="TrendingDown"
+              />
+            </button>
             <cmn-stat-card
               [value]="store.netWorthChangeFormatted()"
               [loading]="store.isLoading()"
@@ -175,6 +189,7 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
             <div class="lg:col-span-2">
               <cmn-data-table
                 [rows]="store.data()?.topCategories ?? []"
+                (rowClick)="onCategoryClick($event)"
                 class="grid gap-4"
                 emptyMessage="No spending data available"
               >
@@ -208,5 +223,17 @@ export class DashboardComponent {
 
   public goToAccounts(): void {
     void this.router.navigateByUrl(AppRoute.AccountsList);
+  }
+
+  public goToIncome(): void {
+    void this.router.navigateByUrl(AppRoute.Income);
+  }
+
+  public goToSpending(): void {
+    void this.router.navigate([AppRoute.Transactions], {queryParams: {type: 'debit'}});
+  }
+
+  public onCategoryClick(row: CategoryStat): void {
+    void this.router.navigate([AppRoute.Transactions], {queryParams: {category: row.category}});
   }
 }

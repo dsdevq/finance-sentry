@@ -1,71 +1,43 @@
 import {defineConfig, devices} from '@playwright/test';
 
-/**
- * Read environment variables from file.
- * https://github.com/motdotla/dotenv
- */
-// require('dotenv').config();
+// libXfixes.so.3 is not installed in the sandbox — provide it from /tmp where it was extracted.
+// This must be set before Playwright spawns Chromium.
+if (!process.env['LD_LIBRARY_PATH']?.includes('/tmp')) {
+  process.env['LD_LIBRARY_PATH'] = ['/tmp', process.env['LD_LIBRARY_PATH'] ?? '']
+    .filter(Boolean)
+    .join(':');
+}
 
-/**
- * See https://playwright.dev/docs/test-configuration.
- */
+const SPA_PORT = 4201;
+
 export default defineConfig({
   testDir: './e2e',
-  /* Run tests in files in parallel */
-  fullyParallel: true,
-  /* Fail the build on CI if you accidentally left test.only in the source code. */
+  fullyParallel: false,
   forbidOnly: !!process.env['CI'],
-  /* Retry on CI only */
   // eslint-disable-next-line @typescript-eslint/no-magic-numbers
   retries: process.env['CI'] ? 2 : 0,
-  /* Opt out of parallel tests on CI. */
-  workers: process.env['CI'] ? 1 : undefined,
-  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: 'html',
-  /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
+  workers: 1,
+  reporter: [['json', {outputFile: 'playwright-report/results.json'}], ['html', {open: 'never'}]],
   use: {
-    /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: process.env['PLAYWRIGHT_TEST_BASE_URL'] ?? 'http://localhost:4200',
-
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
+    baseURL: `http://localhost:${SPA_PORT}`,
     trace: 'on-first-retry',
+    launchOptions: {
+      args: ['--no-sandbox', '--disable-dev-shm-usage'],
+      env: {LD_LIBRARY_PATH: process.env['LD_LIBRARY_PATH'] ?? '/tmp'},
+    },
   },
 
-  /* Configure projects for major browsers */
+  webServer: {
+    command: `node e2e/serve.mjs`,
+    url: `http://localhost:${SPA_PORT}`,
+    reuseExistingServer: false,
+    env: {PORT: String(SPA_PORT)},
+  },
+
   projects: [
     {
       name: 'chromium',
       use: {...devices['Desktop Chrome']},
     },
-
-    {
-      name: 'firefox',
-      use: {...devices['Desktop Firefox']},
-    },
-
-    {
-      name: 'webkit',
-      use: {...devices['Desktop Safari']},
-    },
-
-    /* Test against mobile viewports. */
-    // {
-    //   name: 'Mobile Chrome',
-    //   use: { ...devices['Pixel 5'] },
-    // },
-    // {
-    //   name: 'Mobile Safari',
-    //   use: { ...devices['iPhone 12'] },
-    // },
-
-    /* Test against branded browsers. */
-    // {
-    //   name: 'Microsoft Edge',
-    //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
-    // },
-    // {
-    //   name: 'Google Chrome',
-    //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
-    // },
   ],
 });

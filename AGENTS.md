@@ -100,10 +100,36 @@ Architecture direction: new `cmn-*` library components that need a complex inter
 
 `ng test @dsdevq-common/ui` and `ng test finance-sentry` both require Chromium (Playwright browser runner).
 The sandbox agent environment is missing `libXfixes.so.3` — the browser cannot launch.
-The test suite BUILDS without error (all TypeScript compiles); execution is blocked by the missing system lib.
 This is not an npm/node issue — `npm install` is fine; root access is needed for `apt-get install libxfixes3`.
 
-Workaround: run `npm run test:lib` on a machine with full browser deps. The pre-commit hook (lint + format, no tests) passes in the sandbox.
+Workaround for unit tests: run `npm run test:lib` on a machine with full browser deps. The pre-commit hook (lint + format, no tests) passes in the sandbox.
+
+Workaround for Playwright e2e tests: extract `libXfixes.so.3` from the Debian package into `/tmp` and prepend it to `LD_LIBRARY_PATH`. The `playwright.config.ts` sets this automatically when it detects the path is missing. Run from `frontend/`:
+
+```bash
+# One-time: extract missing lib from Debian package
+python3 - <<'EOF'
+import tarfile, io, urllib.request, struct
+
+url = 'http://ftp.us.debian.org/debian/pool/main/libx/libxfixes/libxfixes3_6.0.0-2+b4_arm64.deb'
+data = urllib.request.urlopen(url).read()
+pos = 8  # skip ar magic
+while pos < len(data):
+    name = data[pos:pos+16].strip().decode(); size = int(data[pos+48:pos+58].strip())
+    entry = data[pos+60:pos+60+size]; pos += 60 + size + (size % 2)
+    if name.startswith('data.tar'):
+        t = tarfile.open(fileobj=io.BytesIO(entry))
+        for m in t.getmembers():
+            if 'Xfixes' in m.name: t.extract(m, '/tmp/xfixes_extract', filter='data')
+        break
+EOF
+cp /tmp/xfixes_extract/usr/lib/aarch64-linux-gnu/libXfixes.so.3* /tmp/
+
+# Run Playwright e2e (build the app first if dist/ is missing)
+cd frontend
+npm run build          # produces dist/finance-sentry/browser
+LD_LIBRARY_PATH=/tmp:$LD_LIBRARY_PATH npx playwright test --reporter=json
+```
 
 ## Frontend pre-commit version-bump gate
 
