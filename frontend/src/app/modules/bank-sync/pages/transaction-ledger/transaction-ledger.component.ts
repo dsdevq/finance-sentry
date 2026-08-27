@@ -24,6 +24,7 @@ import {TransactionAmountClassPipe} from '../../pipes/transaction-amount-class.p
 import {TransactionLedgerStore} from '../../store/transaction-ledger/transaction-ledger.store';
 
 const SKELETON_ROWS = 8;
+const TYPE_LABELS: Record<string, string> = {debit: 'Spending', credit: 'Income'};
 
 @Component({
   selector: 'fns-transaction-ledger',
@@ -60,19 +61,33 @@ export class TransactionLedgerComponent {
     {initialValue: null}
   );
 
+  public readonly activeType = toSignal(this.route.queryParamMap.pipe(map(p => p.get('type'))), {
+    initialValue: null,
+  });
+
   public readonly activeCategoryLabel = computed(() => {
     const cat = this.activeCategory();
     return cat ? MerchantCategoryUtils.format(cat) : null;
   });
 
+  public readonly activeTypeLabel = computed(() => {
+    const type = this.activeType();
+    return type ? (TYPE_LABELS[type] ?? type) : null;
+  });
+
   public readonly displayedTransactions = computed(() => {
     const cat = this.activeCategory();
-    const all = this.store.transactions();
-    if (!cat) {
-      return all;
+    const type = this.activeType();
+    let all = this.store.transactions();
+
+    if (cat) {
+      const target = cat.toLowerCase();
+      all = all.filter(t => t.merchantCategory?.toLowerCase() === target);
     }
-    const target = cat.toLowerCase();
-    return all.filter(t => t.merchantCategory?.toLowerCase() === target);
+    if (type) {
+      all = all.filter(t => t.transactionType === type);
+    }
+    return all;
   });
 
   public openDrawer(tx: GlobalTransactionDto): void {
@@ -85,5 +100,9 @@ export class TransactionLedgerComponent {
 
   public clearCategory(): void {
     void this.router.navigate([], {queryParams: {category: null}, queryParamsHandling: 'merge'});
+  }
+
+  public clearType(): void {
+    void this.router.navigate([], {queryParams: {type: null}, queryParamsHandling: 'merge'});
   }
 }

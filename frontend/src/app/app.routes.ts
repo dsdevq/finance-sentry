@@ -51,6 +51,11 @@ export const APP_ROUTES: Routes = [
           ),
       },
       {
+        path: AppRoute.Income.slice(1),
+        loadComponent: () =>
+          import('./modules/bank-sync/pages/income/income.component').then(m => m.IncomeComponent),
+      },
+      {
         path: AppRoute.Investments.slice(1),
         redirectTo: AppRoute.AccountsInvestments.slice(1),
         pathMatch: 'full',

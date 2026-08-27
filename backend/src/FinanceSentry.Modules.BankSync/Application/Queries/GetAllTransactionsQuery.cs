@@ -35,7 +35,8 @@ public record GetAllTransactionsQuery(
     Guid UserId,
     PagedRequest Paging,
     DateTime? From = null,
-    DateTime? To = null
+    DateTime? To = null,
+    string? TransactionType = null
 ) : IQuery<AllTransactionsResult>;
 
 // ── Handler ──────────────────────────────────────────────────────────────────
@@ -61,6 +62,8 @@ public class GetAllTransactionsQueryHandler(
             filtered = filtered.Where(t => (t.PostedDate ?? t.TransactionDate) >= request.From.Value);
         if (request.To.HasValue)
             filtered = filtered.Where(t => (t.PostedDate ?? t.TransactionDate) <= request.To.Value);
+        if (!string.IsNullOrEmpty(request.TransactionType))
+            filtered = filtered.Where(t => t.TransactionType == request.TransactionType);
 
         var ordered = filtered
             .OrderByDescending(t => t.PostedDate ?? t.TransactionDate)

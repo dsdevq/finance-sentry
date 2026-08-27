@@ -24,7 +24,13 @@ const PALETTE_ITEMS: CommandPaletteItem[] = [
   {id: AppRoute.Dashboard, label: 'Dashboard', icon: 'LayoutDashboard', group: 'Pages'},
   {id: AppRoute.AccountsList, label: 'Accounts', icon: 'Building2', group: 'Pages'},
   {id: AppRoute.Transactions, label: 'Transactions', icon: 'ArrowLeftRight', group: 'Pages'},
-  {id: AppRoute.AccountsInvestments, label: 'Investments', icon: 'TrendingUp', group: 'Pages'},
+  {id: AppRoute.Income, label: 'Income', icon: 'TrendingUp', group: 'Pages'},
+  {
+    id: AppRoute.AccountsInvestments,
+    label: 'Investments',
+    icon: 'ChartNoAxesColumn',
+    group: 'Pages',
+  },
   {id: AppRoute.Budgets, label: 'Budgets', icon: 'Zap', group: 'Pages'},
   {id: AppRoute.Subscriptions, label: 'Subscriptions', icon: 'RefreshCw', group: 'Pages'},
   {id: AppRoute.Alerts, label: 'Alerts', icon: 'Bell', group: 'Pages'},
@@ -87,6 +93,7 @@ export class AppShellComponent {
     {label: 'Dashboard', icon: 'LayoutDashboard', route: AppRoute.Dashboard},
     {label: 'Accounts', icon: 'Building2', route: AppRoute.Accounts},
     {label: 'Transactions', icon: 'ArrowLeftRight', route: AppRoute.Transactions},
+    {label: 'Income', icon: 'TrendingUp', route: AppRoute.Income},
     {label: 'Budgets', icon: 'Zap', route: AppRoute.Budgets},
     {label: 'Subscriptions', icon: 'RefreshCw', route: AppRoute.Subscriptions},
     {

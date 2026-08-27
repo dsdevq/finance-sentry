@@ -88,10 +88,11 @@ public class BankSyncController(
         [FromQuery] int limit = 50,
         [FromQuery] DateTime? from = null,
         [FromQuery] DateTime? to = null,
+        [FromQuery] string? transactionType = null,
         CancellationToken ct = default)
     {
         var result = await _allTransactionsHandler.Handle(
-            new GetAllTransactionsQuery(User.RequireUserId(), new PagedRequest(offset, limit), from, to), ct);
+            new GetAllTransactionsQuery(User.RequireUserId(), new PagedRequest(offset, limit), from, to, transactionType), ct);
 
         return Ok(PaginationExtensions.CreatePaginatedResponse(
             result.Transactions, result.TotalCount, result.Offset, result.Limit));

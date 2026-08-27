@@ -50,4 +50,5 @@ export interface TransactionQueryParams extends PagedRequest {
 export interface GetAllTransactionsParams extends PagedRequest {
   from?: string;
   to?: string;
+  transactionType?: 'credit' | 'debit';
 }

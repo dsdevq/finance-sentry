@@ -1,28 +1,40 @@
 <div class="mx-auto flex h-full w-full max-w-[1200px] flex-col p-cmn-8">
   <div class="mb-cmn-8">
     <h1 class="font-headline text-cmn-2xl font-bold text-text-primary">Transaction Ledger</h1>
-    <p class="text-cmn-sm text-text-secondary mt-cmn-1">
+    <p class="mt-cmn-1 text-cmn-sm text-text-secondary">
       All transactions across connected accounts
     </p>
   </div>
 
-  @if (activeCategoryLabel(); as label) {
-    <div class="mb-cmn-6 flex items-center gap-cmn-2">
+  @if (activeCategoryLabel() || activeTypeLabel()) {
+    <div class="mb-cmn-6 flex flex-wrap items-center gap-cmn-2">
       <span class="text-cmn-xs font-semibold uppercase tracking-widest text-text-secondary"
         >Filter</span
       >
-      <button
-        (click)="clearCategory()"
-        type="button"
-        class="inline-flex items-center gap-cmn-1 rounded-full border border-accent-default bg-accent-subtle px-cmn-3 py-1 text-cmn-xs font-medium text-accent-default hover:bg-accent-200 transition-colors"
-      >
-        Category: {{ label }}
-        <cmn-icon name="X" size="sm" />
-      </button>
+      @if (activeCategoryLabel(); as label) {
+        <button
+          (click)="clearCategory()"
+          type="button"
+          class="inline-flex items-center gap-cmn-1 rounded-full border border-accent-default bg-accent-subtle px-cmn-3 py-1 text-cmn-xs font-medium text-accent-default transition-colors hover:bg-accent-200"
+        >
+          Category: {{ label }}
+          <cmn-icon name="X" size="sm" />
+        </button>
+      }
+      @if (activeTypeLabel(); as label) {
+        <button
+          (click)="clearType()"
+          type="button"
+          class="inline-flex items-center gap-cmn-1 rounded-full border border-accent-default bg-accent-subtle px-cmn-3 py-1 text-cmn-xs font-medium text-accent-default transition-colors hover:bg-accent-200"
+        >
+          Type: {{ label }}
+          <cmn-icon name="X" size="sm" />
+        </button>
+      }
     </div>
   }
 
-  <div class="grid grid-cols-3 gap-cmn-4 mb-cmn-8">
+  <div class="mb-cmn-8 grid grid-cols-3 gap-cmn-4">
     <cmn-stat-card
       [value]="'$' + ((store.monthlyOutflow() | number: '1.2-2') ?? '0.00')"
       [loading]="store.isLoading()"
@@ -44,7 +56,7 @@
   </div>
 
   @if (store.errorMessage()) {
-    <cmn-alert variant="error" class="block mb-cmn-6">
+    <cmn-alert variant="error" class="mb-cmn-6 block">
       {{ store.errorMessage() }}
       <cmn-button (clicked)="store.load()" variant="secondary" size="sm">Retry</cmn-button>
     </cmn-alert>
@@ -52,7 +64,7 @@
 
   @if (store.isLoading()) {
     <cmn-card class="min-h-0 flex-1">
-      <div class="p-cmn-4 space-y-cmn-3">
+      <div class="space-y-cmn-3 p-cmn-4">
         @for (_ of skeletonRows; track $index) {
           <div class="flex gap-cmn-4">
             <cmn-skeleton height="1rem" width="15%" />
@@ -77,41 +89,41 @@
         <table class="w-full text-cmn-sm" aria-label="Transaction ledger">
           <thead class="sticky top-0 z-10">
             <tr
-              class="border-b border-border-default bg-surface-card text-cmn-xs text-text-secondary uppercase tracking-wide"
+              class="border-b border-border-default bg-surface-card text-cmn-xs uppercase tracking-wide text-text-secondary"
             >
-              <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Date</th>
-              <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Description</th>
-              <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Category</th>
-              <th class="text-left py-cmn-3 px-cmn-4 font-medium" scope="col">Account</th>
-              <th class="text-right py-cmn-3 px-cmn-4 font-medium" scope="col">Amount</th>
+              <th class="px-cmn-4 py-cmn-3 text-left font-medium" scope="col">Date</th>
+              <th class="px-cmn-4 py-cmn-3 text-left font-medium" scope="col">Description</th>
+              <th class="px-cmn-4 py-cmn-3 text-left font-medium" scope="col">Category</th>
+              <th class="px-cmn-4 py-cmn-3 text-left font-medium" scope="col">Account</th>
+              <th class="px-cmn-4 py-cmn-3 text-right font-medium" scope="col">Amount</th>
             </tr>
           </thead>
           <tbody>
             @for (t of displayedTransactions(); track t.transactionId) {
               <tr
                 (click)="openDrawer(t)"
-                class="cursor-pointer border-b border-border-default last:border-0 hover:bg-surface-bg transition-colors"
+                class="cursor-pointer border-b border-border-default last:border-0 transition-colors hover:bg-surface-bg"
               >
-                <td class="py-cmn-4 px-cmn-4 text-text-secondary whitespace-nowrap">
+                <td class="whitespace-nowrap px-cmn-4 py-cmn-4 text-text-secondary">
                   {{ t.postedDate ?? t.date | date: 'MMM d, y' }}
                   @if (t.isPending) {
                     <span class="ml-1 text-cmn-xs text-amber-500">Pending</span>
                   }
                 </td>
-                <td class="py-cmn-4 px-cmn-4 text-text-primary max-w-[280px] truncate">
+                <td class="max-w-[280px] truncate px-cmn-4 py-cmn-4 text-text-primary">
                   {{ t.description }}
                 </td>
-                <td class="py-cmn-4 px-cmn-4">
+                <td class="px-cmn-4 py-cmn-4">
                   @if (t.merchantCategory) {
                     <cmn-tag variant="neutral">{{ t.merchantCategory | merchantCategory }}</cmn-tag>
                   } @else {
-                    <span class="text-text-secondary text-cmn-xs">—</span>
+                    <span class="text-cmn-xs text-text-secondary">—</span>
                   }
                 </td>
-                <td class="py-cmn-4 px-cmn-4 text-text-secondary">{{ t.bankName }}</td>
+                <td class="px-cmn-4 py-cmn-4 text-text-secondary">{{ t.bankName }}</td>
                 <td
                   [class]="t | transactionAmountClass"
-                  class="py-cmn-4 px-cmn-4 text-right font-mono tabular-nums font-medium"
+                  class="px-cmn-4 py-cmn-4 text-right font-mono tabular-nums font-medium"
                 >
                   {{ t | transactionAmount }}
                 </td>
@@ -122,7 +134,7 @@
       </div>
 
       @if (store.hasMore()) {
-        <div class="flex justify-center p-cmn-4 border-t border-border-default">
+        <div class="flex justify-center border-t border-border-default p-cmn-4">
           <cmn-button (clicked)="store.loadMore()" variant="secondary" size="sm"
             >Load More</cmn-button
           >
