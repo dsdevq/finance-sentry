@@ -1,5 +1,5 @@
 import {inject, type Signal} from '@angular/core';
-import {extractErrorCode} from '@dsdevq-common/core';
+import {extractErrorCode} from '@lifekit-hq/core';
 import {rxMethod} from '@ngrx/signals/rxjs-interop';
 import {catchError, EMPTY, forkJoin, pipe, switchMap, tap} from 'rxjs';
 
