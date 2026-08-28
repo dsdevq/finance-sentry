@@ -5,6 +5,26 @@ All notable changes to Finance Sentry are documented here. The format follows
 [Semantic Versioning](https://semver.org/). Entries from v0.12.0 onward are
 generated automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [1.6.0](https://github.com/lifekit-hq/finance-sentry/compare/v1.5.0...v1.6.0) (2026-08-28)
+
+
+### Features
+
+* **462:** dashboard drill-downs and Income page ([#476](https://github.com/lifekit-hq/finance-sentry/issues/476)) ([9f1d343](https://github.com/lifekit-hq/finance-sentry/commit/9f1d34335097cd51732c2ee4486df6e42151c3bf))
+* **frontend:** consume @lifekit-hq/* from GitHub Packages — remove the in-repo dsdevq-common library ([#471](https://github.com/lifekit-hq/finance-sentry/issues/471)) ([d4fd182](https://github.com/lifekit-hq/finance-sentry/commit/d4fd182bc06e5a43470140db0dc6bf2463be9aa0)), closes [#469](https://github.com/lifekit-hq/finance-sentry/issues/469)
+* **fx:** historical exchange rates from NBU and ECB ([#488](https://github.com/lifekit-hq/finance-sentry/issues/488)) ([654c671](https://github.com/lifekit-hq/finance-sentry/commit/654c671c519deeed2203de30925febe0fec1e9d0)), closes [#487](https://github.com/lifekit-hq/finance-sentry/issues/487)
+* **subscriptions:** count installments in spend totals, annualized by remaining payments ([#486](https://github.com/lifekit-hq/finance-sentry/issues/486)) ([e8d8e39](https://github.com/lifekit-hq/finance-sentry/commit/e8d8e393bb9dc6f5db0c91869eb2e3c392032337)), closes [#485](https://github.com/lifekit-hq/finance-sentry/issues/485)
+* **subscriptions:** show what exchange-rate movement does to installment cost ([#489](https://github.com/lifekit-hq/finance-sentry/issues/489)) ([5662f31](https://github.com/lifekit-hq/finance-sentry/commit/5662f31bc470c1ea4d7d6d5a3f6d0b9bbfd56dc1)), closes [#487](https://github.com/lifekit-hq/finance-sentry/issues/487)
+
+
+### Bug Fixes
+
+* **dashboard:** exclude the in-progress month from the savings-rate chart ([#458](https://github.com/lifekit-hq/finance-sentry/issues/458)) ([7c00716](https://github.com/lifekit-hq/finance-sentry/commit/7c00716438fbfdf10c9f5e1ad97247c3ad3d2da0)), closes [#457](https://github.com/lifekit-hq/finance-sentry/issues/457)
+* **e2e:** drop the sandbox libXfixes hack from playwright.config.ts ([#478](https://github.com/lifekit-hq/finance-sentry/issues/478)) ([8956345](https://github.com/lifekit-hq/finance-sentry/commit/895634553951be1616715d805d32ca106e3c97f8))
+* **frontend:** repair [@dsdevq-common](https://github.com/dsdevq-common) imports left by the stale fs[#476](https://github.com/lifekit-hq/finance-sentry/issues/476) goal branch ([#477](https://github.com/lifekit-hq/finance-sentry/issues/477)) ([ae8f6cd](https://github.com/lifekit-hq/finance-sentry/commit/ae8f6cddce1f5e64ed5531e2fd36e4b9f5d2965d))
+* **subscriptions:** per-plan installment identity, amount clustering, detection on sync ([#483](https://github.com/lifekit-hq/finance-sentry/issues/483)) ([ee685e3](https://github.com/lifekit-hq/finance-sentry/commit/ee685e337870c0745329db837d8b8534dc8086d6)), closes [#482](https://github.com/lifekit-hq/finance-sentry/issues/482)
+* **thesis-monitor:** anchor price_drawdown to entry price; clear orphaned breaks on trigger removal ([#475](https://github.com/lifekit-hq/finance-sentry/issues/475)) ([939d7be](https://github.com/lifekit-hq/finance-sentry/commit/939d7becad6075c27bc68e829e072fc50ba7c60d)), closes [#474](https://github.com/lifekit-hq/finance-sentry/issues/474)
+
 ## [1.5.0](https://github.com/lifekit-hq/finance-sentry/compare/v1.4.0...v1.5.0) (2026-08-24)
 
 
