@@ -55,7 +55,7 @@ public class SubscriptionsController(
     [HttpPatch("installments/{id:guid}/term")]
     public async Task<IActionResult> SetTerm(Guid id, [FromBody] SetTermRequest body, CancellationToken ct = default)
     {
-        await setTerm.Handle(new SetInstallmentTermCommand(User.RequireUserId().ToString(), id, body.TermCount), ct);
+        await setTerm.Handle(new SetInstallmentTermCommand(User.RequireUserId().ToString(), id, body.TermCount, body.EndDate), ct);
         return NoContent();
     }
 
@@ -99,7 +99,7 @@ public class SubscriptionsController(
     }
 }
 
-public record SetTermRequest(int? TermCount);
+public record SetTermRequest(int? TermCount, DateOnly? EndDate = null);
 
 public record AddSubscriptionRequest(
     string Merchant,

@@ -1,6 +1,8 @@
 namespace FinanceSentry.Modules.BankSync.Infrastructure.Jobs;
 
+using System.Text.RegularExpressions;
 using FinanceSentry.Core.Interfaces;
+using FinanceSentry.Core.Utils;
 using FinanceSentry.Infrastructure.Encryption;
 using FinanceSentry.Modules.BankSync.Application.Services;
 using FinanceSentry.Modules.BankSync.Infrastructure.Persistence;
@@ -25,6 +27,10 @@ public sealed class SubscriptionDetectionJob(
     private const int MonthlyMaxDays = 35;
     private const int AnnualMinDays = 351;
     private const int AnnualMaxDays = 379;
+    // A price change (plan upgrade, VAT shift) moves the charge amount in one step;
+    // adjacent amounts within this relative distance chain into the same cluster,
+    // while a different plan (e.g. Claude Pro €22 vs Max €110) breaks the chain.
+    private const double AmountClusterTolerance = 0.15;
 
     private static readonly string[] UnidentifiableNormalizedNames =
     [
@@ -159,7 +165,7 @@ public sealed class SubscriptionDetectionJob(
         }
     }
 
-    private sealed record TxRow(
+    public sealed record TxRow(
         Guid UserId, string? MerchantName, string? Description, decimal Amount,
         DateTime TransactionDate, string? MerchantCategory, int? Mcc, string? Currency);
 
@@ -204,17 +210,21 @@ public sealed class SubscriptionDetectionJob(
         }
     }
 
-    // Recurring-service detection: group by merchant, require a consistent monthly/annual
-    // cadence, a stable amount, and at least MinOccurrences charges.
-    private static IEnumerable<DetectedSubscriptionData> DetectSubscriptions(IReadOnlyList<TxRow> transactions)
+    // Recurring-service detection: group by merchant, keep only the amount cluster that
+    // contains the most recent charge (so a discontinued plan's old price — e.g. Claude
+    // Pro €22 next to Max €110 — can't poison the stability gates), then require a
+    // consistent monthly/annual cadence, a stable amount, and at least MinOccurrences
+    // charges. A recurring transfer to a masked card number is a loan/mortgage repayment,
+    // not a service — it's emitted as an installment so it stays out of the spend summary.
+    public static IEnumerable<DetectedSubscriptionData> DetectSubscriptions(IReadOnlyList<TxRow> transactions)
     {
         var results = new List<DetectedSubscriptionData>();
-        var byMerchant = transactions.GroupBy(t => MerchantNameNormalizer.Normalize(t.MerchantName ?? t.Description));
+        var byMerchant = transactions.GroupBy(NormalizeForDetection);
 
         foreach (var merchantGroup in byMerchant)
         {
             var normalized = merchantGroup.Key;
-            var sorted = merchantGroup.OrderBy(t => t.TransactionDate).ToList();
+            var sorted = LatestAmountCluster(merchantGroup).OrderBy(t => t.TransactionDate).ToList();
 
             if (sorted.Count < MinOccurrences) continue;
             if (IsUnidentifiableMerchant(normalized)) continue;
@@ -248,8 +258,9 @@ public sealed class SubscriptionDetectionJob(
             var lastChargeDate = DateOnly.FromDateTime(lastTransaction.TransactionDate);
             var nextExpectedDate = lastChargeDate.AddDays((int)median);
 
-            var displayName = MerchantNameNormalizer.GetDisplayName(
-                sorted.Select(t => t.MerchantName ?? t.Description));
+            var displayName = normalized.StartsWith("mobile top-up ", StringComparison.Ordinal)
+                ? $"Mobile top-up {normalized[^4..]}"
+                : MerchantNameNormalizer.GetDisplayName(sorted.Select(t => t.MerchantName ?? t.Description));
             var topCategory = sorted
                 .Select(t => t.MerchantCategory)
                 .Where(c => c != null)
@@ -269,44 +280,101 @@ public sealed class SubscriptionDetectionJob(
                 OccurrenceCount: sorted.Count,
                 ConfidenceScore: sorted.Count,
                 Category: topCategory,
-                Kind: SubscriptionKinds.Subscription));
+                Kind: MaskedPan.IsLikely(normalized)
+                    ? SubscriptionKinds.Installment
+                    : SubscriptionKinds.Subscription));
         }
 
         return results;
     }
 
-    // Installment detection: group by the merchant recovered from Monobank's installment
-    // descriptions. No cadence/CV/min-count gates — a single "- monomarket" repayment is a
-    // real installment. Completed when a full-payoff row is the latest activity.
-    private static IEnumerable<DetectedSubscriptionData> DetectInstallments(IReadOnlyList<TxRow> transactions)
+    /// <summary>
+    /// Merchant key for recurring-service grouping. Mobile top-ups carry the phone number
+    /// in the description ("*MOBI TOP-UP 0857860057"), which both fragments the merchant
+    /// key and trips the generic top-up blocklist — collapse them to a stable per-number
+    /// key instead so a monthly top-up is tracked like any other recurring cost.
+    /// </summary>
+    public static string NormalizeForDetection(TxRow transaction)
+    {
+        var raw = transaction.MerchantName ?? transaction.Description;
+        if (raw is not null)
+        {
+            var mobi = MobiTopUpPattern.Match(raw.Trim());
+            if (mobi.Success)
+            {
+                var number = mobi.Groups[1].Value;
+                return $"mobile top-up {number[^4..]}";
+            }
+        }
+
+        return MerchantNameNormalizer.Normalize(raw);
+    }
+
+    private static readonly Regex MobiTopUpPattern =
+        new(@"^\*?\s*mobi\s+top-?up\s+(\d{4,})$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    /// <summary>
+    /// Splits a merchant's charges into amount clusters (adjacent sorted amounts within
+    /// <see cref="AmountClusterTolerance"/> chain together) and returns the cluster holding
+    /// the most recent charge — the current price of whatever is still being billed.
+    /// </summary>
+    public static IReadOnlyList<TxRow> LatestAmountCluster(IEnumerable<TxRow> transactions)
+    {
+        var byAmount = transactions.OrderBy(t => t.Amount).ToList();
+        if (byAmount.Count == 0) return byAmount;
+
+        var clusters = new List<List<TxRow>> { new() { byAmount[0] } };
+        for (var i = 1; i < byAmount.Count; i++)
+        {
+            var previous = (double)byAmount[i - 1].Amount;
+            var current = (double)byAmount[i].Amount;
+            if (previous > 0 && (current - previous) / previous <= AmountClusterTolerance)
+                clusters[^1].Add(byAmount[i]);
+            else
+                clusters.Add(new List<TxRow> { byAmount[i] });
+        }
+
+        return clusters.MaxBy(c => c.Max(t => t.TransactionDate))!;
+    }
+
+    // Installment detection: one plan per (merchant, rounded monthly amount) — the same
+    // shop can carry several concurrent розстрочки (e.g. two Алло plans at ₴2,339.95 and
+    // ₴2,999.95) and merchant-only grouping merges them into one row with polluted stats.
+    // No cadence/CV/min-count gates — a single "- monomarket" repayment is a real
+    // installment. A full payoff ("Повне погашення") carries its own amount, so it's
+    // matched by merchant: it completes every plan with no payments after it, while a
+    // plan that keeps charging past the payoff date is a separate, still-active plan.
+    public static IEnumerable<DetectedSubscriptionData> DetectInstallments(IReadOnlyList<TxRow> transactions)
     {
         var results = new List<DetectedSubscriptionData>();
-        var byMerchant = transactions.GroupBy(t => ExtractInstallmentMerchant(t.Description ?? string.Empty));
 
-        foreach (var group in byMerchant)
+        var payoffDatesByMerchant = transactions
+            .Where(t => IsInstallmentPayoff(t.Description))
+            .GroupBy(t => ExtractInstallmentMerchant(t.Description ?? string.Empty))
+            .ToDictionary(g => g.Key, g => g.Max(t => t.TransactionDate));
+
+        var byPlan = transactions
+            .Where(t => !IsInstallmentPayoff(t.Description))
+            .GroupBy(t => (
+                Merchant: ExtractInstallmentMerchant(t.Description ?? string.Empty),
+                Amount: RoundPlanAmount(t.Amount)));
+
+        foreach (var group in byPlan)
         {
-            var merchant = group.Key;
+            var (merchant, roundedAmount) = group.Key;
             if (string.IsNullOrWhiteSpace(merchant)) continue;
 
-            var sorted = group.OrderBy(t => t.TransactionDate).ToList();
-            var payments = sorted.Where(t => !IsInstallmentPayoff(t.Description)).ToList();
-            if (payments.Count == 0) continue;
+            var payments = group.OrderBy(t => t.TransactionDate).ToList();
+            var lastPayment = payments[^1];
+            var lastPaymentDate = lastPayment.TransactionDate;
 
-            var lastPaymentDate = payments.Max(t => t.TransactionDate);
-            var lastPayoff = sorted
-                .Where(t => IsInstallmentPayoff(t.Description))
-                .Select(t => (DateTime?)t.TransactionDate)
-                .DefaultIfEmpty(null)
-                .Max();
-            // A payoff only means "finished" if it's the latest event — an early payoff
-            // followed by more monthly charges is a separate, still-active plan.
-            var completed = lastPayoff is DateTime payoff && payoff >= lastPaymentDate;
+            var completed = payoffDatesByMerchant.TryGetValue(merchant, out var payoff)
+                && payoff >= lastPaymentDate;
 
-            var lastPayment = payments.OrderBy(t => t.TransactionDate).Last();
             var lastChargeDate = DateOnly.FromDateTime(lastPaymentDate);
 
             results.Add(new DetectedSubscriptionData(
-                MerchantNameNormalized: "installment:" + merchant.ToLowerInvariant(),
+                MerchantNameNormalized: $"installment:{merchant.ToLowerInvariant()}:{roundedAmount}",
                 MerchantNameDisplay: merchant,
                 Cadence: "monthly",
                 AverageAmount: Math.Round(payments.Average(t => t.Amount), 2),
@@ -323,6 +391,14 @@ public sealed class SubscriptionDetectionJob(
 
         return results;
     }
+
+    /// <summary>
+    /// Plan-identity amount: rounded to the whole unit, half away from zero, so cent-level
+    /// jitter (telemart bills ₴6,499.84 and ₴6,499.85) stays one plan. Must round the same
+    /// way as the M004 data migration's SQL <c>round()</c>.
+    /// </summary>
+    public static int RoundPlanAmount(decimal amount) =>
+        (int)Math.Round(amount, MidpointRounding.AwayFromZero);
 
     public static bool IsInstallmentDescription(string? description)
     {
@@ -384,6 +460,11 @@ public sealed class SubscriptionDetectionJob(
     public static bool IsUnidentifiableMerchant(string normalized)
     {
         if (string.IsNullOrWhiteSpace(normalized)) return true;
+
+        // Keys produced by NormalizeForDetection's mobile top-up special case are
+        // deliberately identifiable despite containing "top-up".
+        if (normalized.StartsWith("mobile top-up ", StringComparison.Ordinal)) return false;
+
         foreach (var marker in UnidentifiableNormalizedNames)
         {
             if (normalized.Contains(marker, StringComparison.Ordinal)) return true;

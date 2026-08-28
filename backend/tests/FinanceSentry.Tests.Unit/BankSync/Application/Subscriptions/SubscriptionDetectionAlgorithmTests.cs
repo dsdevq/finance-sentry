@@ -1,5 +1,7 @@
 namespace FinanceSentry.Tests.Unit.BankSync.Application.Subscriptions;
 
+using FinanceSentry.Core.Interfaces;
+using FinanceSentry.Core.Utils;
 using FinanceSentry.Modules.BankSync.Application.Services;
 using FinanceSentry.Modules.BankSync.Infrastructure.Jobs;
 using FluentAssertions;
@@ -185,5 +187,149 @@ public class SubscriptionDetectionAlgorithmTests
         return sorted.Count % 2 == 0
             ? (sorted[mid - 1] + sorted[mid]) / 2.0
             : sorted[mid];
+    }
+
+    // ── Amount clustering / plan identity (issue #482, live-data scenarios) ─
+
+    private static SubscriptionDetectionJob.TxRow Tx(
+        string description, decimal amount, int year, int month, int day,
+        string currency = "EUR", int? mcc = null) =>
+        new(Guid.Empty, null, description, amount, new DateTime(year, month, day), null, mcc, currency);
+
+    [Fact]
+    public void DetectSubscriptions_DiscontinuedPlanPrice_DoesNotPoisonCurrentPlan()
+    {
+        // Real Claude data: Pro (€22.14, ended June) + Max (€98.38 → €110.70 after a VAT
+        // shift). Merchant-level CV over all five charges fails; the latest amount
+        // cluster alone must pass.
+        var txs = new[]
+        {
+            Tx("Claude.ai Subscription", 22.14m, 2026, 4, 11),
+            Tx("Anthropic* Claude Sub", 22.14m, 2026, 6, 11),
+            Tx("Anthropic* Claude Sub", 98.38m, 2026, 6, 24),
+            Tx("Anthropic* Claude Sub", 110.70m, 2026, 7, 24),
+            Tx("Anthropic* Claude Sub", 110.70m, 2026, 8, 24),
+        };
+
+        var result = SubscriptionDetectionJob.DetectSubscriptions(txs).Should().ContainSingle().Subject;
+
+        result.MerchantNameNormalized.Should().Be("claude");
+        result.Kind.Should().Be(SubscriptionKinds.Subscription);
+        result.OccurrenceCount.Should().Be(3);
+        result.LastKnownAmount.Should().Be(110.70m);
+    }
+
+    [Fact]
+    public void DetectSubscriptions_MobileTopUp_TrackedPerNumber()
+    {
+        var txs = new[]
+        {
+            Tx("*MOBI TOP-UP 0857860057", 20.00m, 2026, 4, 28),
+            Tx("*MOBI TOP-UP 0857860057", 20.00m, 2026, 5, 27),
+            Tx("*MOBI TOP-UP 0857860057", 20.00m, 2026, 6, 25),
+            Tx("*MOBI TOP-UP 0857860057", 20.00m, 2026, 7, 22),
+        };
+
+        var result = SubscriptionDetectionJob.DetectSubscriptions(txs).Should().ContainSingle().Subject;
+
+        result.MerchantNameNormalized.Should().Be("mobile top-up 0057");
+        result.MerchantNameDisplay.Should().Be("Mobile top-up 0057");
+        result.OccurrenceCount.Should().Be(4);
+    }
+
+    [Fact]
+    public void DetectSubscriptions_RecurringTransferToMaskedCard_IsAnInstallmentNotASubscription()
+    {
+        var txs = new[]
+        {
+            Tx("516936******4992", 14060.96m, 2026, 6, 11, "UAH"),
+            Tx("516936******4992", 14060.96m, 2026, 7, 11, "UAH"),
+            Tx("516936******4992", 14060.96m, 2026, 8, 11, "UAH"),
+        };
+
+        var result = SubscriptionDetectionJob.DetectSubscriptions(txs).Should().ContainSingle().Subject;
+
+        result.Kind.Should().Be(SubscriptionKinds.Installment);
+        result.MerchantNameNormalized.Should().Be("516936");
+    }
+
+    [Fact]
+    public void DetectInstallments_TwoConcurrentPlansAtSameMerchant_StaySeparate()
+    {
+        // Real Алло data: old plan ₴2,339.95 (4 payments) + new plan ₴2,999.95 (Aug 22).
+        var txs = new[]
+        {
+            Tx("Платіж ТОВ Алло - monomarket", 2339.95m, 2026, 5, 29, "UAH"),
+            Tx("Погашення наступного платежу ТОВ Алло - monomarket", 2339.95m, 2026, 6, 1, "UAH"),
+            Tx("Погашення наступного платежу ТОВ Алло - monomarket", 2339.95m, 2026, 7, 1, "UAH"),
+            Tx("Погашення наступного платежу ТОВ Алло - monomarket", 2339.95m, 2026, 8, 5, "UAH"),
+            Tx("Платіж ТОВ Алло - monomarket", 2999.95m, 2026, 8, 22, "UAH"),
+        };
+
+        var results = SubscriptionDetectionJob.DetectInstallments(txs).ToList();
+
+        results.Should().HaveCount(2);
+        var oldPlan = results.Single(r => r.MerchantNameNormalized == "installment:тов алло:2340");
+        oldPlan.OccurrenceCount.Should().Be(4);
+        oldPlan.LastKnownAmount.Should().Be(2339.95m);
+        var newPlan = results.Single(r => r.MerchantNameNormalized == "installment:тов алло:3000");
+        newPlan.OccurrenceCount.Should().Be(1);
+    }
+
+    [Fact]
+    public void DetectInstallments_CentJitter_StaysOnePlan()
+    {
+        var txs = new[]
+        {
+            Tx("Щомісячний платіж telemart - monomarket", 6499.84m, 2026, 6, 1, "UAH"),
+            Tx("Щомісячний платіж telemart - monomarket", 6499.85m, 2026, 7, 1, "UAH"),
+        };
+
+        var result = SubscriptionDetectionJob.DetectInstallments(txs).Should().ContainSingle().Subject;
+
+        result.MerchantNameNormalized.Should().Be("installment:telemart:6500");
+        result.OccurrenceCount.Should().Be(2);
+    }
+
+    [Fact]
+    public void DetectInstallments_Payoff_CompletesOnlyThePlanItEnded()
+    {
+        // Real RozetkaPay data: an early full payoff on May 1 closed the old plan while a
+        // new ₴1,371.89 plan kept charging from the same day.
+        var txs = new[]
+        {
+            Tx("Погашення наступного платежу RozetkaPay", 800.00m, 2026, 3, 1, "UAH"),
+            Tx("Погашення наступного платежу RozetkaPay", 800.00m, 2026, 4, 1, "UAH"),
+            Tx("Повне погашення RozetkaPay", 4300.00m, 2026, 5, 1, "UAH"),
+            Tx("Погашення наступного платежу RozetkaPay", 1371.89m, 2026, 5, 1, "UAH"),
+            Tx("Погашення наступного платежу RozetkaPay", 1371.89m, 2026, 6, 1, "UAH"),
+        };
+
+        var results = SubscriptionDetectionJob.DetectInstallments(txs).ToList();
+
+        results.Should().HaveCount(2);
+        results.Single(r => r.MerchantNameNormalized == "installment:rozetkapay:800")
+            .IsCompleted.Should().BeTrue();
+        results.Single(r => r.MerchantNameNormalized == "installment:rozetkapay:1372")
+            .IsCompleted.Should().BeFalse();
+    }
+
+    [Fact]
+    public void MobileTopUpKey_IsIdentifiable_DespiteTopUpBlocklist()
+    {
+        SubscriptionDetectionJob.IsUnidentifiableMerchant("mobile top-up 0057").Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData("516936******4992", true)]
+    [InlineData("516936", true)]
+    [InlineData("545708******2195", true)]
+    [InlineData("ТОВ Алло", false)]
+    [InlineData("Netcup", false)]
+    [InlineData("Mobile top-up 0057", false)]
+    [InlineData(null, false)]
+    public void MaskedPan_IsLikely_RecognizesCardCounterparties(string? text, bool expected)
+    {
+        MaskedPan.IsLikely(text).Should().Be(expected);
     }
 }

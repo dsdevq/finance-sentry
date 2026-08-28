@@ -90,7 +90,8 @@ public class WebhookHandlerTests
         var coordinator = new Modules.BankSync.Application.Services.TransactionSyncCoordinator(
             syncJobRepo.Object,
             new Mock<Modules.BankSync.Domain.Repositories.IBankAccountRepository>().Object,
-            syncService.Object);
+            syncService.Object,
+            new Mock<Hangfire.IBackgroundJobClient>().Object);
 
         var result = await coordinator.TriggerWebhookSyncAsync(accountId);
 
@@ -115,7 +116,8 @@ public class WebhookHandlerTests
         var coordinator = new Modules.BankSync.Application.Services.TransactionSyncCoordinator(
             syncJobRepo.Object,
             new Mock<Modules.BankSync.Domain.Repositories.IBankAccountRepository>().Object,
-            syncService.Object);
+            syncService.Object,
+            new Mock<Hangfire.IBackgroundJobClient>().Object);
 
         var result = await coordinator.TriggerWebhookSyncAsync(accountId);
 
@@ -137,7 +139,8 @@ public class WebhookHandlerTests
         var coordinator = new Modules.BankSync.Application.Services.TransactionSyncCoordinator(
             syncJobRepo.Object,
             new Mock<Modules.BankSync.Domain.Repositories.IBankAccountRepository>().Object,
-            syncService.Object);
+            syncService.Object,
+            new Mock<Hangfire.IBackgroundJobClient>().Object);
 
         var result = await coordinator.TriggerManualSyncAsync(accountId);
 
