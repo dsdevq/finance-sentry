@@ -24,6 +24,7 @@ const SUBSCRIPTION: Subscription = {
   occurrenceCount: 3,
   kind: 'subscription',
   termCount: null,
+  endDate: null,
   remainingPayments: null,
   isManual: false,
 };
@@ -35,9 +36,27 @@ const LIST_RESPONSE: SubscriptionsListResponse = {
 };
 
 const SUMMARY: SubscriptionSummary = {
-  totalMonthlyEstimate: 10,
-  totalAnnualEstimate: 120,
-  activeCount: 1,
+  subscriptions: {
+    monthly: 10,
+    next12Months: 120,
+    remainingCommitment: null,
+    activeCount: 1,
+    hasUnknownSchedule: false,
+  },
+  installments: {
+    monthly: 0,
+    next12Months: 0,
+    remainingCommitment: 0,
+    activeCount: 0,
+    hasUnknownSchedule: false,
+  },
+  combined: {
+    monthly: 10,
+    next12Months: 120,
+    remainingCommitment: null,
+    activeCount: 1,
+    hasUnknownSchedule: false,
+  },
   potentiallyCancelledCount: 0,
   currency: 'EUR',
 };

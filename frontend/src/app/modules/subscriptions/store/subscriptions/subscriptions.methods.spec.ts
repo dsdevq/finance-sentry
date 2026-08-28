@@ -23,6 +23,7 @@ function mkSubscription(overrides: Partial<Subscription> = {}): Subscription {
     occurrenceCount: 3,
     kind: 'subscription',
     termCount: null,
+    endDate: null,
     remainingPayments: null,
     isManual: false,
     ...overrides,
@@ -31,9 +32,27 @@ function mkSubscription(overrides: Partial<Subscription> = {}): Subscription {
 
 function mkSummary(overrides: Partial<SubscriptionSummary> = {}): SubscriptionSummary {
   return {
-    totalMonthlyEstimate: 25,
-    totalAnnualEstimate: 300,
-    activeCount: 2,
+    subscriptions: {
+      monthly: 25,
+      next12Months: 300,
+      remainingCommitment: null,
+      activeCount: 2,
+      hasUnknownSchedule: false,
+    },
+    installments: {
+      monthly: 0,
+      next12Months: 0,
+      remainingCommitment: 0,
+      activeCount: 0,
+      hasUnknownSchedule: false,
+    },
+    combined: {
+      monthly: 25,
+      next12Months: 300,
+      remainingCommitment: null,
+      activeCount: 2,
+      hasUnknownSchedule: false,
+    },
     potentiallyCancelledCount: 0,
     currency: 'EUR',
     ...overrides,
