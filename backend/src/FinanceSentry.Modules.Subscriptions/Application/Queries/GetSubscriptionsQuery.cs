@@ -37,6 +37,7 @@ public class GetSubscriptionsQueryHandler(IDetectedSubscriptionRepository reposi
             s.Kind,
             s.TermCount,
             s.EndDate,
+            s.StartDate,
             s.RemainingPayments,
             s.IsManual)).ToList();
 

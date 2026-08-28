@@ -67,6 +67,71 @@
       </p>
     }
 
+    <!-- Exchange-rate effect on foreign-currency plans. The native payment is fixed by
+         contract, so every move in the line below is the rate, not the debt. -->
+    @let fx = store.fxImpact();
+    @if (fx && fx.plans.length > 0) {
+      <cmn-card>
+        <div class="mb-cmn-3 flex flex-wrap items-baseline justify-between gap-cmn-2">
+          <span
+            class="font-label text-cmn-xs font-semibold uppercase tracking-widest text-text-secondary"
+          >
+            Exchange-rate effect
+          </span>
+          <span
+            [class.text-status-success]="fx.changeAmountTotal < 0"
+            [class.text-status-error]="fx.changeAmountTotal > 0"
+            class="font-mono text-cmn-sm font-semibold"
+          >
+            {{ fx.changeAmountTotal > 0 ? '+' : ''
+            }}{{ fx.changeAmountTotal | appCurrency: fx.baseCurrency }}/mo ({{
+              fx.changePercentTotal > 0 ? '+' : ''
+            }}{{ fx.changePercentTotal }}%)
+          </span>
+        </div>
+
+        <p class="mb-cmn-3 text-cmn-xs text-text-secondary">
+          These payments are fixed in their own currency. What has changed is what they cost you:
+          {{ fx.baselineCostTotal | appCurrency: fx.baseCurrency }} at the start versus
+          {{ fx.currentCostTotal | appCurrency: fx.baseCurrency }} today.
+        </p>
+
+        <cmn-line-chart
+          [data]="store.fxCostPoints()"
+          [currency]="fx.baseCurrency"
+          label="Monthly cost of plans"
+        />
+
+        <div class="mt-cmn-4 space-y-cmn-2">
+          @for (plan of fx.plans; track plan.id) {
+            <div class="flex flex-wrap items-baseline justify-between gap-cmn-2 text-cmn-sm">
+              <span class="text-text-primary">
+                {{ plan.merchant }}
+                @if (plan.baselineIsObserved) {
+                  <span
+                    class="text-cmn-xs text-text-disabled"
+                    title="Set a start date for this plan"
+                  >
+                    · since first seen
+                  </span>
+                }
+              </span>
+              <span class="font-mono text-cmn-xs text-text-secondary">
+                {{ plan.baselineCost | appCurrency: fx.baseCurrency }} →
+                {{ plan.currentCost | appCurrency: fx.baseCurrency }}
+                <span
+                  [class.text-status-success]="plan.changeAmount < 0"
+                  [class.text-status-error]="plan.changeAmount > 0"
+                >
+                  ({{ plan.changePercent > 0 ? '+' : '' }}{{ plan.changePercent }}%)
+                </span>
+              </span>
+            </div>
+          }
+        </div>
+      </cmn-card>
+    }
+
     <!-- Sort controls + active list -->
     <div>
       <div class="mb-cmn-3 flex items-center justify-between">

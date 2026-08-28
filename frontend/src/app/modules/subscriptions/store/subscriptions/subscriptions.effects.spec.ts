@@ -3,6 +3,7 @@ import {of} from 'rxjs';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 
 import {
+  type InstallmentFxImpactResponse,
   type Subscription,
   type SubscriptionsListResponse,
   type SubscriptionSummary,
@@ -25,6 +26,7 @@ const SUBSCRIPTION: Subscription = {
   kind: 'subscription',
   termCount: null,
   endDate: null,
+  startDate: null,
   remainingPayments: null,
   isManual: false,
 };
@@ -61,10 +63,21 @@ const SUMMARY: SubscriptionSummary = {
   currency: 'EUR',
 };
 
+const FX_IMPACT: InstallmentFxImpactResponse = {
+  baseCurrency: 'USD',
+  plans: [],
+  baselineCostTotal: 0,
+  currentCostTotal: 0,
+  changeAmountTotal: 0,
+  changePercentTotal: 0,
+  points: [],
+};
+
 function buildStore() {
   return {
     setData: vi.fn(),
     setSummary: vi.fn(),
+    setFxImpact: vi.fn(),
     dismissSubscription: vi.fn(),
     restoreSubscription: vi.fn(),
   };
@@ -74,6 +87,7 @@ function buildService() {
   return {
     getSubscriptions: vi.fn(),
     getSummary: vi.fn(),
+    getFxImpact: vi.fn(),
     dismiss: vi.fn(),
     restore: vi.fn(),
   };
@@ -95,6 +109,7 @@ describe('subscriptionsEffects', () => {
     const service = buildService();
     service.getSubscriptions.mockReturnValue(of(LIST_RESPONSE));
     service.getSummary.mockReturnValue(of(SUMMARY));
+    service.getFxImpact.mockReturnValue(of(FX_IMPACT));
     configure(service);
 
     TestBed.runInInjectionContext(() => subscriptionsEffects(store).load());

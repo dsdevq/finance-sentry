@@ -17,5 +17,6 @@ public record SubscriptionDto(
     string Kind,
     int? TermCount,
     DateOnly? EndDate,
+    DateOnly? StartDate,
     int? RemainingPayments,
     bool IsManual);

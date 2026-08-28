@@ -18,6 +18,8 @@ export interface Subscription {
   kind: SubscriptionKind;
   termCount: Nullable<number>;
   endDate: Nullable<string>;
+  /** User-set plan start; detection only sees ~13 months, so an older plan needs this. */
+  startDate: Nullable<string>;
   remainingPayments: Nullable<number>;
   isManual: boolean;
 }
@@ -58,6 +60,41 @@ export interface SubscriptionSummary {
   combined: SpendBucket;
   potentiallyCancelledCount: number;
   currency: string;
+}
+
+/** What exchange-rate movement has done to one foreign-currency plan. */
+export interface InstallmentFxImpact {
+  id: string;
+  merchant: string;
+  currency: string;
+  /** Contractually fixed — only its cost in the base currency moves. */
+  monthlyNative: number;
+  baselineDate: string;
+  baselineUnitsPerBase: number;
+  baselineCost: number;
+  currentDate: string;
+  currentUnitsPerBase: number;
+  currentCost: number;
+  changeAmount: number;
+  changePercent: number;
+  /** True when the baseline is only the first observed charge, not the plan's real start. */
+  baselineIsObserved: boolean;
+}
+
+export interface FxCostPoint {
+  date: string;
+  unitsPerBase: number;
+  monthlyCost: number;
+}
+
+export interface InstallmentFxImpactResponse {
+  baseCurrency: string;
+  plans: InstallmentFxImpact[];
+  baselineCostTotal: number;
+  currentCostTotal: number;
+  changeAmountTotal: number;
+  changePercentTotal: number;
+  points: FxCostPoint[];
 }
 
 export interface SubscriptionsListResponse {
