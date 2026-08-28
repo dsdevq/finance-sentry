@@ -283,12 +283,54 @@ test.describe('Transaction ledger — Monthly Outflow stat', () => {
   });
 
   test('Monthly Outflow does not change when Load More is clicked', async ({page}) => {
+    // Offset-aware two-page mock (registered last, so it wins over the
+    // beforeEach route): page 1 repeats LEDGER_TRANSACTIONS with hasMore,
+    // page 2 appends another posted debit ($700) that a client-side sum
+    // would fold into the stat. The backend aggregate must not move.
+    const pageTwo = {
+      items: [
+        {
+          transactionId: 'tx-5',
+          accountId: 'acc-1',
+          bankName: 'Test Bank',
+          currency: 'USD',
+          amount: 700,
+          amountUsd: 700,
+          date: '2026-08-18',
+          postedDate: '2026-08-18',
+          description: 'Electronics store',
+          transactionType: 'debit',
+          merchantCategory: 'GENERAL_MERCHANDISE',
+          isPending: false,
+          createdAt: '2026-08-18T00:00:00Z',
+          updatedAt: '2026-08-18T00:00:00Z',
+        },
+      ],
+      totalCount: 5,
+      hasMore: false,
+    };
+    await page.route(`${API}/accounts/transactions**`, route => {
+      const offset = new URL(route.request().url()).searchParams.get('offset');
+      const body =
+        offset === null || offset === '0'
+          ? {...LEDGER_TRANSACTIONS, totalCount: 5, hasMore: true}
+          : pageTwo;
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(body),
+      });
+    });
+
     await page.goto('/transactions');
     await expect(page.getByRole('heading', {name: 'Transaction Ledger'})).toBeVisible();
     await expect(page.getByText('$2,900.00')).toBeVisible();
-    // No "Load More" button because hasMore: false in mock — stat stays stable.
+
+    await page.getByRole('button', {name: /load more/i}).click();
+    // The page-2 row rendered ⇒ the append happened…
+    await expect(page.getByText('Electronics store')).toBeVisible();
+    // …the button is gone (hasMore now false) and the stat did not move.
     await expect(page.getByRole('button', {name: /load more/i})).not.toBeVisible();
-    // Value unchanged after full render.
     await expect(page.getByText('$2,900.00')).toBeVisible();
   });
 });
