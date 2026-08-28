@@ -47,13 +47,13 @@ export function transactionLedgerEffects(store: EffectsStore) {
         tap(() => store.setLoading()),
         switchMap(() =>
           forkJoin({
-            txResponse: bankSyncService.getAllTransactions({offset: 0, limit: PAGE_SIZE}),
-            dashboardData: bankSyncService.getDashboardData().pipe(catchError(() => of(null))),
+            txResponse$: bankSyncService.getAllTransactions({offset: 0, limit: PAGE_SIZE}),
+            dashboardData$: bankSyncService.getDashboardData().pipe(catchError(() => of(null))),
           }).pipe(
-            tap(({txResponse, dashboardData}) => {
-              store.setTransactions(txResponse.items, txResponse.totalCount, txResponse.hasMore);
+            tap(({txResponse$, dashboardData$}) => {
+              store.setTransactions(txResponse$.items, txResponse$.totalCount, txResponse$.hasMore);
               store.setMonthlyOutflowUsd(
-                dashboardData ? sumCurrentMonthOutflow(dashboardData.monthlyFlow) : null
+                dashboardData$ ? sumCurrentMonthOutflow(dashboardData$.monthlyFlow) : null
               );
             }),
             StoreErrorUtils.catchAndSetError(store)
