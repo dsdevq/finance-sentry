@@ -1,6 +1,7 @@
 import {patchState, type WritableStateSource} from '@ngrx/signals';
 
 import {
+  type InstallmentFxImpactResponse,
   type Subscription,
   type SubscriptionSort,
   type SubscriptionSummary,
@@ -14,6 +15,9 @@ export function subscriptionsMethods(store: WritableStateSource<SubscriptionsSta
     },
     setSummary(summary: SubscriptionSummary): void {
       patchState(store, {summary});
+    },
+    setFxImpact(fxImpact: InstallmentFxImpactResponse): void {
+      patchState(store, {fxImpact});
     },
     setSort(sort: SubscriptionSort): void {
       patchState(store, {sort});

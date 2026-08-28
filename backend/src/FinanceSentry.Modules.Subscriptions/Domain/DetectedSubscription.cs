@@ -29,6 +29,12 @@ public class DetectedSubscription
     /// this date instead of <see cref="TermCount"/>.
     /// </summary>
     public DateOnly? EndDate { get; private set; }
+    /// <summary>
+    /// When the plan actually began (user-set). Detection only sees the last 13 months, so
+    /// an older plan's first observed charge is not its start — this anchors it, which
+    /// matters for pricing the plan against the exchange rate at signing.
+    /// </summary>
+    public DateOnly? StartDate { get; private set; }
     /// <summary>True when the user added this by hand — detection never overwrites or auto-stales it.</summary>
     public bool IsManual { get; private set; }
     public DateTimeOffset DetectedAt { get; private set; } = DateTimeOffset.UtcNow;
@@ -148,13 +154,14 @@ public class DetectedSubscription
     }
 
     /// <summary>
-    /// Sets the installment schedule — total payment count and/or final payment month —
-    /// and completes the plan if it has already been reached.
+    /// Sets the installment schedule — total payment count, first payment month and/or
+    /// final payment month — and completes the plan if the end has already been reached.
     /// </summary>
-    public void SetTerm(int? termCount, DateOnly? endDate = null)
+    public void SetTerm(int? termCount, DateOnly? endDate = null, DateOnly? startDate = null)
     {
         TermCount = termCount is > 0 ? termCount : null;
         EndDate = endDate;
+        StartDate = startDate;
         UpdatedAt = DateTimeOffset.UtcNow;
         EvaluateCompletion(false);
     }

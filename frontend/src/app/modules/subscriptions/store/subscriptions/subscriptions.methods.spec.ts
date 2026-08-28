@@ -24,6 +24,7 @@ function mkSubscription(overrides: Partial<Subscription> = {}): Subscription {
     kind: 'subscription',
     termCount: null,
     endDate: null,
+    startDate: null,
     remainingPayments: null,
     isManual: false,
     ...overrides,

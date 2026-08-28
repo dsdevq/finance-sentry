@@ -8,7 +8,8 @@ using FinanceSentry.Modules.Subscriptions.Domain.Repositories;
 
 // --- Set / clear the installment schedule (total number of payments and/or final payment month) ---
 
-public record SetInstallmentTermCommand(string UserId, Guid Id, int? TermCount, DateOnly? EndDate = null) : ICommand<bool>;
+public record SetInstallmentTermCommand(
+    string UserId, Guid Id, int? TermCount, DateOnly? EndDate = null, DateOnly? StartDate = null) : ICommand<bool>;
 
 public class SetInstallmentTermCommandHandler(IDetectedSubscriptionRepository repository)
     : ICommandHandler<SetInstallmentTermCommand, bool>
@@ -21,7 +22,7 @@ public class SetInstallmentTermCommandHandler(IDetectedSubscriptionRepository re
         if (item is null || item.UserId != command.UserId)
             throw new SubscriptionNotFoundException();
 
-        item.SetTerm(command.TermCount, command.EndDate);
+        item.SetTerm(command.TermCount, command.EndDate, command.StartDate);
         await _repository.UpsertAsync(item, ct);
         return true;
     }

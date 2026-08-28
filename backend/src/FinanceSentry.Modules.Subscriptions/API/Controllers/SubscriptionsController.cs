@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Mvc;
 public class SubscriptionsController(
     IQueryHandler<GetSubscriptionsQuery, SubscriptionsListResponse> getSubscriptions,
     IQueryHandler<GetSubscriptionSummaryQuery, SubscriptionSummaryResponse> getSummary,
+    IQueryHandler<GetInstallmentFxImpactQuery, InstallmentFxImpactResponse> getFxImpact,
     ICommandHandler<DismissSubscriptionCommand, bool> dismiss,
     ICommandHandler<RestoreSubscriptionCommand, bool> restore,
     ICommandHandler<SetInstallmentTermCommand, bool> setTerm,
@@ -38,6 +39,18 @@ public class SubscriptionsController(
         return Ok(result);
     }
 
+    /// <summary>
+    /// How exchange-rate movement has changed what foreign-currency installments cost —
+    /// the native payment is fixed, its cost in the base currency is not.
+    /// </summary>
+    [HttpGet("installments/fx-impact")]
+    public async Task<IActionResult> GetFxImpact(CancellationToken ct = default)
+    {
+        var result = await getFxImpact.Handle(
+            new GetInstallmentFxImpactQuery(User.RequireUserId().ToString()), ct);
+        return Ok(result);
+    }
+
     [HttpPatch("{id:guid}/dismiss")]
     public async Task<IActionResult> Dismiss(Guid id, CancellationToken ct = default)
     {
@@ -55,7 +68,8 @@ public class SubscriptionsController(
     [HttpPatch("installments/{id:guid}/term")]
     public async Task<IActionResult> SetTerm(Guid id, [FromBody] SetTermRequest body, CancellationToken ct = default)
     {
-        await setTerm.Handle(new SetInstallmentTermCommand(User.RequireUserId().ToString(), id, body.TermCount, body.EndDate), ct);
+        await setTerm.Handle(new SetInstallmentTermCommand(
+            User.RequireUserId().ToString(), id, body.TermCount, body.EndDate, body.StartDate), ct);
         return NoContent();
     }
 
@@ -99,7 +113,7 @@ public class SubscriptionsController(
     }
 }
 
-public record SetTermRequest(int? TermCount, DateOnly? EndDate = null);
+public record SetTermRequest(int? TermCount, DateOnly? EndDate = null, DateOnly? StartDate = null);
 
 public record AddSubscriptionRequest(
     string Merchant,
