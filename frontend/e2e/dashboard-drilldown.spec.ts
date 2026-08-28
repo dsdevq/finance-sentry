@@ -1,6 +1,12 @@
 import {type Page, expect, test} from '@playwright/test';
 
-const API = 'http://localhost:5001/api/v1';
+// Origin-agnostic glob, NOT the dev apiBaseUrl. `ng build` defaults to the
+// production configuration, which file-replaces environment.ts and makes
+// apiBaseUrl the relative '/api/v1' — so the built app calls the e2e server's
+// own origin, and mocks pinned to http://localhost:5001 never matched: auth
+// failed, every page redirected to login, and all specs failed on a missing
+// heading. A glob matches whichever origin the build resolves to.
+const API = '**/api/v1';
 
 const AUTH_RESPONSE = {
   user: {id: 'test-user-id', email: 'test@gmail.com'},
