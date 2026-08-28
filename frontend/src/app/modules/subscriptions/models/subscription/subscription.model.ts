@@ -17,6 +17,7 @@ export interface Subscription {
   occurrenceCount: number;
   kind: SubscriptionKind;
   termCount: Nullable<number>;
+  endDate: Nullable<string>;
   remainingPayments: Nullable<number>;
   isManual: boolean;
 }
@@ -36,10 +37,25 @@ export interface AddSubscriptionRequest {
   startDate: string;
 }
 
-export interface SubscriptionSummary {
-  totalMonthlyEstimate: number;
-  totalAnnualEstimate: number;
+export interface SpendBucket {
+  /** Current monthly run-rate. */
+  monthly: number;
+  /**
+   * What actually leaves the account over the next 12 months. Subscriptions are open-ended
+   * (`monthly × 12`); an installment contributes only its remaining payments, capped at 12.
+   */
+  next12Months: number;
+  /** Total still owed until every plan ends — null for open-ended buckets. */
+  remainingCommitment: Nullable<number>;
   activeCount: number;
+  /** A plan in this bucket has no term or end date, so the figures assume it continues. */
+  hasUnknownSchedule: boolean;
+}
+
+export interface SubscriptionSummary {
+  subscriptions: SpendBucket;
+  installments: SpendBucket;
+  combined: SpendBucket;
   potentiallyCancelledCount: number;
   currency: string;
 }

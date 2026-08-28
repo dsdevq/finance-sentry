@@ -17,30 +17,55 @@
     }
 
     <!-- Summary cards -->
-    <div class="grid grid-cols-1 gap-cmn-4 sm:grid-cols-3">
-      @let summary = store.summary();
+    @let summary = store.summary();
+    <div class="grid grid-cols-1 gap-cmn-4 sm:grid-cols-2 lg:grid-cols-3">
       <cmn-stat-card
         [value]="
-          summary ? ((summary.totalMonthlyEstimate | appCurrency: summary.currency) ?? '—') : '—'
+          summary ? ((summary.combined.monthly | appCurrency: summary.currency) ?? '—') : '—'
         "
-        label="Monthly Cost"
+        label="Monthly Total"
         icon="Zap"
       />
       <cmn-stat-card
         [value]="
-          summary ? ((summary.totalAnnualEstimate | appCurrency: summary.currency) ?? '—') : '—'
+          summary ? ((summary.combined.next12Months | appCurrency: summary.currency) ?? '—') : '—'
         "
-        label="Annual Cost"
+        label="Next 12 Months"
         icon="TrendingUp"
       />
       <cmn-stat-card
         [value]="
-          (summary?.activeCount ?? store.activeSubscriptions().length).toString() + ' subscriptions'
+          summary
+            ? ((summary.installments.remainingCommitment | appCurrency: summary.currency) ?? '—')
+            : '—'
         "
-        label="Active"
-        icon="CheckCheck"
+        label="Left On Plans"
+        icon="Wallet"
+      />
+      <cmn-stat-card
+        [value]="
+          summary ? ((summary.subscriptions.monthly | appCurrency: summary.currency) ?? '—') : '—'
+        "
+        [label]="'Subscriptions · ' + (summary?.subscriptions?.activeCount ?? 0)"
+        icon="Repeat"
+      />
+      <cmn-stat-card
+        [value]="
+          summary ? ((summary.installments.monthly | appCurrency: summary.currency) ?? '—') : '—'
+        "
+        [label]="'Installments · ' + (summary?.installments?.activeCount ?? 0)"
+        icon="CreditCard"
       />
     </div>
+
+    <!-- Subscriptions never end on their own, so "Next 12 Months" projects them at full
+         run-rate; installments only count the payments they actually have left. -->
+    @if (summary?.combined?.hasUnknownSchedule) {
+      <p class="text-cmn-xs text-text-secondary">
+        Some plans have no term set — their totals assume the payments continue. Set a term to see
+        the real figure.
+      </p>
+    }
 
     <!-- Sort controls + active list -->
     <div>
