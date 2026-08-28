@@ -1,6 +1,7 @@
 namespace FinanceSentry.Tests.Unit.BankSync.Application;
 
 using FinanceSentry.Infrastructure.Encryption;
+using Hangfire;
 using FinanceSentry.Infrastructure.Logging;
 using FinanceSentry.Modules.BankSync.Application.Services;
 using FinanceSentry.Modules.BankSync.Domain;
@@ -425,7 +426,8 @@ public class ScheduledSyncServiceTests
         syncJobRepo.Setup(r => r.HasRunningJobAsync(AccountId, default)).ReturnsAsync(true);
 
         var coordinator = new TransactionSyncCoordinator(
-            syncJobRepo.Object, new Mock<IBankAccountRepository>().Object, syncService.Object);
+            syncJobRepo.Object, new Mock<IBankAccountRepository>().Object, syncService.Object,
+            new Mock<IBackgroundJobClient>().Object);
 
         var result = await coordinator.TriggerScheduledSyncAsync(AccountId);
 
@@ -450,7 +452,8 @@ public class ScheduledSyncServiceTests
         accountRepo.Setup(r => r.GetByIdAsync(AccountId, It.IsAny<CancellationToken>())).ReturnsAsync(account);
 
         var coordinator = new TransactionSyncCoordinator(
-            syncJobRepo.Object, accountRepo.Object, syncService.Object);
+            syncJobRepo.Object, accountRepo.Object, syncService.Object,
+            new Mock<IBackgroundJobClient>().Object);
 
         var result = await coordinator.TriggerScheduledSyncAsync(AccountId);
 

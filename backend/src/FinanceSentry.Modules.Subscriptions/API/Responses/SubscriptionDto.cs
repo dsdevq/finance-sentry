@@ -16,5 +16,6 @@ public record SubscriptionDto(
     DateTimeOffset DetectedAt,
     string Kind,
     int? TermCount,
+    DateOnly? EndDate,
     int? RemainingPayments,
     bool IsManual);

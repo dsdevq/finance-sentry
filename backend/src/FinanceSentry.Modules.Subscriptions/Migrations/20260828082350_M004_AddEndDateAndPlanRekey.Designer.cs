@@ -3,6 +3,7 @@ using System;
 using FinanceSentry.Modules.Subscriptions.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FinanceSentry.Modules.Subscriptions.Migrations
 {
     [DbContext(typeof(SubscriptionsDbContext))]
-    partial class SubscriptionsDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260828082350_M004_AddEndDateAndPlanRekey")]
+    partial class M004_AddEndDateAndPlanRekey
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

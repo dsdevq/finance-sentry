@@ -1,6 +1,7 @@
 namespace FinanceSentry.Modules.Subscriptions.Domain;
 
 using FinanceSentry.Core.Interfaces;
+using FinanceSentry.Core.Utils;
 
 public class DetectedSubscription
 {
@@ -22,14 +23,23 @@ public class DetectedSubscription
     public string? Category { get; private set; }
     /// <summary>Installment plan length in payments, if known (user-set). Enables remaining/auto-complete.</summary>
     public int? TermCount { get; private set; }
+    /// <summary>
+    /// Final payment month, if known (user-set). For long obligations (a mortgage) the
+    /// detector's lookback window can't count payments made, so remaining derives from
+    /// this date instead of <see cref="TermCount"/>.
+    /// </summary>
+    public DateOnly? EndDate { get; private set; }
     /// <summary>True when the user added this by hand — detection never overwrites or auto-stales it.</summary>
     public bool IsManual { get; private set; }
     public DateTimeOffset DetectedAt { get; private set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; private set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? DismissedAt { get; private set; }
 
-    /// <summary>Payments remaining, or null when the term is unknown.</summary>
-    public int? RemainingPayments => TermCount is int term ? Math.Max(0, term - OccurrenceCount) : null;
+    /// <summary>Payments remaining, or null when neither the end date nor the term is known.</summary>
+    public int? RemainingPayments =>
+        EndDate is DateOnly end
+            ? Math.Max(0, ((end.Year - LastChargeDate.Year) * 12) + end.Month - LastChargeDate.Month)
+            : TermCount is int term ? Math.Max(0, term - OccurrenceCount) : null;
 
     private DetectedSubscription() { }
 
@@ -120,7 +130,10 @@ public class DetectedSubscription
         string kind = SubscriptionKinds.Subscription,
         bool isCompleted = false)
     {
-        MerchantNameDisplay = merchantNameDisplay;
+        // A masked card number must never clobber a human-readable name the row already
+        // has (e.g. a mortgage renamed by the user whose charges show only the PAN).
+        if (string.IsNullOrWhiteSpace(MerchantNameDisplay) || !MaskedPan.IsLikely(merchantNameDisplay))
+            MerchantNameDisplay = merchantNameDisplay;
         AverageAmount = averageAmount;
         LastKnownAmount = lastKnownAmount;
         LastChargeDate = lastChargeDate;
@@ -134,10 +147,14 @@ public class DetectedSubscription
         EvaluateCompletion(isCompleted);
     }
 
-    /// <summary>Sets the installment term and completes it if payments have already reached it.</summary>
-    public void SetTerm(int? termCount)
+    /// <summary>
+    /// Sets the installment schedule — total payment count and/or final payment month —
+    /// and completes the plan if it has already been reached.
+    /// </summary>
+    public void SetTerm(int? termCount, DateOnly? endDate = null)
     {
         TermCount = termCount is > 0 ? termCount : null;
+        EndDate = endDate;
         UpdatedAt = DateTimeOffset.UtcNow;
         EvaluateCompletion(false);
     }
@@ -148,11 +165,15 @@ public class DetectedSubscription
         UpdatedAt = DateTimeOffset.UtcNow;
     }
 
-    /// <summary>Completes the installment when a payoff was seen or the term has been reached.</summary>
+    /// <summary>Completes the installment when a payoff was seen, the term has been reached, or the final payment month has passed.</summary>
     private void EvaluateCompletion(bool payoffSeen)
     {
-        if (payoffSeen || (TermCount is int term && OccurrenceCount >= term))
+        if (payoffSeen
+            || (TermCount is int term && OccurrenceCount >= term)
+            || (EndDate is DateOnly end && LastChargeDate >= end))
+        {
             Status = SubscriptionStatus.Completed;
+        }
     }
 
     public void MarkDismissed()

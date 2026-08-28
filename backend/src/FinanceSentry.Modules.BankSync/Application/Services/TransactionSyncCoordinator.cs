@@ -1,6 +1,8 @@
 namespace FinanceSentry.Modules.BankSync.Application.Services;
 
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
+using FinanceSentry.Modules.BankSync.Infrastructure.Jobs;
+using Hangfire;
 
 /// <summary>
 /// Coordinates sync requests from multiple trigger sources (webhooks, scheduler, manual).
@@ -22,11 +24,13 @@ public interface ITransactionSyncCoordinator
 public class TransactionSyncCoordinator(
     ISyncJobRepository syncJobs,
     IBankAccountRepository accounts,
-    IScheduledSyncService syncService) : ITransactionSyncCoordinator
+    IScheduledSyncService syncService,
+    IBackgroundJobClient backgroundJobs) : ITransactionSyncCoordinator
 {
     private readonly ISyncJobRepository _syncJobs = syncJobs;
     private readonly IBankAccountRepository _accounts = accounts;
     private readonly IScheduledSyncService _syncService = syncService;
+    private readonly IBackgroundJobClient _backgroundJobs = backgroundJobs;
 
     /// <inheritdoc />
     public async Task<SyncResult> TriggerWebhookSyncAsync(Guid accountId, CancellationToken ct = default)
@@ -34,7 +38,7 @@ public class TransactionSyncCoordinator(
         if (await _syncJobs.HasRunningJobAsync(accountId, ct))
             return new SyncResult(false, 0, 0, "SYNC_IN_PROGRESS", "A sync is already in progress for this account.");
 
-        return await _syncService.PerformFullSyncAsync(accountId, webhookTriggered: true, ct: ct);
+        return ChaseWithDetection(await _syncService.PerformFullSyncAsync(accountId, webhookTriggered: true, ct: ct));
     }
 
     /// <inheritdoc />
@@ -50,7 +54,7 @@ public class TransactionSyncCoordinator(
         if (account?.SyncStatus == "reauth_required")
             return new SyncResult(false, 0, 0, "ITEM_LOGIN_REQUIRED", "Account requires reconnection; scheduled sync skipped.");
 
-        return await _syncService.PerformFullSyncAsync(accountId, webhookTriggered: false, ct: ct);
+        return ChaseWithDetection(await _syncService.PerformFullSyncAsync(accountId, webhookTriggered: false, ct: ct));
     }
 
     /// <inheritdoc />
@@ -59,6 +63,20 @@ public class TransactionSyncCoordinator(
         if (await _syncJobs.HasRunningJobAsync(accountId, ct))
             return new SyncResult(false, 0, 0, "SYNC_IN_PROGRESS", "A sync is already in progress for this account.");
 
-        return await _syncService.PerformFullSyncAsync(accountId, webhookTriggered: false, ct: ct);
+        return ChaseWithDetection(await _syncService.PerformFullSyncAsync(accountId, webhookTriggered: false, ct: ct));
+    }
+
+    /// <summary>
+    /// A sync that landed new transactions can change the subscription/installment picture
+    /// (a new розстрочка, a fresh charge) — refresh detection right away instead of waiting
+    /// for the daily recurring job. The detection job is cheap and idempotent, so enqueueing
+    /// once per productive sync is fine.
+    /// </summary>
+    private SyncResult ChaseWithDetection(SyncResult result)
+    {
+        if (result.Success && result.TransactionCountDeduped > 0)
+            _backgroundJobs.Enqueue<SubscriptionDetectionJob>(job => job.ExecuteAsync(CancellationToken.None));
+
+        return result;
     }
 }
