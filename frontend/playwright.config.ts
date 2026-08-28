@@ -1,13 +1,5 @@
 import {defineConfig, devices} from '@playwright/test';
 
-// libXfixes.so.3 is not installed in the sandbox — provide it from /tmp where it was extracted.
-// This must be set before Playwright spawns Chromium.
-if (!process.env['LD_LIBRARY_PATH']?.includes('/tmp')) {
-  process.env['LD_LIBRARY_PATH'] = ['/tmp', process.env['LD_LIBRARY_PATH'] ?? '']
-    .filter(Boolean)
-    .join(':');
-}
-
 const SPA_PORT = 4201;
 
 export default defineConfig({
@@ -23,7 +15,6 @@ export default defineConfig({
     trace: 'on-first-retry',
     launchOptions: {
       args: ['--no-sandbox', '--disable-dev-shm-usage'],
-      env: {LD_LIBRARY_PATH: process.env['LD_LIBRARY_PATH'] ?? '/tmp'},
     },
   },
 
