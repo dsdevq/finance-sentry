@@ -7,6 +7,7 @@ export interface TransactionLedgerState {
   offset: number;
   status: AsyncStatus;
   errorCode: Nullable<string>;
+  monthlyOutflowUsd: number | null;
 }
 
 export const PAGE_SIZE = 50;
@@ -18,4 +19,5 @@ export const initialTransactionLedgerState: TransactionLedgerState = {
   offset: 0,
   status: 'idle',
   errorCode: null,
+  monthlyOutflowUsd: null,
 };
