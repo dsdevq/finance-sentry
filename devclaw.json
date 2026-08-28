@@ -4,5 +4,5 @@
   "boilerplateRevision": 1,
   "surface": "app",
   "stack": ["dotnet", "angular"],
-  "verifyCmd": "cd frontend && npm ci && NODE_OPTIONS=--max-old-space-size=2048 npm run build && npx playwright test --reporter=json"
+  "verifyCmd": "cd frontend && npm ci && npm run lint && npm run format:check && NODE_OPTIONS=--max-old-space-size=2048 npm run build && npx playwright install chromium && npm run test:ci && npx playwright test --reporter=json"
 }
