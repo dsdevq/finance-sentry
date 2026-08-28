@@ -57,7 +57,12 @@ jobs:
       working-directory: frontend
 
     - name: Run Playwright e2e tests
-      run: npx playwright test --reporter=json > playwright-report/results.json
+      # mkdir first: the redirect target's directory is gitignored, so it does
+      # not exist in a fresh checkout and the redirect fails before Playwright
+      # even starts.
+      run: |
+        mkdir -p playwright-report
+        npx playwright test --reporter=json > playwright-report/results.json
       working-directory: frontend
 
     - name: Upload Playwright report
