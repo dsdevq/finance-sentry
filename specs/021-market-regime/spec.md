@@ -2,7 +2,7 @@
 
 **Feature Branch**: `021-market-regime`
 **Created**: 2026-08-08
-**Status**: Draft
+**Status**: Implemented
 **Input**: User description: "021 — Market Regime Scanner. The professional-grade context: two orthogonal, evidence-backed macro axes (equity volatility via VIX, interest-rate/curve via FRED 10y-2y) classified into deterministic regimes, logged as radar signals, exposed via MCP, and fed as *context* into the 019 opportunity scoring. Regime is never an action — stay-invested default holds."
 
 ## Overview

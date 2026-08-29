@@ -2,7 +2,7 @@
 
 **Feature Branch**: `039-ips-risk-boundary`
 **Created**: 2026-08-07
-**Status**: Draft
+**Status**: Implemented
 **Input**: Two modules store overlapping, independently-editable copies of the same financial-policy concepts (target allocation, position cap). Give each concept exactly one home so the policy the agent reads is unambiguous — a prerequisite for ever delegating money to it.
 
 ## Context
