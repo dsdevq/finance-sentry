@@ -19,19 +19,19 @@ public class BankProviderFactoryTests
         return mock.Object;
     }
 
-    private static BankProviderFactory CreateSut(out IBankProvider plaid, out IBankProvider monobank)
+    private static BankProviderFactory CreateSut(out IBankProvider truelayer, out IBankProvider monobank)
     {
-        plaid = StubProvider("plaid");
+        truelayer = StubProvider("truelayer");
         monobank = StubProvider("monobank");
-        return new BankProviderFactory([plaid, monobank]);
+        return new BankProviderFactory([truelayer, monobank]);
     }
 
     [Fact]
-    public void Resolve_Plaid_ReturnsPlaidProvider()
+    public void Resolve_TrueLayer_ReturnsTrueLayerProvider()
     {
-        var sut = CreateSut(out var plaid, out _);
+        var sut = CreateSut(out var truelayer, out _);
 
-        sut.Resolve("plaid").Should().BeSameAs(plaid);
+        sut.Resolve("truelayer").Should().BeSameAs(truelayer);
     }
 
     [Fact]

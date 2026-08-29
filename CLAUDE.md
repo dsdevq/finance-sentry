@@ -4,7 +4,7 @@
 
 ## Project Overview
 
-Finance Sentry is a personal finance aggregation app built as an ASP.NET Core 10 modular monolith + Angular 21 SPA. It integrates with Plaid for bank data, with plans for Interactive Brokers, Binance, and AI-driven portfolio analytics.
+Finance Sentry is a personal finance aggregation app built as an ASP.NET Core 10 modular monolith + Angular 21 SPA. It integrates with TrueLayer and Monobank for bank data and Binance and Interactive Brokers for investments, with AI-driven portfolio analytics on top.
 
 Sole developer: Denys. Spec-driven development via the **speckit** toolchain (constitution → spec → plan → tasks → implement).
 
@@ -73,7 +73,7 @@ Not auto-loaded — follow these links when the task touches them:
 
 ## QA — Test User
 
-`test@gmail.com` / `Darkfly21` — has Plaid, Monobank, Binance and IBKR connections. Full scenarios: [QA guide](docs/claude/qa.md).
+`test@gmail.com` / `Darkfly21` — has TrueLayer, Monobank, Binance and IBKR connections. Full scenarios: [QA guide](docs/claude/qa.md).
 
 ---
 

@@ -18,9 +18,9 @@ public interface IBankAccountRepository
     Task<BankAccount?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Get bank account by Plaid item ID.
+    /// Get bank account by its provider-side external account ID.
     /// </summary>
-    Task<BankAccount?> GetByPlaidItemIdAsync(string plaidItemId, CancellationToken cancellationToken = default);
+    Task<BankAccount?> GetByExternalAccountIdAsync(string externalAccountId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Get all accounts for a user.
@@ -195,42 +195,6 @@ public interface ISyncJobRepository
     /// </summary>
     Task<IReadOnlyDictionary<Guid, DateTime>> GetLastSuccessfulSyncTimesByUserAsync(
         Guid userId, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Save changes to database.
-    /// </summary>
-    Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
-}
-
-/// <summary>
-/// Repository interface for EncryptedCredential operations.
-/// </summary>
-public interface IEncryptedCredentialRepository
-{
-    /// <summary>
-    /// Add new encrypted credential.
-    /// </summary>
-    Task<EncryptedCredential> AddAsync(EncryptedCredential credential, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Get encrypted credential by ID.
-    /// </summary>
-    Task<EncryptedCredential?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Get encrypted credential by account ID (one-to-one relationship).
-    /// </summary>
-    Task<EncryptedCredential?> GetByAccountIdAsync(Guid accountId, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Update encrypted credential (e.g., for key rotation).
-    /// </summary>
-    Task<EncryptedCredential> UpdateAsync(EncryptedCredential credential, CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Delete encrypted credential.
-    /// </summary>
-    Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Save changes to database.

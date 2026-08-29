@@ -1,4 +1,4 @@
-export type TransactionProviderFilter = 'plaid' | 'monobank' | 'truelayer';
+export type TransactionProviderFilter = 'monobank' | 'truelayer';
 
 export type TransactionDateRangeFilter = 'all' | 'last7' | 'last30' | 'thisMonth';
 
@@ -9,7 +9,6 @@ export interface TransactionFilterOption<T> {
 
 export const TRANSACTION_PROVIDER_FILTER_OPTIONS: readonly TransactionFilterOption<TransactionProviderFilter>[] =
   [
-    {value: 'plaid', label: 'Plaid'},
     {value: 'monobank', label: 'Monobank'},
     {value: 'truelayer', label: 'TrueLayer'},
   ];

@@ -46,9 +46,11 @@ function configure(bankSync: ReturnType<typeof buildBankSync>): void {
   });
 }
 
-function plaidStrategy(submitImpl: () => ReturnType<ConnectStrategy['submit']>): ConnectStrategy {
+function monobankStrategy(
+  submitImpl: () => ReturnType<ConnectStrategy['submit']>
+): ConnectStrategy {
   return {
-    slug: 'plaid',
+    slug: 'monobank',
     formComponent: class {} as unknown as ConnectStrategy['formComponent'],
     submit: vi.fn().mockImplementation(submitImpl),
   };
@@ -63,7 +65,7 @@ describe('connectEffects.connect', () => {
     const store = buildStore();
     const bankSync = buildBankSync();
     bankSync.getAccounts.mockReturnValue(of(ACTIVE_RESPONSE));
-    const strategy = plaidStrategy(() =>
+    const strategy = monobankStrategy(() =>
       of({successCode: 'POLLING', count: 1, institutionType: 'bank'})
     );
     configure(bankSync);
@@ -72,7 +74,7 @@ describe('connectEffects.connect', () => {
       connectEffects(store).connect({strategy, payload: undefined});
     });
 
-    expect(store.selectProvider).toHaveBeenCalledWith('plaid');
+    expect(store.selectProvider).toHaveBeenCalledWith('monobank');
     expect(store.setInstitutionType).toHaveBeenCalledWith('bank');
     expect(store.setSyncing).toHaveBeenCalled();
     // eslint-disable-next-line @typescript-eslint/unbound-method
@@ -104,8 +106,8 @@ describe('connectEffects.connect', () => {
   it('error path forwards errorCode from strategy submit', () => {
     const store = buildStore();
     const bankSync = buildBankSync();
-    const strategy = plaidStrategy(() =>
-      throwError(() => Object.assign(new Error('x'), {errorCode: 'PLAID_LINK_FAILED'}))
+    const strategy = monobankStrategy(() =>
+      throwError(() => Object.assign(new Error('x'), {errorCode: 'MONOBANK_TOKEN_INVALID'}))
     );
     configure(bankSync);
 
@@ -113,6 +115,6 @@ describe('connectEffects.connect', () => {
       connectEffects(store).connect({strategy, payload: undefined});
     });
 
-    expect(store.setError).toHaveBeenCalledWith('PLAID_LINK_FAILED');
+    expect(store.setError).toHaveBeenCalledWith('MONOBANK_TOKEN_INVALID');
   });
 });

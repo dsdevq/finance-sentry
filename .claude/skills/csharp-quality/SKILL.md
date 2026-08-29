@@ -64,7 +64,7 @@ dotnet build backend/ --no-incremental 2>&1
 ```
 C# QUALITY FIXES APPLIED
 ─────────────────────────
-FinanceSentry.Modules.BankSync/Infrastructure/PlaidClient.cs
+FinanceSentry.Modules.BankSync/Infrastructure/TrueLayer/TrueLayerHttpClient.cs
   3 suggestions applied
 
 FinanceSentry.API/Program.cs

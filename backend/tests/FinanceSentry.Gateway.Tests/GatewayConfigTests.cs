@@ -17,7 +17,6 @@ public sealed class GatewayConfigTests
     private const string FrontendCluster = "frontend";
     private const string CatchAllPath = "/{**catch-all}";
     private const int ExpectedAuthPermit = 10;
-    private const int ExpectedWebhookPermit = 60;
 
     [Fact]
     public void EveryRouteClusterId_ResolvesToADefinedCluster()
@@ -50,15 +49,12 @@ public sealed class GatewayConfigTests
     }
 
     [Fact]
-    public void AuthAndWebhookRoutes_CarryTheCorrectRateLimiterPolicy()
+    public void AuthRoute_CarriesTheCorrectRateLimiterPolicy()
     {
         var routes = _config.GetSection("ReverseProxy:Routes").GetChildren().ToList();
 
         var authRoute = Assert.Single(routes.Where(r => r["RateLimiterPolicy"] == GatewayRateLimitPolicies.Auth));
         Assert.Equal("/api/v1/auth/{**catch-all}", authRoute["Match:Path"]);
-
-        var webhookRoute = Assert.Single(routes.Where(r => r["RateLimiterPolicy"] == GatewayRateLimitPolicies.Webhook));
-        Assert.Equal("/api/webhook/{**catch-all}", webhookRoute["Match:Path"]);
     }
 
     [Fact]
@@ -87,7 +83,6 @@ public sealed class GatewayConfigTests
     public void RateLimitDefaults_BindFromConfig()
     {
         Assert.Equal(ExpectedAuthPermit, _config.GetValue<int>("Gateway:RateLimits:Auth:PermitPerMinute"));
-        Assert.Equal(ExpectedWebhookPermit, _config.GetValue<int>("Gateway:RateLimits:Webhook:PermitPerMinute"));
     }
 
     private List<string> ClusterIds()

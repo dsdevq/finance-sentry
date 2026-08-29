@@ -9,9 +9,9 @@ Personal finance aggregation platform — bank accounts, crypto, brokerage, budg
 
 ## Features
 
-- **Multi-provider sync** — Plaid (US banking), Monobank, Binance, Interactive Brokers
+- **Multi-provider sync** — TrueLayer (EU/UK open banking), Monobank, Binance, Interactive Brokers
 - **Automatic transaction sync** with cursor-based incremental updates and webhook support
-- **Subscription detection** via Plaid's native recurring transaction API; heuristic fallback for non-Plaid accounts
+- **Subscription detection** via a merchant/cadence heuristic over synced transactions (installment-aware for Monobank)
 - **Budget tracking** with spending analysis per category
 - **Alerts** — unusual spend detection and configurable thresholds
 - **Multi-currency dashboard** with aggregated net worth, money flow, and category breakdown
@@ -21,7 +21,6 @@ Personal finance aggregation platform — bank accounts, crypto, brokerage, budg
 ## Prerequisites
 
 - Docker & Docker Compose
-- Plaid developer account (sandbox credentials)
 
 ## Local Development
 
@@ -102,9 +101,6 @@ docker compose -f docker-compose.dev.yml down -v              # also drop postgr
 |---|---|
 | `ConnectionStrings__Default` | PostgreSQL DSN |
 | `Deduplication__MasterKeyBase64` | AES-256 master key (base64, 32 bytes) |
-| `Plaid__ClientId` | Plaid API client ID |
-| `Plaid__Secret` | Plaid API secret |
-| `Plaid__WebhookKey` | Plaid webhook signing key |
 | `Jwt__Secret` | JWT signing secret (≥32 chars) |
 
 ## Observability (feature 023)
@@ -160,12 +156,12 @@ backend/
     FinanceSentry.Core/               Shared interfaces and domain primitives
     FinanceSentry.Infrastructure/     Cross-cutting: encryption, logging
     FinanceSentry.Modules.Auth/       Registration, login, Google OAuth, JWT + refresh tokens
-    FinanceSentry.Modules.BankSync/   Plaid + Monobank sync, transactions, dashboard, webhooks
+    FinanceSentry.Modules.BankSync/   Monobank + TrueLayer sync, transactions, dashboard
     FinanceSentry.Modules.CryptoSync/ Binance integration, crypto holdings
     FinanceSentry.Modules.BrokerageSync/ IBKR Client Portal, brokerage holdings
     FinanceSentry.Modules.Budgets/    Budget definitions, spend tracking per category
     FinanceSentry.Modules.Alerts/     Alert rules, unusual spend detection, nightly job
-    FinanceSentry.Modules.Subscriptions/ Recurring charge detection (Plaid native + heuristic)
+    FinanceSentry.Modules.Subscriptions/ Recurring charge detection (heuristic, installment-aware)
 docker/
   docker-compose.dev.yml             Full stack (postgres + api + frontend)
   Dockerfile                         Multi-stage backend build with BuildKit cache mounts

@@ -33,7 +33,7 @@ describe('InstitutionLogoUtils', () => {
     });
 
     it('returns null for an unknown institution', () => {
-      expect(InstitutionLogoUtils.faviconUrl('plaid', 'Some Local Credit Union')).toBeNull();
+      expect(InstitutionLogoUtils.faviconUrl('truelayer', 'Some Local Credit Union')).toBeNull();
     });
 
     it('returns null when both provider and name are null', () => {

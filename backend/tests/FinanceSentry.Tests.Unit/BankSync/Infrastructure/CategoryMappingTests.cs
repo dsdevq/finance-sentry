@@ -22,7 +22,7 @@ public class CategoryMappingTests
     [InlineData(7230, CategoryKeys.PersonalCare)]   // Beauty shops (override)
     [InlineData(8011, CategoryKeys.Medical)]        // Doctors
     [InlineData(9399, CategoryKeys.GovernmentAndNonProfit)] // Government services
-    public void MccRangeClassifier_MapsCodesToPlaidPrimaries(int mcc, string expected)
+    public void MccRangeClassifier_MapsCodesToCanonicalKeys(int mcc, string expected)
     {
         MccRangeClassifier.Classify(mcc).Should().Be(expected);
     }

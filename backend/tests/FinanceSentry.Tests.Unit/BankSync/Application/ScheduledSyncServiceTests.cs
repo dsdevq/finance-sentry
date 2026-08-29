@@ -7,13 +7,13 @@ using FinanceSentry.Modules.BankSync.Application.Services;
 using FinanceSentry.Modules.BankSync.Domain;
 using FinanceSentry.Modules.BankSync.Domain.Interfaces;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
+using FinanceSentry.Modules.BankSync.Infrastructure.TrueLayer;
 using FluentAssertions;
 using Moq;
 using Xunit;
-using IPlaidAdapterInterface = Modules.BankSync.Infrastructure.Plaid.IPlaidAdapter;
 
 /// <summary>
-/// Unit tests for ScheduledSyncService (T313).
+/// Unit tests for ScheduledSyncService (T313), exercised through the TrueLayer provider path.
 /// All external dependencies are mocked; no database or network required.
 /// </summary>
 public class ScheduledSyncServiceTests
@@ -22,33 +22,23 @@ public class ScheduledSyncServiceTests
     private static readonly Guid AccountId = Guid.NewGuid();
     private static readonly Guid UserId = Guid.NewGuid();
 
-    private static BankAccount MakeActiveAccount()
-    {
-        var account = new BankAccount(UserId, "item_abc", "Test Bank", "checking", "1234", "Jane", "EUR", UserId);
-        account.BeginSync();
-        account.MarkActive(1000m);
-        return account;
-    }
-
-    private static EncryptedCredential MakeCredential(Guid accountId)
-        => new(
-            accountId,
-            encryptedData: new byte[32],          // non-empty encrypted data
-            iv: new byte[12],           // exactly 12 bytes
-            authTag: new byte[16],           // exactly 16 bytes
-            keyVersion: 1);
-
     // ── Mocks + SUT factory ─────────────────────────────────────────────────
 
-    private (ScheduledSyncService sut,
-             Mock<IBankAccountRepository> accountRepo,
-             Mock<ITransactionRepository> txRepo,
-             Mock<ISyncJobRepository> jobRepo,
-             Mock<IEncryptedCredentialRepository> credRepo,
-             Mock<ICredentialEncryptionService> encryption,
-             Mock<IPlaidAdapterInterface> plaid,
-             Mock<ITransactionDeduplicationService> dedup,
-             Mock<IBankSyncLogger> logger) BuildSut(
+    private sealed record Harness(
+        ScheduledSyncService Sut,
+        Mock<IBankAccountRepository> AccountRepo,
+        Mock<ITransactionRepository> TxRepo,
+        Mock<ISyncJobRepository> JobRepo,
+        Mock<ICredentialEncryptionService> Encryption,
+        Mock<ITransactionDeduplicationService> Dedup,
+        Mock<IBankProviderFactory> ProviderFactory,
+        Mock<ITrueLayerConnectionRepository> TrueLayerConnections,
+        Mock<ITrueLayerClient> TrueLayerClient,
+        Mock<IBankProvider> Provider,
+        BankAccount Account,
+        TrueLayerConnection Connection);
+
+    private static Harness BuildSut(
         Mock<FinanceSentry.Core.Interfaces.IAlertGeneratorService>? alertGen = null,
         Mock<FinanceSentry.Core.Interfaces.IUserAlertPreferencesReader>? userPrefs = null)
     {
@@ -57,42 +47,83 @@ public class ScheduledSyncServiceTests
         txRepo.Setup(r => r.GetAllUniqueHashesByAccountIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
               .ReturnsAsync(Array.Empty<string>());
         var jobRepo = new Mock<ISyncJobRepository>();
-        var credRepo = new Mock<IEncryptedCredentialRepository>();
         var encryption = new Mock<ICredentialEncryptionService>();
-        var plaid = new Mock<IPlaidAdapterInterface>();
         var dedup = new Mock<ITransactionDeduplicationService>();
         var logger = new Mock<IBankSyncLogger>();
 
         var providerFactory = new Mock<IBankProviderFactory>();
         var monobankCreds = new Mock<IMonobankCredentialRepository>();
         var truelayerConnections = new Mock<ITrueLayerConnectionRepository>();
-        var truelayerClient = new Mock<FinanceSentry.Modules.BankSync.Infrastructure.TrueLayer.ITrueLayerClient>();
+        var truelayerClient = new Mock<ITrueLayerClient>();
         var monobankBalanceCache = new FinanceSentry.Modules.BankSync.Infrastructure.Monobank.MonobankBalanceCache();
         alertGen ??= new Mock<FinanceSentry.Core.Interfaces.IAlertGeneratorService>();
         userPrefs ??= new Mock<FinanceSentry.Core.Interfaces.IUserAlertPreferencesReader>();
 
         var sut = new ScheduledSyncService(
-            accountRepo.Object, txRepo.Object, jobRepo.Object, credRepo.Object,
-            encryption.Object, plaid.Object, dedup.Object, logger.Object,
+            accountRepo.Object, txRepo.Object, jobRepo.Object,
+            encryption.Object, dedup.Object, logger.Object,
             providerFactory.Object, monobankCreds.Object,
             truelayerConnections.Object, truelayerClient.Object,
             monobankBalanceCache,
             alertGen.Object, userPrefs.Object);
 
-        return (sut, accountRepo, txRepo, jobRepo, credRepo, encryption, plaid, dedup, logger);
+        // Default TrueLayer wiring: a linked connection with a decryptable refresh token that
+        // exchanges for an access token without rotating, and a provider resolvable by name.
+        var connection = new TrueLayerConnection(UserId, "ob-testbank", "Test Bank", $"ref-{Guid.NewGuid():N}");
+        connection.SetRefreshToken([1], [2], [3]);
+
+        var account = new BankAccount
+        {
+            UserId = UserId,
+            Provider = "truelayer",
+            ExternalAccountId = "tl-acc-1",
+            TrueLayerConnectionId = connection.Id,
+            BankName = "Test Bank",
+            AccountType = "checking",
+            Currency = "EUR",
+            SyncStatus = "active",
+        };
+
+        accountRepo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
+        accountRepo.Setup(r => r.UpdateAsync(It.IsAny<BankAccount>(), It.IsAny<CancellationToken>())).ReturnsAsync(account);
+        jobRepo.Setup(r => r.AddAsync(It.IsAny<SyncJob>(), It.IsAny<CancellationToken>()))
+               .ReturnsAsync((SyncJob j, CancellationToken _) => j);
+        jobRepo.Setup(r => r.UpdateAsync(It.IsAny<SyncJob>(), It.IsAny<CancellationToken>()))
+               .ReturnsAsync((SyncJob j, CancellationToken _) => j);
+        truelayerConnections.Setup(r => r.GetByIdAsync(connection.Id, It.IsAny<CancellationToken>()))
+                            .ReturnsAsync(connection);
+        encryption.Setup(e => e.Decrypt(It.IsAny<byte[]>(), It.IsAny<byte[]>(), It.IsAny<byte[]>(), It.IsAny<int>()))
+                  .Returns("refresh-token");
+        truelayerClient.Setup(c => c.RefreshAccessTokenAsync("refresh-token", It.IsAny<CancellationToken>()))
+                       .ReturnsAsync(new TrueLayerTokenSet("access-token", "refresh-token", 3600));
+        txRepo.Setup(r => r.GetByAccountIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+              .ReturnsAsync([]);
+
+        var provider = new Mock<IBankProvider>();
+        providerFactory.Setup(f => f.Resolve("truelayer")).Returns(provider.Object);
+
+        return new Harness(sut, accountRepo, txRepo, jobRepo, encryption, dedup,
+            providerFactory, truelayerConnections, truelayerClient, provider, account, connection);
     }
+
+    private static void SetupProviderCandidates(Harness h, IReadOnlyList<TransactionCandidate> candidates)
+        => h.Provider
+            .Setup(p => p.SyncTransactionsAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<Guid>(),
+                It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((candidates, (DateTime?)null));
 
     // ── T313-1: Account not found ───────────────────────────────────────────
 
     [Fact]
     public async Task PerformFullSyncAsync_AccountNotFound_ReturnsFailure()
     {
-        var (sut, accountRepo, _, _, _, _, _, _, _) = BuildSut();
+        var h = BuildSut();
 
-        accountRepo.Setup(r => r.GetByIdAsync(AccountId, default))
-                   .ReturnsAsync((BankAccount?)null);
+        h.AccountRepo.Setup(r => r.GetByIdAsync(AccountId, It.IsAny<CancellationToken>()))
+                     .ReturnsAsync((BankAccount?)null);
 
-        var result = await sut.PerformFullSyncAsync(AccountId);
+        var result = await h.Sut.PerformFullSyncAsync(AccountId);
 
         result.Success.Should().BeFalse();
         result.ErrorCode.Should().Be("ACCOUNT_NOT_FOUND");
@@ -103,73 +134,42 @@ public class ScheduledSyncServiceTests
     [Fact]
     public async Task PerformFullSyncAsync_HappyPath_CreatesJobFetchesAndSavesTransactions()
     {
-        var (sut, accountRepo, txRepo, jobRepo, credRepo, encryption, plaid, dedup, _) = BuildSut();
-
-        var account = MakeActiveAccount();
-        var credential = MakeCredential(AccountId);
-
-        accountRepo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), default)).ReturnsAsync(account);
-        accountRepo.Setup(r => r.UpdateAsync(It.IsAny<BankAccount>(), default)).ReturnsAsync(account);
-
-        jobRepo.Setup(r => r.AddAsync(It.IsAny<SyncJob>(), default))
-               .ReturnsAsync((SyncJob j, CancellationToken _) => j);
-        jobRepo.Setup(r => r.UpdateAsync(It.IsAny<SyncJob>(), default))
-               .ReturnsAsync((SyncJob j, CancellationToken _) => j);
-        jobRepo.Setup(r => r.GetLatestByAccountIdAsync(It.IsAny<Guid>(), default))
-               .ReturnsAsync((SyncJob?)null);
-
-        credRepo.Setup(r => r.GetByAccountIdAsync(It.IsAny<Guid>(), default)).ReturnsAsync(credential);
-        encryption.Setup(e => e.Decrypt(It.IsAny<byte[]>(), It.IsAny<byte[]>(), It.IsAny<byte[]>(), It.IsAny<int>()))
-                  .Returns("access-sandbox-token");
+        var h = BuildSut();
 
         var candidates = new List<TransactionCandidate>
         {
-            new(AccountId, UserId, 50m, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow.AddDays(-1),
-                "Coffee", false, "debit", "Starbucks", "food", "tx_001"),
-            new(AccountId, UserId, 100m, DateTime.UtcNow.AddDays(-2), DateTime.UtcNow.AddDays(-2),
-                "Salary", false, "credit", null, "income", "tx_002")
+            new(h.Account.Id, UserId, 50m, DateTime.UtcNow.AddDays(-1), DateTime.UtcNow.AddDays(-1),
+                "Coffee", false, "debit", "Starbucks", "food"),
+            new(h.Account.Id, UserId, 100m, DateTime.UtcNow.AddDays(-2), DateTime.UtcNow.AddDays(-2),
+                "Salary", false, "credit", null, "income")
         };
+        SetupProviderCandidates(h, candidates);
 
-        plaid.Setup(p => p.SyncTransactionsAsync(
-                "access-sandbox-token", It.IsAny<Guid>(), It.IsAny<Guid>(),
-                It.IsAny<string?>(), default))
-             .ReturnsAsync(((IReadOnlyList<TransactionCandidate>)candidates, "cursor_1"));
-
-        plaid.Setup(p => p.GetAccountsWithBalanceAsync("access-sandbox-token", default))
-             .ReturnsAsync(
-             [
-                 new("plaid_acc_1", "Checking", "checking", "1234", 1200m, 1200m, "EUR")
-             ]);
-
-        txRepo.Setup(r => r.GetByAccountIdAsync(It.IsAny<Guid>(), default))
-              .ReturnsAsync([]);
-
-        dedup.Setup(d => d.FilterDuplicates(
+        h.Dedup.Setup(d => d.FilterDuplicates(
                 It.IsAny<IEnumerable<TransactionCandidate>>(),
                 It.IsAny<IReadOnlySet<string>>()))
              .Returns(candidates);
 
-        var entity1 = new Transaction(AccountId, UserId, 50m, DateTime.UtcNow.AddDays(-1), "Coffee", "hash1", false);
-        var entity2 = new Transaction(AccountId, UserId, 100m, DateTime.UtcNow.AddDays(-2), "Salary", "hash2", false);
+        var entity1 = new Transaction(h.Account.Id, UserId, 50m, DateTime.UtcNow.AddDays(-1), "Coffee", "hash1", false);
+        var entity2 = new Transaction(h.Account.Id, UserId, 100m, DateTime.UtcNow.AddDays(-2), "Salary", "hash2", false);
+        h.Dedup.Setup(d => d.ToEntity(candidates[0])).Returns(entity1);
+        h.Dedup.Setup(d => d.ToEntity(candidates[1])).Returns(entity2);
 
-        dedup.Setup(d => d.ToEntity(candidates[0])).Returns(entity1);
-        dedup.Setup(d => d.ToEntity(candidates[1])).Returns(entity2);
+        h.TxRepo.Setup(r => r.AddRangeAsync(It.IsAny<IEnumerable<Transaction>>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((IEnumerable<Transaction> txs, CancellationToken _) => txs);
 
-        txRepo.Setup(r => r.AddRangeAsync(It.IsAny<IEnumerable<Transaction>>(), default))
-              .ReturnsAsync((IEnumerable<Transaction> txs, CancellationToken _) => txs);
-
-        var result = await sut.PerformFullSyncAsync(AccountId);
+        var result = await h.Sut.PerformFullSyncAsync(h.Account.Id);
 
         result.Success.Should().BeTrue();
         result.TransactionCountFetched.Should().Be(2);
         result.TransactionCountDeduped.Should().Be(2);
 
-        jobRepo.Verify(r => r.AddAsync(It.IsAny<SyncJob>(), default), Times.Once);
-        txRepo.Verify(r => r.AddRangeAsync(It.IsAny<IEnumerable<Transaction>>(), default), Times.Once);
-        accountRepo.Verify(r => r.UpdateAsync(It.IsAny<BankAccount>(), default), Times.AtLeast(2));
+        h.JobRepo.Verify(r => r.AddAsync(It.IsAny<SyncJob>(), It.IsAny<CancellationToken>()), Times.Once);
+        h.TxRepo.Verify(r => r.AddRangeAsync(It.IsAny<IEnumerable<Transaction>>(), It.IsAny<CancellationToken>()), Times.Once);
+        h.AccountRepo.Verify(r => r.UpdateAsync(It.IsAny<BankAccount>(), It.IsAny<CancellationToken>()), Times.AtLeast(2));
     }
 
-    // ── TrueLayer #3: in-batch duplicate hashes must not be double-inserted ──
+    // ── In-batch duplicate hashes must not be double-inserted ───────────────
 
     [Fact]
     public async Task PerformFullSyncAsync_InBatchDuplicateHashes_InsertedOnce()
@@ -177,43 +177,29 @@ public class ScheduledSyncServiceTests
         // Regression: two candidates in one provider batch that hash alike (e.g. a pending and a
         // booked copy) previously both reached AddRange and violated the unique (AccountId,
         // UniqueHash) index, poisoning the whole SaveChanges and wedging the account in "syncing".
-        var (sut, accountRepo, txRepo, jobRepo, credRepo, encryption, plaid, dedup, _) = BuildSut();
-
-        var account = MakeActiveAccount();
-        accountRepo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), default)).ReturnsAsync(account);
-        accountRepo.Setup(r => r.UpdateAsync(It.IsAny<BankAccount>(), default)).ReturnsAsync(account);
-        jobRepo.Setup(r => r.AddAsync(It.IsAny<SyncJob>(), default)).ReturnsAsync((SyncJob j, CancellationToken _) => j);
-        jobRepo.Setup(r => r.UpdateAsync(It.IsAny<SyncJob>(), default)).ReturnsAsync((SyncJob j, CancellationToken _) => j);
-        jobRepo.Setup(r => r.GetLatestByAccountIdAsync(It.IsAny<Guid>(), default)).ReturnsAsync((SyncJob?)null);
-        credRepo.Setup(r => r.GetByAccountIdAsync(It.IsAny<Guid>(), default)).ReturnsAsync(MakeCredential(AccountId));
-        encryption.Setup(e => e.Decrypt(It.IsAny<byte[]>(), It.IsAny<byte[]>(), It.IsAny<byte[]>(), It.IsAny<int>()))
-                  .Returns("access-sandbox-token");
+        var h = BuildSut();
 
         var candidates = new List<TransactionCandidate>
         {
-            new(AccountId, UserId, 50m, DateTime.UtcNow.AddDays(-1), null, "Coffee", true, "debit", null, null, "tx_001"),
-            new(AccountId, UserId, 50m, DateTime.UtcNow.AddDays(-1), null, "Coffee", false, "debit", null, null, "tx_001")
+            new(h.Account.Id, UserId, 50m, DateTime.UtcNow.AddDays(-1), null, "Coffee", true, "debit", null, null),
+            new(h.Account.Id, UserId, 50m, DateTime.UtcNow.AddDays(-1), null, "Coffee", false, "debit", null, null)
         };
-        plaid.Setup(p => p.SyncTransactionsAsync("access-sandbox-token", It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string?>(), default))
-             .ReturnsAsync(((IReadOnlyList<TransactionCandidate>)candidates, "cursor_1"));
-        plaid.Setup(p => p.GetAccountsWithBalanceAsync("access-sandbox-token", default))
-             .ReturnsAsync([new("plaid_acc_1", "Checking", "checking", "1234", 100m, 100m, "EUR")]);
-        txRepo.Setup(r => r.GetByAccountIdAsync(It.IsAny<Guid>(), default)).ReturnsAsync([]);
+        SetupProviderCandidates(h, candidates);
 
-        dedup.Setup(d => d.FilterDuplicates(It.IsAny<IEnumerable<TransactionCandidate>>(), It.IsAny<IReadOnlySet<string>>()))
+        h.Dedup.Setup(d => d.FilterDuplicates(It.IsAny<IEnumerable<TransactionCandidate>>(), It.IsAny<IReadOnlySet<string>>()))
              .Returns(candidates);
         // Both candidates map to entities with the SAME hash — the in-batch collision.
-        dedup.Setup(d => d.ToEntity(candidates[0]))
-             .Returns(new Transaction(AccountId, UserId, 50m, DateTime.UtcNow.AddDays(-1), "Coffee", "dup_hash", false));
-        dedup.Setup(d => d.ToEntity(candidates[1]))
-             .Returns(new Transaction(AccountId, UserId, 50m, DateTime.UtcNow.AddDays(-1), "Coffee", "dup_hash", false));
+        h.Dedup.Setup(d => d.ToEntity(candidates[0]))
+             .Returns(new Transaction(h.Account.Id, UserId, 50m, DateTime.UtcNow.AddDays(-1), "Coffee", "dup_hash", false));
+        h.Dedup.Setup(d => d.ToEntity(candidates[1]))
+             .Returns(new Transaction(h.Account.Id, UserId, 50m, DateTime.UtcNow.AddDays(-1), "Coffee", "dup_hash", false));
 
         IEnumerable<Transaction>? added = null;
-        txRepo.Setup(r => r.AddRangeAsync(It.IsAny<IEnumerable<Transaction>>(), default))
+        h.TxRepo.Setup(r => r.AddRangeAsync(It.IsAny<IEnumerable<Transaction>>(), It.IsAny<CancellationToken>()))
               .ReturnsAsync((IEnumerable<Transaction> txs, CancellationToken _) => txs)
               .Callback((IEnumerable<Transaction> txs, CancellationToken _) => added = txs.ToList());
 
-        var result = await sut.PerformFullSyncAsync(AccountId);
+        var result = await h.Sut.PerformFullSyncAsync(h.Account.Id);
 
         result.Success.Should().BeTrue();
         added.Should().NotBeNull();
@@ -226,31 +212,18 @@ public class ScheduledSyncServiceTests
         // The hash set handed to dedup must come from GetAllUniqueHashesByAccountIdAsync (which
         // includes soft-deleted rows), not just the active rows — otherwise a re-synced
         // soft-deleted transaction slips through and collides with the unique index.
-        var (sut, accountRepo, txRepo, jobRepo, credRepo, encryption, plaid, dedup, _) = BuildSut();
+        var h = BuildSut();
 
-        var account = MakeActiveAccount();
-        accountRepo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), default)).ReturnsAsync(account);
-        accountRepo.Setup(r => r.UpdateAsync(It.IsAny<BankAccount>(), default)).ReturnsAsync(account);
-        jobRepo.Setup(r => r.AddAsync(It.IsAny<SyncJob>(), default)).ReturnsAsync((SyncJob j, CancellationToken _) => j);
-        jobRepo.Setup(r => r.UpdateAsync(It.IsAny<SyncJob>(), default)).ReturnsAsync((SyncJob j, CancellationToken _) => j);
-        jobRepo.Setup(r => r.GetLatestByAccountIdAsync(It.IsAny<Guid>(), default)).ReturnsAsync((SyncJob?)null);
-        credRepo.Setup(r => r.GetByAccountIdAsync(It.IsAny<Guid>(), default)).ReturnsAsync(MakeCredential(AccountId));
-        encryption.Setup(e => e.Decrypt(It.IsAny<byte[]>(), It.IsAny<byte[]>(), It.IsAny<byte[]>(), It.IsAny<int>()))
-                  .Returns("access-sandbox-token");
-        plaid.Setup(p => p.SyncTransactionsAsync("access-sandbox-token", It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string?>(), default))
-             .ReturnsAsync(((IReadOnlyList<TransactionCandidate>)[], "cursor_1"));
-        plaid.Setup(p => p.GetAccountsWithBalanceAsync("access-sandbox-token", default))
-             .ReturnsAsync([new("plaid_acc_1", "Checking", "checking", "1234", 100m, 100m, "EUR")]);
-        txRepo.Setup(r => r.GetByAccountIdAsync(It.IsAny<Guid>(), default)).ReturnsAsync([]);
-        txRepo.Setup(r => r.GetAllUniqueHashesByAccountIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+        SetupProviderCandidates(h, []);
+        h.TxRepo.Setup(r => r.GetAllUniqueHashesByAccountIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
               .ReturnsAsync(["soft_deleted_hash"]);
 
         IReadOnlySet<string>? seenSet = null;
-        dedup.Setup(d => d.FilterDuplicates(It.IsAny<IEnumerable<TransactionCandidate>>(), It.IsAny<IReadOnlySet<string>>()))
+        h.Dedup.Setup(d => d.FilterDuplicates(It.IsAny<IEnumerable<TransactionCandidate>>(), It.IsAny<IReadOnlySet<string>>()))
              .Callback((IEnumerable<TransactionCandidate> _, IReadOnlySet<string> hashes) => seenSet = hashes)
              .Returns([]);
 
-        await sut.PerformFullSyncAsync(AccountId);
+        await h.Sut.PerformFullSyncAsync(h.Account.Id);
 
         seenSet.Should().NotBeNull();
         seenSet!.Should().Contain("soft_deleted_hash");
@@ -261,106 +234,66 @@ public class ScheduledSyncServiceTests
     [Fact]
     public async Task PerformFullSyncAsync_DuplicatesFiltered_SavesOnlyNewTransactions()
     {
-        var (sut, accountRepo, txRepo, jobRepo, credRepo, encryption, plaid, dedup, _) = BuildSut();
-
-        var account = MakeActiveAccount();
-        var credential = MakeCredential(AccountId);
-
-        accountRepo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), default)).ReturnsAsync(account);
-        accountRepo.Setup(r => r.UpdateAsync(It.IsAny<BankAccount>(), default)).ReturnsAsync(account);
-        jobRepo.Setup(r => r.AddAsync(It.IsAny<SyncJob>(), default))
-               .ReturnsAsync((SyncJob j, CancellationToken _) => j);
-        jobRepo.Setup(r => r.UpdateAsync(It.IsAny<SyncJob>(), default))
-               .ReturnsAsync((SyncJob j, CancellationToken _) => j);
-        jobRepo.Setup(r => r.GetLatestByAccountIdAsync(It.IsAny<Guid>(), default))
-               .ReturnsAsync((SyncJob?)null);
-        credRepo.Setup(r => r.GetByAccountIdAsync(It.IsAny<Guid>(), default)).ReturnsAsync(credential);
-        encryption.Setup(e => e.Decrypt(It.IsAny<byte[]>(), It.IsAny<byte[]>(), It.IsAny<byte[]>(), It.IsAny<int>()))
-                  .Returns("access-sandbox-token");
+        var h = BuildSut();
 
         var allCandidates = new List<TransactionCandidate>
         {
-            new(AccountId, UserId, 50m, DateTime.UtcNow.AddDays(-1), null, "Coffee", true, "debit", null, null, "tx_001"),
-            new(AccountId, UserId, 100m, DateTime.UtcNow.AddDays(-2), null, "Salary", true, "credit", null, null, "tx_002")
+            new(h.Account.Id, UserId, 50m, DateTime.UtcNow.AddDays(-1), null, "Coffee", true, "debit", null, null),
+            new(h.Account.Id, UserId, 100m, DateTime.UtcNow.AddDays(-2), null, "Salary", true, "credit", null, null)
         };
-
-        plaid.Setup(p => p.SyncTransactionsAsync(
-                "access-sandbox-token", It.IsAny<Guid>(), It.IsAny<Guid>(),
-                It.IsAny<string?>(), default))
-             .ReturnsAsync(((IReadOnlyList<TransactionCandidate>)allCandidates, "cursor_1"));
-
-        plaid.Setup(p => p.GetAccountsWithBalanceAsync("access-sandbox-token", default))
-             .ReturnsAsync(
-             [
-                 new("plaid_acc_1", "Checking", "checking", "1234", 900m, 900m, "EUR")
-             ]);
+        SetupProviderCandidates(h, allCandidates);
 
         // Only one existing transaction in DB
-        var existingTx = new Transaction(AccountId, UserId, 50m, DateTime.UtcNow.AddDays(-1), "Coffee", "hash_existing", false);
-        txRepo.Setup(r => r.GetByAccountIdAsync(It.IsAny<Guid>(), default))
+        var existingTx = new Transaction(h.Account.Id, UserId, 50m, DateTime.UtcNow.AddDays(-1), "Coffee", "hash_existing", false);
+        h.TxRepo.Setup(r => r.GetByAccountIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
               .ReturnsAsync([existingTx]);
 
         // Dedup returns only the NEW candidate (the existing one is filtered out)
         var newCandidates = allCandidates.Skip(1).ToList();
-        dedup.Setup(d => d.FilterDuplicates(
+        h.Dedup.Setup(d => d.FilterDuplicates(
                 It.IsAny<IEnumerable<TransactionCandidate>>(),
                 It.IsAny<IReadOnlySet<string>>()))
              .Returns(newCandidates);
 
-        var newEntity = new Transaction(AccountId, UserId, 100m, DateTime.UtcNow.AddDays(-2), "Salary", "hash_new", false);
-        dedup.Setup(d => d.ToEntity(newCandidates[0])).Returns(newEntity);
+        var newEntity = new Transaction(h.Account.Id, UserId, 100m, DateTime.UtcNow.AddDays(-2), "Salary", "hash_new", false);
+        h.Dedup.Setup(d => d.ToEntity(newCandidates[0])).Returns(newEntity);
 
-        txRepo.Setup(r => r.AddRangeAsync(It.IsAny<IEnumerable<Transaction>>(), default))
+        h.TxRepo.Setup(r => r.AddRangeAsync(It.IsAny<IEnumerable<Transaction>>(), It.IsAny<CancellationToken>()))
               .ReturnsAsync((IEnumerable<Transaction> txs, CancellationToken _) => txs);
 
-        var result = await sut.PerformFullSyncAsync(AccountId);
+        var result = await h.Sut.PerformFullSyncAsync(h.Account.Id);
 
         result.Success.Should().BeTrue();
-        result.TransactionCountFetched.Should().Be(2);  // 2 from Plaid
+        result.TransactionCountFetched.Should().Be(2);  // 2 from the provider
         result.TransactionCountDeduped.Should().Be(1);  // 1 new after dedup
     }
 
     // ── T313-4: Hard failure during sync marks job + account failed and alerts ──
 
     [Fact]
-    public async Task PerformFullSyncAsync_PlaidThrowsHardError_MarksFailedAndFiresAlert()
+    public async Task PerformFullSyncAsync_ProviderThrowsHardError_MarksFailedAndFiresAlert()
     {
         var alertGen = new Mock<FinanceSentry.Core.Interfaces.IAlertGeneratorService>();
         var userPrefs = new Mock<FinanceSentry.Core.Interfaces.IUserAlertPreferencesReader>();
         userPrefs.Setup(p => p.GetAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
                  .ReturnsAsync(new FinanceSentry.Core.Interfaces.UserAlertPreferences(false, 0m, true));
 
-        var (sut, accountRepo, txRepo, jobRepo, credRepo, encryption, plaid, _, _) =
-            BuildSut(alertGen, userPrefs);
+        var h = BuildSut(alertGen, userPrefs);
+        h.Account.BeginSync();
+        h.Account.MarkActive(1000m);
 
-        var account = MakeActiveAccount();
-        var credential = MakeCredential(AccountId);
+        h.Provider
+            .Setup(p => p.SyncTransactionsAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<Guid>(),
+                It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("INVALID_CREDENTIALS: bad token"));
 
-        accountRepo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), default)).ReturnsAsync(account);
-        accountRepo.Setup(r => r.UpdateAsync(It.IsAny<BankAccount>(), default)).ReturnsAsync(account);
-        jobRepo.Setup(r => r.AddAsync(It.IsAny<SyncJob>(), default))
-               .ReturnsAsync((SyncJob j, CancellationToken _) => j);
-        jobRepo.Setup(r => r.UpdateAsync(It.IsAny<SyncJob>(), default))
-               .ReturnsAsync((SyncJob j, CancellationToken _) => j);
-        jobRepo.Setup(r => r.GetLatestByAccountIdAsync(It.IsAny<Guid>(), default))
-               .ReturnsAsync((SyncJob?)null);
-        credRepo.Setup(r => r.GetByAccountIdAsync(It.IsAny<Guid>(), default)).ReturnsAsync(credential);
-        encryption.Setup(e => e.Decrypt(It.IsAny<byte[]>(), It.IsAny<byte[]>(), It.IsAny<byte[]>(), It.IsAny<int>()))
-                  .Returns("access-sandbox-token");
-        txRepo.Setup(r => r.GetByAccountIdAsync(It.IsAny<Guid>(), default))
-              .ReturnsAsync([]);
-
-        plaid.Setup(p => p.SyncTransactionsAsync(
-                It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<Guid>(),
-                It.IsAny<string?>(), default))
-             .ThrowsAsync(new HttpRequestException("INVALID_CREDENTIALS: bad token"));
-
-        var result = await sut.PerformFullSyncAsync(AccountId);
+        var result = await h.Sut.PerformFullSyncAsync(h.Account.Id);
 
         result.Success.Should().BeFalse();
         result.ErrorCode.Should().Be("INVALID_CREDENTIALS");
-        jobRepo.Verify(r => r.UpdateAsync(It.Is<SyncJob>(j => j.Status == "failed"), default), Times.Once);
-        account.SyncStatus.Should().Be("failed");
+        h.JobRepo.Verify(r => r.UpdateAsync(It.Is<SyncJob>(j => j.Status == "failed"), It.IsAny<CancellationToken>()), Times.Once);
+        h.Account.SyncStatus.Should().Be("failed");
         alertGen.Verify(a => a.GenerateSyncFailureAlertAsync(
             It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<Guid?>(),
             It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -376,43 +309,43 @@ public class ScheduledSyncServiceTests
         userPrefs.Setup(p => p.GetAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
                  .ReturnsAsync(new FinanceSentry.Core.Interfaces.UserAlertPreferences(false, 0m, true));
 
-        var (sut, accountRepo, txRepo, jobRepo, credRepo, encryption, plaid, _, _) =
-            BuildSut(alertGen, userPrefs);
+        var h = BuildSut(alertGen, userPrefs);
+        h.Account.BeginSync();
+        h.Account.MarkActive(1000m);
 
-        var account = MakeActiveAccount();
-        var credential = MakeCredential(AccountId);
+        h.Provider
+            .Setup(p => p.SyncTransactionsAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<Guid>(),
+                It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("RATE_LIMIT_EXCEEDED: too many requests"));
 
-        accountRepo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), default)).ReturnsAsync(account);
-        accountRepo.Setup(r => r.UpdateAsync(It.IsAny<BankAccount>(), default)).ReturnsAsync(account);
-        jobRepo.Setup(r => r.AddAsync(It.IsAny<SyncJob>(), default))
-               .ReturnsAsync((SyncJob j, CancellationToken _) => j);
-        jobRepo.Setup(r => r.UpdateAsync(It.IsAny<SyncJob>(), default))
-               .ReturnsAsync((SyncJob j, CancellationToken _) => j);
-        jobRepo.Setup(r => r.GetLatestByAccountIdAsync(It.IsAny<Guid>(), default))
-               .ReturnsAsync((SyncJob?)null);
-        credRepo.Setup(r => r.GetByAccountIdAsync(It.IsAny<Guid>(), default)).ReturnsAsync(credential);
-        encryption.Setup(e => e.Decrypt(It.IsAny<byte[]>(), It.IsAny<byte[]>(), It.IsAny<byte[]>(), It.IsAny<int>()))
-                  .Returns("access-sandbox-token");
-        txRepo.Setup(r => r.GetByAccountIdAsync(It.IsAny<Guid>(), default))
-              .ReturnsAsync([]);
-
-        plaid.Setup(p => p.SyncTransactionsAsync(
-                It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<Guid>(),
-                It.IsAny<string?>(), default))
-             .ThrowsAsync(new HttpRequestException("RATE_LIMIT_EXCEEDED: too many requests"));
-
-        var result = await sut.PerformFullSyncAsync(AccountId);
+        var result = await h.Sut.PerformFullSyncAsync(h.Account.Id);
 
         result.Success.Should().BeFalse();
         result.ErrorCode.Should().Be("RATE_LIMIT_EXCEEDED");
         // Job still records the failure for observability...
-        jobRepo.Verify(r => r.UpdateAsync(It.Is<SyncJob>(j => j.Status == "failed"), default), Times.Once);
+        h.JobRepo.Verify(r => r.UpdateAsync(It.Is<SyncJob>(j => j.Status == "failed"), It.IsAny<CancellationToken>()), Times.Once);
         // ...but the account self-heals to active and no false alarm is raised.
-        account.SyncStatus.Should().Be("active");
-        account.LastSyncError.Should().BeNull();
+        h.Account.SyncStatus.Should().Be("active");
+        h.Account.LastSyncError.Should().BeNull();
         alertGen.Verify(a => a.GenerateSyncFailureAlertAsync(
             It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<Guid?>(),
             It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    // ── Unknown provider is an explicit failure, not a silent fallback ──────
+
+    [Fact]
+    public async Task PerformFullSyncAsync_UnknownProvider_FailsExplicitly()
+    {
+        var h = BuildSut();
+        h.Account.Provider = "not-a-provider";
+
+        var result = await h.Sut.PerformFullSyncAsync(h.Account.Id);
+
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("Unknown provider");
+        h.JobRepo.Verify(r => r.UpdateAsync(It.Is<SyncJob>(j => j.Status == "failed"), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     // ── T313-5: Idempotency — coordinator blocks concurrent runs ────────────
@@ -433,7 +366,9 @@ public class ScheduledSyncServiceTests
 
         result.Success.Should().BeFalse();
         result.ErrorCode.Should().Be("SYNC_IN_PROGRESS");
-        syncService.Verify(s => s.PerformFullSyncAsync(It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
+        syncService.Verify(
+            s => s.PerformFullSyncAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>(), It.IsAny<string?>()),
+            Times.Never);
     }
 
     // A consent-expired account (reauth_required) must be skipped by the recurring scheduler so it stops
@@ -459,7 +394,7 @@ public class ScheduledSyncServiceTests
 
         result.ErrorCode.Should().Be("ITEM_LOGIN_REQUIRED");
         syncService.Verify(
-            s => s.PerformFullSyncAsync(It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()),
+            s => s.PerformFullSyncAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>(), It.IsAny<string?>()),
             Times.Never);
     }
 
@@ -470,63 +405,25 @@ public class ScheduledSyncServiceTests
     [Fact]
     public async Task SyncTrueLayer_PersistsRotatedRefreshToken_EvenWhenSyncFails()
     {
-        var accountRepo = new Mock<IBankAccountRepository>();
-        var txRepo = new Mock<ITransactionRepository>();
-        txRepo.Setup(r => r.GetAllUniqueHashesByAccountIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-              .ReturnsAsync(Array.Empty<string>());
-        var jobRepo = new Mock<ISyncJobRepository>();
-        var credRepo = new Mock<IEncryptedCredentialRepository>();
-        var encryption = new Mock<ICredentialEncryptionService>();
-        var plaid = new Mock<IPlaidAdapterInterface>();
-        var dedup = new Mock<ITransactionDeduplicationService>();
-        var logger = new Mock<IBankSyncLogger>();
-        var providerFactory = new Mock<IBankProviderFactory>();
-        var monobankCreds = new Mock<IMonobankCredentialRepository>();
-        var truelayerConnections = new Mock<ITrueLayerConnectionRepository>();
-        var truelayerClient = new Mock<FinanceSentry.Modules.BankSync.Infrastructure.TrueLayer.ITrueLayerClient>();
-        var balanceCache = new FinanceSentry.Modules.BankSync.Infrastructure.Monobank.MonobankBalanceCache();
-        var alertGen = new Mock<FinanceSentry.Core.Interfaces.IAlertGeneratorService>();
-        var userPrefs = new Mock<FinanceSentry.Core.Interfaces.IUserAlertPreferencesReader>();
+        var h = BuildSut();
 
-        var connection = new TrueLayerConnection(UserId, "ob-natwest", "NatWest", "ref-1");
-        connection.SetRefreshToken([1], [2], [3]);
-        var account = new BankAccount
-        {
-            UserId = UserId,
-            Provider = "truelayer",
-            ExternalAccountId = "tl-acc-1",
-            TrueLayerConnectionId = connection.Id,
-            SyncStatus = "active",
-        };
-
-        accountRepo.Setup(r => r.GetByIdAsync(account.Id, It.IsAny<CancellationToken>())).ReturnsAsync(account);
-        truelayerConnections.Setup(r => r.GetByIdAsync(connection.Id, It.IsAny<CancellationToken>())).ReturnsAsync(connection);
-        encryption.Setup(e => e.Decrypt(It.IsAny<byte[]>(), It.IsAny<byte[]>(), It.IsAny<byte[]>(), It.IsAny<int>()))
-                  .Returns("old-refresh");
-        encryption.Setup(e => e.Encrypt("new-refresh")).Returns(new EncryptionResult([9], [8], [7], 1));
-        truelayerClient
+        h.Encryption.Setup(e => e.Decrypt(It.IsAny<byte[]>(), It.IsAny<byte[]>(), It.IsAny<byte[]>(), It.IsAny<int>()))
+                    .Returns("old-refresh");
+        h.Encryption.Setup(e => e.Encrypt("new-refresh")).Returns(new EncryptionResult([9], [8], [7], 1));
+        h.TrueLayerClient
             .Setup(c => c.RefreshAccessTokenAsync("old-refresh", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new FinanceSentry.Modules.BankSync.Infrastructure.TrueLayer.TrueLayerTokenSet("AT", "new-refresh", 3600));
+            .ReturnsAsync(new TrueLayerTokenSet("AT", "new-refresh", 3600));
 
-        var provider = new Mock<IBankProvider>();
-        provider
+        h.Provider
             .Setup(p => p.SyncTransactionsAsync(
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<Guid>(),
                 It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("mid-sync failure"));
-        providerFactory.Setup(f => f.Resolve("truelayer")).Returns(provider.Object);
 
-        var sut = new ScheduledSyncService(
-            accountRepo.Object, txRepo.Object, jobRepo.Object, credRepo.Object,
-            encryption.Object, plaid.Object, dedup.Object, logger.Object,
-            providerFactory.Object, monobankCreds.Object,
-            truelayerConnections.Object, truelayerClient.Object,
-            balanceCache, alertGen.Object, userPrefs.Object);
-
-        var result = await sut.PerformFullSyncAsync(account.Id);
+        var result = await h.Sut.PerformFullSyncAsync(h.Account.Id);
 
         result.Success.Should().BeFalse("the transaction fetch threw");
-        truelayerConnections.Verify(
+        h.TrueLayerConnections.Verify(
             r => r.UpdateAsync(
                 It.Is<TrueLayerConnection>(c => c.EncryptedRefreshToken.Length == 1 && c.EncryptedRefreshToken[0] == 9),
                 It.IsAny<CancellationToken>()),

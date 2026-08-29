@@ -6,8 +6,8 @@
 
 **Steps:**
 1. Check `sync_jobs` table for `error_message` and `error_code`.
-2. If `error_code = 'PLAID_RATE_LIMIT'`: Plaid is throttling. Wait and let Polly retry (5m → 15m → 1h).
-3. If `error_code = 'PLAID_ITEM_LOGIN_REQUIRED'`: User must re-link. Account status = `reauth_required`. Notify user.
+2. If `error_code = 'MONOBANK_RATE_LIMITED'` / `RATE_LIMIT_EXCEEDED`: the provider is throttling. Wait and let the next scheduled cycle retry.
+3. If `error_code = 'ITEM_LOGIN_REQUIRED'`: User must re-link (expired TrueLayer consent or revoked Monobank token). Account status = `reauth_required`. Notify user.
 4. If `error_code = 'DATABASE_ERROR'`: Check DB connectivity. Run `SELECT 1` against PostgreSQL.
 5. Manually trigger re-sync once root cause resolved:
    ```
@@ -22,7 +22,7 @@
 1. Check Serilog/Application Insights for ERROR-level logs.
 2. Common causes:
    - DB connection pool exhausted: increase `Max Pool Size` in connection string.
-   - Plaid API down: check `https://status.plaid.com`. All syncs will fail until resolved.
+   - Provider API down: check TrueLayer / Monobank status pages. Affected syncs will fail until resolved.
    - Memory pressure: restart the API container (`docker-compose restart api`).
 3. If DB migration pending: run `dotnet ef database update`.
 
@@ -38,17 +38,7 @@
    - N+1: use `Include()` / `Join()` instead of looping queries.
 4. If N+1 suspected: look for `Potential N+1 detected: X DB round-trips` in logs.
 
-## 4. Plaid Webhook Not Triggering Sync
-
-**Symptoms:** Transactions not updating despite bank activity
-
-**Steps:**
-1. Verify webhook URL is registered in Plaid Dashboard: `POST https://your-api/api/webhook/plaid`.
-2. Check HMAC signature key matches `Plaid:WebhookKey` in `appsettings.json`.
-3. Check `WebhookController` logs for `HMAC validation failed`.
-4. Manually trigger sync to confirm the sync pipeline is working.
-
-## 5. Hangfire Jobs Not Running
+## 4. Hangfire Jobs Not Running
 
 **Symptoms:** Recurring jobs not appearing in Hangfire Dashboard
 
@@ -58,7 +48,7 @@
 3. Check `SyncScheduler.ScheduleAllActiveAccounts()` was called at startup (logged at startup).
 4. Re-register recurring jobs: restart the API (scheduler runs on startup).
 
-## 6. Audit Log Table Growing Too Large
+## 5. Audit Log Table Growing Too Large
 
 **Symptoms:** `audit_logs` table > 10GB
 
@@ -69,7 +59,7 @@
    ```
 2. Add a partition by month if volume is sustained (consult DBA).
 
-## 7. Data Retention Job Failing
+## 6. Data Retention Job Failing
 
 **Symptoms:** `DataRetentionJob` ERROR in logs
 
@@ -81,7 +71,7 @@
    ```
 3. Use dry-run mode first to verify: `j.RunAsync(true, ...)` — logs count without archiving.
 
-## 8. Health Check Returning Unhealthy
+## 7. Health Check Returning Unhealthy
 
 ```
 GET /health/ready → 503
@@ -95,4 +85,4 @@ GET /health/ready → 503
 ## Contact
 
 - On-call channel: `#finance-sentry-oncall`
-- Escalation: DBA team for database issues, Plaid support for API issues.
+- Escalation: DBA team for database issues; TrueLayer / Monobank support for provider API issues.

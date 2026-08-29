@@ -207,9 +207,7 @@ public class TransactionDeduplicationTests
             IsPending: isPending,
             TransactionType: "debit",
             MerchantName: null,
-            MerchantCategory: null,
-            PlaidTransactionId: null
-        );
+            MerchantCategory: null);
     }
 
     private static List<TransactionCandidate> MakeCandidates(int count, int startIndex = 0)

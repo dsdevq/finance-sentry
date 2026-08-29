@@ -48,7 +48,6 @@ public record TransactionCandidate(
     string? TransactionType,
     string? MerchantName,
     string? MerchantCategory,
-    string? PlaidTransactionId,
     int? Mcc = null,
     string? SourceCategory = null
 )

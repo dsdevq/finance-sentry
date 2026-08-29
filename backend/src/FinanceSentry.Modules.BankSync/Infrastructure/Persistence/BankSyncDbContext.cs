@@ -8,7 +8,6 @@ public class BankSyncDbContext(DbContextOptions<BankSyncDbContext> options) : Db
     public DbSet<BankAccount> BankAccounts { get; set; } = null!;
     public DbSet<Transaction> Transactions { get; set; } = null!;
     public DbSet<SyncJob> SyncJobs { get; set; } = null!;
-    public DbSet<EncryptedCredential> EncryptedCredentials { get; set; } = null!;
     public DbSet<AuditLog> AuditLogs { get; set; } = null!;
     public DbSet<MonobankCredential> MonobankCredentials { get; set; } = null!;
     public DbSet<TrueLayerConnection> TrueLayerConnections { get; set; } = null!;
@@ -27,7 +26,7 @@ public class BankSyncDbContext(DbContextOptions<BankSyncDbContext> options) : Db
         bab.HasIndex(ba => ba.SyncStatus).HasDatabaseName("idx_bank_account_sync_status");
         bab.HasIndex(ba => ba.ExternalAccountId).IsUnique().HasDatabaseName("idx_bank_account_external_account_id_unique");
         bab.Property(ba => ba.ExternalAccountId).IsRequired().HasMaxLength(64);
-        bab.Property(ba => ba.Provider).IsRequired().HasMaxLength(20).HasDefaultValue("plaid");
+        bab.Property(ba => ba.Provider).IsRequired().HasMaxLength(20);
         bab.Property(ba => ba.BankName).IsRequired().HasMaxLength(255);
         bab.Property(ba => ba.AccountType).IsRequired().HasMaxLength(50);
         bab.Property(ba => ba.AccountNumberLast4).IsRequired().HasMaxLength(4);
@@ -39,7 +38,6 @@ public class BankSyncDbContext(DbContextOptions<BankSyncDbContext> options) : Db
         bab.Property(ba => ba.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
         bab.HasMany(ba => ba.Transactions).WithOne(t => t.Account).HasForeignKey(t => t.AccountId).OnDelete(DeleteBehavior.Cascade);
         bab.HasMany(ba => ba.SyncJobs).WithOne(sj => sj.Account).HasForeignKey(sj => sj.AccountId).OnDelete(DeleteBehavior.Cascade);
-        bab.HasOne(ba => ba.EncryptedCredential).WithOne(ec => ec.Account).HasForeignKey<EncryptedCredential>(ec => ec.AccountId).OnDelete(DeleteBehavior.Cascade);
         bab.HasOne(ba => ba.MonobankCredential).WithMany(mc => mc.BankAccounts).HasForeignKey(ba => ba.MonobankCredentialId).OnDelete(DeleteBehavior.SetNull).IsRequired(false);
         bab.HasOne(ba => ba.TrueLayerConnection).WithMany(tc => tc.BankAccounts).HasForeignKey(ba => ba.TrueLayerConnectionId).OnDelete(DeleteBehavior.SetNull).IsRequired(false);
 
@@ -127,18 +125,8 @@ public class BankSyncDbContext(DbContextOptions<BankSyncDbContext> options) : Db
         sjb.Property(sj => sj.TransactionCountFetched).HasDefaultValue(0);
         sjb.Property(sj => sj.TransactionCountDeduped).HasDefaultValue(0);
         sjb.Property(sj => sj.RetryCount).HasDefaultValue(0);
-        sjb.Property(sj => sj.WebhookTriggered).HasDefaultValue(false);
         sjb.HasIndex(sj => new { sj.AccountId, sj.Status }).HasDatabaseName("idx_sync_job_account_status");
         sjb.Property(sj => sj.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-        var ecb = modelBuilder.Entity<EncryptedCredential>();
-        ecb.HasKey(ec => ec.Id);
-        ecb.HasIndex(ec => ec.AccountId).IsUnique().HasDatabaseName("idx_encrypted_credential_account_id_unique");
-        ecb.Property(ec => ec.EncryptedData).IsRequired();
-        ecb.Property(ec => ec.Iv).IsRequired();
-        ecb.Property(ec => ec.AuthTag).IsRequired();
-        ecb.Property(ec => ec.KeyVersion).HasDefaultValue(1);
-        ecb.Property(ec => ec.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
 
         var alb = modelBuilder.Entity<AuditLog>();
         alb.ToTable("audit_logs");

@@ -2,21 +2,11 @@ import {type Provider, type ProviderDescriptor} from '../../models/provider/prov
 
 /**
  * Providers kept in the codebase but hidden from the connect picker.
- * Plaid stays scaffolded for the day a US bank account gets added — remove
- * the slug from this set to surface it again.
+ * Empty today; add a slug here to keep a provider wired but unlisted.
  */
-export const HIDDEN_PROVIDERS: ReadonlySet<Provider> = new Set<Provider>(['plaid']);
+export const HIDDEN_PROVIDERS: ReadonlySet<Provider> = new Set<Provider>();
 
 export const PROVIDER_CATALOG: readonly ProviderDescriptor[] = Object.freeze([
-  Object.freeze({
-    slug: 'plaid',
-    displayName: 'Plaid',
-    institutionType: 'bank',
-    description: 'Connect US, Canadian, or European banks via Plaid Link.',
-    iconAsset: '/assets/providers/plaid.svg',
-    formShape: 'plaid-link',
-    helpUrl: 'https://plaid.com/docs/link/',
-  }),
   Object.freeze({
     slug: 'monobank',
     displayName: 'Monobank',

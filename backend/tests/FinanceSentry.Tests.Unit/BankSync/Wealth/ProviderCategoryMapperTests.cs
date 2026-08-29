@@ -7,8 +7,8 @@ using Xunit;
 public class ProviderCategoryMapperTests
 {
     [Theory]
-    [InlineData("plaid", "banking")]
-    [InlineData("PLAID", "banking")]
+    [InlineData("truelayer", "banking")]
+    [InlineData("TRUELAYER", "banking")]
     [InlineData("monobank", "banking")]
     [InlineData("MONOBANK", "banking")]
     [InlineData("binance", "crypto")]

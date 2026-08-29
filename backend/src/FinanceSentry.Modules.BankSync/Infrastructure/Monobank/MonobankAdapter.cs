@@ -112,7 +112,6 @@ public class MonobankAdapter(MonobankHttpClient client, ICategoryResolver catego
                 TransactionType: txType,
                 MerchantName: t.CounterName,
                 MerchantCategory: ResolveCategory(t),
-                PlaidTransactionId: null,
                 Mcc: t.MCC);
         });
     }

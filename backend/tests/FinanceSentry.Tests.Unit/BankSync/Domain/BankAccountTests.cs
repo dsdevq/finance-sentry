@@ -32,9 +32,9 @@ public class BankAccountTests
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    public void Constructor_EmptyPlaidItemId_ThrowsArgumentException(string plaidItemId)
+    public void Constructor_EmptyExternalAccountId_ThrowsArgumentException(string externalAccountId)
     {
-        var act = () => new BankAccount(UserId, plaidItemId, "Bank", "checking", "1234", "John", "EUR", CreatorId);
+        var act = () => new BankAccount(UserId, externalAccountId, "Bank", "checking", "1234", "John", "EUR", CreatorId, "truelayer");
         act.Should().Throw<ArgumentException>().WithMessage("*ExternalAccountId*");
     }
 
@@ -43,7 +43,7 @@ public class BankAccountTests
     [InlineData("   ")]
     public void Constructor_EmptyBankName_ThrowsArgumentException(string bankName)
     {
-        var act = () => new BankAccount(UserId, "item_123", bankName, "checking", "1234", "John", "EUR", CreatorId);
+        var act = () => new BankAccount(UserId, "item_123", bankName, "checking", "1234", "John", "EUR", CreatorId, "truelayer");
         act.Should().Throw<ArgumentException>().WithMessage("*BankName*");
     }
 
@@ -53,7 +53,7 @@ public class BankAccountTests
     [InlineData("12AB")]  // non-digit
     public void Constructor_InvalidAccountNumberLast4_ThrowsArgumentException(string last4)
     {
-        var act = () => new BankAccount(UserId, "item_123", "AIB", "checking", last4, "John", "EUR", CreatorId);
+        var act = () => new BankAccount(UserId, "item_123", "AIB", "checking", last4, "John", "EUR", CreatorId, "truelayer");
         act.Should().Throw<ArgumentException>().WithMessage("*AccountNumberLast4*");
     }
 
@@ -159,7 +159,7 @@ public class BankAccountTests
     {
         var specificUserId = Guid.NewGuid();
         var account = new BankAccount(specificUserId, "item_xyz", "Revolut", "checking",
-            "5678", "Jane Doe", "GBP", specificUserId);
+            "5678", "Jane Doe", "GBP", specificUserId, "truelayer");
 
         account.UserId.Should().Be(specificUserId);
     }
@@ -198,5 +198,5 @@ public class BankAccountTests
 
     private static BankAccount MakeAccount()
         => new(UserId, "item_abc123", "AIB Ireland", "checking",
-            "1234", "John Doe", "EUR", CreatorId);
+            "1234", "John Doe", "EUR", CreatorId, "truelayer");
 }

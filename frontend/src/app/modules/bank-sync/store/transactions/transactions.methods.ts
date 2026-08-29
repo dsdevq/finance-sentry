@@ -8,7 +8,7 @@ import {
 } from './transactions.constants';
 import {type TransactionsState} from './transactions.state';
 
-const BANKING_PROVIDERS = new Set<TransactionProviderFilter>(['plaid', 'monobank', 'truelayer']);
+const BANKING_PROVIDERS = new Set<TransactionProviderFilter>(['monobank', 'truelayer']);
 
 interface TransactionsMethodsStore extends WritableStateSource<TransactionsState> {
   selectedProviders: Signal<TransactionProviderFilter[]>;

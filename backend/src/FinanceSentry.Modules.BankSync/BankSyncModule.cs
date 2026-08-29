@@ -13,9 +13,7 @@ using FinanceSentry.Modules.BankSync.Infrastructure.Monobank;
 using FinanceSentry.Modules.BankSync.Infrastructure.Performance;
 using FinanceSentry.Modules.BankSync.Infrastructure.Persistence;
 using FinanceSentry.Modules.BankSync.Infrastructure.Persistence.Repositories;
-using FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
 using FinanceSentry.Modules.BankSync.Infrastructure.TrueLayer;
-using FinanceSentry.Modules.BankSync.Infrastructure.Security;
 using FinanceSentry.Modules.BankSync.Infrastructure.Services;
 using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Infrastructure;
@@ -98,7 +96,6 @@ public static class BankSyncModule
         services.AddScoped<IBankAccountRepository, BankAccountRepository>();
         services.AddScoped<ITransactionRepository, TransactionRepository>();
         services.AddScoped<ISyncJobRepository, SyncJobRepository>();
-        services.AddScoped<IEncryptedCredentialRepository, EncryptedCredentialRepository>();
         services.AddScoped<IMonobankCredentialRepository, MonobankCredentialRepository>();
         services.AddScoped<ITrueLayerConnectionRepository, TrueLayerConnectionRepository>();
 
@@ -109,12 +106,6 @@ public static class BankSyncModule
 
         services.AddSingleton<ICategoryResolver, CategoryResolver>();
         services.AddScoped<ICategoryReadService, CategoryReadService>();
-
-        services.AddHttpClient<IPlaidClient, PlaidHttpClient>(client =>
-            client.BaseAddress = new Uri(config["Plaid:BaseUrl"] ?? "https://sandbox.plaid.com"));
-        services.AddScoped<PlaidAdapter>();
-        services.AddScoped<IPlaidAdapter>(sp => sp.GetRequiredService<PlaidAdapter>());
-        services.AddScoped<IBankProvider>(sp => sp.GetRequiredService<PlaidAdapter>());
 
         services.AddHttpClient<MonobankHttpClient>(client =>
             client.BaseAddress = new Uri(config["Monobank:BaseUrl"] ?? "https://api.monobank.ua"));
@@ -137,8 +128,6 @@ public static class BankSyncModule
         services.AddSingleton<CorrelationIdAccessor>();
         services.AddScoped<ICorrelationIdAccessor>(sp => sp.GetRequiredService<CorrelationIdAccessor>());
         services.AddScoped<IBankSyncLogger, BankSyncLogger>();
-        services.AddSingleton<IWebhookSignatureValidator, WebhookSignatureValidator>();
-        services.AddSingleton<IPlaidErrorMapper, PlaidErrorMapper>();
         services.AddScoped<IScheduledSyncService, ScheduledSyncService>();
         services.AddScoped<ITransactionSyncCoordinator, TransactionSyncCoordinator>();
 

@@ -36,10 +36,6 @@ services:
       # fs_readonly role by migration M001 and drops into it per query (SET LOCAL ROLE), so the same
       # DSN is safe here; a dedicated fs_readonly LOGIN can replace it in production for defense in depth.
       ConnectionStrings__ReadOnly: "Host=postgres;Port=5432;Database=finance_sentry;Username=finance_user;Password=finance_password;"
-      Plaid__BaseUrl: https://sandbox.plaid.com
-      Plaid__ClientId: ${PLAID_CLIENT_ID}
-      Plaid__Secret: ${PLAID_SECRET}
-      Plaid__Environment: sandbox
       TrueLayer__AuthBaseUrl: https://auth.truelayer.com
       TrueLayer__ApiBaseUrl: https://api.truelayer.com
       TrueLayer__ClientId: ${TRUELAYER_CLIENT_ID:-}

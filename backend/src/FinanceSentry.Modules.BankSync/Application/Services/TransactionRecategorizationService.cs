@@ -6,7 +6,6 @@ using FinanceSentry.Modules.BankSync.Domain;
 using FinanceSentry.Modules.BankSync.Domain.Interfaces;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
 using FinanceSentry.Modules.BankSync.Infrastructure.Monobank;
-using FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
 using FinanceSentry.Modules.BankSync.Infrastructure.TrueLayer;
 using Microsoft.Extensions.Logging;
 
@@ -28,9 +27,7 @@ public interface ITransactionRecategorizationService
 public class TransactionRecategorizationService(
     IBankAccountRepository accounts,
     ITransactionRepository transactions,
-    IEncryptedCredentialRepository credentials,
     ICredentialEncryptionService encryption,
-    IPlaidAdapter plaid,
     ITransactionDeduplicationService dedup,
     IBankProviderFactory providerFactory,
     IMonobankCredentialRepository monobankCredentials,
@@ -40,18 +37,13 @@ public class TransactionRecategorizationService(
     ICategoryResolver categoryResolver,
     ILogger<TransactionRecategorizationService> logger) : ITransactionRecategorizationService
 {
-    // Plaid /transactions/sync is paged; cap iterations so a bad cursor can't loop forever.
-    private const int MaxPlaidPages = 50;
-
     // Monobank statement API caps each request at 31 days and ~1 request per 60s per token.
     private const int MonobankWindowDays = 31;
     private static readonly TimeSpan MonobankThrottle = TimeSpan.FromSeconds(61);
 
     private readonly IBankAccountRepository _accounts = accounts;
     private readonly ITransactionRepository _transactions = transactions;
-    private readonly IEncryptedCredentialRepository _credentials = credentials;
     private readonly ICredentialEncryptionService _encryption = encryption;
-    private readonly IPlaidAdapter _plaid = plaid;
     private readonly ITransactionDeduplicationService _dedup = dedup;
     private readonly IBankProviderFactory _providerFactory = providerFactory;
     private readonly IMonobankCredentialRepository _monobankCredentials = monobankCredentials;
@@ -102,8 +94,8 @@ public class TransactionRecategorizationService(
 
     /// <summary>
     /// Pass 2 — provider re-fetch for rows with no stored raw signal (pre-overhaul rows).
-    /// Plaid pages its full history; Monobank walks 31-day windows from each account's oldest
-    /// uncategorized row to now (rate-limited); TrueLayer covers its ~90-day window.
+    /// Monobank walks 31-day windows from each account's oldest uncategorized row to now
+    /// (rate-limited); TrueLayer covers its ~90-day window.
     /// </summary>
     private async Task<int> ReFetchMissingSignalAsync(
         IReadOnlyList<BankAccount> userAccounts, IReadOnlyList<Transaction> txns, CancellationToken ct)
@@ -158,7 +150,7 @@ public class TransactionRecategorizationService(
         if (t.Mcc.HasValue)
             return _categoryResolver.ResolveMcc(t.Mcc);
         if (!string.IsNullOrWhiteSpace(t.SourceCategory))
-            return _categoryResolver.ResolvePlaidPrimary(t.SourceCategory);
+            return _categoryResolver.ResolveCanonicalKey(t.SourceCategory);
 
         // No structured signal (e.g. TrueLayer): recover from the free-text description.
         // A miss returns null so the row stays eligible for a provider re-fetch (pass 2).
@@ -173,29 +165,9 @@ public class TransactionRecategorizationService(
         {
             "monobank" => await FetchMonobankAsync(account, rows, ct),
             "truelayer" => await FetchTrueLayerAsync(account, ct),
-            _ => await FetchPlaidAsync(account, ct),
+            _ => throw new InvalidOperationException(
+                $"Unknown provider '{account.Provider}' for account {account.Id}."),
         };
-    }
-
-    private async Task<IReadOnlyList<TransactionCandidate>> FetchPlaidAsync(BankAccount account, CancellationToken ct)
-    {
-        var cred = await _credentials.GetByAccountIdAsync(account.Id, ct)
-            ?? throw new InvalidOperationException($"No Plaid credential for account {account.Id}.");
-        var accessToken = _encryption.Decrypt(cred.EncryptedData, cred.Iv, cred.AuthTag, cred.KeyVersion);
-
-        // Page through the full history from a null cursor; leave the stored incremental cursor untouched.
-        var all = new List<TransactionCandidate>();
-        string? cursor = null;
-        for (var page = 0; page < MaxPlaidPages; page++)
-        {
-            var (candidates, nextCursor) = await _plaid.SyncTransactionsAsync(
-                accessToken, account.Id, account.UserId, cursor, ct);
-            all.AddRange(candidates);
-            if (candidates.Count == 0 || nextCursor == cursor)
-                break;
-            cursor = nextCursor;
-        }
-        return all;
     }
 
     private async Task<IReadOnlyList<TransactionCandidate>> FetchMonobankAsync(

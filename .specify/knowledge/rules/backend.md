@@ -11,7 +11,7 @@ a concrete adapter directly.
 
 ```csharp
 // WRONG
-public class SyncService(PlaidClient client) { }
+public class SyncService(TrueLayerHttpClient client) { }
 
 // CORRECT
 public class SyncService(IBankProvider bankProvider) { }

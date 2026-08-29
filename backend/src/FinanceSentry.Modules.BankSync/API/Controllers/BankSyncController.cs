@@ -9,7 +9,6 @@ using FinanceSentry.Modules.BankSync.Application.Commands;
 using FinanceSentry.Modules.BankSync.Application.Queries;
 using FinanceSentry.Modules.BankSync.Application.Services;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
-using FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
 using Hangfire;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -17,7 +16,6 @@ using Microsoft.Extensions.Logging;
 [ApiController]
 [Route("accounts")]
 public class BankSyncController(
-    ICommandHandler<ConnectBankAccountCommand, ConnectBankAccountResult> connectHandler,
     ICommandHandler<ConnectMonobankAccountCommand, ConnectMonobankResult> connectMonobankHandler,
     IQueryHandler<GetAccountsQuery, GetAccountsResult> getAccountsHandler,
     IQueryHandler<GetAllTransactionsQuery, AllTransactionsResult> allTransactionsHandler,
@@ -27,7 +25,6 @@ public class BankSyncController(
     ICommandHandler<DisconnectInstitutionCommand, DisconnectInstitutionResult> disconnectInstitutionHandler,
     Microsoft.Extensions.Configuration.IConfiguration configuration,
     ILogger<BankSyncController> logger,
-    PlaidAdapter plaid,
     IBankAccountRepository accounts,
     ITransactionRepository transactions,
     IBackgroundJobClient backgroundJobs,
@@ -35,36 +32,12 @@ public class BankSyncController(
     ITransactionSyncCoordinator coordinator,
     FinanceSentry.Core.Interfaces.IAlertGeneratorService alerts) : ControllerBase
 {
-    private readonly PlaidAdapter _plaid = plaid;
     private readonly IBankAccountRepository _accounts = accounts;
     private readonly ITransactionRepository _transactions = transactions;
     private readonly IBackgroundJobClient _backgroundJobs = backgroundJobs;
     private readonly ISyncJobRepository _syncJobs = syncJobs;
     private readonly IQueryHandler<GetAllTransactionsQuery, AllTransactionsResult> _allTransactionsHandler = allTransactionsHandler;
     private readonly ITransactionSyncCoordinator _coordinator = coordinator;
-
-    // ── POST /api/accounts/connect ── T205 ───────────────────────────────────
-
-    [HttpPost("connect")]
-    public async Task<IActionResult> Connect(CancellationToken ct)
-    {
-        var result = await _plaid.CreateLinkTokenAsync(User.RequireUserId(), ct);
-        return Ok(new LinkTokenResponse(
-            result.LinkToken,
-            (int)result.ExpiresIn.TotalSeconds,
-            result.RequestId));
-    }
-
-    // ── POST /api/accounts/link ── T206 ──────────────────────────────────────
-
-    [HttpPost("link")]
-    public async Task<IActionResult> Link([FromBody] LinkRequest request, CancellationToken ct)
-    {
-        var result = await connectHandler.Handle(new ConnectBankAccountCommand(
-            User.RequireUserId(), request.PublicToken, request.InstitutionName), ct);
-
-        return Ok(result);
-    }
 
     // ── GET /api/accounts ── T207 ────────────────────────────────────────────
 
@@ -192,9 +165,8 @@ public class BankSyncController(
     }
 
     // ── DELETE /api/v1/accounts/institutions/{provider}/{institutionId} ──
-    // Institution-level disconnect: removes a Monobank credential, TrueLayer
-    // connection, or Plaid account and cascades to every child sub-account,
-    // transaction, and alert.
+    // Institution-level disconnect: removes a Monobank credential or TrueLayer
+    // connection and cascades to every child sub-account, transaction, and alert.
 
     [HttpDelete("institutions/{provider}/{institutionId:guid}")]
     public async Task<IActionResult> DisconnectInstitution(string provider, Guid institutionId, CancellationToken ct)

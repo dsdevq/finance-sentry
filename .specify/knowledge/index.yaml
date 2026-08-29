@@ -189,7 +189,7 @@ rules:
 
   - id: TEST-003
     category: [testing]
-    text: "Contract tests required for every external API integration (Plaid, IB, Binance)"
+    text: "Contract tests required for every external API integration (TrueLayer, IB, Binance)"
     source_file: rules/testing.md
     added: "2026-04-18"
     enabled: true

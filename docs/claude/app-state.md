@@ -17,7 +17,7 @@ backend/
           JwtAuthenticationMiddleware.cs  # JWT validation; exempt: /health, /api/v1/health, /swagger, /api/webhook, /hangfire
       Application/                        # CQRS commands/queries (MediatR)
       Domain/                             # Entities, interfaces, repositories
-      Infrastructure/                     # EF Core, Plaid HTTP client, encryption
+      Infrastructure/                     # EF Core, provider HTTP clients, encryption
 
 frontend/
   src/app/

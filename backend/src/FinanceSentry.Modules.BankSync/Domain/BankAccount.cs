@@ -8,7 +8,7 @@ public class BankAccount : Entity
 
     public string ExternalAccountId { get; set; } = string.Empty;
 
-    public string Provider { get; set; } = "plaid";
+    public string Provider { get; set; } = string.Empty;
 
     public Guid? MonobankCredentialId { get; set; }
 
@@ -54,7 +54,6 @@ public class BankAccount : Entity
 
     public ICollection<Transaction> Transactions { get; set; } = [];
     public ICollection<SyncJob> SyncJobs { get; set; } = [];
-    public EncryptedCredential? EncryptedCredential { get; set; }
     public MonobankCredential? MonobankCredential { get; set; }
     public TrueLayerConnection? TrueLayerConnection { get; set; }
 
@@ -62,8 +61,10 @@ public class BankAccount : Entity
 
     public BankAccount(Guid userId, string externalAccountId, string bankName, string accountType,
         string accountNumberLast4, string ownerName, string currency, Guid createdBy,
-        string provider = "plaid")
+        string provider)
     {
+        if (string.IsNullOrWhiteSpace(provider))
+            throw new ArgumentException("Provider cannot be empty.", nameof(provider));
         if (string.IsNullOrWhiteSpace(externalAccountId))
             throw new ArgumentException("ExternalAccountId cannot be empty.", nameof(externalAccountId));
         if (string.IsNullOrWhiteSpace(bankName))

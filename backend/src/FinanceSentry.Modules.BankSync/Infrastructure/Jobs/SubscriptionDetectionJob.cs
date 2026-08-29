@@ -3,17 +3,13 @@ namespace FinanceSentry.Modules.BankSync.Infrastructure.Jobs;
 using System.Text.RegularExpressions;
 using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Core.Utils;
-using FinanceSentry.Infrastructure.Encryption;
 using FinanceSentry.Modules.BankSync.Application.Services;
 using FinanceSentry.Modules.BankSync.Infrastructure.Persistence;
-using FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 public sealed class SubscriptionDetectionJob(
     BankSyncDbContext db,
-    IPlaidClient plaid,
-    ICredentialEncryptionService encryption,
     ISubscriptionDetectionResultService resultService,
     ILogger<SubscriptionDetectionJob> logger)
 {
@@ -75,101 +71,14 @@ public sealed class SubscriptionDetectionJob(
 
     public async Task ExecuteAsync(CancellationToken ct = default)
     {
-        await ProcessPlaidAccountsAsync(ct);
-        await ProcessNonPlaidAccountsAsync(ct);
-    }
-
-    private async Task ProcessPlaidAccountsAsync(CancellationToken ct)
-    {
-        var plaidAccounts = await db.BankAccounts
-            .AsNoTracking()
-            .Where(a => a.IsActive && a.Provider == "plaid")
-            .Join(db.EncryptedCredentials, a => a.Id, c => c.AccountId,
-                (a, c) => new { a.UserId, a.Currency, Cred = c })
-            .ToListAsync(ct);
-
-        var byUser = plaidAccounts.GroupBy(x => x.UserId);
-
-        foreach (var userGroup in byUser)
-        {
-            var userId = userGroup.Key.ToString();
-
-            try
-            {
-                var results = new List<DetectedSubscriptionData>();
-
-                foreach (var item in userGroup)
-                {
-                    string accessToken;
-                    try
-                    {
-                        accessToken = encryption.Decrypt(
-                            item.Cred.EncryptedData, item.Cred.Iv, item.Cred.AuthTag, item.Cred.KeyVersion);
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogWarning(ex, "Failed to decrypt Plaid token for user {UserId}", userId);
-                        continue;
-                    }
-
-                    PlaidRecurringResponse recurring;
-                    try
-                    {
-                        recurring = await plaid.GetRecurringTransactionsAsync(accessToken, ct);
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogWarning(ex, "Plaid recurring API call failed for user {UserId}", userId);
-                        continue;
-                    }
-
-                    foreach (var stream in recurring.OutflowStreams)
-                    {
-                        if (stream.AverageAmount <= 0) continue;
-
-                        var cadence = MapFrequency(stream.Frequency);
-                        if (cadence is null) continue;
-
-                        var lastDate = stream.LastDate is not null
-                            ? DateOnly.Parse(stream.LastDate)
-                            : DateOnly.FromDateTime(DateTime.UtcNow);
-
-                        var nextDate = cadence == "annual"
-                            ? lastDate.AddYears(1)
-                            : lastDate.AddMonths(1);
-
-                        var confidence = stream.Status == "MATURE" ? 90 : 60;
-
-                        results.Add(new DetectedSubscriptionData(
-                            MerchantNameNormalized: MerchantNameNormalizer.Normalize(stream.MerchantName ?? stream.Description),
-                            MerchantNameDisplay: stream.MerchantName ?? stream.Description,
-                            Cadence: cadence,
-                            AverageAmount: stream.AverageAmount,
-                            LastKnownAmount: stream.LastAmount,
-                            Currency: stream.IsoCurrencyCode ?? item.Currency ?? "USD",
-                            LastChargeDate: lastDate,
-                            NextExpectedDate: nextDate,
-                            OccurrenceCount: stream.TransactionIds.Count,
-                            ConfidenceScore: confidence,
-                            Category: stream.PersonalFinanceCategory));
-                    }
-                }
-
-                await resultService.UpsertDetectedSubscriptionsAsync(userId, results, ct);
-                await resultService.MarkStaleAsPotentiallyCancelledAsync(userId, ct);
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, "Plaid subscription detection failed for user {UserId}", userId);
-            }
-        }
+        await ProcessAccountsAsync(ct);
     }
 
     public sealed record TxRow(
         Guid UserId, string? MerchantName, string? Description, decimal Amount,
         DateTime TransactionDate, string? MerchantCategory, int? Mcc, string? Currency);
 
-    private async Task ProcessNonPlaidAccountsAsync(CancellationToken ct)
+    private async Task ProcessAccountsAsync(CancellationToken ct)
     {
         var cutoff = DateTime.UtcNow.AddMonths(-LookbackMonths);
 
@@ -180,7 +89,7 @@ public sealed class SubscriptionDetectionJob(
                      && t.Amount != 0m   // skip €0.00 auth holds / reversals that skew amount stability
                      && t.TransactionDate >= cutoff
                      && (t.TransactionType == null || t.TransactionType == "debit"))
-            .Join(db.BankAccounts.Where(a => a.IsActive && a.Provider != "plaid"),
+            .Join(db.BankAccounts.Where(a => a.IsActive),
                 t => t.AccountId, a => a.Id, (t, a) => new TxRow(
                     t.UserId, t.MerchantName, t.Description, t.Amount,
                     t.TransactionDate, t.MerchantCategory, t.Mcc, a.Currency))
@@ -471,16 +380,6 @@ public sealed class SubscriptionDetectionJob(
         }
         return false;
     }
-
-    private static string? MapFrequency(string frequency) => frequency switch
-    {
-        "WEEKLY" => "monthly",
-        "BIWEEKLY" => "monthly",
-        "SEMI_MONTHLY" => "monthly",
-        "MONTHLY" => "monthly",
-        "ANNUALLY" => "annual",
-        _ => null
-    };
 
     private static double Median(List<int> values)
     {

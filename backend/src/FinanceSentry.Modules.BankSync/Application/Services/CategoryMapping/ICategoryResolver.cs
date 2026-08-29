@@ -13,10 +13,11 @@ public interface ICategoryResolver
     string ResolveMcc(int? mcc);
 
     /// <summary>
-    /// Resolves a Plaid PFC primary (which is itself a canonical key). Returns the
-    /// canonical key when known, otherwise UNCATEGORIZED.
+    /// Validates a stored raw category signal against the canonical key set (the signal is
+    /// itself a canonical key when it came from a PFC-style source). Returns the canonical
+    /// key when known, otherwise UNCATEGORIZED.
     /// </summary>
-    string ResolvePlaidPrimary(string? primary);
+    string ResolveCanonicalKey(string? primary);
 
     /// <summary>
     /// Resolves a category from a free-text transaction description via the runtime-editable

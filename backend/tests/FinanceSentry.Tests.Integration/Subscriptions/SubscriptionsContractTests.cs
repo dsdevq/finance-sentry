@@ -1,4 +1,4 @@
-namespace FinanceSentry.Tests.Integration.Subscriptions;
+﻿namespace FinanceSentry.Tests.Integration.Subscriptions;
 
 using System.Net;
 using System.Net.Http.Json;
@@ -160,8 +160,6 @@ public class SubscriptionsApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Encryption:CurrentKeyVersion", "1");
         builder.UseSetting("Encryption:Keys:1",
             "dGVzdGtleS10ZXN0a2V5LXRlc3RrZXktdGVzdGtleTA=");
-        builder.UseSetting("Plaid:ClientId", "test-client-id");
-        builder.UseSetting("Plaid:Secret", "test-secret");
         builder.UseSetting("Jwt:Secret",
             "test-jwt-secret-key-for-integration-tests-minimum-32-chars");
     }

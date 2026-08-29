@@ -93,7 +93,7 @@ public class StaleSyncReaperJobTests
     private static BankAccount MakeSyncingAccount()
     {
         var account = new BankAccount(UserId, "item_abc123", "REVOLUT-IE", "checking",
-            "1234", "John Doe", "EUR", UserId);
+            "1234", "John Doe", "EUR", UserId, "truelayer");
         account.BeginSync();
         return account;
     }

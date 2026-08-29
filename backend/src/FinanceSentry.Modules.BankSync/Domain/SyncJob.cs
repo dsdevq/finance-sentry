@@ -44,7 +44,7 @@ public class SyncJob : Entity
     public string? ErrorMessage { get; set; }
 
     /// <summary>
-    /// Plaid error code (e.g., ITEM_LOGIN_REQUIRED, RATE_LIMIT_EXCEEDED).
+    /// Provider error code (e.g., ITEM_LOGIN_REQUIRED, MONOBANK_RATE_LIMITED).
     /// </summary>
     public string? ErrorCode { get; set; }
 
@@ -54,7 +54,7 @@ public class SyncJob : Entity
     public int TransactionsSynced { get; set; }
 
     /// <summary>
-    /// Total transactions fetched from Plaid during this job.
+    /// Total transactions fetched from the provider during this job.
     /// </summary>
     public int TransactionCountFetched { get; set; }
 
@@ -72,11 +72,6 @@ public class SyncJob : Entity
     /// Number of retry attempts for this job.
     /// </summary>
     public int RetryCount { get; set; } = 0;
-
-    /// <summary>
-    /// Whether this sync was triggered by a Plaid webhook.
-    /// </summary>
-    public bool WebhookTriggered { get; set; } = false;
 
     /// <summary>
     /// Navigation property to parent account.

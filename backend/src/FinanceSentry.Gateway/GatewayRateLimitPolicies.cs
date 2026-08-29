@@ -10,7 +10,4 @@ public static class GatewayRateLimitPolicies
 {
     /// <summary>Per-client limit on unauthenticated auth endpoints (login, register, refresh, google).</summary>
     public const string Auth = "auth";
-
-    /// <summary>Per-client limit on inbound webhook endpoints (e.g. Plaid).</summary>
-    public const string Webhook = "webhook";
 }

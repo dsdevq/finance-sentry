@@ -72,7 +72,7 @@ public class FinalizeTrueLayerConnectCommandHandler(
                 // Best-effort: skip balance, account is still usable.
             }
 
-            var existing = await accounts.GetByPlaidItemIdAsync(pa.AccountId, cancellationToken);
+            var existing = await accounts.GetByExternalAccountIdAsync(pa.AccountId, cancellationToken);
             if (existing != null)
             {
                 // Reconnect/reauth: heal the existing account in place instead of skipping it.
@@ -113,7 +113,7 @@ public class FinalizeTrueLayerConnectCommandHandler(
             try
             {
                 await syncService.PerformFullSyncAsync(
-                    accountId, webhookTriggered: false, ct: cancellationToken,
+                    accountId, ct: cancellationToken,
                     preAcquiredTrueLayerAccessToken: tokens.AccessToken);
             }
             catch (Exception ex)

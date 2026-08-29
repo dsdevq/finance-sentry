@@ -43,7 +43,7 @@ Always target this project. Do not use the older "Finance Sentry" project (`1153
 
 ## Finance Sentry design context (source of truth for prompts)
 
-- **App**: Personal finance aggregator. Banks (Plaid, Monobank), crypto (Binance), brokerage (IBKR). Single user, power tool.
+- **App**: Personal finance aggregator. Banks (TrueLayer, Monobank), crypto (Binance), brokerage (IBKR). Single user, power tool.
 - **Vibe**: Institutional ops dashboard, not a consumer app. Data-dense. Numbers are the hero.
 - **Color**: Indigo primary (`#4F46E5`) on primary actions and key numbers. Everything else neutral grays. Status: green `#10B981` = gains/synced, red `#EF4444` = losses/errors, amber `#F59E0B` = stale/warning.
 - **Type**: Inter throughout. Tabular monospaced numerals for all money, right-aligned.

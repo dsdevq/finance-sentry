@@ -5,7 +5,6 @@ using System.Net.Http.Json;
 using System.Security.Claims;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
 using FinanceSentry.Modules.BankSync.Infrastructure.Persistence;
-using FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -19,40 +18,17 @@ using Xunit;
 
 /// <summary>
 /// REST API contract tests (T215).
-/// Validates response shapes for all US1 endpoints:
-///   POST /accounts/connect
-///   POST /accounts/link
+/// Validates response shapes for the US1 endpoints:
 ///   GET  /accounts
 ///   GET  /accounts/{id}/transactions
 ///
 /// Uses WebApplicationFactory with mocked infrastructure dependencies
-/// (no real Plaid calls, no real database).
+/// (no real provider calls, no real database).
 /// </summary>
 public class BankSyncAPIContractTests(BankSyncApiFactory factory) : IClassFixture<BankSyncApiFactory>
 {
     private readonly HttpClient _client = factory.CreateAuthenticatedClient();
     private readonly BankSyncApiFactory _factory = factory;
-
-    // ── POST /accounts/connect ───────────────────────────────────────────────
-
-    [Fact]
-    public async Task PostConnect_Returns200_WithLinkTokenShape()
-    {
-        _factory.PlaidClientMock
-            .Setup(c => c.CreateLinkTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new PlaidLinkTokenResponse(
-                "link-sandbox-test-token",
-                "req_001",
-                DateTime.UtcNow.AddMinutes(30)));
-
-        var response = await _client.PostAsync("/api/v1/accounts/connect",
-            JsonContent.Create(new { userId = Guid.NewGuid() }));
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var body = await response.Content.ReadFromJsonAsync<ConnectResponse>();
-        body!.LinkToken.Should().NotBeNullOrWhiteSpace();
-        body.ExpiresIn.Should().BeGreaterThan(0);
-    }
 
     // ── GET /accounts ────────────────────────────────────────────────────────
 
@@ -92,7 +68,8 @@ public class BankSyncAPIContractTests(BankSyncApiFactory factory) : IClassFixtur
                 accountNumberLast4: "1234",
                 ownerName: "Other Person",
                 currency: "EUR",
-                createdBy: Guid.NewGuid()));
+                createdBy: Guid.NewGuid(),
+                provider: "truelayer"));
 
         var url = $"/api/v1/accounts/{accountId}/transactions?userId={requestingUserId}";
         var response = await _client.GetAsync(url);
@@ -117,7 +94,8 @@ public class BankSyncAPIContractTests(BankSyncApiFactory factory) : IClassFixtur
                 accountNumberLast4: "5678",
                 ownerName: "Jane Doe",
                 currency: "EUR",
-                createdBy: userId));
+                createdBy: userId,
+                provider: "truelayer"));
 
         _factory.TransactionRepoMock
             .Setup(r => r.GetByAccountIdAsync(accountId, It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
@@ -139,7 +117,6 @@ public class BankSyncAPIContractTests(BankSyncApiFactory factory) : IClassFixtur
 
     // ── Response shape records (contract definitions) ────────────────────────
 
-    private record ConnectResponse(string LinkToken, int ExpiresIn, string RequestId);
     private record AccountsListResponse(object[] Accounts, int TotalCount, object CurrencyTotals);
     private record TransactionsListResponse(string AccountId, string BankName, string Currency,
         object[] Items, int TotalCount, int Offset, int Limit, bool HasMore);
@@ -150,7 +127,6 @@ public class BankSyncAPIContractTests(BankSyncApiFactory factory) : IClassFixtur
 /// </summary>
 public class BankSyncApiFactory : WebApplicationFactory<Program>
 {
-    public Mock<IPlaidClient> PlaidClientMock { get; } = new(MockBehavior.Loose);
     public Mock<IBankAccountRepository> BankAccountRepoMock { get; } = new(MockBehavior.Loose);
     public Mock<ITransactionRepository> TransactionRepoMock { get; } = new(MockBehavior.Loose);
 
@@ -159,7 +135,6 @@ public class BankSyncApiFactory : WebApplicationFactory<Program>
         builder.ConfigureServices(services =>
         {
             // Override real infrastructure with mocks
-            ReplaceService(services, PlaidClientMock.Object);
             ReplaceService(services, BankAccountRepoMock.Object);
             ReplaceService(services, TransactionRepoMock.Object);
 
@@ -189,8 +164,6 @@ public class BankSyncApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Encryption:CurrentKeyVersion", "1");
         builder.UseSetting("Encryption:Keys:1",
             "dGVzdGtleS10ZXN0a2V5LXRlc3RrZXktdGVzdGtleTA=");
-        builder.UseSetting("Plaid:ClientId", "test-client-id");
-        builder.UseSetting("Plaid:Secret", "test-secret");
         builder.UseSetting("Jwt:Secret",
             "test-jwt-secret-key-for-integration-tests-minimum-32-chars");
     }

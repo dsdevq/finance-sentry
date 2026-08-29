@@ -19,13 +19,6 @@ export interface AccountsResponse {
   currency_totals: Record<string, number>;
 }
 
-export interface ConnectResponse {
-  linkToken: string;
-  expiresIn: number;
-  expiresAt: string;
-  requestId: string;
-}
-
 export interface ConnectedMonobankAccount {
   id: string;
   bankName: string;
@@ -40,12 +33,4 @@ export interface ConnectedMonobankAccount {
 
 export interface ConnectMonobankResponse {
   accounts: ConnectedMonobankAccount[];
-}
-
-export interface LinkAccountResponse extends AccountIdentity {
-  ownerName: string;
-  initialBalance: number;
-  syncStatus: string;
-  lastSyncTimestamp: Nullable<string>;
-  message: string;
 }

@@ -13,8 +13,6 @@ using FinanceSentry.Modules.BankSync.Application.Services;
 using FinanceSentry.Modules.BankSync.Domain;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
 using FinanceSentry.Modules.BankSync.Infrastructure.Monobank;
-using FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
-using FinanceSentry.Tests.Unit.BankSync.Infrastructure;
 using FluentAssertions;
 using Hangfire;
 using Microsoft.AspNetCore.Http;
@@ -178,7 +176,6 @@ public class ConnectMonobankContractTests
     private BankSyncController CreateController()
     {
         var controller = new BankSyncController(
-            new Mock<ICommandHandler<ConnectBankAccountCommand, ConnectBankAccountResult>>().Object,
             CreateHandler(),
             new Mock<IQueryHandler<GetAccountsQuery, GetAccountsResult>>().Object,
             new Mock<IQueryHandler<GetAllTransactionsQuery, AllTransactionsResult>>().Object,
@@ -188,7 +185,6 @@ public class ConnectMonobankContractTests
             new Mock<ICommandHandler<DisconnectInstitutionCommand, DisconnectInstitutionResult>>().Object,
             new Mock<IConfiguration>().Object,
             NullLogger<BankSyncController>.Instance,
-            new PlaidAdapter(new Mock<IPlaidClient>().Object, StubCategoryResolver.Instance),
             _accounts.Object,
             new Mock<ITransactionRepository>().Object,
             _backgroundJobs.Object,

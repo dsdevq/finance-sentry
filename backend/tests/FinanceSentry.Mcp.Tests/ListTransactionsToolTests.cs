@@ -83,7 +83,7 @@ public sealed class ListTransactionsToolTests
         _accountsReader
             .Setup(r => r.GetAccountSummariesAsync(UserId, It.IsAny<CancellationToken>()))
             .ReturnsAsync([
-                new BankingAccountSummary(accountId, "TestBank", "checking", "1234", "plaid", "EUR", 1000m, null, "active", null)
+                new BankingAccountSummary(accountId, "TestBank", "checking", "1234", "truelayer", "EUR", 1000m, null, "active", null)
             ]);
 
         var result = await CreateSut().ExecuteAsync(UserId);
@@ -93,7 +93,7 @@ public sealed class ListTransactionsToolTests
         entry.AccountId.Should().Be(accountId.ToString());
         entry.Amount.Should().Be(100m);
         entry.Currency.Should().Be("EUR");
-        entry.Provider.Should().Be("plaid");
+        entry.Provider.Should().Be("truelayer");
         entry.Description.Should().Be("Test description");
     }
 

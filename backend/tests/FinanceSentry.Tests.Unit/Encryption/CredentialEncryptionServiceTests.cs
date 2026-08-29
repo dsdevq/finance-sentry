@@ -37,7 +37,7 @@ public class CredentialEncryptionServiceTests
     [Fact]
     public void Encrypt_ThenDecrypt_ReturnsOriginalPlaintext()
     {
-        const string original = "access-sandbox-abc123-plaid-token";
+        const string original = "access-sandbox-abc123-provider-token";
 
         var result = _sut.Encrypt(original);
         var decrypted = _sut.Decrypt(result.Ciphertext, result.Iv, result.AuthTag, result.KeyVersion);
@@ -121,7 +121,7 @@ public class CredentialEncryptionServiceTests
 
     [Theory]
     [InlineData("short")]
-    [InlineData("access-sandbox-abc123xyz-plaid-long-token-value")]
+    [InlineData("access-sandbox-abc123xyz-provider-long-token-value")]
     [InlineData("access-sandbox-abc123xyz-1234567890-abcdef-ghijkl-mnopqr")]
     public void Encrypt_Decrypt_Works_ForVariousTokenLengths(string token)
     {

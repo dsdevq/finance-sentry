@@ -6,7 +6,7 @@ using FinanceSentry.Modules.BankSync.Infrastructure.Categorization;
 
 /// <summary>
 /// Test double mirroring <c>CategoryResolver</c> semantics without a database:
-/// Plaid primaries pass through (uppercased); MCCs classify via the range rules.
+/// Canonical keys pass through (uppercased); MCCs classify via the range rules.
 /// </summary>
 internal sealed class StubCategoryResolver : ICategoryResolver
 {
@@ -15,7 +15,7 @@ internal sealed class StubCategoryResolver : ICategoryResolver
     public string ResolveMcc(int? mcc)
         => mcc is null ? CategoryKeys.Uncategorized : MccRangeClassifier.Classify(mcc.Value);
 
-    public string ResolvePlaidPrimary(string? primary)
+    public string ResolveCanonicalKey(string? primary)
         => string.IsNullOrWhiteSpace(primary) ? CategoryKeys.Uncategorized : primary.Trim().ToUpperInvariant();
 
     // Minimal keyword set + transfer prefix so adapter/service tests can exercise the fallback.

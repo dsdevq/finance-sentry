@@ -4,7 +4,6 @@ public static class ProviderCategoryMapper
 {
     private static readonly Dictionary<string, string> Map = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["plaid"] = "banking",
         ["monobank"] = "banking",
         ["truelayer"] = "banking",
         ["binance"] = "crypto",

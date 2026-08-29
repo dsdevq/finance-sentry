@@ -100,7 +100,6 @@ public class TrueLayerAdapter(
                 TransactionType: txType,
                 MerchantName: t.MerchantName,
                 MerchantCategory: category,
-                PlaidTransactionId: null,
                 SourceCategory: sourceCategory);
         }
     }

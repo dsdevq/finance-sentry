@@ -58,11 +58,11 @@ modules/bank-sync/
   models/
     transaction/
       transaction.model.ts
-    plaid/
-      plaid.model.ts
+    monobank/
+      monobank.model.ts
   constants/
-    plaid/
-      plaid.constants.ts
+    monobank/
+      monobank.constants.ts
   enums/
     bank-sync-route/
       bank-sync-route.enum.ts
@@ -71,7 +71,7 @@ modules/bank-sync/
 Rules:
 - Three sibling trees: `models/`, `constants/`, `enums/`. **Never** put a `.constants.ts` inside `models/<entity>/`, never put a `.enum.ts` inside `models/<entity>/`. Each file type has its own tree.
 - Within a tree, every file lives in a per-entity folder named for the entity (kebab-case, singular): `models/transaction/transaction.model.ts`, not `models/transaction.model.ts`.
-- File names are prefixed with the entity name: `transaction.model.ts`, `plaid.constants.ts`. No bare `model.ts` / `index.ts` re-exports.
+- File names are prefixed with the entity name: `transaction.model.ts`, `monobank.constants.ts`. No bare `model.ts` / `index.ts` re-exports.
 - Single-file entities are still in a folder — `enums/app-route/app-route.enum.ts`, not a flat `enums/app-route.enum.ts`. Future siblings for that entity have a home without restructuring later.
 - File suffix `.models.ts` (plural) is a violation — use singular `.model.ts`.
 

@@ -52,7 +52,7 @@ public class WealthAggregationServiceTests
     [Fact]
     public async Task GetWealthSummary_NonMonobank_HasNoCardGrouping()
     {
-        var svc = BuildService([MakeAccount("plaid", "USD", 1000m)]);
+        var svc = BuildService([MakeAccount("truelayer", "USD", 1000m)]);
         var result = await svc.GetWealthSummaryAsync(UserId, null, null);
 
         result.Categories.Single().Institutions.Single().Cards.Should().BeNull();
@@ -80,7 +80,7 @@ public class WealthAggregationServiceTests
     {
         var accounts = new[]
         {
-            MakeAccount("plaid", "USD", 1000m),
+            MakeAccount("truelayer", "USD", 1000m),
             MakeAccount("monobank", "UAH", 100000m),
         };
 
@@ -98,7 +98,7 @@ public class WealthAggregationServiceTests
         // so the frozen balance shows as stale rather than current (Revolut/AIB lapse case).
         var accounts = new[]
         {
-            MakeAccount("plaid", "USD", 1000m, lastSuccessfulSync: DateTime.UtcNow.AddDays(-4)),
+            MakeAccount("truelayer", "USD", 1000m, lastSuccessfulSync: DateTime.UtcNow.AddDays(-4)),
         };
 
         var svc = BuildService(accounts);
@@ -110,7 +110,7 @@ public class WealthAggregationServiceTests
     [Fact]
     public async Task GetWealthSummary_BankingSyncedRecently_NotStale()
     {
-        var accounts = new[] { MakeAccount("plaid", "USD", 1000m, lastSuccessfulSync: DateTime.UtcNow.AddHours(-2)) };
+        var accounts = new[] { MakeAccount("truelayer", "USD", 1000m, lastSuccessfulSync: DateTime.UtcNow.AddHours(-2)) };
 
         var svc = BuildService(accounts);
         var result = await svc.GetWealthSummaryAsync(UserId, null, null);
@@ -123,8 +123,8 @@ public class WealthAggregationServiceTests
     {
         var accounts = new[]
         {
-            MakeAccount("plaid", "USD", 500m),
-            new BankingAccountSummary(Guid.NewGuid(), "Test Bank", "checking", "1234", "plaid", "USD", null, null, "synced", null),
+            MakeAccount("truelayer", "USD", 500m),
+            new BankingAccountSummary(Guid.NewGuid(), "Test Bank", "checking", "1234", "truelayer", "USD", null, null, "synced", null),
         };
 
         var svc = BuildService(accounts);
@@ -150,7 +150,7 @@ public class WealthAggregationServiceTests
     {
         var accounts = new[]
         {
-            MakeAccount("plaid", "USD", 1000m),
+            MakeAccount("truelayer", "USD", 1000m),
             MakeAccount("binance", "USD", 500m),
         };
 
@@ -167,7 +167,7 @@ public class WealthAggregationServiceTests
     {
         var accounts = new[]
         {
-            MakeAccount("plaid", "USD", 1000m),
+            MakeAccount("truelayer", "USD", 1000m),
             MakeAccount("monobank", "USD", 500m),
         };
 
@@ -181,7 +181,7 @@ public class WealthAggregationServiceTests
     [Fact]
     public async Task GetWealthSummary_UnknownProvider_ReturnsEmpty()
     {
-        var accounts = new[] { MakeAccount("plaid", "USD", 1000m) };
+        var accounts = new[] { MakeAccount("truelayer", "USD", 1000m) };
 
         var svc = BuildService(accounts);
         var result = await svc.GetWealthSummaryAsync(UserId, null, "nonexistent_bank");
@@ -207,12 +207,12 @@ public class WealthAggregationServiceTests
         var date = new DateTime(2026, 4, 15, 0, 0, 0, DateTimeKind.Utc);
         var txs = new[]
         {
-            MakeTx(accountId, "plaid", 100m, "debit", date),
-            MakeTx(accountId, "plaid", 200m, "debit", date),
-            MakeTx(accountId, "plaid", 300m, "credit", date),
+            MakeTx(accountId, "truelayer", 100m, "debit", date),
+            MakeTx(accountId, "truelayer", 200m, "debit", date),
+            MakeTx(accountId, "truelayer", 300m, "credit", date),
         };
 
-        var svc = BuildService([MakeAccount("plaid", "USD", 1000m)], txs);
+        var svc = BuildService([MakeAccount("truelayer", "USD", 1000m)], txs);
         var result = await svc.GetTransactionSummaryAsync(UserId, new DateOnly(2026, 4, 1), new DateOnly(2026, 4, 30), null, null);
 
         result.TotalDebits.Should().Be(300m);
@@ -230,11 +230,11 @@ public class WealthAggregationServiceTests
         var date = new DateTime(2026, 4, 15, 0, 0, 0, DateTimeKind.Utc);
         var txs = new[]
         {
-            MakeTx(usdAcct, "plaid", 100m, "debit", date),
+            MakeTx(usdAcct, "truelayer", 100m, "debit", date),
             MakeTx(uahAcct, "monobank", 10000m, "debit", date, currency: "UAH"),
         };
 
-        var svc = BuildService([MakeAccount("plaid", "USD", 1000m), MakeAccount("monobank", "UAH", 50000m)], txs);
+        var svc = BuildService([MakeAccount("truelayer", "USD", 1000m), MakeAccount("monobank", "UAH", 50000m)], txs);
         var result = await svc.GetTransactionSummaryAsync(UserId, new DateOnly(2026, 4, 1), new DateOnly(2026, 4, 30), null, null);
 
         result.TotalDebits.Should().Be(340m);
@@ -243,7 +243,7 @@ public class WealthAggregationServiceTests
     [Fact]
     public async Task GetTransactionSummary_EmptyWindow_ReturnsZeros()
     {
-        var svc = BuildService([MakeAccount("plaid", "USD", 1000m)], []);
+        var svc = BuildService([MakeAccount("truelayer", "USD", 1000m)], []);
         var result = await svc.GetTransactionSummaryAsync(UserId, new DateOnly(2026, 4, 1), new DateOnly(2026, 4, 30), null, null);
 
         result.TotalDebits.Should().Be(0m);
@@ -257,11 +257,11 @@ public class WealthAggregationServiceTests
         var date = new DateTime(2026, 4, 15, 0, 0, 0, DateTimeKind.Utc);
         var txs = new[]
         {
-            MakeTx(Guid.NewGuid(), "plaid", 100m, "debit", date),
+            MakeTx(Guid.NewGuid(), "truelayer", 100m, "debit", date),
             MakeTx(Guid.NewGuid(), "monobank", 200m, "debit", date),
         };
 
-        var svc = BuildService([MakeAccount("plaid", "USD", 1000m), MakeAccount("monobank", "UAH", 50000m)], txs);
+        var svc = BuildService([MakeAccount("truelayer", "USD", 1000m), MakeAccount("monobank", "UAH", 50000m)], txs);
         var result = await svc.GetTransactionSummaryAsync(UserId, new DateOnly(2026, 4, 1), new DateOnly(2026, 4, 30), null, "monobank");
 
         result.TotalDebits.Should().Be(200m);
@@ -274,11 +274,11 @@ public class WealthAggregationServiceTests
         var date = new DateTime(2026, 4, 15, 0, 0, 0, DateTimeKind.Utc);
         var txs = new[]
         {
-            MakeTx(accountId, "plaid", 999m, "debit", date, isPending: true),
-            MakeTx(accountId, "plaid", 50m, "debit", date, isPending: false),
+            MakeTx(accountId, "truelayer", 999m, "debit", date, isPending: true),
+            MakeTx(accountId, "truelayer", 50m, "debit", date, isPending: false),
         };
 
-        var svc = BuildService([MakeAccount("plaid", "USD", 1000m)], txs);
+        var svc = BuildService([MakeAccount("truelayer", "USD", 1000m)], txs);
         var result = await svc.GetTransactionSummaryAsync(UserId, new DateOnly(2026, 4, 1), new DateOnly(2026, 4, 30), null, null);
 
         result.TotalDebits.Should().Be(50m);
@@ -290,11 +290,11 @@ public class WealthAggregationServiceTests
         var date = new DateTime(2026, 4, 15, 0, 0, 0, DateTimeKind.Utc);
         var txs = new[]
         {
-            MakeTx(Guid.NewGuid(), "plaid", 100m, "debit", date),
+            MakeTx(Guid.NewGuid(), "truelayer", 100m, "debit", date),
             MakeTx(Guid.NewGuid(), "binance", 50m, "debit", date),
         };
 
-        var svc = BuildService([MakeAccount("plaid", "USD", 1000m), MakeAccount("binance", "USD", 500m)], txs);
+        var svc = BuildService([MakeAccount("truelayer", "USD", 1000m), MakeAccount("binance", "USD", 500m)], txs);
         var result = await svc.GetTransactionSummaryAsync(UserId, new DateOnly(2026, 4, 1), new DateOnly(2026, 4, 30), null, null);
 
         result.Categories.Should().HaveCount(2);

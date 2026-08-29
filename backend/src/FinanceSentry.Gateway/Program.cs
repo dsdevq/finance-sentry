@@ -14,7 +14,6 @@ var builder = WebApplication.CreateBuilder(args);
 // -----------------------------------------------------------------------------------------------
 
 const int DefaultAuthPermitPerMinute = 10;
-const int DefaultWebhookPermitPerMinute = 60;
 const int TooManyRequestsStatusCode = StatusCodes.Status429TooManyRequests;
 
 // Exports (data download) must stream through un-truncated (spec edge case): drop the body-size cap.
@@ -37,10 +36,9 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownProxies.Clear();
 });
 
-// FR-004 / US3: per-client (real IP) fixed-window limits on auth + webhook routes. Limits are
+// FR-004 / US3: per-client (real IP) fixed-window limits on abuse-prone routes. Limits are
 // config-tunable (Gateway:RateLimits:*); rejections return 429 (SC-005) and are visible in metrics.
 var authPermit = builder.Configuration.GetValue("Gateway:RateLimits:Auth:PermitPerMinute", DefaultAuthPermitPerMinute);
-var webhookPermit = builder.Configuration.GetValue("Gateway:RateLimits:Webhook:PermitPerMinute", DefaultWebhookPermitPerMinute);
 
 builder.Services.AddRateLimiter(options =>
 {
@@ -49,14 +47,6 @@ builder.Services.AddRateLimiter(options =>
         RateLimitPartition.GetFixedWindowLimiter(ClientPartitionKey(httpContext), _ => new FixedWindowRateLimiterOptions
         {
             PermitLimit = authPermit,
-            Window = TimeSpan.FromMinutes(1),
-            QueueLimit = 0,
-            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-        }));
-    options.AddPolicy(GatewayRateLimitPolicies.Webhook, httpContext =>
-        RateLimitPartition.GetFixedWindowLimiter(ClientPartitionKey(httpContext), _ => new FixedWindowRateLimiterOptions
-        {
-            PermitLimit = webhookPermit,
             Window = TimeSpan.FromMinutes(1),
             QueueLimit = 0,
             QueueProcessingOrder = QueueProcessingOrder.OldestFirst,

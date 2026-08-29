@@ -5,9 +5,8 @@ using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
 
 /// <summary>
-/// Disconnects one banking institution (Monobank credential, TrueLayer
-/// connection, or a single Plaid account) and cascades to every child sub-
-/// account, transaction, and alert.
+/// Disconnects one banking institution (Monobank credential or TrueLayer
+/// connection) and cascades to every child sub-account, transaction, and alert.
 /// </summary>
 public sealed record DisconnectInstitutionCommand(
     Guid UserId,
@@ -48,10 +47,6 @@ public sealed class DisconnectInstitutionCommandHandler(
             case "truelayer":
                 await trueLayerConnections.DeleteAsync(command.InstitutionId, ct);
                 break;
-            case "plaid":
-                // Plaid: each BankAccount currently represents one Plaid Item.
-                // Deleting the account above already removed the institution.
-                break;
             default:
                 throw new InvalidOperationException(
                     $"Provider '{command.Provider}' is not routed through the banking institution disconnect handler.");
@@ -68,7 +63,6 @@ public sealed class DisconnectInstitutionCommandHandler(
         {
             "monobank" => [.. all.Where(a => a.MonobankCredentialId == institutionId)],
             "truelayer" => [.. all.Where(a => a.TrueLayerConnectionId == institutionId)],
-            "plaid" => [.. all.Where(a => a.Id == institutionId)],
             _ => [],
         };
     }

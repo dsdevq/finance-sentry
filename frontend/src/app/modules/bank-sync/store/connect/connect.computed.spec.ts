@@ -18,7 +18,7 @@ function build(
   }> = {}
 ) {
   return {
-    selectedProvider: signal<Provider>(overrides.selectedProvider ?? 'plaid'),
+    selectedProvider: signal<Provider>(overrides.selectedProvider ?? 'monobank'),
     status: signal<ConnectStatus>(overrides.status ?? 'idle'),
     errorCode: signal<Nullable<string>>(overrides.errorCode ?? null),
     statusMessage: signal<Nullable<string>>(null),
@@ -76,13 +76,6 @@ describe('connectComputed', () => {
     });
   });
 
-  it('errorMessage falls back to plaid init default when plaid with unknown code', () => {
-    const store = build({status: 'error', errorCode: 'UNKNOWN', selectedProvider: 'plaid'});
-    TestBed.runInInjectionContext(() => {
-      expect(connectComputed(store).errorMessage()).toContain('Failed to initialize');
-    });
-  });
-
   it('errorMessage resolves the real backend INVALID_CREDENTIALS code for binance', () => {
     const store = build({
       status: 'error',
@@ -113,17 +106,6 @@ describe('connectComputed', () => {
     });
     TestBed.runInInjectionContext(() => {
       expect(connectComputed(store).errorMessage()).toContain('Binance account already connected');
-    });
-  });
-
-  it('errorMessage maps PLAID_LINK_FAILED to link-specific copy', () => {
-    const store = build({
-      status: 'error',
-      errorCode: 'PLAID_LINK_FAILED',
-      selectedProvider: 'plaid',
-    });
-    TestBed.runInInjectionContext(() => {
-      expect(connectComputed(store).errorMessage()).toContain('Failed to link');
     });
   });
 });
