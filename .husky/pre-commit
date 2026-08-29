@@ -3,7 +3,8 @@
 # Husky Pre-Commit Hook
 # Enforces (hard gate — commit is blocked on any failure):
 #   1. Auto-fix + format staged frontend files (lint-staged)
-#   2. Full frontend lint across ALL projects (app + @dsdevq-common libraries)
+#   2. Full frontend lint (the UI libraries moved to lifekit-common;
+#      frontend/projects/ no longer exists but stays in the trigger glob as a guard)
 #   3. Prettier format check
 #
 # Versioning is intentionally NOT enforced here: release-please owns the version
@@ -40,7 +41,7 @@ if [ "$FRONTEND_LINT_NEEDED" = true ]; then
   echo "📝 Auto-fixing staged files (lint-staged)..."
   (cd frontend && npx lint-staged)
 
-  echo "🧹 Linting all frontend projects (app + libraries)..."
+  echo "🧹 Linting the frontend app..."
   if ! (cd frontend && npm run lint); then
     echo -e "${RED}❌ ERROR: frontend lint failed. Fix the errors above before committing.${NC}"
     exit 1

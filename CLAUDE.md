@@ -4,7 +4,7 @@
 
 ## Project Overview
 
-Finance Sentry is a personal finance aggregation app built as an ASP.NET Core 9 modular monolith + Angular 20 SPA. It integrates with Plaid for bank data, with plans for Interactive Brokers, Binance, and AI-driven portfolio analytics.
+Finance Sentry is a personal finance aggregation app built as an ASP.NET Core 10 modular monolith + Angular 21 SPA. It integrates with Plaid for bank data, with plans for Interactive Brokers, Binance, and AI-driven portfolio analytics.
 
 Sole developer: Denys. Spec-driven development via the **speckit** toolchain (constitution → spec → plan → tasks → implement).
 
@@ -86,9 +86,22 @@ Not auto-loaded — follow these links when the task touches them:
 | Issue title | Imperative sentence, **no priority prefix** — priority lives in the `P1`/`P2` label and the Project field | `Asset Dossier — per-holding page …` |
 | Issue body | Traceability first (destination / source — why this exists), then acceptance criteria (**P1 issues only**; P2/P3 stay one-liners until promoted), then shape in PR count | see #411 |
 | Issue metadata | Type (Feature/Bug/Task) + milestone + `P1`/`P2` label + Project "Finance Sentry" Priority/Size fields. Size only on P1 (S=1 PR, M=2–3, L=4+) — never size the fog | — |
+| Issue labels | `P1` (firm: sized, acceptance criteria) / `P2` (named fog, unsized); `needs-refinement` = not ready to work; `devclaw-ready` = dispatchable to the autonomous instance; area labels (`frontend`, `backend`, …) | — |
+| PR body | What + why, then a **Validation** section stating exactly what was run and its result (the PR template scaffolds this) | see `.github/PULL_REQUEST_TEMPLATE.md` |
 | Milestone | `M<n> — <outcome>` — named for the outcome, never a date | `M1 — Ledger earns its keep` |
+| Releases | release-please maintains the release PR (version bump for `version.txt` + `frontend/package.json` + API csproj + CHANGELOG); the Weekly Release workflow merges it Mondays 08:00 UTC (`workflow_dispatch` = release now), then dispatches the tag + VPS deploy. Never hand-bump versions or tag ad-hoc. | — |
 
-Backlog planning happens in dedicated sessions (plan-backlog skill); every issue must trace to a destination. Main is protected — all changes land via PR (squash), including agent work.
+Backlog planning happens in dedicated sessions (plan-backlog skill); every issue must trace to a destination. Main is protected — all changes land via PR (squash), CI green first, including agent work.
+
+### Gold-standard divergences
+
+Audited against [REPO-STANDARD.md](https://github.com/lifekit-hq/.github/blob/main/REPO-STANDARD.md) (issue #470, 2026-08-29). Where this repo deliberately differs:
+
+- **Root files beyond README/CLAUDE**: `AGENTS.md` (house-accepted agent pointer), `CHANGELOG.md` + `version.txt` (release-please-owned — `release-type: simple` versions `version.txt`), `devclaw.json` / `global.json` / dotfiles (tool configs). All load-bearing; none are session artifacts.
+- **Deploy is continuous, not release-gated**: every merge to main deploys to the VPS (`deploy.yml`). The weekly release cadence governs versioning/CHANGELOG/tags, not shipping — there is no package publishing in this repo, so "publishing hangs off release-created" has nothing to attach to.
+- **Pre-commit hook covers the frontend only** (`.husky/pre-commit` via `core.hooksPath`, wired by `frontend`'s `prepare` script): lint-staged + full lint + format check. Backend gates (build, tests, `EnforceCodeStyleInBuild`) run in CI only — a `dotnet` build/test cycle is too slow for a commit hook.
+- **Coverage floors**: frontend ratchet floors live in `angular.json` (test → `ci` configuration) and gate CI; the backend 80% gate in `backend-ci.yml` is present but commented out (coverage is below the constitution's §II floor — re-enable when it ratchets up).
+- **Backend has no format-only lint step**: no `dotnet format --verify-no-changes` in CI or pre-commit; style is enforced at build time via `EnforceCodeStyleInBuild` in `backend/Directory.Build.props` instead.
 
 ## Collaboration Style
 
