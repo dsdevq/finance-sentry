@@ -22,22 +22,19 @@ public class BankAccountRepository(BankSyncDbContext context) : IBankAccountRepo
     public async Task<BankAccount?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await _context.BankAccounts
-            .Include(ba => ba.EncryptedCredential)
             .FirstOrDefaultAsync(ba => ba.Id == id && ba.IsActive, cancellationToken);
     }
 
-    public async Task<BankAccount?> GetByPlaidItemIdAsync(string plaidItemId, CancellationToken cancellationToken = default)
+    public async Task<BankAccount?> GetByExternalAccountIdAsync(string externalAccountId, CancellationToken cancellationToken = default)
     {
         return await _context.BankAccounts
-            .Include(ba => ba.EncryptedCredential)
-            .FirstOrDefaultAsync(ba => ba.ExternalAccountId == plaidItemId && ba.IsActive, cancellationToken);
+            .FirstOrDefaultAsync(ba => ba.ExternalAccountId == externalAccountId && ba.IsActive, cancellationToken);
     }
 
     public async Task<IEnumerable<BankAccount>> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         return await _context.BankAccounts
             .Where(ba => ba.UserId == userId && ba.IsActive)
-            .Include(ba => ba.EncryptedCredential)
             .OrderByDescending(ba => ba.CreatedAt)
             .ToListAsync(cancellationToken);
     }
@@ -67,7 +64,6 @@ public class BankAccountRepository(BankSyncDbContext context) : IBankAccountRepo
         var account = await _context.BankAccounts
             .Include(ba => ba.Transactions)
             .Include(ba => ba.SyncJobs)
-            .Include(ba => ba.EncryptedCredential)
             .FirstOrDefaultAsync(ba => ba.Id == id, cancellationToken);
         if (account == null)
             return false;
@@ -81,7 +77,6 @@ public class BankAccountRepository(BankSyncDbContext context) : IBankAccountRepo
     {
         return await _context.BankAccounts
             .Where(ba => ba.SyncStatus == status && ba.IsActive)
-            .Include(ba => ba.EncryptedCredential)
             .ToListAsync(cancellationToken);
     }
 
@@ -89,7 +84,6 @@ public class BankAccountRepository(BankSyncDbContext context) : IBankAccountRepo
     {
         return await _context.BankAccounts
             .Where(ba => ba.IsActive)
-            .Include(ba => ba.EncryptedCredential)
             .OrderBy(ba => ba.CreatedAt)
             .ToListAsync(cancellationToken);
     }
@@ -311,58 +305,6 @@ public class SyncJobRepository(BankSyncDbContext context) : ISyncJobRepository
             .ToListAsync(cancellationToken);
 
         return rows.ToDictionary(r => r.AccountId, r => r.LastSuccess!.Value);
-    }
-
-    public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
-    {
-        return await _context.SaveChangesAsync(cancellationToken);
-    }
-}
-
-/// <summary>
-/// Entity Framework Core implementation of IEncryptedCredentialRepository.
-/// </summary>
-public class EncryptedCredentialRepository(BankSyncDbContext context) : IEncryptedCredentialRepository
-{
-    private readonly BankSyncDbContext _context = context ?? throw new ArgumentNullException(nameof(context));
-
-    public async Task<EncryptedCredential> AddAsync(EncryptedCredential credential, CancellationToken cancellationToken = default)
-    {
-        credential.ValidateInvariants();
-        await _context.EncryptedCredentials.AddAsync(credential, cancellationToken);
-        await _context.SaveChangesAsync(cancellationToken);
-        return credential;
-    }
-
-    public async Task<EncryptedCredential?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
-    {
-        return await _context.EncryptedCredentials
-            .FirstOrDefaultAsync(ec => ec.Id == id, cancellationToken);
-    }
-
-    public async Task<EncryptedCredential?> GetByAccountIdAsync(Guid accountId, CancellationToken cancellationToken = default)
-    {
-        return await _context.EncryptedCredentials
-            .FirstOrDefaultAsync(ec => ec.AccountId == accountId, cancellationToken);
-    }
-
-    public async Task<EncryptedCredential> UpdateAsync(EncryptedCredential credential, CancellationToken cancellationToken = default)
-    {
-        credential.ValidateInvariants();
-        _context.EncryptedCredentials.Update(credential);
-        await _context.SaveChangesAsync(cancellationToken);
-        return credential;
-    }
-
-    public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
-    {
-        var credential = await _context.EncryptedCredentials.FirstOrDefaultAsync(ec => ec.Id == id, cancellationToken);
-        if (credential == null)
-            return false;
-
-        _context.EncryptedCredentials.Remove(credential);
-        await _context.SaveChangesAsync(cancellationToken);
-        return true;
     }
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

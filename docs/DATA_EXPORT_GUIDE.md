@@ -53,7 +53,7 @@ COPY (
 
 ## Import / Restore
 
-1. Re-link bank accounts through Plaid Link (credentials cannot be imported — must re-authenticate).
+1. Re-link bank accounts through the provider consent flows (credentials cannot be imported — must re-authenticate).
 2. Import historical transactions:
    ```sql
    INSERT INTO transactions (id, account_id, user_id, amount, transaction_date, ...)

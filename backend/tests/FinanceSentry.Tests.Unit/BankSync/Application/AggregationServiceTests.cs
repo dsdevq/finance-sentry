@@ -17,7 +17,7 @@ public class AggregationServiceTests
 
     private static BankAccount MakeAccount(string currency, decimal? balance, string accountType = "checking")
     {
-        var a = new BankAccount(UserId, $"item_{Guid.NewGuid():N}", "Test Bank", accountType, "1234", "Owner", currency, UserId);
+        var a = new BankAccount(UserId, $"item_{Guid.NewGuid():N}", "Test Bank", accountType, "1234", "Owner", currency, UserId, "truelayer");
         a.BeginSync();
         if (balance.HasValue)
             a.MarkActive(balance.Value);
@@ -26,7 +26,7 @@ public class AggregationServiceTests
 
     private static BankAccount MakeAccountNoBalance(string currency, string accountType = "checking")
     {
-        var a = new BankAccount(UserId, $"item_{Guid.NewGuid():N}", "Test Bank", accountType, "1234", "Owner", currency, UserId);
+        var a = new BankAccount(UserId, $"item_{Guid.NewGuid():N}", "Test Bank", accountType, "1234", "Owner", currency, UserId, "truelayer");
         // Leave in pending state — CurrentBalance is null
         return a;
     }

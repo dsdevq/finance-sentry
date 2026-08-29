@@ -7,7 +7,7 @@
 | Email | test@gmail.com |
 | Password | Darkfly21 |
 
-This account has connected accounts across Plaid (banking), Monobank (banking), Binance (crypto), and IBKR (brokerage).
+This account has connected accounts across TrueLayer (banking), Monobank (banking), Binance (crypto), and IBKR (brokerage).
 
 ### Key test scenarios (check before declaring any fix done)
 
@@ -18,7 +18,7 @@ This account has connected accounts across Plaid (banking), Monobank (banking), 
 | **Dashboard** | Load page | Total Balance ≠ $0.00 (if accounts exist); category table shows human-readable labels (not `FOOD_AND_DRINK`) |
 | **Transactions** | Load page | Transaction rows render; categories human-readable; no spinner stuck |
 | **Holdings** | Load page | Summary cards have labels; breakdown table has data |
-| **Connect (Plaid)** | Click "Connect Account" → select Plaid | Modal opens; no 422/500 on link token request |
+| **Connect (TrueLayer)** | Click "Connect Account" → select Open Banking | Modal opens; provider list loads without 422/500 |
 | **Disconnect** | Click Disconnect on any account | Confirmation dialog opens; account removed on confirm |
 
 ---

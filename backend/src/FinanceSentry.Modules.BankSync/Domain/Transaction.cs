@@ -70,7 +70,7 @@ public class Transaction : Entity
     public int? Mcc { get; set; }
 
     /// <summary>
-    /// Raw provider-native category value (e.g. Plaid PFC primary), if any.
+    /// Raw provider-native category value (e.g. a PFC-style canonical key or TrueLayer classification), if any.
     /// Retained so the category can be re-resolved without re-syncing the provider.
     /// </summary>
     public string? SourceCategory { get; set; }

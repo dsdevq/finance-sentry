@@ -85,8 +85,8 @@ public sealed class AnalyticsPostgresFixture : IAsyncLifetime
             return;
         }
 
-        var accountA = new BankAccount(UserA, "ext-A", "Bank A", "checking", "1111", "Alice", "USD", UserA);
-        var accountB = new BankAccount(UserB, "ext-B", "Bank B", "checking", "2222", "Bob", "USD", UserB);
+        var accountA = new BankAccount(UserA, "ext-A", "Bank A", "checking", "1111", "Alice", "USD", UserA, "truelayer");
+        var accountB = new BankAccount(UserB, "ext-B", "Bank B", "checking", "2222", "Bob", "USD", UserB, "truelayer");
         db.Set<BankAccount>().AddRange(accountA, accountB);
 
         // User A: 3 debits totalling 60; User B: 2 debits totalling 300.

@@ -247,9 +247,9 @@ public sealed class ToolParityTests
         await using var scope = sp.CreateAsyncScope();
         var svc = scope.ServiceProvider;
 
-        // Seed one active Plaid bank account.
+        // Seed one active TrueLayer bank account.
         var bankDb = svc.GetRequiredService<BankSyncDbContext>();
-        var account = new BankAccount(userId, "ext-acc-001", "Chase", "checking", "1234", "Test User", "USD", userId);
+        var account = new BankAccount(userId, "ext-acc-001", "Chase", "checking", "1234", "Test User", "USD", userId, "truelayer");
         account.BeginSync();
         account.MarkActive(5_000m);
         bankDb.BankAccounts.Add(account);
@@ -271,7 +271,7 @@ public sealed class ToolParityTests
             e.Provider.Should().NotBeNullOrEmpty();
             e.Currency.Should().NotBeNullOrEmpty();
         });
-        result.Should().ContainSingle(e => e.Provider == "plaid");
+        result.Should().ContainSingle(e => e.Provider == "truelayer");
         result.Should().ContainSingle(e => e.Provider == "binance");
     }
 
@@ -285,7 +285,7 @@ public sealed class ToolParityTests
 
         var bankDb = svc.GetRequiredService<BankSyncDbContext>();
 
-        var account = new BankAccount(userId, "ext-txn-001", "BofA", "savings", "5678", "Test User", "USD", userId);
+        var account = new BankAccount(userId, "ext-txn-001", "BofA", "savings", "5678", "Test User", "USD", userId, "truelayer");
         account.BeginSync();
         account.MarkActive(2_000m);
         bankDb.BankAccounts.Add(account);
@@ -473,7 +473,7 @@ public sealed class ToolParityTests
         await cryptoDb.SaveChangesAsync();
 
         var bankDb = svc.GetRequiredService<BankSyncDbContext>();
-        var account = new BankAccount(userId, "ext-parity-001", "Chase", "checking", "9999", "Test User", "USD", userId);
+        var account = new BankAccount(userId, "ext-parity-001", "Chase", "checking", "9999", "Test User", "USD", userId, "truelayer");
         account.BeginSync();
         account.MarkActive(2_000m);
         bankDb.BankAccounts.Add(account);
@@ -559,12 +559,12 @@ public sealed class ToolParityTests
         await using var scope = sp.CreateAsyncScope();
         var svc = scope.ServiceProvider;
 
-        // Seed an active Plaid account so the tool reports "ok" for Plaid.
+        // Seed an active TrueLayer account so the tool reports "ok" for TrueLayer.
         var bankDb = svc.GetRequiredService<BankSyncDbContext>();
-        var plaidAccount = new BankAccount(userId, "ext-plaid-001", "Chase", "checking", "9999", "Test", "USD", userId);
-        plaidAccount.BeginSync();
-        plaidAccount.MarkActive(10_000m);
-        bankDb.BankAccounts.Add(plaidAccount);
+        var truelayerAccount = new BankAccount(userId, "ext-tl-001", "Chase", "checking", "9999", "Test", "USD", userId, "truelayer");
+        truelayerAccount.BeginSync();
+        truelayerAccount.MarkActive(10_000m);
+        bankDb.BankAccounts.Add(truelayerAccount);
         await bankDb.SaveChangesAsync();
 
         // Seed a Binance credential with a completed sync so the tool reports "ok" for Binance.
@@ -588,7 +588,7 @@ public sealed class ToolParityTests
         // All four providers are always returned.
         result.Should().HaveCount(4);
         result.Select(e => e.Provider).Should()
-            .BeEquivalentTo(["plaid", "monobank", "binance", "ibkr"]);
+            .BeEquivalentTo(["monobank", "truelayer", "binance", "ibkr"]);
 
         // Every entry has required fields populated.
         result.Should().AllSatisfy(e =>
@@ -598,7 +598,7 @@ public sealed class ToolParityTests
         });
 
         // Seeded providers report expected statuses.
-        result.Single(e => e.Provider == "plaid").Status.Should().Be("ok");
+        result.Single(e => e.Provider == "truelayer").Status.Should().Be("ok");
         result.Single(e => e.Provider == "binance").Status.Should().Be("ok");
 
         // Providers with no credentials are honest about it.
@@ -752,14 +752,14 @@ public sealed class ToolParityTests
         var svc = scope.ServiceProvider;
 
         var bankDb = svc.GetRequiredService<BankSyncDbContext>();
-        var account = new BankAccount(userId, "ext-cf-001", "Chase", "checking", "1111", "Test User", "USD", userId);
+        var account = new BankAccount(userId, "ext-cf-001", "Chase", "checking", "1111", "Test User", "USD", userId, "truelayer");
         account.BeginSync();
         account.MarkActive(0m);
         bankDb.BankAccounts.Add(account);
 
         var jan = new DateTime(2024, 1, 15, 12, 0, 0, DateTimeKind.Utc);
         var feb = new DateTime(2024, 2, 10, 12, 0, 0, DateTimeKind.Utc);
-        // Plaid/Monobank store Amount as a positive magnitude; direction lives in
+        // Providers store Amount as a positive magnitude; direction lives in
         // TransactionType ("credit" = inflow, "debit" = outflow).
         var salary1 = new Transaction(account.Id, userId, 2_000m, jan, "Salary", "hash-cf-001") { TransactionType = "credit" };
         var groceries = new Transaction(account.Id, userId, 300m, jan, "Groceries", "hash-cf-002") { TransactionType = "debit" };
@@ -1161,7 +1161,7 @@ public sealed class ToolParityTests
 
         // Cash-only book of $10k; a $5k new position would be 33% of the projected book vs a 25% cap.
         var bankDb = svc.GetRequiredService<BankSyncDbContext>();
-        var account = new BankAccount(userId, "ext-risk-001", "Chase", "checking", "1234", "Test", "USD", userId);
+        var account = new BankAccount(userId, "ext-risk-001", "Chase", "checking", "1234", "Test", "USD", userId, "truelayer");
         account.BeginSync();
         account.MarkActive(10_000m);
         bankDb.BankAccounts.Add(account);

@@ -4,7 +4,7 @@
 
 | # | Test Case | Steps | Expected Result |
 |---|-----------|-------|-----------------|
-| 1 | Happy path: link account | Click "Connect Bank", complete Plaid Link sandbox flow | Account appears in list with status "active" |
+| 1 | Happy path: link account | Click "Connect Bank", complete the TrueLayer sandbox consent flow | Account appears in list with status "active" |
 | 2 | Duplicate account | Link same bank account twice | Second attempt rejected with clear error message |
 | 3 | Invalid public token | Submit corrupted `publicToken` | 400 "Bank credentials expired. Please reconnect." |
 | 4 | View transactions | Open linked account, view transaction list | Paginated list loads, amounts and dates correct |
@@ -19,8 +19,8 @@
 | 8  | Sync idempotency | Trigger sync twice rapidly | Second request returns 409 "sync already running" |
 | 9  | Sync completion | Wait for sync to finish | Status changes to "active", transaction count updated |
 | 10 | Duplicate deduplication | Sync same transactions twice | No duplicates in transaction list |
-| 11 | Plaid outage | Plaid API returns 503 | Error recorded in SyncJob, account status = "failed", retry scheduled |
-| 12 | Credential expiry | Plaid returns ITEM_LOGIN_REQUIRED | Account status = "reauth_required", user prompted |
+| 11 | Provider outage | Provider API returns 503 | Error recorded in SyncJob, account status = "failed", retry scheduled |
+| 12 | Credential expiry | TrueLayer consent expires (invalid_grant) | Account status = "reauth_required", user prompted |
 | 13 | Webhook TRANSACTIONS_READY | POST webhook with valid HMAC | Sync enqueued for affected account |
 | 14 | Webhook invalid HMAC | POST webhook with tampered body | 401 returned, sync NOT enqueued |
 

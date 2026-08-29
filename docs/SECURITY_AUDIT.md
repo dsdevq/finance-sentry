@@ -15,7 +15,7 @@
 | Check | Status | Evidence |
 |-------|--------|----------|
 | JWT validation on all endpoints | ✅ | `JwtAuthenticationMiddleware` validates signature + expiry |
-| JWT exempt paths audited | ✅ | Only `/health`, `/swagger`, `/api/webhook/plaid`, `/hangfire` |
+| JWT exempt paths audited | ✅ | Only `/health`, `/swagger`, `/hangfire`, `/api/v1/auth`, TrueLayer callback |
 | FR-009 user scoping | ✅ | All data endpoints verify `account.UserId == requestingUserId` |
 | Webhook HMAC-SHA256 | ✅ | `WebhookSignatureValidator` constant-time comparison |
 
@@ -34,7 +34,7 @@
 |-------|--------|----------|
 | HTTPS enforced in production | ✅ | `UseHttpsRedirection()` in `Program.cs` |
 | CORS restricted | ✅ | Origin whitelist: `localhost:4200` (dev), `finance-sentry.com` (prod) |
-| CSP headers set | ✅ | `index.html` meta CSP tag restricts scripts to `self` + `cdn.plaid.com` |
+| CSP headers set | ❌ | No CSP header today (`index.html` documents the decision) |
 
 ### Rate Limiting & DoS
 
@@ -42,7 +42,6 @@
 |-------|--------|----------|
 | Anonymous rate limit | ✅ | 10 req/min (ASP.NET Core fixed-window limiter) |
 | Authenticated rate limit | ✅ | 100 req/min per user |
-| Webhook exempt | ✅ | Plaid webhook bypass (HMAC protects integrity) |
 
 ### Input Validation
 
@@ -56,7 +55,6 @@
 
 | Risk | Mitigation |
 |------|------------|
-| Plaid link token replay | Token expires in 30 min per Plaid spec |
 | Hangfire dashboard access | Protected by JWT middleware; restrict to admin role in production |
 
 ## Next Review Date

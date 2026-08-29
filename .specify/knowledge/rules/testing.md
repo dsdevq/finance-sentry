@@ -25,7 +25,7 @@ covering the full contract (request + response shape + error cases).
 **Source**: constitution § Testing Discipline
 **Added**: 2026-04-18
 
-Every integration with an external service (Plaid, Interactive Brokers, Binance) must
+Every integration with an external service (TrueLayer, Interactive Brokers, Binance) must
 have a contract test that validates the external API still conforms to the shape the
 domain interface expects. These tests run in CI.
 

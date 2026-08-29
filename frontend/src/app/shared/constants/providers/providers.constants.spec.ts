@@ -3,7 +3,7 @@ import {describe, expect, it} from 'vitest';
 import {type Provider} from '../../models/provider/provider.model';
 import {PROVIDER_CATALOG} from './providers.constants';
 
-const ALL_SLUGS: readonly Provider[] = ['plaid', 'monobank', 'binance', 'ibkr', 'truelayer'];
+const ALL_SLUGS: readonly Provider[] = ['monobank', 'binance', 'ibkr', 'truelayer'];
 
 describe('PROVIDER_CATALOG', () => {
   it('contains exactly one descriptor per Provider', () => {
@@ -29,7 +29,6 @@ describe('PROVIDER_CATALOG', () => {
 
   it('maps providers to expected institution types', () => {
     const byType = new Map(PROVIDER_CATALOG.map(p => [p.slug, p.institutionType]));
-    expect(byType.get('plaid')).toBe('bank');
     expect(byType.get('monobank')).toBe('bank');
     expect(byType.get('binance')).toBe('crypto');
     expect(byType.get('ibkr')).toBe('broker');
@@ -38,7 +37,6 @@ describe('PROVIDER_CATALOG', () => {
 
   it('maps providers to expected form shapes', () => {
     const byShape = new Map(PROVIDER_CATALOG.map(p => [p.slug, p.formShape]));
-    expect(byShape.get('plaid')).toBe('plaid-link');
     expect(byShape.get('monobank')).toBe('token');
     expect(byShape.get('binance')).toBe('key-secret');
     expect(byShape.get('ibkr')).toBe('user-pass');

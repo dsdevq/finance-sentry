@@ -4,8 +4,6 @@ import {provideCustomIcons} from '@lifekit-hq/ui';
 export function provideAppIcons(): EnvironmentProviders {
   return provideCustomIcons({
     urls: {
-      'provider-plaid': '/assets/providers/plaid.svg',
-
       'provider-monobank': '/assets/providers/monobank.svg',
 
       'provider-binance': '/assets/providers/binance.svg',

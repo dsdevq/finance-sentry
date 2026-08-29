@@ -15,7 +15,7 @@ export interface ConnectState {
 }
 
 export const initialConnectState: ConnectState = {
-  selectedProvider: 'plaid',
+  selectedProvider: 'truelayer',
   status: 'idle',
   errorCode: null,
   statusMessage: null,

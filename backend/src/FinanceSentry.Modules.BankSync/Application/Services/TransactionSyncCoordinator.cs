@@ -5,14 +5,11 @@ using FinanceSentry.Modules.BankSync.Infrastructure.Jobs;
 using Hangfire;
 
 /// <summary>
-/// Coordinates sync requests from multiple trigger sources (webhooks, scheduler, manual).
+/// Coordinates sync requests from multiple trigger sources (scheduler, manual).
 /// Ensures only one sync runs at a time per account — additional requests are silently dropped.
 /// </summary>
 public interface ITransactionSyncCoordinator
 {
-    /// <summary>Trigger a sync initiated by a Plaid webhook notification.</summary>
-    Task<SyncResult> TriggerWebhookSyncAsync(Guid accountId, CancellationToken ct = default);
-
     /// <summary>Trigger a sync initiated by the recurring background scheduler.</summary>
     Task<SyncResult> TriggerScheduledSyncAsync(Guid accountId, CancellationToken ct = default);
 
@@ -33,15 +30,6 @@ public class TransactionSyncCoordinator(
     private readonly IBackgroundJobClient _backgroundJobs = backgroundJobs;
 
     /// <inheritdoc />
-    public async Task<SyncResult> TriggerWebhookSyncAsync(Guid accountId, CancellationToken ct = default)
-    {
-        if (await _syncJobs.HasRunningJobAsync(accountId, ct))
-            return new SyncResult(false, 0, 0, "SYNC_IN_PROGRESS", "A sync is already in progress for this account.");
-
-        return ChaseWithDetection(await _syncService.PerformFullSyncAsync(accountId, webhookTriggered: true, ct: ct));
-    }
-
-    /// <inheritdoc />
     public async Task<SyncResult> TriggerScheduledSyncAsync(Guid accountId, CancellationToken ct = default)
     {
         if (await _syncJobs.HasRunningJobAsync(accountId, ct))
@@ -49,12 +37,12 @@ public class TransactionSyncCoordinator(
 
         // An account whose provider consent has expired/been revoked cannot sync until the user
         // reconnects. Skip it in the recurring scheduler so it stops failing every cycle; the reconnect
-        // flow (manual/webhook path) clears the state via MarkActive. Manual syncs are unaffected.
+        // flow clears the state via MarkActive. Manual syncs are unaffected.
         var account = await _accounts.GetByIdAsync(accountId, ct);
         if (account?.SyncStatus == "reauth_required")
             return new SyncResult(false, 0, 0, "ITEM_LOGIN_REQUIRED", "Account requires reconnection; scheduled sync skipped.");
 
-        return ChaseWithDetection(await _syncService.PerformFullSyncAsync(accountId, webhookTriggered: false, ct: ct));
+        return ChaseWithDetection(await _syncService.PerformFullSyncAsync(accountId, ct: ct));
     }
 
     /// <inheritdoc />
@@ -63,7 +51,7 @@ public class TransactionSyncCoordinator(
         if (await _syncJobs.HasRunningJobAsync(accountId, ct))
             return new SyncResult(false, 0, 0, "SYNC_IN_PROGRESS", "A sync is already in progress for this account.");
 
-        return ChaseWithDetection(await _syncService.PerformFullSyncAsync(accountId, webhookTriggered: false, ct: ct));
+        return ChaseWithDetection(await _syncService.PerformFullSyncAsync(accountId, ct: ct));
     }
 
     /// <summary>

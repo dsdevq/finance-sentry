@@ -7,7 +7,7 @@ import {type DisconnectDialogData} from '../../models/disconnect-dialog/disconne
 import {DisconnectDialogComponent} from './disconnect-dialog.component';
 
 describe('DisconnectDialogComponent', () => {
-  const data: DisconnectDialogData = {providerName: 'Plaid'};
+  const data: DisconnectDialogData = {providerName: 'Monobank'};
   let dialogRef: {close: ReturnType<typeof vi.fn>};
 
   beforeEach(() => {
@@ -40,6 +40,6 @@ describe('DisconnectDialogComponent', () => {
   it('renders the provider name in the dialog body', () => {
     const fixture = TestBed.createComponent(DisconnectDialogComponent);
     fixture.detectChanges();
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Plaid');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Monobank');
   });
 });

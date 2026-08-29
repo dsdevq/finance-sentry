@@ -72,7 +72,6 @@ public static class RetentionPolicyRegistry
 
         // ── Keep forever: user-initiated records + reference/config + current-state snapshots ─────
         Keep(BankSync, "BankAccounts", "User accounts."),
-        Keep(BankSync, "EncryptedCredentials", "Provider credentials."),
         Keep(BankSync, "MonobankCredentials", "Provider credentials."),
         Keep(BankSync, "TrueLayerConnections", "Provider connections."),
         Keep(BankSync, "categories", "Reference taxonomy."),

@@ -35,7 +35,7 @@ const headers = {
 };
 
 export default function () {
-  // Step 1: Get Plaid link token
+  // Step 1: List accounts
   const connectStart = Date.now();
   const connectRes = http.post(
     `${BASE_URL}/api/accounts/connect`,

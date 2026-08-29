@@ -24,7 +24,7 @@ public sealed class GetSyncHealthTool(
     private readonly ILogger<GetSyncHealthTool> _logger = logger;
 
     [McpServerTool(Name = "get_sync_health")]
-    [Description("Returns the last sync timestamp, status, and error for each provider (Plaid, Monobank, Binance, IBKR). Defaults to the authenticated MCP identity when userId is omitted.")]
+    [Description("Returns the last sync timestamp, status, and error for each provider (Monobank, TrueLayer, Binance, IBKR). Defaults to the authenticated MCP identity when userId is omitted.")]
     public async Task<IReadOnlyList<SyncHealthEntry>> ExecuteAsync(
         [Description("Optional user GUID. Defaults to the authenticated MCP identity.")] Guid? userId = null,
         CancellationToken cancellationToken = default)
@@ -35,43 +35,11 @@ public sealed class GetSyncHealthTool(
 
         return
         [
-            await GetPlaidHealthAsync(userIdVal, cancellationToken),
             await GetMonobankHealthAsync(userIdVal, cancellationToken),
+            await GetTrueLayerHealthAsync(userIdVal, cancellationToken),
             await GetBinanceHealthAsync(userIdVal, cancellationToken),
             await GetIbkrHealthAsync(userIdVal, cancellationToken),
         ];
-    }
-
-    private async Task<SyncHealthEntry> GetPlaidHealthAsync(Guid userId, CancellationToken ct)
-    {
-        try
-        {
-            var accounts = await _bankSync.BankAccounts
-                .AsNoTracking()
-                .Where(a => a.UserId == userId && a.Provider == "plaid" && a.IsActive)
-                .Select(a => new { a.SyncStatus, a.LastSyncError, a.UpdatedAt })
-                .ToListAsync(ct);
-
-            if (accounts.Count == 0 || accounts.All(a => a.SyncStatus == "pending"))
-                return new SyncHealthEntry("plaid", null, "never_synced", null);
-
-            var syncedAccounts = accounts.Where(a => a.SyncStatus is "active" or "failed").ToList();
-            DateTime? lastSyncAt = syncedAccounts.Count > 0 ? syncedAccounts.Max(a => a.UpdatedAt) : null;
-
-            var latestFailed = syncedAccounts
-                .Where(a => a.SyncStatus == "failed")
-                .OrderByDescending(a => a.UpdatedAt)
-                .FirstOrDefault();
-
-            return latestFailed is not null
-                ? new SyncHealthEntry("plaid", lastSyncAt, "error", latestFailed.LastSyncError)
-                : new SyncHealthEntry("plaid", lastSyncAt, "ok", null);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to retrieve Plaid sync health for user {UserId}.", userId);
-            return new SyncHealthEntry("plaid", null, "error", "Health check unavailable.");
-        }
     }
 
     private async Task<SyncHealthEntry> GetMonobankHealthAsync(Guid userId, CancellationToken ct)
@@ -104,6 +72,38 @@ public sealed class GetSyncHealthTool(
         {
             _logger.LogWarning(ex, "Failed to retrieve Monobank sync health for user {UserId}.", userId);
             return new SyncHealthEntry("monobank", null, "error", "Health check unavailable.");
+        }
+    }
+
+    private async Task<SyncHealthEntry> GetTrueLayerHealthAsync(Guid userId, CancellationToken ct)
+    {
+        try
+        {
+            var accounts = await _bankSync.BankAccounts
+                .AsNoTracking()
+                .Where(a => a.UserId == userId && a.Provider == "truelayer" && a.IsActive)
+                .Select(a => new { a.SyncStatus, a.LastSyncError, a.UpdatedAt })
+                .ToListAsync(ct);
+
+            if (accounts.Count == 0 || accounts.All(a => a.SyncStatus == "pending"))
+                return new SyncHealthEntry("truelayer", null, "never_synced", null);
+
+            var syncedAccounts = accounts.Where(a => a.SyncStatus is "active" or "failed").ToList();
+            DateTime? lastSyncAt = syncedAccounts.Count > 0 ? syncedAccounts.Max(a => a.UpdatedAt) : null;
+
+            var latestFailed = syncedAccounts
+                .Where(a => a.SyncStatus == "failed")
+                .OrderByDescending(a => a.UpdatedAt)
+                .FirstOrDefault();
+
+            return latestFailed is not null
+                ? new SyncHealthEntry("truelayer", lastSyncAt, "error", latestFailed.LastSyncError)
+                : new SyncHealthEntry("truelayer", lastSyncAt, "ok", null);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to retrieve TrueLayer sync health for user {UserId}.", userId);
+            return new SyncHealthEntry("truelayer", null, "error", "Health check unavailable.");
         }
     }
 

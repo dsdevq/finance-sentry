@@ -8,7 +8,6 @@ using FinanceSentry.Modules.BankSync.Domain;
 using FinanceSentry.Modules.BankSync.Domain.Interfaces;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
 using FinanceSentry.Modules.BankSync.Infrastructure.Monobank;
-using FinanceSentry.Modules.BankSync.Infrastructure.Plaid;
 using FinanceSentry.Modules.BankSync.Infrastructure.TrueLayer;
 
 /// <summary>
@@ -24,13 +23,12 @@ public record SyncResult(
 /// <summary>
 /// Drives the full transaction sync lifecycle for a single account:
 /// create job → decrypt token → fetch from provider → deduplicate → persist → update account state.
-/// Supports both Plaid (cursor-based) and Monobank (timestamp-based) providers.
+/// Supports Monobank and TrueLayer (both timestamp-based) providers.
 /// </summary>
 public interface IScheduledSyncService
 {
     Task<SyncResult> PerformFullSyncAsync(
         Guid accountId,
-        bool webhookTriggered = false,
         CancellationToken ct = default,
         string? preAcquiredTrueLayerAccessToken = null);
 }
@@ -40,9 +38,7 @@ public class ScheduledSyncService(
     IBankAccountRepository accounts,
     ITransactionRepository transactions,
     ISyncJobRepository syncJobs,
-    IEncryptedCredentialRepository credentials,
     ICredentialEncryptionService encryption,
-    IPlaidAdapter plaid,
     ITransactionDeduplicationService dedup,
     IBankSyncLogger logger,
     IBankProviderFactory providerFactory,
@@ -56,9 +52,7 @@ public class ScheduledSyncService(
     private readonly IBankAccountRepository _accounts = accounts;
     private readonly ITransactionRepository _transactions = transactions;
     private readonly ISyncJobRepository _syncJobs = syncJobs;
-    private readonly IEncryptedCredentialRepository _credentials = credentials;
     private readonly ICredentialEncryptionService _encryption = encryption;
-    private readonly IPlaidAdapter _plaid = plaid;
     private readonly ITransactionDeduplicationService _dedup = dedup;
     private readonly IBankSyncLogger _logger = logger;
     private readonly IBankProviderFactory _providerFactory = providerFactory;
@@ -83,7 +77,6 @@ public class ScheduledSyncService(
     /// <inheritdoc />
     public async Task<SyncResult> PerformFullSyncAsync(
           Guid accountId,
-          bool webhookTriggered = false,
           CancellationToken ct = default,
           string? preAcquiredTrueLayerAccessToken = null)
     {
@@ -96,7 +89,6 @@ public class ScheduledSyncService(
         var job = new SyncJob(accountId, account.UserId)
         {
             Status = "running",
-            WebhookTriggered = webhookTriggered,
             StartedAt = startedAt
         };
         await _syncJobs.AddAsync(job, ct);
@@ -115,7 +107,8 @@ public class ScheduledSyncService(
             else if (account.Provider == "truelayer")
                 result = await SyncTrueLayerAsync(account, job, startedAt, ct, preAcquiredTrueLayerAccessToken);
             else
-                result = await SyncPlaidAsync(account, job, webhookTriggered, startedAt, ct);
+                throw new InvalidOperationException(
+                    $"Unknown provider '{account.Provider}' for account {account.Id}.");
 
             await EvaluateAlertsAfterSuccessAsync(account, ct);
 
@@ -207,44 +200,6 @@ public class ScheduledSyncService(
         {
             // best-effort
         }
-    }
-
-    private async Task<SyncResult> SyncPlaidAsync(
-        Domain.BankAccount account, SyncJob job, bool webhookTriggered, DateTime startedAt, CancellationToken ct)
-    {
-        var cred = await _credentials.GetByAccountIdAsync(account.Id, ct)
-            ?? throw new InvalidOperationException($"No Plaid credential found for account {account.Id}.");
-
-        var accessToken = _encryption.Decrypt(cred.EncryptedData, cred.Iv, cred.AuthTag, cred.KeyVersion);
-        _logger.CredentialAccessed(job.CorrelationId ?? job.Id.ToString(), account.Id);
-
-        var (candidates, nextCursor) = await _plaid.SyncTransactionsAsync(
-            accessToken, account.Id, account.UserId, cred.PlaidSyncCursor, ct);
-
-        var entities = await PersistAndReconcileAsync(account.Id, candidates, ct);
-
-        cred.PlaidSyncCursor = nextCursor;
-        cred.UpdateLastUsedAt();
-        await _credentials.UpdateAsync(cred, ct);
-
-        var plaidAccounts = await _plaid.GetAccountsWithBalanceAsync(accessToken, ct);
-        var balance = plaidAccounts.FirstOrDefault()?.CurrentBalance ?? 0m;
-
-        account.MarkActive(balance);
-        await _accounts.UpdateAsync(account, ct);
-
-        var lastTxDate = entities.Count > 0
-            ? entities.Max(t => t.PostedDate ?? t.TransactionDate)
-            : (DateTime?)null;
-
-        job.MarkSuccess(candidates.Count, entities.Count, lastTxDate);
-        await _syncJobs.UpdateAsync(job, ct);
-
-        var durationMs = (long)(DateTime.UtcNow - startedAt).TotalMilliseconds;
-        _logger.SyncCompleted(job.CorrelationId ?? job.Id.ToString(), account.Id,
-            candidates.Count, entities.Count, durationMs);
-
-        return new SyncResult(true, candidates.Count, entities.Count, null, null);
     }
 
     private async Task<SyncResult> SyncMonobankAsync(

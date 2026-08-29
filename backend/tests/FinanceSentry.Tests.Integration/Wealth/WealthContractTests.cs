@@ -1,4 +1,4 @@
-namespace FinanceSentry.Tests.Integration.Wealth;
+﻿namespace FinanceSentry.Tests.Integration.Wealth;
 
 using System.Net;
 using System.Net.Http.Json;
@@ -52,7 +52,7 @@ public class WealthSummaryContractTests(WealthApiFactory factory) : IClassFixtur
     public async Task GetSummary_WithAccounts_Returns200WithFullShape()
     {
         var userId = _factory.TestUserId;
-        var acc = new BankAccount(userId, "ext_001", "Chase", "checking", "1234", "Owner", "USD", userId, "plaid");
+        var acc = new BankAccount(userId, "ext_001", "Chase", "checking", "1234", "Owner", "USD", userId, "truelayer");
         acc.BeginSync();
         acc.MarkActive(1000m);
 
@@ -246,8 +246,6 @@ public class WealthApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Encryption:CurrentKeyVersion", "1");
         builder.UseSetting("Encryption:Keys:1",
             "dGVzdGtleS10ZXN0a2V5LXRlc3RrZXktdGVzdGtleTA=");
-        builder.UseSetting("Plaid:ClientId", "test-client-id");
-        builder.UseSetting("Plaid:Secret", "test-secret");
         builder.UseSetting("Jwt:Secret",
             "test-jwt-secret-key-for-integration-tests-minimum-32-chars");
     }

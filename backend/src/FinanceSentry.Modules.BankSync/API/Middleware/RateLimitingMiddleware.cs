@@ -12,6 +12,6 @@ public static class RateLimitingPolicies
     /// <summary>10 requests/min for anonymous users (per IP).</summary>
     public const string Anonymous = "anonymous";
 
-    /// <summary>Exempt from all rate limiting (Plaid webhooks, health checks).</summary>
+    /// <summary>Exempt from all rate limiting (health checks).</summary>
     public const string Exempt = "exempt";
 }

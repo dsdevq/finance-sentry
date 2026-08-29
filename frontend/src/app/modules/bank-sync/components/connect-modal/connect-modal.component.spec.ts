@@ -8,13 +8,11 @@ import {type ConnectStrategy} from '../../strategies/connect-strategy';
 import {CONNECT_STRATEGIES, ConnectStrategyRegistry} from '../../strategies/connect-strategy.token';
 import {ConnectModalComponent} from './connect-modal.component';
 
-class PlaidFormStub {}
 class MonobankFormStub {}
 class BinanceFormStub {}
 class IbkrFormStub {}
 
 const STRATEGIES: readonly ConnectStrategy[] = [
-  {slug: 'plaid', formComponent: PlaidFormStub as Type<unknown>, submit: () => null as never},
   {
     slug: 'monobank',
     formComponent: MonobankFormStub as Type<unknown>,
@@ -44,7 +42,6 @@ describe('ConnectModalComponent', () => {
   });
 
   it.each([
-    ['plaid-launcher', PlaidFormStub],
     ['monobank-form', MonobankFormStub],
     ['binance-form', BinanceFormStub],
     ['ibkr-form', IbkrFormStub],

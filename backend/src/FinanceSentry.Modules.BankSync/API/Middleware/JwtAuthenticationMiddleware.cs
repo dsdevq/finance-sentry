@@ -10,7 +10,7 @@ using Microsoft.IdentityModel.Tokens;
 
 /// <summary>
 /// Middleware that validates Bearer JWT tokens on every request.
-/// Exempt paths: /health, /swagger, /api/webhook/plaid, /hangfire.
+/// Exempt paths: /health, /swagger, /hangfire, /api/v1/auth, the TrueLayer callback.
 /// Attaches ClaimsPrincipal (including user ID) to HttpContext.User on success.
 /// Returns 401 for missing/invalid/expired tokens on protected paths.
 /// </summary>
@@ -26,7 +26,6 @@ public class JwtAuthenticationMiddleware
         "/api/v1/health",
         "/metrics",
         "/swagger",
-        "/api/v1/webhook",
         "/hangfire",
         "/api/v1/auth",
         "/api/v1/accounts/truelayer/callback"

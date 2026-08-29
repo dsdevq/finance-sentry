@@ -1,14 +1,14 @@
 namespace FinanceSentry.Infrastructure.Encryption;
 
 /// <summary>
-/// Encrypts and decrypts sensitive credential data (Plaid access tokens) using AES-256-GCM.
+/// Encrypts and decrypts sensitive credential data (provider tokens and API keys) using AES-256-GCM.
 /// All plaintext tokens must be encrypted before storage and decrypted only at point of use.
 /// Never log plaintext tokens or encryption keys.
 /// </summary>
 public interface ICredentialEncryptionService
 {
     /// <summary>
-    /// Encrypts a plaintext string (e.g., Plaid access token) using AES-256-GCM.
+    /// Encrypts a plaintext string (e.g., a provider access token) using AES-256-GCM.
     /// Returns the ciphertext, IV, authentication tag, and key version used.
     /// </summary>
     EncryptionResult Encrypt(string plaintext);

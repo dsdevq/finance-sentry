@@ -23,7 +23,7 @@ describe('BankPickerComponent', () => {
     TestBed.resetTestingModule();
   });
 
-  it('exposes only visible bank-typed providers (Plaid hidden)', () => {
+  it('exposes only visible bank-typed providers', () => {
     configure(buildStore());
     const fixture = TestBed.createComponent(BankPickerComponent);
     const slugs = fixture.componentInstance.providers.map(p => p.slug).sort();
@@ -50,7 +50,7 @@ describe('BankPickerComponent', () => {
   });
 
   it('connected() reflects the store signal', () => {
-    const set = new Set<Provider>(['plaid']);
+    const set = new Set<Provider>(['monobank']);
     const store = buildStore(set);
     configure(store);
     const fixture = TestBed.createComponent(BankPickerComponent);

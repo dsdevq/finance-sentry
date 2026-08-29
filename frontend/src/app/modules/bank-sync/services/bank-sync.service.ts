@@ -5,12 +5,7 @@ import {shareReplay, switchMap, takeWhile} from 'rxjs/operators';
 
 import {environment} from '../../../../environments/environment';
 import {DateRangeUtils} from '../../../shared/utils/date-range.utils';
-import {
-  AccountsResponse,
-  ConnectMonobankResponse,
-  ConnectResponse,
-  LinkAccountResponse,
-} from '../models/bank-account/bank-account.model';
+import {AccountsResponse, ConnectMonobankResponse} from '../models/bank-account/bank-account.model';
 import {
   DashboardData,
   type HistoryRange,
@@ -51,17 +46,6 @@ export class BankSyncService extends ApiService {
     request: BeginTrueLayerConnectRequest
   ): Observable<BeginTrueLayerConnectResponse> {
     return this.post<BeginTrueLayerConnectResponse>('truelayer/connect', request);
-  }
-
-  public getLinkToken(): Observable<ConnectResponse> {
-    return this.post<ConnectResponse>('connect');
-  }
-
-  public exchangePublicToken(
-    publicToken: string,
-    institutionName: string
-  ): Observable<LinkAccountResponse> {
-    return this.post<LinkAccountResponse>('link', {publicToken, institutionName});
   }
 
   public getAccounts(status?: string, currency?: string): Observable<AccountsResponse> {

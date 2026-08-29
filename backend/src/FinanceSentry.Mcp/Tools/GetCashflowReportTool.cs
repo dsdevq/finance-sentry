@@ -61,7 +61,7 @@ public sealed class GetCashflowReportTool(
             return [];
         }
 
-        // Plaid + Monobank both store Amount as a positive magnitude. The direction
+        // Providers store Amount as a positive magnitude. The direction
         // lives in TransactionType ("credit" = inflow, "debit" = outflow). Sign of
         // Amount is NOT used.
         return result.Transactions

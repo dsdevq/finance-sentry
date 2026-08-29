@@ -1,4 +1,4 @@
-namespace FinanceSentry.Tests.Integration.Shared;
+﻿namespace FinanceSentry.Tests.Integration.Shared;
 
 using FinanceSentry.Infrastructure.Encryption;
 using FluentAssertions;
@@ -47,7 +47,7 @@ public class CredentialEncryptionTests
 
     [Theory]
     [InlineData("x")]
-    [InlineData("a very long plaid access token that is several hundred characters long and includes special chars: ñ€£")]
+    [InlineData("a very long provider access token that is several hundred characters long and includes special chars: ñ€£")]
     public void Encrypt_ThenDecrypt_RoundTrips_VariousLengths(string plaintext)
     {
         var sut = CreateSut();
@@ -62,7 +62,7 @@ public class CredentialEncryptionTests
     {
         // Simulate writing to DB (serialise to byte arrays) then reading back
         var sut = CreateSut();
-        const string originalToken = "plaid-access-prod-token-XXXX";
+        const string originalToken = "provider-access-prod-token-XXXX";
 
         var enc = sut.Encrypt(originalToken);
 
@@ -159,7 +159,7 @@ public class CredentialEncryptionTests
     public void EncryptionResult_DoesNotContainPlaintextBytes()
     {
         var sut = CreateSut();
-        const string plaintext = "super-secret-plaid-token";
+        const string plaintext = "super-secret-provider-token";
         var plaintextBytes = System.Text.Encoding.UTF8.GetBytes(plaintext);
 
         var enc = sut.Encrypt(plaintext);

@@ -27,7 +27,7 @@ public sealed class GetAccountSummaryToolTests
             .ReturnsAsync([
                 new BankingAccountSummary(
                     Guid.NewGuid(), "Chase", "checking", "1234",
-                    "plaid", "USD", 1000m, 1000m, "synced", null)
+                    "truelayer", "USD", 1000m, 1000m, "synced", null)
             ]);
 
         _cryptoReader.Setup(r => r.GetHoldingsAsync(UserId, default))
@@ -44,7 +44,7 @@ public sealed class GetAccountSummaryToolTests
 
         result.Should().HaveCount(3);
 
-        var banking = result.Single(e => e.Provider == "plaid");
+        var banking = result.Single(e => e.Provider == "truelayer");
         banking.Name.Should().Be("Chase");
         banking.Currency.Should().Be("USD");
         banking.Balance.Should().Be(1000m);
@@ -142,7 +142,7 @@ public sealed class GetAccountSummaryToolTests
             .ReturnsAsync([
                 new BankingAccountSummary(
                     Guid.NewGuid(), "FirstBank", "checking", "9999",
-                    "plaid", "EUR", null, null, "pending", null)
+                    "truelayer", "EUR", null, null, "pending", null)
             ]);
 
         _cryptoReader.Setup(r => r.GetHoldingsAsync(UserId, default)).ReturnsAsync([]);

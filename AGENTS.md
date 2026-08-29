@@ -45,7 +45,7 @@ backend/
     FinanceSentry.Infrastructure/    # Encryption, cross-cutting infra
     FinanceSentry.Mcp/               # MCP server (7 tools over stdio or HTTP)
     FinanceSentry.Modules.Auth/      # Auth module (JWT, Google OAuth, Identity)
-    FinanceSentry.Modules.BankSync/  # Plaid + Monobank adapter, accounts, transactions
+    FinanceSentry.Modules.BankSync/  # Monobank + TrueLayer adapters, accounts, transactions
     FinanceSentry.Modules.CryptoSync/# Binance adapter, crypto holdings
     FinanceSentry.Modules.BrokerageSync/ # IBKR adapter, brokerage holdings
     FinanceSentry.Modules.Wealth/    # Aggregated net-worth queries

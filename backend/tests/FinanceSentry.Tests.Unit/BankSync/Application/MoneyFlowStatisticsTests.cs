@@ -22,7 +22,7 @@ public class MoneyFlowStatisticsTests
     /// </summary>
     private static (BankAccount account, Guid accountId) MakeAccount(string currency)
     {
-        var a = new BankAccount(UserId, $"item_{Guid.NewGuid():N}", "Bank", "checking", "1234", "Owner", currency, UserId);
+        var a = new BankAccount(UserId, $"item_{Guid.NewGuid():N}", "Bank", "checking", "1234", "Owner", currency, UserId, "truelayer");
         return (a, a.Id);
     }
 

@@ -30,7 +30,7 @@ The current runtime surface contains 58 tools. The canonical list is the `Agreed
 | `list_active_alerts` | Read | Alerts | `userId?` | Only unread unresolved alerts |
 | `get_portfolio_snapshot` | Read | Portfolio | `userId?` | Unified brokerage + crypto holdings |
 | `list_subscriptions` | Read | Subscriptions | `userId?` | Detected recurring charges |
-| `get_sync_health` | Read | Sync | `userId?` | Status across Plaid, Monobank, Binance, IBKR |
+| `get_sync_health` | Read | Sync | `userId?` | Status across Monobank, TrueLayer, Binance, IBKR |
 | `get_crypto_pnl_detail` | Read | Crypto | `userId?` | Per-asset crypto P&L from trade history |
 | `get_tax_lots` | Read | Brokerage | `userId?` | Current tax lots / average cost data |
 | `get_cashflow_report` | Read | Cashflow | `userId?`, `fromDate?`, `toDate?` | Monthly inflow / outflow / net |

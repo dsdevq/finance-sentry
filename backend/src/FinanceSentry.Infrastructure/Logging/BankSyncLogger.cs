@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 /// Security rules (FR-003, Constitution V):
 /// - Never log plaintext tokens, passwords, or full account numbers.
 /// - Always include correlation ID for distributed tracing.
-/// - Plaid errors logged with error code + user-safe message only.
+/// - Provider errors logged with error code + user-safe message only.
 /// </summary>
 public interface IBankSyncLogger
 {
@@ -17,7 +17,6 @@ public interface IBankSyncLogger
     void SyncFailed(string correlationId, Guid accountId, string errorCode, string safeMessage, int retryCount);
     void SyncRetrying(string correlationId, Guid accountId, int attempt, TimeSpan delay, string reason);
     void CredentialAccessed(string correlationId, Guid accountId);
-    void WebhookReceived(string correlationId, string webhookType, string webhookCode);
 }
 
 /// <inheritdoc />
@@ -54,11 +53,6 @@ public class BankSyncLogger(ILogger<BankSyncLogger> logger) : IBankSyncLogger
             new EventId(1005, "CredentialAccessed"),
             "[{CorrelationId}] Credential accessed for account {AccountId}");
 
-    private static readonly Action<ILogger, string, string, string, Exception?> _webhookReceived =
-        LoggerMessage.Define<string, string, string>(LogLevel.Information,
-            new EventId(1006, "WebhookReceived"),
-            "[{CorrelationId}] Plaid webhook received: type={WebhookType}, code={WebhookCode}");
-
     public void SyncStarted(string correlationId, Guid accountId)
           => _syncStarted(_logger, correlationId, accountId, null);
 
@@ -76,7 +70,4 @@ public class BankSyncLogger(ILogger<BankSyncLogger> logger) : IBankSyncLogger
 
     public void CredentialAccessed(string correlationId, Guid accountId)
         => _credentialAccessed(_logger, correlationId, accountId, null);
-
-    public void WebhookReceived(string correlationId, string webhookType, string webhookCode)
-        => _webhookReceived(_logger, correlationId, webhookType, webhookCode, null);
 }

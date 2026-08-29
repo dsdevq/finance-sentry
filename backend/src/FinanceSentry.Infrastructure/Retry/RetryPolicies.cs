@@ -6,7 +6,7 @@ using Polly;
 using Polly.Retry;
 
 /// <summary>
-/// Polly retry policies for Plaid API calls.
+/// Polly retry policies for outbound provider/API calls.
 ///
 /// FR-005: Max 3 attempts with exponential backoff delays: 5 min → 15 min → 1 hour.
 /// Transient errors (timeout, rate limit, 5xx) are retried.
@@ -15,7 +15,7 @@ using Polly.Retry;
 public static class RetryPolicies
 {
     /// <summary>Delay sequence per FR-005: 5 min, 15 min, 1 hour.</summary>
-    public static readonly TimeSpan[] PlaidRetryDelays =
+    public static readonly TimeSpan[] TransientRetryDelays =
     [
         TimeSpan.FromMinutes(5),
         TimeSpan.FromMinutes(15),
@@ -35,48 +35,6 @@ public static class RetryPolicies
     ];
 
     /// <summary>
-    /// Builds the Plaid API retry policy: 3 attempts, FR-005 delays.
-    /// Retries on transient errors (timeout, 429, 5xx).
-    /// Fails immediately on permanent errors (400, 401, 403).
-    /// Logs each retry attempt with correlation ID.
-    /// </summary>
-    public static ResiliencePipeline<HttpResponseMessage> CreatePlaidRetryPipeline(
-        ILogger logger,
-        string correlationId)
-    {
-        return new ResiliencePipelineBuilder<HttpResponseMessage>()
-            .AddRetry(new RetryStrategyOptions<HttpResponseMessage>
-            {
-                MaxRetryAttempts = 3,
-                DelayGenerator = static args =>
-                {
-                    var delay = args.AttemptNumber < PlaidRetryDelays.Length
-                        ? PlaidRetryDelays[args.AttemptNumber]
-                        : PlaidRetryDelays[^1];
-                    return ValueTask.FromResult<TimeSpan?>(delay);
-                },
-                ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
-                    .Handle<HttpRequestException>()
-                    .Handle<TaskCanceledException>() // timeout
-                    .HandleResult(response =>
-                        IsTransientHttpError(response.StatusCode)),
-                OnRetry = args =>
-                {
-                    logger.LogWarning(
-                        "[{CorrelationId}] Plaid API retry {Attempt}/{Max} after {Delay}. " +
-                        "Outcome: {Outcome}",
-                        correlationId,
-                        args.AttemptNumber + 1,
-                        3,
-                        args.RetryDelay,
-                        args.Outcome.Result?.StatusCode.ToString() ?? args.Outcome.Exception?.Message);
-                    return ValueTask.CompletedTask;
-                }
-            })
-            .Build();
-    }
-
-    /// <summary>
     /// Simplified retry pipeline for operations that don't return HttpResponseMessage
     /// (e.g., database calls, internal service calls).
     /// Uses same 3-attempt / FR-005 delays pattern.
@@ -92,9 +50,9 @@ public static class RetryPolicies
                 MaxRetryAttempts = maxAttempts,
                 DelayGenerator = args =>
                 {
-                    var delay = args.AttemptNumber < PlaidRetryDelays.Length
-                        ? PlaidRetryDelays[args.AttemptNumber]
-                        : PlaidRetryDelays[^1];
+                    var delay = args.AttemptNumber < TransientRetryDelays.Length
+                        ? TransientRetryDelays[args.AttemptNumber]
+                        : TransientRetryDelays[^1];
                     return ValueTask.FromResult<TimeSpan?>(delay);
                 },
                 ShouldHandle = new PredicateBuilder()

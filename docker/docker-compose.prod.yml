@@ -22,9 +22,6 @@ services:
       Logging__LogLevel__Default: Information
       Logging__LogLevel__Microsoft: Warning
       ConnectionStrings__Default: "Host=postgres;Port=5432;Database=${DB_NAME:-finance_sentry};Username=${DB_USER:-finance_user};Password=${DB_PASSWORD}"
-      Plaid__ClientId: ${PLAID_CLIENT_ID}
-      Plaid__Secret: ${PLAID_SECRET}
-      Plaid__Environment: ${PLAID_ENVIRONMENT:-development}
       Jwt__Secret: ${JWT_SECRET}
       Jwt__Issuer: ${JWT_ISSUER:-https://finance-sentry.tail1cb676.ts.net}
       Jwt__ExpirationMinutes: ${JWT_EXPIRATION_MINUTES:-60}

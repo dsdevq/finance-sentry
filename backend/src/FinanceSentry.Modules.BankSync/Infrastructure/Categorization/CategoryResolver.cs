@@ -32,7 +32,7 @@ public sealed class CategoryResolver(IServiceScopeFactory scopeFactory) : ICateg
         return _mccToKey!.TryGetValue(mcc.Value, out var key) ? key : CategoryKeys.Uncategorized;
     }
 
-    public string ResolvePlaidPrimary(string? primary)
+    public string ResolveCanonicalKey(string? primary)
     {
         EnsureLoaded();
         if (string.IsNullOrWhiteSpace(primary))

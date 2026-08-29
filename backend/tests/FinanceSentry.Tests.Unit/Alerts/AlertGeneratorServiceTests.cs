@@ -98,7 +98,7 @@ public class AlertGeneratorServiceTests
                 _userId, AlertType.SyncFailure, _accountId, "Chase", It.IsAny<DateTimeOffset>(), default))
             .ReturnsAsync(false);
 
-        await _service.GenerateSyncFailureAlertAsync(_userId, "plaid", _accountId, "Chase", "ITEM_LOGIN_REQUIRED");
+        await _service.GenerateSyncFailureAlertAsync(_userId, "truelayer", _accountId, "Chase", "ITEM_LOGIN_REQUIRED");
 
         _repo.Verify(r => r.AddAsync(It.Is<Alert>(a =>
             a.Type == AlertType.SyncFailure &&
@@ -112,7 +112,7 @@ public class AlertGeneratorServiceTests
         _repo.Setup(r => r.FindActiveAsync(_userId, AlertType.SyncFailure, _accountId, default))
             .ReturnsAsync(existing);
 
-        await _service.ResolveSyncFailureAlertAsync(_userId, "plaid", _accountId);
+        await _service.ResolveSyncFailureAlertAsync(_userId, "truelayer", _accountId);
 
         _repo.Verify(r => r.ResolveAsync(existing.Id, default), Times.Once);
     }
@@ -126,7 +126,7 @@ public class AlertGeneratorServiceTests
                 _userId, AlertType.SyncFailure, _accountId, "Chase", It.IsAny<DateTimeOffset>(), default))
             .ReturnsAsync(true);
 
-        await _service.GenerateSyncFailureAlertAsync(_userId, "plaid", _accountId, "Chase", "ITEM_LOGIN_REQUIRED");
+        await _service.GenerateSyncFailureAlertAsync(_userId, "truelayer", _accountId, "Chase", "ITEM_LOGIN_REQUIRED");
 
         _repo.Verify(r => r.AddAsync(It.IsAny<Alert>(), default), Times.Never);
     }

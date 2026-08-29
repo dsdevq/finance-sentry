@@ -49,7 +49,6 @@ function extractCode(err: unknown): Nullable<string> {
 
 function institutionTypeForSlug(strategy: ConnectStrategy): InstitutionType {
   switch (strategy.slug) {
-    case 'plaid':
     case 'monobank':
     case 'truelayer':
       return 'bank';

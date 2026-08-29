@@ -20,12 +20,6 @@ public class BankSyncException : ApiException
     }
 }
 
-public class PlaidApiException(string plaidErrorCode, string message, int httpStatusCode = 400)
-    : BankSyncException("PLAID_ERROR", message, httpStatusCode)
-{
-    public string PlaidErrorCode { get; } = plaidErrorCode;
-}
-
 public class AccountNotFoundException(Guid accountId)
     : BankSyncException("ACCOUNT_NOT_FOUND", $"Account {accountId} not found.", 404);
 
