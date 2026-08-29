@@ -9,7 +9,7 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "test:ci": "ng test finance-sentry --configuration ci",
-    "lint": "ng lint",
+    "lint": "ng lint --max-warnings 0",
     "format": "prettier --write \"src/**/*.{ts,html,scss}\"",
     "format:check": "prettier --check \"src/**/*.{ts,html,scss}\"",
     "e2e": "ng e2e",

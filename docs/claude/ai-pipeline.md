@@ -11,7 +11,7 @@ This project uses a two-model pipeline. [`.specify/memory/pipeline.md`](.specify
 
 - MCP config: `.mcp.json` + `.claude/settings.json` → `enabledMcpjsonServers: ["qwen-code"]`
 - MCP is only active in **new sessions** — check `/mcp` to confirm it loaded
-- Knowledge rules live in `.specify/knowledge/index.yaml` (30 rules); inject into QWEN.md with `py .specify/integrations/qwen/scripts/inject-knowledge.py`
+- Knowledge rules live in `.specify/knowledge/index.yaml` (30 rules). The generated root `QWEN.md` (injected via `py .specify/integrations/qwen/scripts/inject-knowledge.py`) was removed 2026-08-29 with the Qwen path disabled — re-run the inject script to regenerate it if the pipeline is revived.
 - Per-task loop: Claude calls Qwen MCP → reads diff → reviews inline → approves or requests fix → commits → next task
 - Reviews saved to `.specify/knowledge/reviews/<feature>/<task>.yaml`
 
