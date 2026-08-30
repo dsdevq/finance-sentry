@@ -1,6 +1,7 @@
 namespace FinanceSentry.Modules.Liquidity.Application.Jobs;
 
 using FinanceSentry.Core.Interfaces;
+using FinanceSentry.Core.Utils;
 using FinanceSentry.Modules.Liquidity.Application.Services;
 using Microsoft.Extensions.Logging;
 
@@ -52,6 +53,15 @@ public class LiquiditySentinelJob(
 
         foreach (var account in accounts)
         {
+            // A credit account's balance is debt, not an opening cash position — projecting
+            // subscriptions against it would alert on numbers that were never spendable.
+            if (AccountBalanceMath.IsLiability(account.AccountType))
+            {
+                _logger.LogDebug(
+                    "LiquiditySentinel: skipping credit account {AccountId}", account.AccountId);
+                continue;
+            }
+
             if (account.CurrentBalance is not { } balance)
             {
                 _logger.LogDebug(

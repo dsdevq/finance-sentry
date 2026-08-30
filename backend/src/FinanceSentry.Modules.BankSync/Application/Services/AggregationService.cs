@@ -38,7 +38,7 @@ public class AggregationService(IBankAccountRepository accounts) : IAggregationS
         return accounts
             .Where(a => a.IsActive && a.CurrentBalance.HasValue)
             .GroupBy(a => a.Currency)
-            .ToDictionary(g => g.Key, g => g.Sum(a => a.CurrentBalance!.Value));
+            .ToDictionary(g => g.Key, g => g.Sum(a => AccountBalanceMath.SignedForNetTotal(a.AccountType, a.CurrentBalance!.Value)));
     }
 
     /// <inheritdoc />
@@ -48,7 +48,7 @@ public class AggregationService(IBankAccountRepository accounts) : IAggregationS
 
         return accounts
             .Where(a => a.IsActive && a.CurrentBalance.HasValue)
-            .Sum(a => CurrencyConverter.ToUsd(a.CurrentBalance!.Value, a.Currency));
+            .Sum(a => AccountBalanceMath.SignedForNetTotal(a.AccountType, CurrencyConverter.ToUsd(a.CurrentBalance!.Value, a.Currency)));
     }
 
     /// <inheritdoc />

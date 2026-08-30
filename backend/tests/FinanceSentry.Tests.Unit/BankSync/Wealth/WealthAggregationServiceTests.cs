@@ -11,8 +11,8 @@ public class WealthAggregationServiceTests
 {
     private static readonly Guid UserId = Guid.NewGuid();
 
-    private static BankingAccountSummary MakeAccount(string provider, string currency, decimal? balance, DateTime? lastSuccessfulSync = null)
-        => new(Guid.NewGuid(), "Test Bank", "checking", "1234", provider, currency,
+    private static BankingAccountSummary MakeAccount(string provider, string currency, decimal? balance, DateTime? lastSuccessfulSync = null, string accountType = "checking")
+        => new(Guid.NewGuid(), "Test Bank", accountType, "1234", provider, currency,
                balance, balance.HasValue ? CurrencyConverter.ToUsd(balance.Value, currency) : null, "synced",
                DateTime.UtcNow, lastSuccessfulSync ?? DateTime.UtcNow);
 
@@ -133,6 +133,26 @@ public class WealthAggregationServiceTests
         result.TotalNetWorth.Should().Be(500m);
         result.Categories.Single().Institutions.SelectMany(i => i.Accounts).Should().HaveCount(2);
         result.Categories.Single().Institutions.SelectMany(i => i.Accounts).First(a => a.CurrentBalance is null).BalanceInBaseCurrency.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetWealthSummary_CreditAccount_NegatedInTotal_RawInAccountList()
+    {
+        // #498 — a credit card balance is the amount owed: it subtracts from the
+        // institution/net-worth totals but the per-account row keeps the raw value
+        var accounts = new[]
+        {
+            MakeAccount("truelayer", "USD", 1000m),
+            MakeAccount("truelayer", "USD", 300m, accountType: "credit"),
+        };
+
+        var svc = BuildService(accounts);
+        var result = await svc.GetWealthSummaryAsync(UserId, null, null);
+
+        result.TotalNetWorth.Should().Be(700m);
+        var creditAccount = result.Categories.Single().Institutions
+            .SelectMany(i => i.Accounts).Single(a => a.AccountType == "credit");
+        creditAccount.BalanceInBaseCurrency.Should().Be(300m);
     }
 
     [Fact]

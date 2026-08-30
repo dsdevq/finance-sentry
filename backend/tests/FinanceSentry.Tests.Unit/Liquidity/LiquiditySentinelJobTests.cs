@@ -45,12 +45,34 @@ public class LiquiditySentinelJobTests
         _accountsReader.Setup(r => r.GetAllActiveUserIdsAsync(default))
             .ReturnsAsync([_userId]);
         _accountsReader.Setup(r => r.GetActiveAccountSnapshotsAsync(_userId, default))
-            .ReturnsAsync([new AccountBalanceSnapshot(_accountId, "Chase", "1234", "EUR", null)]);
+            .ReturnsAsync([new AccountBalanceSnapshot(_accountId, "Chase", "checking", "1234", "EUR", null)]);
         _subscriptionsReader.Setup(r => r.GetActiveSubscriptionsAsync(_userId, default))
             .ReturnsAsync([]);
 
         await _job.ExecuteAsync();
 
+        _alerts.Verify(a => a.GenerateCashShortfallAlertAsync(
+            It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string>(),
+            It.IsAny<DateOnly>(), It.IsAny<decimal>(), It.IsAny<string>(), default), Times.Never);
+        _alerts.Verify(a => a.ResolveCashShortfallAlertAsync(
+            It.IsAny<Guid>(), It.IsAny<Guid>(), default), Times.Never);
+    }
+
+    [Fact]
+    public async Task Execute_CreditAccount_SkippedEntirely()
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        _accountsReader.Setup(r => r.GetAllActiveUserIdsAsync(default))
+            .ReturnsAsync([_userId]);
+        _accountsReader.Setup(r => r.GetActiveAccountSnapshotsAsync(_userId, default))
+            .ReturnsAsync([new AccountBalanceSnapshot(_accountId, "Revolut", "credit", "5678", "EUR", 100m)]);
+        _subscriptionsReader.Setup(r => r.GetActiveSubscriptionsAsync(_userId, default))
+            .ReturnsAsync([new ActiveSubscriptionSummary("Netflix", "monthly", 200m, "EUR", today.AddDays(5))]);
+
+        await _job.ExecuteAsync();
+
+        // A credit balance is debt, not spendable cash — no shortfall alert, no resolve
         _alerts.Verify(a => a.GenerateCashShortfallAlertAsync(
             It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string>(),
             It.IsAny<DateOnly>(), It.IsAny<decimal>(), It.IsAny<string>(), default), Times.Never);
@@ -67,7 +89,7 @@ public class LiquiditySentinelJobTests
         _accountsReader.Setup(r => r.GetAllActiveUserIdsAsync(default))
             .ReturnsAsync([_userId]);
         _accountsReader.Setup(r => r.GetActiveAccountSnapshotsAsync(_userId, default))
-            .ReturnsAsync([new AccountBalanceSnapshot(_accountId, "Chase", "1234", "EUR", 100m)]);
+            .ReturnsAsync([new AccountBalanceSnapshot(_accountId, "Chase", "checking", "1234", "EUR", 100m)]);
         _subscriptionsReader.Setup(r => r.GetActiveSubscriptionsAsync(_userId, default))
             .ReturnsAsync([new ActiveSubscriptionSummary("Netflix", "monthly", 200m, "EUR", dueDate)]);
 
@@ -89,7 +111,7 @@ public class LiquiditySentinelJobTests
         _accountsReader.Setup(r => r.GetAllActiveUserIdsAsync(default))
             .ReturnsAsync([_userId]);
         _accountsReader.Setup(r => r.GetActiveAccountSnapshotsAsync(_userId, default))
-            .ReturnsAsync([new AccountBalanceSnapshot(_accountId, "Chase", "1234", "EUR", 10000m)]);
+            .ReturnsAsync([new AccountBalanceSnapshot(_accountId, "Chase", "checking", "1234", "EUR", 10000m)]);
         _subscriptionsReader.Setup(r => r.GetActiveSubscriptionsAsync(_userId, default))
             .ReturnsAsync([new ActiveSubscriptionSummary("Netflix", "monthly", 15m, "EUR", DateOnly.FromDateTime(DateTime.UtcNow).AddDays(5))]);
 
@@ -111,8 +133,8 @@ public class LiquiditySentinelJobTests
             .ReturnsAsync([_userId]);
         _accountsReader.Setup(r => r.GetActiveAccountSnapshotsAsync(_userId, default))
             .ReturnsAsync([
-                new AccountBalanceSnapshot(_accountId, "Chase", "1234", "EUR", 50m),
-                new AccountBalanceSnapshot(accountId2, "Revolut", "5678", "EUR", 5000m),
+                new AccountBalanceSnapshot(_accountId, "Chase", "checking", "1234", "EUR", 50m),
+                new AccountBalanceSnapshot(accountId2, "Revolut", "checking", "5678", "EUR", 5000m),
             ]);
         _subscriptionsReader.Setup(r => r.GetActiveSubscriptionsAsync(_userId, default))
             .ReturnsAsync([new ActiveSubscriptionSummary("Netflix", "monthly", 100m, "EUR", today.AddDays(3))]);
@@ -140,7 +162,7 @@ public class LiquiditySentinelJobTests
             .ThrowsAsync(new InvalidOperationException("simulated error"));
 
         _accountsReader.Setup(r => r.GetActiveAccountSnapshotsAsync(userId2, default))
-            .ReturnsAsync([new AccountBalanceSnapshot(accountId2, "AIB", "9999", "EUR", 5000m)]);
+            .ReturnsAsync([new AccountBalanceSnapshot(accountId2, "AIB", "checking", "9999", "EUR", 5000m)]);
         _subscriptionsReader.Setup(r => r.GetActiveSubscriptionsAsync(userId2, default))
             .ReturnsAsync([]);
 

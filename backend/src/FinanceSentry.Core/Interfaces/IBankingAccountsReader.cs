@@ -20,6 +20,7 @@ public interface IBankingAccountsReader
 public record AccountBalanceSnapshot(
     Guid AccountId,
     string BankName,
+    string AccountType,
     string AccountNumberLast4,
     string Currency,
     decimal? CurrentBalance)

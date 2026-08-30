@@ -2,6 +2,7 @@ namespace FinanceSentry.Core.Services;
 
 using FinanceSentry.Core.Domain;
 using FinanceSentry.Core.Interfaces;
+using FinanceSentry.Core.Utils;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
@@ -58,7 +59,7 @@ public sealed class BookFiguresService(
         try
         {
             var accounts = await bankingReader.GetAccountSummariesAsync(userId, ct);
-            bankingCashUsd = accounts.Sum(a => a.BalanceUsd ?? 0m);
+            bankingCashUsd = accounts.Sum(a => AccountBalanceMath.SignedForNetTotal(a.AccountType, a.BalanceUsd ?? 0m));
         }
         catch (Exception ex)
         {

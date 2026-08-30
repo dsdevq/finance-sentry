@@ -103,6 +103,49 @@ public class AggregationServiceTests
         result.Should().BeEmpty();
     }
 
+    // ── #498 — credit balances are liabilities ───────────────────────────────
+
+    [Fact]
+    public async Task Aggregate_CreditAccount_NegatedInCurrencyTotal()
+    {
+        // A credit card's provider balance is the amount owed — it reduces the net total
+        var accounts = new List<BankAccount>
+        {
+            MakeAccount("EUR", 1000m),
+            MakeAccount("EUR", 300m, "credit")
+        };
+
+        var repoMock = new Mock<IBankAccountRepository>();
+        repoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(accounts);
+
+        var sut = new AggregationService(repoMock.Object);
+
+        var result = await sut.GetAggregatedBalanceAsync(UserId);
+
+        result.Should().ContainKey("EUR").WhoseValue.Should().Be(700m);
+    }
+
+    [Fact]
+    public async Task GetTotalNetWorthUsd_CreditAccount_Negated()
+    {
+        var accounts = new List<BankAccount>
+        {
+            MakeAccount("USD", 1000m),
+            MakeAccount("USD", 400m, "credit")
+        };
+
+        var repoMock = new Mock<IBankAccountRepository>();
+        repoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(accounts);
+
+        var sut = new AggregationService(repoMock.Object);
+
+        var result = await sut.GetTotalNetWorthUsdAsync(UserId);
+
+        result.Should().Be(600m);
+    }
+
     // ── T412 Test 4 — GetAccountCountByTypeAsync acts as "available balance" grouping test ──
 
     [Fact]
