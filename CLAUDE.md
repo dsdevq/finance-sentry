@@ -103,6 +103,16 @@ Audited against [REPO-STANDARD.md](https://github.com/lifekit-hq/.github/blob/ma
 - **Coverage floors**: frontend ratchet floors live in `angular.json` (test → `ci` configuration) and gate CI; the backend 80% gate in `backend-ci.yml` is present but commented out (coverage is below the constitution's §II floor — re-enable when it ratchets up).
 - **Backend has no format-only lint step**: no `dotnet format --verify-no-changes` in CI or pre-commit; style is enforced at build time via `EnforceCodeStyleInBuild` in `backend/Directory.Build.props` instead.
 
+## Infrastructure catalog (ecosystem rule)
+
+The ecosystem's infrastructure inventory lives in
+[`lifekit-dashboard/backend/infra.json`](https://github.com/lifekit-hq/lifekit-dashboard/blob/main/backend/infra.json)
+(rendered with live health probes on the dashboard's Infrastructure page).
+**Any PR here that adds/removes/moves infrastructure — a container, cron,
+workflow, external service, bot, or secret — updates that catalog in the same
+change** (companion PR to lifekit-dashboard). `creds` entries name where a
+secret lives, never its value.
+
 ## Collaboration Style
 
 - Responses must be short and direct. No trailing summaries — Denys can read the diff.
