@@ -67,7 +67,14 @@ elif sudo -n test -f /srv/openclaw/config/.env 2>/dev/null; then
 else
   echo "[deploy] warn: no Telegram creds for uptime probe — probe will no-op" >&2
 fi
-[[ -f "$PROBE_DIR/probe.env" ]] && chmod 600 "$PROBE_DIR/probe.env"
+if [[ -f "$PROBE_DIR/probe.env" ]]; then
+  chmod 600 "$PROBE_DIR/probe.env"
+fi
 
-( crontab -l 2>/dev/null | grep -v 'fs-uptime' ; echo "*/5 * * * * $PROBE_DIR/uptime-probe.sh >> $PROBE_DIR/probe.log 2>&1" ) | crontab -
+# grep exits 1 on an empty/absent crontab — the `|| true` keeps errexit+pipefail from
+# killing the list mid-pipe and clobbering the crontab with empty input (broke deploy once).
+{
+  crontab -l 2>/dev/null | grep -v 'fs-uptime' || true
+  echo "*/5 * * * * $PROBE_DIR/uptime-probe.sh >> $PROBE_DIR/probe.log 2>&1"
+} | crontab -
 echo "[deploy] uptime probe installed"
