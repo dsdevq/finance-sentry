@@ -22,7 +22,7 @@ public class BankingTotalsReader(
         var accounts = await _accounts.GetByUserIdAsync(userId, ct);
         return accounts
             .Where(a => a.IsActive && a.CurrentBalance.HasValue)
-            .Sum(a => CurrencyConverter.ToUsd(a.CurrentBalance!.Value, a.Currency));
+            .Sum(a => AccountBalanceMath.SignedForNetTotal(a.AccountType, CurrencyConverter.ToUsd(a.CurrentBalance!.Value, a.Currency)));
     }
 
     public async Task<DateTime?> GetLatestSuccessfulSyncAsync(Guid userId, CancellationToken ct = default)

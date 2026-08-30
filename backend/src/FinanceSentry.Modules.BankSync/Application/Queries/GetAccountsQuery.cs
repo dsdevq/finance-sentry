@@ -3,6 +3,7 @@ namespace FinanceSentry.Modules.BankSync.Application.Queries;
 using FinanceSentry.Modules.BankSync.Domain;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
 using FinanceSentry.Core.Cqrs;
+using FinanceSentry.Core.Utils;
 
 // ──────────────────────────────────────────────
 // Query
@@ -92,7 +93,7 @@ public class GetAccountsQueryHandler(
         var currencyTotals = list
             .Where(a => a.CurrentBalance.HasValue)
             .GroupBy(a => a.Currency)
-            .ToDictionary(g => g.Key, g => g.Sum(a => a.CurrentBalance!.Value));
+            .ToDictionary(g => g.Key, g => g.Sum(a => AccountBalanceMath.SignedForNetTotal(a.AccountType, a.CurrentBalance!.Value)));
 
         return new GetAccountsResult(dtos, dtos.Count, currencyTotals);
     }

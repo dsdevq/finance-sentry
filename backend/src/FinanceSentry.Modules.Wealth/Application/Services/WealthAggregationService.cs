@@ -165,7 +165,7 @@ public class WealthAggregationService(
                 Provider: first.Provider.ToLowerInvariant(),
                 Name: first.BankName,
                 Category: ProviderCategoryMapper.GetCategory(first.Provider),
-                TotalInBaseCurrency: accountDtos.Sum(a => a.BalanceInBaseCurrency ?? 0m),
+                TotalInBaseCurrency: accountDtos.Sum(a => AccountBalanceMath.SignedForNetTotal(a.AccountType, a.BalanceInBaseCurrency ?? 0m)),
                 SyncStatus: WorstSyncStatus(list.Select(a => EffectiveBankingStatus(a.SyncStatus, a.LastSuccessfulSyncTimestamp))),
                 LastSyncTimestamp: list.Max(a => a.LastSyncTimestamp),
                 LastSuccessfulSyncTimestamp: list.Max(a => a.LastSuccessfulSyncTimestamp),
@@ -202,7 +202,7 @@ public class WealthAggregationService(
             .Select(x => new CardGroupDto(
                 CardType: x.CardType,
                 DisplayName: FormatCardName(x.CardType),
-                TotalInBaseCurrency: x.NonEmpty.Sum(a => a.BalanceInBaseCurrency ?? 0m),
+                TotalInBaseCurrency: x.NonEmpty.Sum(a => AccountBalanceMath.SignedForNetTotal(a.AccountType, a.BalanceInBaseCurrency ?? 0m)),
                 SyncStatus: WorstSyncStatus(x.NonEmpty.Select(a => a.SyncStatus)),
                 Accounts: x.NonEmpty))
             .OrderByDescending(c => c.TotalInBaseCurrency)];
