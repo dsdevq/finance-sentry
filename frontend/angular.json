@@ -135,17 +135,6 @@
               ]
             }
           }
-        },
-        "e2e": {
-          "builder": "playwright-ng-schematics:playwright",
-          "options": {
-            "devServerTarget": "finance-sentry:serve"
-          },
-          "configurations": {
-            "production": {
-              "devServerTarget": "finance-sentry:serve:production"
-            }
-          }
         }
       }
     }
@@ -153,8 +142,7 @@
   "cli": {
     "analytics": false,
     "schematicCollections": [
-      "@schematics/angular",
-      "playwright-ng-schematics"
+      "@schematics/angular"
     ],
     "packageManager": "npm"
   }
