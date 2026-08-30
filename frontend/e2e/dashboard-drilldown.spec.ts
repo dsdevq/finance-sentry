@@ -1,4 +1,4 @@
-import {type Page, expect, test} from '@playwright/test';
+import {expect, type Page, test} from '@playwright/test';
 
 // Origin-agnostic glob, NOT the dev apiBaseUrl. `ng build` defaults to the
 // production configuration, which file-replaces environment.ts and makes
@@ -163,35 +163,67 @@ const LEDGER_TRANSACTIONS = {
 async function mockApis(page: Page): Promise<void> {
   // Silent refresh / auth check on app init
   await page.route(`${API}/auth/me`, route =>
-    route.fulfill({status: 200, contentType: 'application/json', body: JSON.stringify(AUTH_RESPONSE)})
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(AUTH_RESPONSE),
+    })
   );
   // Dashboard data
   await page.route(`${API}/dashboard/aggregated`, route =>
-    route.fulfill({status: 200, contentType: 'application/json', body: JSON.stringify(DASHBOARD_DATA)})
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(DASHBOARD_DATA),
+    })
   );
   // Net-worth history (all ranges)
   await page.route(`${API}/net-worth/history**`, route =>
-    route.fulfill({status: 200, contentType: 'application/json', body: JSON.stringify(NET_WORTH_HISTORY)})
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(NET_WORTH_HISTORY),
+    })
   );
   // Income transactions
   await page.route(`${API}/accounts/transactions**`, route =>
-    route.fulfill({status: 200, contentType: 'application/json', body: JSON.stringify(INCOME_TRANSACTIONS)})
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(INCOME_TRANSACTIONS),
+    })
   );
   // Refresh token (called on 401, should not happen but mock it anyway)
   await page.route(`${API}/auth/refresh`, route =>
-    route.fulfill({status: 200, contentType: 'application/json', body: JSON.stringify(AUTH_RESPONSE)})
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(AUTH_RESPONSE),
+    })
   );
 }
 
 async function mockApisWithLedger(page: Page): Promise<void> {
   await page.route(`${API}/auth/me`, route =>
-    route.fulfill({status: 200, contentType: 'application/json', body: JSON.stringify(AUTH_RESPONSE)})
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(AUTH_RESPONSE),
+    })
   );
   await page.route(`${API}/dashboard/aggregated`, route =>
-    route.fulfill({status: 200, contentType: 'application/json', body: JSON.stringify(DASHBOARD_DATA)})
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(DASHBOARD_DATA),
+    })
   );
   await page.route(`${API}/net-worth/history**`, route =>
-    route.fulfill({status: 200, contentType: 'application/json', body: JSON.stringify(NET_WORTH_HISTORY)})
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(NET_WORTH_HISTORY),
+    })
   );
   await page.route(`${API}/accounts/transactions**`, route =>
     route.fulfill({
@@ -201,7 +233,11 @@ async function mockApisWithLedger(page: Page): Promise<void> {
     })
   );
   await page.route(`${API}/auth/refresh`, route =>
-    route.fulfill({status: 200, contentType: 'application/json', body: JSON.stringify(AUTH_RESPONSE)})
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(AUTH_RESPONSE),
+    })
   );
 }
 
@@ -235,7 +271,9 @@ test.describe('Dashboard drill-downs', () => {
     await expect(page.getByRole('heading', {name: 'Income'})).toBeVisible();
   });
 
-  test('clicking "Spending this month" navigates to /transactions with debit filter', async ({page}) => {
+  test('clicking "Spending this month" navigates to /transactions with debit filter', async ({
+    page,
+  }) => {
     await page.goto('/dashboard');
     await expect(page.getByRole('heading', {name: 'Dashboard'})).toBeVisible();
 
