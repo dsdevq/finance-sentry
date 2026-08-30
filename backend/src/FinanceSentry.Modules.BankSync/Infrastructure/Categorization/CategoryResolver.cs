@@ -1,7 +1,7 @@
 namespace FinanceSentry.Modules.BankSync.Infrastructure.Categorization;
 
+using FinanceSentry.Core.Domain;
 using FinanceSentry.Modules.BankSync.Application.Services.CategoryMapping;
-using FinanceSentry.Modules.BankSync.Domain;
 using FinanceSentry.Modules.BankSync.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;

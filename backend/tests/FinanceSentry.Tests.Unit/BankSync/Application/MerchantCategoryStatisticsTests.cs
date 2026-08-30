@@ -1,5 +1,6 @@
 namespace FinanceSentry.Tests.Unit.BankSync.Application;
 
+using FinanceSentry.Core.Domain;
 using FinanceSentry.Modules.BankSync.Application.Services;
 using FinanceSentry.Modules.BankSync.Domain;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;

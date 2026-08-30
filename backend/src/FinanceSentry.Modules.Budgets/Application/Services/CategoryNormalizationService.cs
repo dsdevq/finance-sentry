@@ -1,6 +1,6 @@
 namespace FinanceSentry.Modules.Budgets.Application.Services;
 
-using FinanceSentry.Modules.BankSync.Domain;
+using FinanceSentry.Core.Domain;
 using FinanceSentry.Modules.Budgets.Domain;
 
 public class CategoryNormalizationService : ICategoryNormalizationService

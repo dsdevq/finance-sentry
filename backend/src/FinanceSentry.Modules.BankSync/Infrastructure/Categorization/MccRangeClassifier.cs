@@ -1,6 +1,6 @@
 namespace FinanceSentry.Modules.BankSync.Infrastructure.Categorization;
 
-using FinanceSentry.Modules.BankSync.Domain;
+using FinanceSentry.Core.Domain;
 
 /// <summary>
 /// The single piece of category glue we own. Maps an ISO 18245 Merchant Category Code

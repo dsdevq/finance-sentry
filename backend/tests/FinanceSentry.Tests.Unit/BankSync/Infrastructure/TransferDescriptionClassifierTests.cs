@@ -1,6 +1,6 @@
 namespace FinanceSentry.Tests.Unit.BankSync.Infrastructure;
 
-using FinanceSentry.Modules.BankSync.Domain;
+using FinanceSentry.Core.Domain;
 using FinanceSentry.Modules.BankSync.Infrastructure.Categorization;
 using FluentAssertions;
 using Xunit;

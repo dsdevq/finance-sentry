@@ -1,6 +1,6 @@
 namespace FinanceSentry.Modules.BankSync.Infrastructure.Categorization;
 
-using FinanceSentry.Modules.BankSync.Domain;
+using FinanceSentry.Core.Domain;
 
 /// <summary>
 /// Seed rows for the <c>merchant_keywords</c> bridge table — a lowercase description

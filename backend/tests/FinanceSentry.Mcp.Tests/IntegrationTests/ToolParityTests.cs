@@ -181,8 +181,9 @@ public sealed class ToolParityTests
         // host graph so risk/allocation tools resolve IAllocationPolicySource / IPositionCapSource.
         services.AddCrossModulePorts();
 
-        // Domain service needed by GetBudgetSummaryQueryHandler.
+        // Domain service + BankSync spend read port needed by GetBudgetSummaryQueryHandler.
         services.AddScoped<ICategoryNormalizationService, CategoryNormalizationService>();
+        services.AddScoped<IMerchantSpendingReader, MerchantSpendingReader>();
 
         // CQRS: registers all IQueryHandler / ICommandHandler / IEventHandler
         // implementations from each module assembly, wrapped in validation and logging

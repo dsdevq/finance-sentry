@@ -1,8 +1,8 @@
 namespace FinanceSentry.Modules.Budgets.Application.Queries;
 
 using FinanceSentry.Core.Cqrs;
+using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Core.Utils;
-using FinanceSentry.Modules.BankSync.Application.Queries;
 using FinanceSentry.Modules.Budgets.API.Responses;
 using FinanceSentry.Modules.Budgets.Application.Services;
 using FinanceSentry.Modules.Budgets.Domain.Exceptions;
@@ -14,12 +14,12 @@ public record GetBudgetSummaryQuery(Guid UserId, int? Year = null, int? Month = 
 public class GetBudgetSummaryQueryHandler(
     IBudgetRepository budgets,
     ICategoryNormalizationService normalization,
-    IQueryHandler<GetMerchantSpendingQuery, IReadOnlyDictionary<string, decimal>> merchantSpending)
+    IMerchantSpendingReader merchantSpending)
     : IQueryHandler<GetBudgetSummaryQuery, BudgetSummaryResponse>
 {
     private readonly IBudgetRepository _budgets = budgets;
     private readonly ICategoryNormalizationService _normalization = normalization;
-    private readonly IQueryHandler<GetMerchantSpendingQuery, IReadOnlyDictionary<string, decimal>> _merchantSpending = merchantSpending;
+    private readonly IMerchantSpendingReader _merchantSpending = merchantSpending;
 
     public async Task<BudgetSummaryResponse> Handle(GetBudgetSummaryQuery request, CancellationToken cancellationToken)
     {
@@ -35,9 +35,8 @@ public class GetBudgetSummaryQueryHandler(
 
         var userBudgets = await _budgets.GetByUserIdAsync(request.UserId, cancellationToken);
 
-        var rawSpending = await _merchantSpending.Handle(
-            new GetMerchantSpendingQuery(request.UserId, from, to),
-            cancellationToken);
+        var rawSpending = await _merchantSpending.GetSpendingByCategoryUsdAsync(
+            request.UserId, from, to, cancellationToken);
 
         var spentByCategory = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
         foreach (var (rawCategory, amount) in rawSpending)
