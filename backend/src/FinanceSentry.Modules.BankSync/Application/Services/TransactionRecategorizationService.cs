@@ -1,5 +1,6 @@
 namespace FinanceSentry.Modules.BankSync.Application.Services;
 
+using FinanceSentry.Core.Domain;
 using FinanceSentry.Infrastructure.Encryption;
 using FinanceSentry.Modules.BankSync.Application.Services.CategoryMapping;
 using FinanceSentry.Modules.BankSync.Domain;

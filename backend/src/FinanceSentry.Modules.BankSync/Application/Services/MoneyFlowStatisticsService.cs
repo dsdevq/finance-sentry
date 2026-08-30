@@ -1,7 +1,7 @@
 namespace FinanceSentry.Modules.BankSync.Application.Services;
 
+using FinanceSentry.Core.Domain;
 using FinanceSentry.Core.Utils;
-using FinanceSentry.Modules.BankSync.Domain;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
 
 /// <summary>

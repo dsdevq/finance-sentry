@@ -1,8 +1,8 @@
 namespace FinanceSentry.Modules.BankSync.Infrastructure.TrueLayer;
 
+using FinanceSentry.Core.Domain;
 using FinanceSentry.Modules.BankSync.Application.Services;
 using FinanceSentry.Modules.BankSync.Application.Services.CategoryMapping;
-using FinanceSentry.Modules.BankSync.Domain;
 using FinanceSentry.Modules.BankSync.Domain.Interfaces;
 
 /// <summary>

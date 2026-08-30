@@ -1,7 +1,7 @@
 namespace FinanceSentry.Tests.Unit.BankSync.Infrastructure;
 
+using FinanceSentry.Core.Domain;
 using FinanceSentry.Modules.BankSync.Application.Services.CategoryMapping;
-using FinanceSentry.Modules.BankSync.Domain;
 using FinanceSentry.Modules.BankSync.Infrastructure.Categorization;
 
 /// <summary>

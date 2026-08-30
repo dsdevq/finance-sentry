@@ -1,6 +1,6 @@
 namespace FinanceSentry.Modules.BankSync.Infrastructure.Categorization;
 
-using FinanceSentry.Modules.BankSync.Domain;
+using FinanceSentry.Core.Domain;
 
 /// <summary>
 /// Classifies bank-transfer and income transactions from their description prefix, for providers

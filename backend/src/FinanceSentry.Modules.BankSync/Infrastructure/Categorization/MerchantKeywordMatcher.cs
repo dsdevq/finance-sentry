@@ -1,6 +1,6 @@
 namespace FinanceSentry.Modules.BankSync.Infrastructure.Categorization;
 
-using FinanceSentry.Modules.BankSync.Domain;
+using FinanceSentry.Core.Domain;
 
 /// <summary>
 /// Pure matching logic shared by <see cref="CategoryResolver"/> and its tests: matches a

@@ -1,9 +1,10 @@
-namespace FinanceSentry.Modules.BankSync.Domain;
+namespace FinanceSentry.Core.Domain;
 
 /// <summary>
 /// Canonical category keys. The 16 values below are Plaid Personal Finance Category
 /// primaries (verbatim), so Plaid transactions map 1:1 with zero glue. <see cref="Uncategorized"/>
 /// is the one synthetic key we add for transactions that carry no usable signal.
+/// Shared-kernel vocabulary: BankSync categorizes into these keys, Budgets budgets against them.
 /// </summary>
 public static class CategoryKeys
 {
