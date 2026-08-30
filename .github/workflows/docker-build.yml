@@ -44,7 +44,7 @@ jobs:
     # (OS packages + .NET deps). --ignore-unfixed keeps base-image CVEs without an
     # available patch from blocking every PR.
     - name: Scan image for vulnerabilities (Trivy)
-      uses: aquasecurity/trivy-action@0.28.0
+      uses: aquasecurity/trivy-action@v0.36.0
       with:
         image-ref: finance-sentry-api:latest
         format: table
