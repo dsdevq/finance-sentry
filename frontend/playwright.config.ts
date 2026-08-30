@@ -4,12 +4,17 @@ const SPA_PORT = 4201;
 
 export default defineConfig({
   testDir: './e2e',
+  // Live-stack smoke specs run via playwright.live.config.ts, never against serve.mjs.
+  testIgnore: '**/live/**',
   fullyParallel: false,
   forbidOnly: !!process.env['CI'],
   // eslint-disable-next-line @typescript-eslint/no-magic-numbers
   retries: process.env['CI'] ? 2 : 0,
   workers: 1,
-  reporter: [['json', {outputFile: 'playwright-report/results.json'}], ['html', {open: 'never'}]],
+  reporter: [
+    ['json', {outputFile: 'playwright-report/results.json'}],
+    ['html', {open: 'never'}],
+  ],
   use: {
     baseURL: `http://localhost:${SPA_PORT}`,
     trace: 'on-first-retry',
@@ -19,7 +24,7 @@ export default defineConfig({
   },
 
   webServer: {
-    command: `node e2e/serve.mjs`,
+    command: 'node e2e/serve.mjs',
     url: `http://localhost:${SPA_PORT}`,
     reuseExistingServer: false,
     env: {PORT: String(SPA_PORT)},
