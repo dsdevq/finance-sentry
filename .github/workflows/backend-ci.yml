@@ -48,44 +48,40 @@ jobs:
     - name: Build solution
       run: dotnet build backend/FinanceSentry.sln --configuration Release --no-restore
 
-    - name: Run unit tests with coverage
-      run: |
-        dotnet test backend/tests/FinanceSentry.Tests.Unit/FinanceSentry.Tests.Unit.csproj \
-          --configuration Release --no-build --verbosity normal \
-          --collect:"XPlat Code Coverage;Format=opencover" \
-          --results-directory TestResults/Unit \
-          --logger "trx;LogFileName=unit-results.trx"
-
-    - name: Run integration tests with coverage
+    # 509: run the FULL solution — the old two-project shape silently skipped the 9
+    # module test suites (~550 tests never ran in CI).
+    - name: Run all tests with coverage
       env:
         ConnectionStrings__Default: "Host=localhost;Port=5432;Database=finance_sentry;Username=finance_user;Password=finance_password"
       run: |
-        dotnet test backend/tests/FinanceSentry.Tests.Integration/FinanceSentry.Tests.Integration.csproj \
+        dotnet test backend/FinanceSentry.sln \
           --configuration Release --no-build --verbosity normal \
           --collect:"XPlat Code Coverage;Format=opencover" \
-          --results-directory TestResults/Integration \
-          --logger "trx;LogFileName=integration-results.trx"
+          --results-directory TestResults \
+          --logger "trx"
 
-    # Constitution §II (NON-NEGOTIABLE): Enforce 80% minimum line coverage.
-    # Pipeline fails here if coverage drops below threshold.
-    # - name: Enforce 80% coverage gate (Constitution §II)
-    #   run: |
-    #     dotnet tool install --global dotnet-reportgenerator-globaltool --version 5.* 2>/dev/null || true
-    #     ~/.dotnet/tools/reportgenerator \
-    #       -reports:"TestResults/Unit/**/coverage.opencover.xml;TestResults/Integration/**/coverage.opencover.xml" \
-    #       -targetdir:"TestResults/CoverageReport" \
-    #       -reporttypes:"TextSummary;Cobertura" \
-    #       -assemblyfilters:"+FinanceSentry.*"
-    #     COVERAGE=$(grep -oP 'Line coverage: \K[\d.]+' TestResults/CoverageReport/Summary.txt || echo "0")
-    #     echo "Line coverage: ${COVERAGE}%"
-    #     awk -v cov="$COVERAGE" 'BEGIN {
-    #       if (cov+0 < 80) {
-    #         print "FAIL: Coverage " cov "% is below 80% minimum (Constitution §II)";
-    #         exit 1
-    #       } else {
-    #         print "PASS: Coverage " cov "% meets 80% threshold"
-    #       }
-    #     }'
+    # Coverage ratchet (509): floor sits just under measured coverage (26.8% line on
+    # 2026-08-30) and only moves UP as coverage grows — raise it with every feature
+    # that lifts the number. Constitution §II's 80% stays the destination.
+    - name: Enforce coverage ratchet floor
+      run: |
+        dotnet tool install --global dotnet-reportgenerator-globaltool --version 5.* 2>/dev/null || true
+        ~/.dotnet/tools/reportgenerator \
+          -reports:"TestResults/**/coverage.opencover.xml" \
+          -targetdir:"TestResults/CoverageReport" \
+          -reporttypes:"TextSummary;Cobertura" \
+          -assemblyfilters:"+FinanceSentry.*"
+        COVERAGE=$(grep -oP 'Line coverage: \K[\d.]+' TestResults/CoverageReport/Summary.txt || echo "0")
+        FLOOR=25
+        echo "Line coverage: ${COVERAGE}% (ratchet floor: ${FLOOR}%)"
+        awk -v cov="$COVERAGE" -v floor="$FLOOR" 'BEGIN {
+          if (cov+0 < floor) {
+            print "FAIL: Coverage " cov "% fell below the " floor "% ratchet floor";
+            exit 1
+          } else {
+            print "PASS: Coverage " cov "% holds the " floor "% ratchet floor"
+          }
+        }'
 
     - name: Generate test report
       if: always()
