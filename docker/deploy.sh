@@ -46,3 +46,28 @@ until curl -sf http://127.0.0.1:8080/api/v1/health >/dev/null 2>&1; do
 done
 
 echo "[deploy] ok — api reachable via gateway on 127.0.0.1:8080"
+
+# --- Uptime probe (issue #511) -------------------------------------------------
+# Host-level cron so outage alerts don't depend on the stack being up. Telegram
+# creds: prefer UPTIME_TELEGRAM_* from the decrypted docker/.env; fall back to the
+# Ledger bot creds already provisioned in OpenClaw's env on this host.
+echo "[deploy] install uptime probe (cron every 5 min)"
+PROBE_DIR="$HOME/.fs-uptime"
+mkdir -p "$PROBE_DIR"
+cp docker/uptime-probe.sh "$PROBE_DIR/uptime-probe.sh"
+chmod 700 "$PROBE_DIR/uptime-probe.sh"
+
+if grep -qE '^UPTIME_TELEGRAM_BOT_TOKEN=' docker/.env 2>/dev/null; then
+  grep -E '^UPTIME_TELEGRAM_(BOT_TOKEN|CHAT_ID)=' docker/.env > "$PROBE_DIR/probe.env"
+elif sudo -n test -f /srv/openclaw/config/.env 2>/dev/null; then
+  {
+    printf 'UPTIME_TELEGRAM_BOT_TOKEN=%s\n' "$(sudo -n grep -E '^FINANCE_BOT_TOKEN=' /srv/openclaw/config/.env | cut -d= -f2-)"
+    printf 'UPTIME_TELEGRAM_CHAT_ID=%s\n' "$(sudo -n grep -E '^TELEGRAM_OWNER_USER_ID=' /srv/openclaw/config/.env | cut -d= -f2-)"
+  } > "$PROBE_DIR/probe.env"
+else
+  echo "[deploy] warn: no Telegram creds for uptime probe — probe will no-op" >&2
+fi
+[[ -f "$PROBE_DIR/probe.env" ]] && chmod 600 "$PROBE_DIR/probe.env"
+
+( crontab -l 2>/dev/null | grep -v 'fs-uptime' ; echo "*/5 * * * * $PROBE_DIR/uptime-probe.sh >> $PROBE_DIR/probe.log 2>&1" ) | crontab -
+echo "[deploy] uptime probe installed"
