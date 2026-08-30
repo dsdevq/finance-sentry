@@ -40,6 +40,18 @@ jobs:
         docker load --input /tmp/image.tar
         docker images
 
+    # 510: gate on known fixable HIGH/CRITICAL vulnerabilities in the built image
+    # (OS packages + .NET deps). --ignore-unfixed keeps base-image CVEs without an
+    # available patch from blocking every PR.
+    - name: Scan image for vulnerabilities (Trivy)
+      uses: aquasecurity/trivy-action@0.28.0
+      with:
+        image-ref: finance-sentry-api:latest
+        format: table
+        exit-code: '1'
+        severity: CRITICAL,HIGH
+        ignore-unfixed: true
+
     - name: Test health endpoint
       run: |
         docker run -d --name finance-sentry-test -p 8080:8080 finance-sentry-api:latest
