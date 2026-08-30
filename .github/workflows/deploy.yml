@@ -24,6 +24,19 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./docker/deploy.sh
 
+      # Read-only Playwright smoke against the stack just deployed (real login, no
+      # mocks). Runs in the Playwright image on the host network so it can reach the
+      # loopback-bound gateway; the e2e sources are copied out of the read-only mount
+      # so npm never writes into the runner workspace.
+      - name: Live e2e smoke (deployed stack)
+        run: |
+          docker run --rm --network host \
+            -v "$PWD/frontend:/repo:ro" -w /work \
+            mcr.microsoft.com/playwright:v1.62.1-noble \
+            bash -c "cp -r /repo/e2e /repo/playwright.live.config.ts . \
+              && npm i --no-save --no-audit --no-fund @playwright/test@1.62.1 \
+              && npx playwright test --config playwright.live.config.ts"
+
       - name: Logs on failure
         if: failure()
         run: |

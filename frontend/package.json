@@ -13,6 +13,7 @@
     "format": "prettier --write \"src/**/*.{ts,html,scss}\"",
     "format:check": "prettier --check \"src/**/*.{ts,html,scss}\"",
     "e2e": "ng e2e",
+    "e2e:live": "playwright test --config playwright.live.config.ts",
     "prepare": "git -C .. config core.hooksPath .husky || true"
   },
   "lint-staged": {
