@@ -103,6 +103,47 @@ public class TrueLayerAdapterTests
     }
 
     [Fact]
+    public async Task SyncTransactionsAsync_RecentCursor_RefetchesTrailingOverlap()
+    {
+        // Posted transactions keep their original timestamp, so a pure watermark fetch
+        // never re-observes them — the stored pending twin would linger forever.
+        DateOnly? capturedFrom = null;
+        _clientMock
+            .Setup(c => c.GetTransactionsAsync(AccessToken, ExternalAccountId,
+                It.IsAny<DateOnly?>(), It.IsAny<DateOnly?>(), default))
+            .Callback<string, string, DateOnly?, DateOnly?, CancellationToken>((_, _, from, _, _) => capturedFrom = from)
+            .ReturnsAsync([]);
+        _clientMock
+            .Setup(c => c.GetPendingTransactionsAsync(AccessToken, ExternalAccountId, default))
+            .ReturnsAsync([]);
+
+        await CreateSut().SyncTransactionsAsync(
+            AccessToken, ExternalAccountId, AccountId, UserId, since: DateTime.UtcNow.AddHours(-1));
+
+        capturedFrom.Should().Be(DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-7));
+    }
+
+    [Fact]
+    public async Task SyncTransactionsAsync_OldCursor_StartsAtWatermarkNotOverlap()
+    {
+        DateOnly? capturedFrom = null;
+        _clientMock
+            .Setup(c => c.GetTransactionsAsync(AccessToken, ExternalAccountId,
+                It.IsAny<DateOnly?>(), It.IsAny<DateOnly?>(), default))
+            .Callback<string, string, DateOnly?, DateOnly?, CancellationToken>((_, _, from, _, _) => capturedFrom = from)
+            .ReturnsAsync([]);
+        _clientMock
+            .Setup(c => c.GetPendingTransactionsAsync(AccessToken, ExternalAccountId, default))
+            .ReturnsAsync([]);
+
+        var since = DateTime.UtcNow.AddDays(-40);
+        await CreateSut().SyncTransactionsAsync(
+            AccessToken, ExternalAccountId, AccountId, UserId, since: since);
+
+        capturedFrom.Should().Be(DateOnly.FromDateTime(since.Date));
+    }
+
+    [Fact]
     public async Task SyncTransactionsAsync_MergesBookedAndPendingWithSignedAmounts()
     {
         var booked = new TrueLayerTransaction(
