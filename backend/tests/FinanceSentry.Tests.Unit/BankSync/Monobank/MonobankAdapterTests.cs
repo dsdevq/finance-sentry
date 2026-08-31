@@ -155,6 +155,42 @@ public class MonobankAdapterTests
     }
 
     [Fact]
+    public async Task SyncTransactionsAsync_RecentCursor_RefetchesTrailingOverlap()
+    {
+        // A settled hold keeps its original timestamp, so a pure watermark fetch never
+        // re-observes it — every incremental sync must re-read a trailing overlap window.
+        var handler = new MonobankStubHttpHandler().Enqueue(HttpStatusCode.OK, "[]");
+        var since = DateTime.UtcNow.AddMinutes(-30);
+
+        await CreateSut(handler).SyncTransactionsAsync(
+            Token, ExternalAccountId, AccountId, UserId, since, default);
+
+        handler.RequestPaths.Should().ContainSingle();
+        var parts = handler.RequestPaths[0].Split('/');
+        var fromUnix = long.Parse(parts[^2]);
+        var fetchedFrom = DateTimeOffset.FromUnixTimeSeconds(fromUnix);
+        var expectedOverlapStart = DateTimeOffset.UtcNow.AddDays(-7);
+        fetchedFrom.Should().BeCloseTo(expectedOverlapStart, TimeSpan.FromMinutes(5));
+    }
+
+    [Fact]
+    public async Task SyncTransactionsAsync_OldCursor_StartsAtWatermarkNotOverlap()
+    {
+        // A gap longer than the overlap must still be fetched in full from the watermark.
+        var handler = new MonobankStubHttpHandler()
+            .Enqueue(HttpStatusCode.OK, "[]")
+            .Enqueue(HttpStatusCode.OK, "[]");
+        var since = DateTime.UtcNow.AddDays(-40);
+
+        await CreateSut(handler).SyncTransactionsAsync(
+            Token, ExternalAccountId, AccountId, UserId, since, default);
+
+        var parts = handler.RequestPaths[0].Split('/');
+        var fetchedFrom = DateTimeOffset.FromUnixTimeSeconds(long.Parse(parts[^2]));
+        fetchedFrom.Should().BeCloseTo(DateTimeOffset.UtcNow.AddDays(-40), TimeSpan.FromMinutes(5));
+    }
+
+    [Fact]
     public async Task SyncTransactionsAsync_NoCursor_Fetches90DaysInThreeWindows()
     {
         var handler = new MonobankStubHttpHandler().Enqueue(HttpStatusCode.OK, "[]");

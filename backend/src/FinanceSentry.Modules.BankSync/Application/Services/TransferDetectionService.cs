@@ -20,8 +20,10 @@ public interface ITransferDetectionService
     /// <summary>
     /// Detects all likely internal transfers within a batch and returns the union of
     /// matched debit + credit transaction Ids. Each credit is consumed by at most one
-    /// debit so an ambiguous credit is not double-counted. Pending / inactive rows are
-    /// ignored — the caller does not need to pre-filter.
+    /// debit so an ambiguous credit is not double-counted. Inactive rows are ignored —
+    /// the caller does not need to pre-filter. Pending rows DO participate: cash-flow
+    /// statistics count pending money, so a transfer whose leg is still pending must be
+    /// excluded like any other or it leaks into income/spending.
     /// When <paramref name="accountCurrencies"/> is provided, cross-currency pairs
     /// (e.g. a EUR debit funding a UAH credit) are also matched by comparing the
     /// USD-converted amounts within an FX tolerance.
@@ -113,7 +115,7 @@ public class TransferDetectionService : ITransferDetectionService
         var credits = new List<Transaction>();
         foreach (var tx in transactions)
         {
-            if (tx.IsPending || !tx.IsActive) continue;
+            if (!tx.IsActive) continue;
             var txType = tx.TransactionType?.Trim();
             if (txType?.Equals("debit", StringComparison.OrdinalIgnoreCase) == true) debits.Add(tx);
             else if (txType?.Equals("credit", StringComparison.OrdinalIgnoreCase) == true) credits.Add(tx);

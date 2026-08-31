@@ -16,6 +16,15 @@ public class MonobankAdapter(MonobankHttpClient client, ICategoryResolver catego
     /// <summary>How far back the first-ever import of an account reaches.</summary>
     private const int InitialImportDays = 90;
 
+    /// <summary>
+    /// Trailing overlap re-fetched on every incremental sync. A hold keeps its original
+    /// timestamp when it settles, so a pure watermark fetch never re-observes the settled
+    /// version once the watermark passes it — the stored row would stay pending forever.
+    /// Re-reading the last few days lets settle-in-place flip cleared holds; dedup makes
+    /// the overlap idempotent.
+    /// </summary>
+    private const int ResyncLookbackDays = 7;
+
     public string ProviderName => "monobank";
 
     public async Task<IReadOnlyList<MonobankAccountInfo>> ConnectAsync(
@@ -67,9 +76,11 @@ public class MonobankAdapter(MonobankHttpClient client, ICategoryResolver catego
         var now = DateTimeOffset.UtcNow;
         var candidates = new List<TransactionCandidate>();
 
-        var start = since.HasValue
+        var overlapStart = now.AddDays(-ResyncLookbackDays);
+        var watermarkStart = since.HasValue
             ? new DateTimeOffset(since.Value.AddSeconds(1), TimeSpan.Zero)
             : now.AddDays(-InitialImportDays);
+        var start = watermarkStart < overlapStart ? watermarkStart : overlapStart;
 
         // The statement endpoint rejects ranges longer than 31 days with a 400, so any
         // span — the 90-day initial import or an incremental catch-up after a long gap —

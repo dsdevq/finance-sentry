@@ -76,8 +76,15 @@ keeps the raw positive value ("you owe X"), matching how banks present credit ca
   (`ScheduledSyncService.PersistAndReconcileAsync`).
 - **PendingReconciler**: a pending row whose posted twin exists under a *different* hash
   (date moved — the TrueLayer case) is retired (soft-deleted, `IsActive = false`).
+- **Sync lookback overlap**: settled transactions keep their original timestamp, so a pure
+  watermark fetch would never re-observe them once the watermark passes — every
+  incremental sync therefore re-reads a trailing 7-day window (`ResyncLookbackDays` in
+  both adapters). Dedup makes the overlap idempotent; it is what feeds settle-in-place
+  and the reconciler.
 - Net effect: a real purchase exists as exactly one active row; it may be `IsPending` for a
-  few days, then becomes posted either in place or via retire-and-replace.
+  few days, then becomes posted either in place or via retire-and-replace. A hold that
+  takes longer than the lookback window to settle stays pending until a manual resync
+  (reset the account's `LastTransactionSyncAt`).
 
 ## 5. Monthly inflow / outflow ("Spending this month", "Monthly Outflow")
 
@@ -89,10 +96,12 @@ keeps the raw positive value ("you owe X"), matching how banks present credit ca
 - **Included**: active transactions, **pending included** — a card hold is committed
   spending (excluding it made the month's outflow a fraction of reality).
 - **Excluded**: internal transfers, two ways — (a) pair-matched via
-  `TransferDetectionService` (cross-currency aware, posted rows only), (b) category-based
-  `TRANSFER_IN` / `TRANSFER_OUT`. Note: credit-card repayments are transfers (moving money
-  onto your own card), so they are rightly excluded — the *spending* is counted on the card
-  itself.
+  `TransferDetectionService` (cross-currency aware; pending rows participate, since
+  pending money counts in the flow), (b) category-based `TRANSFER_IN` / `TRANSFER_OUT`.
+  Note: credit-card repayments are transfers (moving money onto your own card), so they
+  are rightly excluded — the *spending* is counted on the card itself when the provider
+  exposes it (Revolut's TrueLayer integration does not: its card is invisible, so only
+  the repayments are observable at all).
 - Outflow = sum of `debit` amounts, inflow = sum of `credit` amounts, per currency, plus
   USD-converted fields. Transactions on deactivated accounts resolve to currency
   `"UNKNOWN"` (converted 1:1).
@@ -135,6 +144,7 @@ excluded (month-to-date reads absurdly negative before payday).
 - Unknown currencies convert 1:1 (§3).
 - A pending transaction and its posted twin can both be active between the twin's arrival
   and the account's next sync — a transient double-count window of one sync cycle.
+- A hold that settles with a materially different amount or description than it was
+  authorized with produces a new posted row; the stale pending twin is only retired if
+  the amount+description reconciler key still matches.
 - Backfilled snapshot days are not historical truth (§8).
-- Transfer pair-detection only considers posted rows; a pending half of a transfer is
-  excluded only if its category says so.

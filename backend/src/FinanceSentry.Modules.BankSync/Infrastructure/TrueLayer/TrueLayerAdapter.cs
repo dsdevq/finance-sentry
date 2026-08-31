@@ -25,6 +25,15 @@ public class TrueLayerAdapter(
 
     private const int InitialSyncWindowDays = 90;
 
+    /// <summary>
+    /// Trailing overlap re-fetched on every incremental sync. A transaction that settles
+    /// keeps its original timestamp, so a pure watermark fetch never re-observes the
+    /// posted version once the watermark passes it — the stored pending row would linger
+    /// forever. Re-reading the last few days lets the pending reconciler (and same-hash
+    /// settle-in-place) clear it; dedup makes the overlap idempotent.
+    /// </summary>
+    private const int ResyncLookbackDays = 7;
+
     private readonly TrueLayerCategoryMapper _categoryMapper = categoryMapper;
     private readonly ICategoryResolver _categoryResolver = categoryResolver;
 
@@ -121,9 +130,11 @@ public class TrueLayerAdapter(
         DateTime? since, bool isCard, CancellationToken ct)
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var from = since.HasValue
+        var overlapFrom = today.AddDays(-ResyncLookbackDays);
+        var watermarkFrom = since.HasValue
             ? DateOnly.FromDateTime(since.Value.Date)
             : today.AddDays(-InitialSyncWindowDays);
+        var from = watermarkFrom < overlapFrom ? watermarkFrom : overlapFrom;
 
         var booked = isCard
             ? await client.GetCardTransactionsAsync(credential, externalAccountId, from, today, ct)

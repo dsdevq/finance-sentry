@@ -99,13 +99,13 @@ public class TransferDetectionTests
     }
 
     [Fact]
-    public void DetectTransferTransactionIds_PendingAndInactive_Ignored()
+    public void DetectTransferTransactionIds_InactiveRows_Ignored()
     {
         var accountA = Guid.NewGuid();
         var accountB = Guid.NewGuid();
         var date = new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc);
 
-        var debit  = MakeTx(accountA, 500m, "debit",  date, isPending: true);
+        var debit  = MakeTx(accountA, 500m, "debit",  date, isActive: false);
         var credit = MakeTx(accountB, 500m, "credit", date, isActive: false);
 
         var sut = new TransferDetectionService();
@@ -113,6 +113,26 @@ public class TransferDetectionTests
         var result = sut.DetectTransferTransactionIds([debit, credit]);
 
         result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void DetectTransferTransactionIds_PendingLeg_StillPairs()
+    {
+        // Cash-flow statistics count pending money, so a transfer whose receiving leg is
+        // still pending must be excluded like any other — otherwise the pending credit
+        // leaks into income until it posts (the Revolut→AIB €265 case).
+        var accountA = Guid.NewGuid();
+        var accountB = Guid.NewGuid();
+        var date = new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc);
+
+        var debit  = MakeTx(accountA, 500m, "debit",  date);
+        var credit = MakeTx(accountB, 500m, "credit", date, isPending: true);
+
+        var sut = new TransferDetectionService();
+
+        var result = sut.DetectTransferTransactionIds([debit, credit]);
+
+        result.Should().BeEquivalentTo(new[] { debit.Id, credit.Id });
     }
 
     [Theory]
