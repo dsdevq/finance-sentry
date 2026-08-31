@@ -30,8 +30,8 @@ test.describe('Live smoke — deployed stack', () => {
     await login(page);
     // The QA test user has connected accounts — the empty state must not show.
     await expect(page.getByText('Connect your first account')).not.toBeVisible();
-    await expect(page.getByText('Income this month')).toBeVisible();
-    await expect(page.getByText('Spending this month')).toBeVisible();
+    await expect(page.getByText('Income (MTD)')).toBeVisible();
+    await expect(page.getByText('Spending (MTD)')).toBeVisible();
   });
 
   test('transaction ledger renders with live data', async ({page}) => {

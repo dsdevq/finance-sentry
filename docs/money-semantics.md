@@ -86,13 +86,21 @@ keeps the raw positive value ("you owe X"), matching how banks present credit ca
   takes longer than the lookback window to settle stays pending until a manual resync
   (reset the account's `LastTransactionSyncAt`).
 
-## 5. Monthly inflow / outflow ("Spending this month", "Monthly Outflow")
+## 5. Monthly inflow / outflow ("Spending (MTD)", "Monthly Outflow")
 
 `MoneyFlowStatisticsService.GetMonthlyFlowAsync`:
 
-- **Fetch window**: rolling — `UtcNow.AddMonths(-6)`. **Bucketing**: calendar UTC month on
-  `PostedDate ?? TransactionDate`. The current bucket is month-to-date; the oldest bucket
-  is a partial month (truncated by the rolling fetch edge).
+- **Fetch window**: month-aligned — `MonthWindow.StartOfMonthsAgo(months)`, i.e. UTC
+  midnight on the first of the month N back. `months` comes from the dashboard's selected
+  range (3M/6M/1Y/All). So "3M" spans **three complete calendar months plus the one in
+  progress**, and no bucket is ever a fragment of a month. (It used to be a raw
+  `UtcNow.AddMonths(-n)`, which started mid-month and left the oldest bucket holding a
+  handful of days — it charted as a collapsed bar and yielded a savings rate computed
+  from a single day.)
+- **Bucketing**: calendar UTC month on `PostedDate ?? TransactionDate`. The trailing
+  bucket is month-to-date and is returned deliberately: it feeds the dashboard's
+  month-to-date tiles. Callers must keep it out of month-over-month comparisons
+  (see §7).
 - **Included**: active transactions, **pending included** — a card hold is committed
   spending (excluding it made the month's outflow a fraction of reality).
 - **Excluded**: internal transfers, two ways — (a) pair-matched via
@@ -111,14 +119,43 @@ keeps the raw positive value ("you owe X"), matching how banks present credit ca
 ## 6. Top spending categories
 
 `MerchantCategoryStatisticsService`: same filters as monthly flow (active, pending
-included, transfers excluded, debits only, USD-converted), but a **flat rolling 6-month
-window** — not month-bucketed. Displayed as "Top Spending Categories (6M)".
+included, transfers excluded, debits only, USD-converted) over the same month-aligned
+window (`MonthWindow.StartOfMonthsAgo`), but **flat — not month-bucketed**. Displayed as
+"Top Spending Categories (3M)" etc., following the dashboard's selected range.
 
-## 7. Savings rate
+Unlike the bar charts (§7) this **includes the in-progress month**. A composition is not a
+period-over-period comparison, so a partial month does not distort it the way it distorts
+a bar sitting next to complete ones — and dropping the freshest spending from "where does
+my money go" would be a real loss.
 
-Frontend-only (`dashboard.computed.ts`), derived from the monthly-flow buckets:
-**completed calendar months with inflow only** — the in-progress month is deliberately
-excluded (month-to-date reads absurdly negative before payday).
+## 7. Month-bucketed charts vs. month-to-date tiles
+
+Frontend-only (`dashboard.computed.ts`). The in-progress month appears in exactly one
+place, and the split is deliberate.
+
+**Charts plot complete calendar months only** — both *Income vs Spending* and *Monthly
+Savings Rate* read the same `completeMonths` window, so they always share an x-axis. A
+partial month as a bar next to complete ones is an apples-to-oranges comparison: income
+reads as collapsing, and the savings rate swings to absurd magnitudes (the old chart read
+-500,000%), because salary posts once — often on the last day — so until then the month
+holds a full run of spending against stray small credits. Savings rate additionally drops
+completed months with zero inflow, for the same divide-by-near-zero reason.
+
+**Month-to-date tiles carry the in-progress month**, labelled `(MTD)`:
+
+- *Income (MTD)* / *Spending (MTD)*: current-month totals, compared against the average of
+  the trailing 3 complete months **prorated by day-of-month elapsed** — without proration
+  a figure two days into the month always reads as a collapse.
+- *Savings rate (MTD)*: withheld (shows `—`) until month-to-date inflow reaches
+  `INCOME_LANDED_FRACTION` (50%) of a normal month's income. Below that the raw rate is
+  technically correct and completely misleading. Compared in **percentage points** against
+  the trailing complete months, since a rate is scale-free and is not prorated.
+- The `cmn-stat-card` `delta` input drives colour and arrow off its **sign**, so the number
+  passed is "how good is this", not "which direction did it move" — for spending those are
+  opposites, and the wording (`over pace` / `under pace`) carries the direction instead.
+
+This is the same split Binance and IBKR use: the current period is a tile with a
+comparison; the bars are closed periods.
 
 ## 8. Net worth
 
@@ -148,3 +185,7 @@ excluded (month-to-date reads absurdly negative before payday).
   authorized with produces a new posted row; the stale pending twin is only retired if
   the amount+description reconciler key still matches.
 - Backfilled snapshot days are not historical truth (§8).
+- The month-to-date pace baseline (§7) prorates a monthly average linearly by elapsed
+  days. Real spending is lumpy — rent lands on the 1st, salary on the last day — so pace
+  is directionally right rather than exact. A true same-day-last-month comparison would
+  need day-level cumulative flow from the backend, which is not built.

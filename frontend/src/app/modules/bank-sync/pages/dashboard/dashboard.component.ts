@@ -82,45 +82,74 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
             </div>
           </cmn-card>
         } @else {
-          <div class="grid grid-cols-1 gap-cmn-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div class="grid grid-cols-1 gap-cmn-4 sm:grid-cols-2">
             <cmn-stat-card
               [value]="store.totalBalanceFormatted()"
               [loading]="store.isLoading()"
               label="Net Worth"
               icon="Wallet"
             />
-            <button
-              (click)="goToIncome()"
-              type="button"
-              class="w-full cursor-pointer text-left transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-default focus-visible:ring-offset-2"
-              aria-label="View income details"
-            >
-              <cmn-stat-card
-                [value]="store.monthlyInflowFormatted()"
-                [loading]="store.isLoading()"
-                label="Income this month"
-                icon="TrendingUp"
-              />
-            </button>
-            <button
-              (click)="goToSpending()"
-              type="button"
-              class="w-full cursor-pointer text-left transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-default focus-visible:ring-offset-2"
-              aria-label="View spending details"
-            >
-              <cmn-stat-card
-                [value]="store.monthlySpendingFormatted()"
-                [loading]="store.isLoading()"
-                label="Spending this month"
-                icon="TrendingDown"
-              />
-            </button>
             <cmn-stat-card
               [value]="store.netWorthChangeFormatted()"
               [loading]="store.isLoading()"
               label="Change (period)"
               icon="Activity"
             />
+          </div>
+
+          <!--
+            The in-progress month lives here and nowhere else. The charts below plot closed
+            months only, so a partial figure never sits next to a complete one pretending to
+            be comparable; here it is labelled month-to-date and paced against the trailing
+            complete months, which is the comparison that actually means something mid-month.
+          -->
+          <div>
+            <div class="mb-cmn-3 flex items-baseline justify-between">
+              <span class="text-cmn-sm font-medium text-text-secondary">This month</span>
+              <span class="text-cmn-xs text-text-disabled">
+                Month to date, paced against the last 3 complete months
+              </span>
+            </div>
+            <div class="grid grid-cols-1 gap-cmn-4 sm:grid-cols-3">
+              <button
+                (click)="goToIncome()"
+                type="button"
+                class="w-full cursor-pointer text-left transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-default focus-visible:ring-offset-2"
+                aria-label="View income details"
+              >
+                <cmn-stat-card
+                  [value]="store.monthlyInflowFormatted()"
+                  [delta]="store.inflowPaceDelta()"
+                  [deltaLabel]="store.inflowPaceLabel()"
+                  [loading]="store.isLoading()"
+                  label="Income (MTD)"
+                  icon="TrendingUp"
+                />
+              </button>
+              <button
+                (click)="goToSpending()"
+                type="button"
+                class="w-full cursor-pointer text-left transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-default focus-visible:ring-offset-2"
+                aria-label="View spending details"
+              >
+                <cmn-stat-card
+                  [value]="store.monthlySpendingFormatted()"
+                  [delta]="store.spendingPaceDelta()"
+                  [deltaLabel]="store.spendingPaceLabel()"
+                  [loading]="store.isLoading()"
+                  label="Spending (MTD)"
+                  icon="TrendingDown"
+                />
+              </button>
+              <cmn-stat-card
+                [value]="store.savingsRateMonthToDateFormatted()"
+                [delta]="store.savingsRatePaceDelta()"
+                [deltaLabel]="store.savingsRatePaceLabel()"
+                [loading]="store.isLoading()"
+                label="Savings rate (MTD)"
+                icon="PiggyBank"
+              />
+            </div>
           </div>
 
           <div>
@@ -162,19 +191,19 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
             <div class="grid grid-cols-1 gap-cmn-4 lg:grid-cols-2">
               <cmn-bar-chart
                 [series]="store.incomeVsSpendingBars()"
-                label="Income vs Spending"
+                label="Income vs Spending (complete months)"
                 currency="USD"
               />
               <cmn-bar-chart
                 [series]="store.savingsRateBars()"
-                label="Monthly Savings Rate"
+                label="Monthly Savings Rate (complete months)"
                 valueFormat="percent"
               />
             </div>
           } @else if (store.hasCashFlow()) {
             <cmn-bar-chart
               [series]="store.incomeVsSpendingBars()"
-              label="Income vs Spending"
+              label="Income vs Spending (complete months)"
               currency="USD"
             />
           }
@@ -230,7 +259,7 @@ export class DashboardComponent {
   }
 
   public goToIncome(): void {
-    void this.router.navigateByUrl(AppRoute.Income);
+    void this.router.navigate([AppRoute.Transactions], {queryParams: {type: 'credit'}});
   }
 
   public goToSpending(): void {

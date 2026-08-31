@@ -40,8 +40,9 @@ public class MerchantCategoryStatisticsService(
           Guid userId, int limit = 10, int months = 6, CancellationToken ct = default)
     {
         // Windowed to match the money-flow charts — an all-time breakdown silently mixes
-        // years of history into what reads as a current spending mix.
-        var since = DateTime.UtcNow.AddMonths(-months);
+        // years of history into what reads as a current spending mix. Floored to a month
+        // boundary for the same reason as the money-flow window (see MonthWindow).
+        var since = MonthWindow.StartOfMonthsAgo(months);
         var txList = await _transactions.GetByUserIdSinceAsync(userId, since, ct);
 
         // Convert each transaction to USD by its account currency — accounts span UAH/EUR/…,
