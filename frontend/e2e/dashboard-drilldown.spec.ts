@@ -169,8 +169,8 @@ async function mockApis(page: Page): Promise<void> {
       body: JSON.stringify(AUTH_RESPONSE),
     })
   );
-  // Dashboard data
-  await page.route(`${API}/dashboard/aggregated`, route =>
+  // Dashboard data — trailing ** because the dashboard scopes the call with ?months=<range>
+  await page.route(`${API}/dashboard/aggregated**`, route =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -211,7 +211,7 @@ async function mockApisWithLedger(page: Page): Promise<void> {
       body: JSON.stringify(AUTH_RESPONSE),
     })
   );
-  await page.route(`${API}/dashboard/aggregated`, route =>
+  await page.route(`${API}/dashboard/aggregated**`, route =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -247,7 +247,10 @@ test.describe('Dashboard drill-downs', () => {
   });
 
   test('dashboard renders stat cards for authenticated user', async ({page}) => {
+    // The default 3M range must scope the aggregated statistics call.
+    const aggregatedRequest = page.waitForRequest(/dashboard\/aggregated\?months=3/);
     await page.goto('/dashboard');
+    await aggregatedRequest;
     // Verify the Dashboard heading is visible
     await expect(page.getByRole('heading', {name: 'Dashboard'})).toBeVisible();
     // Stat cards should render (not empty state)
