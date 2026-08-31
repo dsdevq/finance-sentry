@@ -5,6 +5,43 @@ All notable changes to Finance Sentry are documented here. The format follows
 [Semantic Versioning](https://semver.org/). Entries from v0.12.0 onward are
 generated automatically by [release-please](https://github.com/googleapis/release-please).
 
+## [1.7.0](https://github.com/lifekit-hq/finance-sentry/compare/v1.6.0...v1.7.0) (2026-08-31)
+
+
+### Features
+
+* **ci:** dependency updates, vuln gates, and SSH.NET CVE fix ([#510](https://github.com/lifekit-hq/finance-sentry/issues/510)) ([#514](https://github.com/lifekit-hq/finance-sentry/issues/514)) ([30c22a0](https://github.com/lifekit-hq/finance-sentry/commit/30c22a09921cc8cc5aa0930fc8921303d8925152))
+* **dashboard:** one shared time range drives every widget, default 3M ([#533](https://github.com/lifekit-hq/finance-sentry/issues/533)) ([63f135d](https://github.com/lifekit-hq/finance-sentry/commit/63f135d40d864f61e9b5c1605075056be3b0e279))
+* **deploy:** host-level uptime probe with Telegram alerting ([#511](https://github.com/lifekit-hq/finance-sentry/issues/511)) ([#512](https://github.com/lifekit-hq/finance-sentry/issues/512)) ([7bddc01](https://github.com/lifekit-hq/finance-sentry/commit/7bddc01ca00d7dc0816b8c060eaf05180a88ca50))
+* **e2e:** live smoke suite against the deployed VPS stack ([#503](https://github.com/lifekit-hq/finance-sentry/issues/503)) ([#504](https://github.com/lifekit-hq/finance-sentry/issues/504)) ([9fcff5c](https://github.com/lifekit-hq/finance-sentry/commit/9fcff5c9ae5edc55b43d38fd7099c4dbd5194019))
+
+
+### Bug Fixes
+
+* **bank-sync:** actually publish AccountSyncCompletedEvent after a successful sync ([#536](https://github.com/lifekit-hq/finance-sentry/issues/536)) ([e0bcce9](https://github.com/lifekit-hq/finance-sentry/commit/e0bcce9c03bcc65b87083bca375c0da35f541f0b))
+* **bank-sync:** auto-discover TrueLayer credit cards during scheduled sync ([#532](https://github.com/lifekit-hq/finance-sentry/issues/532)) ([f215523](https://github.com/lifekit-hq/finance-sentry/commit/f215523ed192cb1ad1d6037c8f2e4d6cc2f20ac6))
+* **bank-sync:** credit-card accounting, pending outflow, live net-worth snapshots ([#531](https://github.com/lifekit-hq/finance-sentry/issues/531)) ([7c85cea](https://github.com/lifekit-hq/finance-sentry/commit/7c85cea24b64e171225684d0155f94f640ea1074))
+* **bank-sync:** re-observe settled transactions and pair pending transfer legs ([#535](https://github.com/lifekit-hq/finance-sentry/issues/535)) ([0fd4b32](https://github.com/lifekit-hq/finance-sentry/commit/0fd4b32a03b55da61e0d7b01c89e8cec5b72a893))
+* **ci:** backend coverage was never collected; run all suites + ratchet gate ([#509](https://github.com/lifekit-hq/finance-sentry/issues/509)) ([#521](https://github.com/lifekit-hq/finance-sentry/issues/521)) ([ce1ec0a](https://github.com/lifekit-hq/finance-sentry/commit/ce1ec0a0e863eb9ddf8b1468ff9c13d361d4a2d2))
+* **core:** treat credit-card balances as liabilities in net-total aggregations ([#498](https://github.com/lifekit-hq/finance-sentry/issues/498)) ([#499](https://github.com/lifekit-hq/finance-sentry/issues/499)) ([99e8f15](https://github.com/lifekit-hq/finance-sentry/commit/99e8f1591206c634d19ab92fd90ca736c09b1cad))
+* **dashboard:** chart complete months only, retire the Income page ([#537](https://github.com/lifekit-hq/finance-sentry/issues/537)) ([27d935f](https://github.com/lifekit-hq/finance-sentry/commit/27d935f82112a7d52cb4d2da75ae61ab6d9278f0))
+* **deploy:** probe install no longer trips errexit on an empty crontab ([#511](https://github.com/lifekit-hq/finance-sentry/issues/511)) ([#513](https://github.com/lifekit-hq/finance-sentry/issues/513)) ([3b9a915](https://github.com/lifekit-hq/finance-sentry/commit/3b9a9151bb150c74c70526e59581bbe8028b95a2))
+* **docker:** apk upgrade runtime stage to clear Trivy HIGH CVEs ([#530](https://github.com/lifekit-hq/finance-sentry/issues/530)) ([3101b98](https://github.com/lifekit-hq/finance-sentry/commit/3101b983a9d776964b1149cdfd37955ae3635141))
+* **docker:** serialize the shared NuGet cache mount (sharing=locked) ([#529](https://github.com/lifekit-hq/finance-sentry/issues/529)) ([bbd13f9](https://github.com/lifekit-hq/finance-sentry/commit/bbd13f9f8e7aec45e440c50186c598a67fc7d123))
+* **e2e:** match the dashboard aggregated mock with its new ?months param ([#534](https://github.com/lifekit-hq/finance-sentry/issues/534)) ([72adf79](https://github.com/lifekit-hq/finance-sentry/commit/72adf7937808125af162622f5af0bb6d59ea9be7))
+
+
+### Refactoring
+
+* **budgets:** decouple from BankSync via Core read port + module-boundary arch test ([#501](https://github.com/lifekit-hq/finance-sentry/issues/501)) ([1d50f98](https://github.com/lifekit-hq/finance-sentry/commit/1d50f9810111c1cda5e025fb89a1d22a876c54ed))
+
+
+### Documentation
+
+* devclaw work-item issue template (spec 024 — the issue is the contract) ([#490](https://github.com/lifekit-hq/finance-sentry/issues/490)) ([fad5771](https://github.com/lifekit-hq/finance-sentry/commit/fad5771b7345c2dc364af25b9b9f0428d1131f47))
+* infrastructure-catalog rule — infra changes update lifekit-dashboard's infra.json ([#526](https://github.com/lifekit-hq/finance-sentry/issues/526)) ([35486a3](https://github.com/lifekit-hq/finance-sentry/commit/35486a378fa20a5fb5aa81595d11889aee5e43fa))
+* **specs:** flip 021 + 039 Status to Implemented ([#497](https://github.com/lifekit-hq/finance-sentry/issues/497)) ([609a6be](https://github.com/lifekit-hq/finance-sentry/commit/609a6be34693af411d5089619db71f8e51681bb8))
+
 ## [1.6.0](https://github.com/lifekit-hq/finance-sentry/compare/v1.5.0...v1.6.0) (2026-08-28)
 
 
