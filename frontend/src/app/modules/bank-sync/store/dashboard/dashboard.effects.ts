@@ -5,6 +5,7 @@ import {extractErrorCode} from '@lifekit-hq/core';
 import {rxMethod} from '@ngrx/signals/rxjs-interop';
 import {catchError, EMPTY, pipe, switchMap, tap, timer} from 'rxjs';
 
+import {HISTORY_RANGE_MONTHS} from '../../constants/dashboard/dashboard.constants';
 import {
   type DashboardData,
   type HistoryRange,
@@ -33,11 +34,13 @@ export function dashboardEffects(store: EffectsStore) {
   const bankSyncService = inject(BankSyncService);
 
   return {
-    load: rxMethod<void>(
+    // The selected range scopes the month-bucketed widgets too (income vs spending,
+    // savings rate, top categories) — one range, one story across the whole dashboard.
+    load: rxMethod<HistoryRange>(
       pipe(
         tap(() => store.setLoading()),
-        switchMap(() =>
-          bankSyncService.getDashboardData().pipe(
+        switchMap(range =>
+          bankSyncService.getDashboardData(HISTORY_RANGE_MONTHS[range]).pipe(
             tap(data => {
               store.setData(data);
               store.setSuccess();
@@ -75,7 +78,7 @@ export function dashboardEffects(store: EffectsStore) {
 }
 
 interface HookStore extends EffectsStore {
-  load: () => void;
+  load: (range: HistoryRange) => void;
   loadNetWorthHistory: (range: HistoryRange) => void;
   setHistoryRange: (range: HistoryRange) => void;
 }
@@ -97,10 +100,10 @@ export function dashboardHooks(store: HookStore): void {
     store.setHistoryRange(urlRange);
   }
 
-  store.load();
-
   // Keep the URL in sync with the selected range (replaceUrl so range clicks don't
-  // pollute browser history), and reload history whenever it changes.
+  // pollute browser history), and reload BOTH the history chart and the range-scoped
+  // dashboard statistics whenever it changes. The initial emission doubles as the
+  // first load, so there is no separate load() call.
   toObservable(store.historyRange)
     .pipe(
       tap(range => {
@@ -110,7 +113,10 @@ export function dashboardHooks(store: HookStore): void {
           queryParamsHandling: 'merge',
           replaceUrl: true,
         });
-        untracked(() => store.loadNetWorthHistory(range));
+        untracked(() => {
+          store.loadNetWorthHistory(range);
+          store.load(range);
+        });
       })
     )
     .subscribe();
@@ -119,7 +125,9 @@ export function dashboardHooks(store: HookStore): void {
     pipe(
       switchMap(() =>
         timer(REFRESH_INTERVAL_MS, REFRESH_INTERVAL_MS).pipe(
-          switchMap(() => bankSyncService.getDashboardData()),
+          switchMap(() =>
+            bankSyncService.getDashboardData(HISTORY_RANGE_MONTHS[untracked(store.historyRange)])
+          ),
           tap(data => untracked(() => store.setData(data))),
           catchError((err: unknown) => {
             untracked(() => store.setError(extractErrorCode(err)));

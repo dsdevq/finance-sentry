@@ -16,7 +16,7 @@ export interface DashboardState {
 export const initialDashboardState: DashboardState = {
   data: null,
   netWorthHistory: [],
-  historyRange: '1y',
+  historyRange: '3m',
   historyHasHistory: false,
   historyLoading: false,
   historyError: null,
