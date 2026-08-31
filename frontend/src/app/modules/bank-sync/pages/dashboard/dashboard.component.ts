@@ -18,6 +18,7 @@ import {AppCurrencyPipe} from '../../../../core/pipes/app-currency.pipe';
 import {AppDecimalPipe} from '../../../../core/pipes/app-decimal.pipe';
 import {AppRoute} from '../../../../shared/enums/app-route/app-route.enum';
 import {MerchantCategoryPipe} from '../../../../shared/pipes/merchant-category.pipe';
+import {HISTORY_RANGE_LABELS} from '../../constants/dashboard/dashboard.constants';
 import {type CategoryStat, type HistoryRange} from '../../models/dashboard/dashboard.model';
 import {DashboardStore} from '../../store/dashboard/dashboard.store';
 
@@ -182,7 +183,7 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
             <div>
               <cmn-donut-chart
                 [segments]="store.categoryChartData()"
-                label="Top Spending Categories (6M)"
+                [label]="topCategoriesLabel()"
                 currency="USD"
               />
             </div>
@@ -219,6 +220,9 @@ export class DashboardComponent {
   public readonly ranges = HISTORY_RANGES;
   public readonly showEmptyState = computed(
     () => !this.store.isLoading() && (this.store.data()?.accountCount ?? 0) === 0
+  );
+  public readonly topCategoriesLabel = computed(
+    () => `Top Spending Categories (${HISTORY_RANGE_LABELS[this.store.historyRange()]})`
   );
 
   public goToAccounts(): void {
