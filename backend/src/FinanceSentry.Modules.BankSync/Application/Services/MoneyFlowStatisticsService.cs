@@ -25,7 +25,11 @@ public record MonthlyFlow(
 public interface IMoneyFlowStatisticsService
 {
     /// <summary>
-    /// Returns monthly inflow/outflow/net per currency for the last <paramref name="months"/> calendar months.
+    /// Returns monthly inflow/outflow/net per currency over the last <paramref name="months"/>
+    /// COMPLETE calendar months plus the one in progress. The window starts on a month
+    /// boundary (see <see cref="MonthWindow"/>) so no bucket is a partial fragment of a month;
+    /// the trailing in-progress bucket is included so callers can render a month-to-date
+    /// figure, and it is up to them to keep it out of month-over-month comparisons.
     /// Pending transactions count — a card hold is real spending, and excluding it made the
     /// current month's outflow a fraction of reality. Settlement retires or flips the pending
     /// row in place, so it is never double-counted for long.
@@ -48,7 +52,11 @@ public class MoneyFlowStatisticsService(
     public async Task<IReadOnlyList<MonthlyFlow>> GetMonthlyFlowAsync(
           Guid userId, int months = 6, CancellationToken ct = default)
     {
-        var since = DateTime.UtcNow.AddMonths(-months);
+        // Floor to the first day of the month so the oldest bucket is a WHOLE month.
+        // A raw UtcNow.AddMonths(-months) starts mid-month, leaving the leading bucket
+        // holding only a few days of transactions — it rendered as a near-zero bar and
+        // produced a savings rate computed from a single day.
+        var since = MonthWindow.StartOfMonthsAgo(months);
 
         // 1. Build currency map from active accounts
         var accountList = await _accounts.GetByUserIdAsync(userId, ct);

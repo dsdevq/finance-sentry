@@ -255,13 +255,20 @@ test.describe('Dashboard drill-downs', () => {
     await expect(page.getByRole('heading', {name: 'Dashboard'})).toBeVisible();
     // Stat cards should render (not empty state)
     await expect(page.getByText('Connect your first account')).not.toBeVisible();
-    // Income stat card label is visible
-    await expect(page.getByText('Income this month')).toBeVisible();
-    // Spending stat card label is visible
-    await expect(page.getByText('Spending this month')).toBeVisible();
+    // The in-progress month lives on the month-to-date tiles and nowhere else.
+    await expect(page.getByText('Income (MTD)')).toBeVisible();
+    await expect(page.getByText('Spending (MTD)')).toBeVisible();
+    await expect(page.getByText('Savings rate (MTD)')).toBeVisible();
   });
 
-  test('clicking "Income this month" navigates to /income', async ({page}) => {
+  test('month-bucketed charts are labelled as complete months only', async ({page}) => {
+    await page.goto('/dashboard');
+    await expect(page.getByRole('heading', {name: 'Dashboard'})).toBeVisible();
+
+    await expect(page.getByText('Income vs Spending (complete months)')).toBeVisible();
+  });
+
+  test('clicking "Income (MTD)" navigates to /transactions with credit filter', async ({page}) => {
     await page.goto('/dashboard');
     await expect(page.getByRole('heading', {name: 'Dashboard'})).toBeVisible();
 
@@ -270,13 +277,10 @@ test.describe('Dashboard drill-downs', () => {
     await expect(incomeButton).toBeVisible();
     await incomeButton.click();
 
-    await expect(page).toHaveURL(/\/income$/);
-    await expect(page.getByRole('heading', {name: 'Income'})).toBeVisible();
+    await expect(page).toHaveURL(/\/transactions.*type=credit/);
   });
 
-  test('clicking "Spending this month" navigates to /transactions with debit filter', async ({
-    page,
-  }) => {
+  test('clicking "Spending (MTD)" navigates to /transactions with debit filter', async ({page}) => {
     await page.goto('/dashboard');
     await expect(page.getByRole('heading', {name: 'Dashboard'})).toBeVisible();
 
@@ -288,26 +292,18 @@ test.describe('Dashboard drill-downs', () => {
   });
 });
 
-test.describe('Income page', () => {
+test.describe('Retired Income page', () => {
   test.beforeEach(async ({page}) => {
     await mockApis(page);
   });
 
-  test('income page renders heading and stat cards', async ({page}) => {
+  test('/income redirects to the credit-filtered ledger so old links still work', async ({
+    page,
+  }) => {
     await page.goto('/income');
-    await expect(page.getByRole('heading', {name: 'Income'})).toBeVisible();
-    await expect(page.getByText('Income this month')).toBeVisible();
-    await expect(page.getByText('Monthly average')).toBeVisible();
-    await expect(page.getByText('Year to date')).toBeVisible();
-  });
 
-  test('income page renders transaction table with mocked data', async ({page}) => {
-    await page.goto('/income');
-    await expect(page.getByRole('heading', {name: 'Income'})).toBeVisible();
-    // Table should render with the mocked transaction
-    await expect(page.getByRole('table', {name: 'Income transactions'})).toBeVisible();
+    await expect(page).toHaveURL(/\/transactions.*type=credit/);
     await expect(page.getByText('Salary August')).toBeVisible();
-    await expect(page.getByText('Test Bank')).toBeVisible();
   });
 });
 

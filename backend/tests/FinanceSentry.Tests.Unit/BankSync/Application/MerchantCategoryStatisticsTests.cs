@@ -1,6 +1,7 @@
 namespace FinanceSentry.Tests.Unit.BankSync.Application;
 
 using FinanceSentry.Core.Domain;
+using FinanceSentry.Core.Utils;
 using FinanceSentry.Modules.BankSync.Application.Services;
 using FinanceSentry.Modules.BankSync.Domain;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
@@ -125,7 +126,9 @@ public class MerchantCategoryStatisticsTests
     public async Task GetTopCategories_QueriesOnlyTheRequestedMonthsWindow()
     {
         // The breakdown must be windowed, not all-time — the repository has to be asked
-        // for transactions since ~N months ago, not for the user's full history.
+        // for transactions since N months ago, not for the user's full history. That
+        // boundary is the FIRST OF THE MONTH: a mid-month start leaves the oldest bucket
+        // holding a few days of transactions, which the charts render as a collapsed bar.
         var (account, accountId) = MakeAccount();
         var transactions = new List<Transaction>
         {
@@ -148,6 +151,7 @@ public class MerchantCategoryStatisticsTests
         await sut.GetTopCategoriesAsync(UserId, limit: 10, months: 3);
 
         capturedSince.Should().NotBeNull();
-        capturedSince!.Value.Should().BeCloseTo(DateTime.UtcNow.AddMonths(-3), TimeSpan.FromDays(1));
+        capturedSince!.Value.Should().Be(MonthWindow.StartOfMonthsAgo(3));
+        capturedSince!.Value.Day.Should().Be(1, "a window must start on a whole month");
     }
 }

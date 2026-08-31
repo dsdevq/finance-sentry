@@ -1,4 +1,5 @@
-import {type Routes} from '@angular/router';
+import {inject} from '@angular/core';
+import {Router, type Routes} from '@angular/router';
 
 import {authGuard} from './modules/auth/guards/auth.guard';
 import {guestGuard} from './modules/auth/guards/guest.guard';
@@ -51,9 +52,11 @@ export const APP_ROUTES: Routes = [
           ),
       },
       {
+        // The Income page was the transaction ledger filtered to credits, plus charts the
+        // dashboard already owns. Kept as a redirect so old links and bookmarks still land
+        // somewhere sensible instead of on a dead route.
         path: AppRoute.Income.slice(1),
-        loadComponent: () =>
-          import('./modules/bank-sync/pages/income/income.component').then(m => m.IncomeComponent),
+        redirectTo: () => inject(Router).parseUrl(`${AppRoute.Transactions}?type=credit`),
       },
       {
         path: AppRoute.Investments.slice(1),

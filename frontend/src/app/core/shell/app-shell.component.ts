@@ -24,7 +24,6 @@ const PALETTE_ITEMS: CommandPaletteItem[] = [
   {id: AppRoute.Dashboard, label: 'Dashboard', icon: 'LayoutDashboard', group: 'Pages'},
   {id: AppRoute.AccountsList, label: 'Accounts', icon: 'Building2', group: 'Pages'},
   {id: AppRoute.Transactions, label: 'Transactions', icon: 'ArrowLeftRight', group: 'Pages'},
-  {id: AppRoute.Income, label: 'Income', icon: 'TrendingUp', group: 'Pages'},
   {
     id: AppRoute.AccountsInvestments,
     label: 'Investments',
@@ -93,7 +92,6 @@ export class AppShellComponent {
     {label: 'Dashboard', icon: 'LayoutDashboard', route: AppRoute.Dashboard},
     {label: 'Accounts', icon: 'Building2', route: AppRoute.Accounts},
     {label: 'Transactions', icon: 'ArrowLeftRight', route: AppRoute.Transactions},
-    {label: 'Income', icon: 'TrendingUp', route: AppRoute.Income},
     {label: 'Budgets', icon: 'Zap', route: AppRoute.Budgets},
     {label: 'Subscriptions', icon: 'RefreshCw', route: AppRoute.Subscriptions},
     {

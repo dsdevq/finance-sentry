@@ -45,6 +45,18 @@ const SPENDING_COLOR = '#ef4444';
 const SAVINGS_COLOR = '#6366f1';
 const PERCENT = 100;
 
+// The month-to-date tiles compare against the average of this many complete months,
+// prorated by how far into the current month we are. Three is enough to absorb a single
+// odd month without reaching back to spending habits that no longer apply.
+const PACE_BASELINE_MONTHS = 3;
+
+// A month-to-date savings rate is only meaningful once the month's income has actually
+// landed. Salary posts once, often on the last day, so before then the month holds a full
+// run of spending against stray small credits and the rate reads in the hundreds of
+// percent negative. Below this fraction of a normal month's income we show nothing rather
+// than a number that is technically correct and completely misleading.
+const INCOME_LANDED_FRACTION = 0.5;
+
 // Need at least a start and end snapshot to state a change over the window.
 const MIN_POINTS_FOR_DELTA = 2;
 
@@ -62,6 +74,37 @@ function formatMonthKey(key: string): string {
 interface MonthTotals {
   inflow: number;
   outflow: number;
+}
+
+/**
+ * Fraction of the current month already elapsed, in (0, 1]. Used to scale a
+ * complete-month baseline down to something a month-to-date figure can be
+ * compared against without reading as a collapse every time a month starts.
+ */
+function elapsedMonthFraction(now = new Date()): number {
+  // Day-of-month, not whole days since the 1st: the current day counts, because
+  // transactions post throughout it. On the last day this is exactly 1.
+  const daysInMonth = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0)
+  ).getUTCDate();
+  return now.getUTCDate() / daysInMonth;
+}
+
+/**
+ * Signed percentage difference of a month-to-date actual against the prorated average of
+ * the trailing complete months. Null when there is no baseline to speak of — a first-ever
+ * month has nothing to be ahead or behind of, and inventing a delta there would be noise.
+ */
+function paceDelta(actual: number, baselines: number[]): number | null {
+  const usable = baselines.slice(-PACE_BASELINE_MONTHS).filter(v => v > 0);
+  if (usable.length === 0) {
+    return null;
+  }
+  const expected = (usable.reduce((a, b) => a + b, 0) / usable.length) * elapsedMonthFraction();
+  if (expected <= 0) {
+    return null;
+  }
+  return ((actual - expected) / expected) * PERCENT;
 }
 
 /** Collapse the per-currency monthly rows into one USD inflow/outflow per month, sorted. */
@@ -88,6 +131,59 @@ function currentMonth(rows: MonthlyFlow[]): Nullable<MonthTotals> {
   );
 }
 
+/** Savings rate for one month, as a percentage. */
+function savingsRateOf(totals: MonthTotals): number {
+  return ((totals.inflow - totals.outflow) / totals.inflow) * PERCENT;
+}
+
+/**
+ * Renders a pace comparison for `cmn-stat-card`. The card colours on the SIGN of `delta`
+ * (positive green / negative red) and picks its arrow from it too, so the number handed
+ * over is "how good is this", not "which way did it move" — for spending those are
+ * opposites. The wording carries the direction so the arrow never has to.
+ */
+function paceChip(
+  deltaPercent: number | null,
+  goodWhenAbove: boolean,
+  above: string,
+  below: string
+): {delta: number | null; label: string} {
+  if (deltaPercent === null) {
+    return {delta: null, label: ''};
+  }
+  const magnitude = Math.round(Math.abs(deltaPercent));
+  const isAbove = deltaPercent >= 0;
+  const isGood = isAbove === goodWhenAbove;
+  return {
+    delta: isGood ? magnitude : -magnitude,
+    label: `${magnitude}% ${isAbove ? above : below}`,
+  };
+}
+
+/**
+ * Savings-rate comparison chip. The gap between two rates is in percentage POINTS, so it
+ * is worded that way rather than reusing paceChip's "% above" phrasing, which would claim
+ * a percentage of a percentage.
+ */
+function savingsRateChip(
+  monthToDateRate: number | null,
+  months: [string, MonthTotals][]
+): {delta: number | null; label: string} {
+  const rates = months
+    .filter(([, v]) => v.inflow > 0)
+    .slice(-PACE_BASELINE_MONTHS)
+    .map(([, v]) => savingsRateOf(v));
+  if (monthToDateRate === null || rates.length === 0) {
+    return {delta: null, label: ''};
+  }
+  const diff = monthToDateRate - rates.reduce((a, b) => a + b, 0) / rates.length;
+  const points = Math.round(Math.abs(diff));
+  return {
+    delta: diff >= 0 ? points : -points,
+    label: `${points} pts ${diff >= 0 ? 'above' : 'below'} usual`,
+  };
+}
+
 export function dashboardComputed(store: StateSignals) {
   const currency = inject(CurrencyPipe);
   const categoryStore = inject(CategoryStore);
@@ -95,6 +191,50 @@ export function dashboardComputed(store: StateSignals) {
   // Snapshots with a real total; days with a missing feed land as 0 and would otherwise
   // render as a cliff down to the axis, reading as if net worth briefly vanished.
   const validHistory = computed(() => store.netWorthHistory().filter(s => s.totalNetWorth > 0));
+
+  // Every month-bucketed CHART plots complete calendar months only. The in-progress month
+  // is a fragment: as a bar it reads as income collapsing, and as a savings rate it swings
+  // to absurd magnitudes. It belongs on the month-to-date tiles instead, where a partial
+  // figure is exactly what the reader expects — the same split Binance and IBKR use, where
+  // the current period is a tile and the bars are closed periods.
+  const completeMonths = computed(() =>
+    groupMonthly(store.data()?.monthlyFlow ?? []).filter(([key]) => key !== currentMonthKey())
+  );
+
+  const monthToDate = computed(() => currentMonth(store.data()?.monthlyFlow ?? []));
+
+  const inflowPace = computed(() =>
+    paceDelta(
+      monthToDate()?.inflow ?? 0,
+      completeMonths().map(([, v]) => v.inflow)
+    )
+  );
+
+  const outflowPace = computed(() =>
+    paceDelta(
+      monthToDate()?.outflow ?? 0,
+      completeMonths().map(([, v]) => v.outflow)
+    )
+  );
+
+  // Rates are scale-free, so unlike the money figures they are compared against the plain
+  // average of the closed months rather than a prorated one.
+  const savingsRateMonthToDate = computed((): number | null => {
+    const mtd = monthToDate();
+    const baselineInflows = completeMonths()
+      .map(([, v]) => v.inflow)
+      .filter(v => v > 0)
+      .slice(-PACE_BASELINE_MONTHS);
+    if (!mtd || mtd.inflow <= 0 || baselineInflows.length === 0) {
+      return null;
+    }
+    const normalInflow = baselineInflows.reduce((a, b) => a + b, 0) / baselineInflows.length;
+    return mtd.inflow >= normalInflow * INCOME_LANDED_FRACTION ? savingsRateOf(mtd) : null;
+  });
+
+  const inflowChip = computed(() => paceChip(inflowPace(), true, 'above pace', 'below pace'));
+  const spendingChip = computed(() => paceChip(outflowPace(), false, 'over pace', 'under pace'));
+  const savingsChip = computed(() => savingsRateChip(savingsRateMonthToDate(), completeMonths()));
 
   const snapshotLabeller = computed((): ((s: NetWorthSnapshotDto) => string) => {
     const history = validHistory();
@@ -125,14 +265,31 @@ export function dashboardComputed(store: StateSignals) {
     }),
 
     monthlySpendingFormatted: computed(() => {
-      const cur = currentMonth(store.data()?.monthlyFlow ?? []);
+      const cur = monthToDate();
       return cur ? COMPACT_FORMATTER.format(cur.outflow) : '—';
     }),
 
     monthlyInflowFormatted: computed(() => {
-      const cur = currentMonth(store.data()?.monthlyFlow ?? []);
+      const cur = monthToDate();
       return cur ? COMPACT_FORMATTER.format(cur.inflow) : '—';
     }),
+
+    savingsRateMonthToDateFormatted: computed(() => {
+      const rate = savingsRateMonthToDate();
+      return rate === null ? '—' : `${Math.round(rate)}%`;
+    }),
+
+    // Month-to-date against the trailing complete months, prorated by how far into the
+    // month we are — otherwise a figure two days into August always looks like a collapse.
+    inflowPaceDelta: computed(() => inflowChip().delta),
+    inflowPaceLabel: computed(() => inflowChip().label),
+
+    // Spending above pace is bad, so the card's colour is driven by the inverse.
+    spendingPaceDelta: computed(() => spendingChip().delta),
+    spendingPaceLabel: computed(() => spendingChip().label),
+
+    savingsRatePaceDelta: computed(() => savingsChip().delta),
+    savingsRatePaceLabel: computed(() => savingsChip().label),
 
     // Stacked net-worth composition (banking / brokerage / crypto) over time — the snapshots
     // already carry each sleeve, so we plot the mix rather than throwing it away for one line.
@@ -177,7 +334,7 @@ export function dashboardComputed(store: StateSignals) {
     }),
 
     incomeVsSpendingBars: computed((): BarSeries[] => {
-      const grouped = groupMonthly(store.data()?.monthlyFlow ?? []);
+      const grouped = completeMonths();
       if (grouped.length === 0) {
         return [];
       }
@@ -195,24 +352,21 @@ export function dashboardComputed(store: StateSignals) {
       ];
     }),
 
-    // Only completed months with real income yield a savings rate. A near-zero-inflow
-    // month sends net/inflow to absurd magnitudes (the old chart read -500,000%), and the
-    // in-progress month is exactly that case for most of its span: salary posts on the
-    // last day, so until then the month holds a full run of spending against stray
-    // small credits and reads ~-400%. Rate is only meaningful once the month closes.
+    // A near-zero-inflow month sends net/inflow to absurd magnitudes (the old chart read
+    // -500,000%), so months without real income are dropped on top of the shared
+    // complete-months window.
     savingsRateBars: computed((): BarSeries[] => {
-      const inProgress = currentMonthKey();
-      const points = groupMonthly(store.data()?.monthlyFlow ?? [])
-        .filter(([key, v]) => key !== inProgress && v.inflow > 0)
-        .map(([key, v]) => ({
-          label: formatMonthKey(key),
-          value: ((v.inflow - v.outflow) / v.inflow) * PERCENT,
-        }));
+      const points = completeMonths()
+        .filter(([, v]) => v.inflow > 0)
+        .map(([key, v]) => ({label: formatMonthKey(key), value: savingsRateOf(v)}));
       return points.length > 0 ? [{label: 'Savings rate', color: SAVINGS_COLOR, points}] : [];
     }),
 
-    hasCashFlow: computed(() => (store.data()?.monthlyFlow ?? []).length > 0),
-    hasIncome: computed(() => (store.data()?.monthlyFlow ?? []).some(r => r.inflowUsd > 0)),
+    // Gated on the same complete-month window the charts plot: a user whose only data is
+    // the in-progress month has nothing to chart yet, and rendering an empty frame reads
+    // as a broken widget rather than as "not enough history".
+    hasCashFlow: computed(() => completeMonths().length > 0),
+    hasIncome: computed(() => completeMonths().some(([, v]) => v.inflow > 0)),
 
     categoryChartData: computed((): DonutSegment[] =>
       (store.data()?.topCategories ?? []).map(c => ({
