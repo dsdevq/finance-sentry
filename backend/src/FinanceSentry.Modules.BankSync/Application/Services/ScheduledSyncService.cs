@@ -1,10 +1,12 @@
 namespace FinanceSentry.Modules.BankSync.Application.Services;
 
 using System.Collections.Concurrent;
+using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Infrastructure.Encryption;
 using FinanceSentry.Infrastructure.Logging;
 using FinanceSentry.Modules.BankSync.Domain;
+using FinanceSentry.Modules.BankSync.Domain.Events;
 using FinanceSentry.Modules.BankSync.Domain.Interfaces;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
 using FinanceSentry.Modules.BankSync.Infrastructure.Monobank;
@@ -47,7 +49,8 @@ public class ScheduledSyncService(
     ITrueLayerClient truelayerClient,
     MonobankBalanceCache monobankBalanceCache,
     IAlertGeneratorService alerts,
-    IUserAlertPreferencesReader userPreferences) : IScheduledSyncService
+    IUserAlertPreferencesReader userPreferences,
+    IEventBus eventBus) : IScheduledSyncService
 {
     private readonly IBankAccountRepository _accounts = accounts;
     private readonly ITransactionRepository _transactions = transactions;
@@ -62,6 +65,7 @@ public class ScheduledSyncService(
     private readonly MonobankBalanceCache _monobankBalanceCache = monobankBalanceCache;
     private readonly IAlertGeneratorService _alerts = alerts;
     private readonly IUserAlertPreferencesReader _userPreferences = userPreferences;
+    private readonly IEventBus _eventBus = eventBus;
 
     /// <summary>
     /// Error codes that represent a transient, self-healing condition (provider rate-limit /
@@ -111,6 +115,7 @@ public class ScheduledSyncService(
                     $"Unknown provider '{account.Provider}' for account {account.Id}.");
 
             await EvaluateAlertsAfterSuccessAsync(account, ct);
+            await PublishSyncCompletedAsync(account, result, ct);
 
             return result;
         }
@@ -152,6 +157,27 @@ public class ScheduledSyncService(
                 await EvaluateSyncFailureAlertAsync(account, errorCode, ct);
 
             return new SyncResult(false, 0, 0, errorCode, ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Publishes <see cref="AccountSyncCompletedEvent"/> after a successful sync. This is
+    /// what drives the intraday net-worth snapshot refresh (FirstSyncSnapshotTrigger) —
+    /// the event was defined and handled but never published, so the trigger was dead
+    /// code and the day's snapshot stayed frozen at the 01:00 UTC backstop run.
+    /// Best-effort: a downstream reaction must not fail the sync.
+    /// </summary>
+    private async Task PublishSyncCompletedAsync(Domain.BankAccount account, SyncResult result, CancellationToken ct)
+    {
+        try
+        {
+            await _eventBus.Publish(new AccountSyncCompletedEvent(
+                account.Id, account.UserId, account.Provider, "success",
+                result.TransactionCountFetched, account.CurrentBalance, null, null), ct);
+        }
+        catch
+        {
+            // best-effort
         }
     }
 
