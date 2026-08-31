@@ -103,6 +103,67 @@ public class FinalizeTrueLayerConnectCommandHandler(
             createdIds.Add(account.Id);
         }
 
+        // Credit cards live behind /data/v1/cards, not /data/v1/accounts — without this pass
+        // a Revolut/AIB credit card is invisible to the whole system. Card support is
+        // provider-dependent, so a failing /cards call means "no cards", not a failed connect.
+        IReadOnlyList<TrueLayerAccountInfo> providerCards = [];
+        try
+        {
+            providerCards = await client.ListCardsAsync(tokens.AccessToken, cancellationToken);
+        }
+        catch (TrueLayerException ex)
+        {
+            logger.LogInformation(
+                "TrueLayer /cards unavailable for connection {ConnectionId}: {Error}",
+                connection.Id, ex.Message);
+        }
+
+        foreach (var card in providerCards)
+        {
+            decimal? owed = null;
+            decimal? creditLimit = null;
+            try
+            {
+                var bal = await client.GetCardBalanceAsync(tokens.AccessToken, card.AccountId, cancellationToken);
+                owed = bal?.Current;
+                creditLimit = bal?.CreditLimit;
+            }
+            catch (TrueLayerException)
+            {
+                // Best-effort: skip balance, card is still usable.
+            }
+
+            var existing = await accounts.GetByExternalAccountIdAsync(card.AccountId, cancellationToken);
+            if (existing != null)
+            {
+                existing.MarkReconnected(connection.Id, owed ?? existing.CurrentBalance ?? 0m);
+                existing.CreditLimit = creditLimit ?? existing.CreditLimit;
+                await accounts.UpdateAsync(existing, cancellationToken);
+                createdIds.Add(existing.Id);
+                continue;
+            }
+
+            var cardAccount = new BankAccount(
+                userId: connection.UserId,
+                externalAccountId: card.AccountId,
+                bankName: !string.IsNullOrWhiteSpace(card.ProviderName) ? card.ProviderName : connection.ProviderDisplayName,
+                accountType: "credit",
+                accountNumberLast4: card.AccountNumberLast4,
+                ownerName: string.Empty,
+                currency: card.Currency,
+                createdBy: connection.UserId,
+                provider: "truelayer")
+            {
+                TrueLayerConnectionId = connection.Id,
+                CurrentBalance = owed,
+                CreditLimit = creditLimit,
+                ProductType = TrueLayerAdapter.CardProductType
+            };
+
+            await accounts.AddAsync(cardAccount, cancellationToken);
+            createdIds.Add(cardAccount.Id);
+        }
+
         // Sync inline with the freshly-exchanged access token while its SCA session is still
         // active — this is the only window in which strict banks (e.g. AIB) will return
         // transaction history; a deferred background job would refresh the token and lose SCA.

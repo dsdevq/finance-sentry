@@ -25,4 +25,24 @@ public interface ITrueLayerClient
         string accessToken,
         string accountId,
         CancellationToken ct = default);
+
+    // ── Cards ─────────────────────────────────────────────────────────────────
+    // TrueLayer serves credit cards under /data/v1/cards, NOT /data/v1/accounts —
+    // an accounts-only integration never sees them at all.
+
+    Task<IReadOnlyList<TrueLayerAccountInfo>> ListCardsAsync(string accessToken, CancellationToken ct = default);
+
+    Task<TrueLayerCardBalance?> GetCardBalanceAsync(string accessToken, string cardId, CancellationToken ct = default);
+
+    Task<IReadOnlyList<TrueLayerTransaction>> GetCardTransactionsAsync(
+        string accessToken,
+        string cardId,
+        DateOnly? dateFrom,
+        DateOnly? dateTo,
+        CancellationToken ct = default);
+
+    Task<IReadOnlyList<TrueLayerTransaction>> GetCardPendingTransactionsAsync(
+        string accessToken,
+        string cardId,
+        CancellationToken ct = default);
 }

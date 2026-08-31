@@ -79,7 +79,9 @@ public class ConnectMonobankAccountCommandHandler(
                 provider: "monobank")
             {
                 MonobankCredentialId = credential.Id,
-                CurrentBalance = MonobankHttpClient.KopecksToDecimal(a.Balance),
+                CurrentBalance = MonobankHttpClient.ToStoredBalance(a.Balance, a.CreditLimit),
+                CreditLimit = a.CreditLimit > 0
+                    ? MonobankHttpClient.KopecksToDecimal(a.CreditLimit) : null,
                 ProductType = a.ProductType
             };
 

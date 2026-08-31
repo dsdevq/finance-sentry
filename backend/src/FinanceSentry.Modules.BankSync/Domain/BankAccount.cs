@@ -32,7 +32,18 @@ public class BankAccount : Entity
 
     public string Currency { get; set; } = "EUR";
 
+    /// <summary>
+    /// For credit accounts, the outstanding amount owed (positive = debt), per the
+    /// <see cref="FinanceSentry.Core.Utils.AccountBalanceMath"/> liability convention —
+    /// aggregations negate it. For all other accounts, the user's own funds.
+    /// </summary>
     public decimal? CurrentBalance { get; set; }
+
+    /// <summary>
+    /// The account's credit limit, when the provider exposes one (Monobank client-info
+    /// creditLimit, TrueLayer card balance credit_limit). Null for non-credit accounts.
+    /// </summary>
+    public decimal? CreditLimit { get; set; }
 
     public string SyncStatus { get; set; } = "pending";
 

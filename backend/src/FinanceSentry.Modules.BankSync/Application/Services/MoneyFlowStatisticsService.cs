@@ -26,7 +26,9 @@ public interface IMoneyFlowStatisticsService
 {
     /// <summary>
     /// Returns monthly inflow/outflow/net per currency for the last <paramref name="months"/> calendar months.
-    /// Only posted (non-pending), active transactions are included.
+    /// Pending transactions count — a card hold is real spending, and excluding it made the
+    /// current month's outflow a fraction of reality. Settlement retires or flips the pending
+    /// row in place, so it is never double-counted for long.
     /// </summary>
     Task<IReadOnlyList<MonthlyFlow>> GetMonthlyFlowAsync(
         Guid userId, int months = 6, CancellationToken ct = default);
@@ -61,9 +63,10 @@ public class MoneyFlowStatisticsService(
         // Currency map enables cross-currency pairing (e.g. Revolut EUR → Monobank UAH).
         var transferIds = _transferDetection.DetectTransferTransactionIds(txList.ToList(), accountCurrencies);
 
-        // 4. Group by (currency, year-month) and sum inflow/outflow
+        // 4. Group by (currency, year-month) and sum inflow/outflow (pending included —
+        // a hold is committed money; see interface doc)
         var result = txList
-            .Where(t => !t.IsPending && t.IsActive && !transferIds.Contains(t.Id)
+            .Where(t => t.IsActive && !transferIds.Contains(t.Id)
                         && !CategoryKeys.IsTransfer(t.MerchantCategory))
             .Select(t => new
             {

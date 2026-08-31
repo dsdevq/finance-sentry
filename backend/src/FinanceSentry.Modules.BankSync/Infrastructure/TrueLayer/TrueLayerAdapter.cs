@@ -16,6 +16,13 @@ public class TrueLayerAdapter(
     TrueLayerCategoryMapper categoryMapper,
     ICategoryResolver categoryResolver) : IBankProvider
 {
+    /// <summary>
+    /// ProductType marker distinguishing a /data/v1/cards credit card from a regular
+    /// /data/v1/accounts account — the two live behind different endpoint families, so
+    /// every later balance/transaction call must route on it.
+    /// </summary>
+    public const string CardProductType = "card";
+
     private const int InitialSyncWindowDays = 90;
 
     private readonly TrueLayerCategoryMapper _categoryMapper = categoryMapper;
@@ -54,17 +61,76 @@ public class TrueLayerAdapter(
         return result;
     }
 
-    public async Task<(IReadOnlyList<TransactionCandidate> Candidates, DateTime? NextSyncFrom)> SyncTransactionsAsync(
+    /// <summary>
+    /// Lists the connection's credit cards (from /data/v1/cards) as account infos with the
+    /// liability convention: AccountType "credit", CurrentBalance = amount owed, ProductType
+    /// <see cref="CardProductType"/>. Providers without card support throw — callers treat
+    /// that as "no cards".
+    /// </summary>
+    public async Task<IReadOnlyList<BankAccountInfo>> GetCardsAsync(string credential, CancellationToken ct = default)
+    {
+        var cards = await client.ListCardsAsync(credential, ct);
+        var result = new List<BankAccountInfo>(cards.Count);
+
+        foreach (var c in cards)
+        {
+            decimal? owed = null;
+            decimal? creditLimit = null;
+            try
+            {
+                var balance = await client.GetCardBalanceAsync(credential, c.AccountId, ct);
+                owed = balance?.Current;
+                creditLimit = balance?.CreditLimit;
+            }
+            catch (TrueLayerException)
+            {
+                // Balance is best-effort; don't fail card discovery on a single 4xx.
+            }
+
+            result.Add(new BankAccountInfo(
+                ExternalAccountId: c.AccountId,
+                Name: !string.IsNullOrWhiteSpace(c.DisplayName) ? c.DisplayName : c.ProviderName,
+                AccountType: "credit",
+                AccountNumberLast4: c.AccountNumberLast4,
+                CurrentBalance: owed,
+                Currency: c.Currency,
+                OwnerName: string.Empty,
+                ProductType: CardProductType,
+                CreditLimit: creditLimit));
+        }
+
+        return result;
+    }
+
+    public Task<(IReadOnlyList<TransactionCandidate> Candidates, DateTime? NextSyncFrom)> SyncTransactionsAsync(
         string credential, string externalAccountId, Guid accountId, Guid userId,
         DateTime? since, CancellationToken ct = default)
+        => SyncCoreAsync(credential, externalAccountId, accountId, userId, since, isCard: false, ct);
+
+    /// <summary>
+    /// Same sync flow as <see cref="SyncTransactionsAsync"/> but against the card endpoint
+    /// family (/data/v1/cards/{id}/transactions[/pending]).
+    /// </summary>
+    public Task<(IReadOnlyList<TransactionCandidate> Candidates, DateTime? NextSyncFrom)> SyncCardTransactionsAsync(
+        string credential, string externalAccountId, Guid accountId, Guid userId,
+        DateTime? since, CancellationToken ct = default)
+        => SyncCoreAsync(credential, externalAccountId, accountId, userId, since, isCard: true, ct);
+
+    private async Task<(IReadOnlyList<TransactionCandidate> Candidates, DateTime? NextSyncFrom)> SyncCoreAsync(
+        string credential, string externalAccountId, Guid accountId, Guid userId,
+        DateTime? since, bool isCard, CancellationToken ct)
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var from = since.HasValue
             ? DateOnly.FromDateTime(since.Value.Date)
             : today.AddDays(-InitialSyncWindowDays);
 
-        var booked = await client.GetTransactionsAsync(credential, externalAccountId, from, today, ct);
-        var pending = await client.GetPendingTransactionsAsync(credential, externalAccountId, ct);
+        var booked = isCard
+            ? await client.GetCardTransactionsAsync(credential, externalAccountId, from, today, ct)
+            : await client.GetTransactionsAsync(credential, externalAccountId, from, today, ct);
+        var pending = isCard
+            ? await client.GetCardPendingTransactionsAsync(credential, externalAccountId, ct)
+            : await client.GetPendingTransactionsAsync(credential, externalAccountId, ct);
 
         var candidates = booked
             .Concat(pending)
