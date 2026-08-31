@@ -35,6 +35,7 @@ public class ScheduledSyncServiceTests
         Mock<ITrueLayerConnectionRepository> TrueLayerConnections,
         Mock<ITrueLayerClient> TrueLayerClient,
         Mock<IBankProvider> Provider,
+        Mock<FinanceSentry.Core.Cqrs.IEventBus> EventBus,
         BankAccount Account,
         TrueLayerConnection Connection);
 
@@ -58,6 +59,7 @@ public class ScheduledSyncServiceTests
         var monobankBalanceCache = new FinanceSentry.Modules.BankSync.Infrastructure.Monobank.MonobankBalanceCache();
         alertGen ??= new Mock<FinanceSentry.Core.Interfaces.IAlertGeneratorService>();
         userPrefs ??= new Mock<FinanceSentry.Core.Interfaces.IUserAlertPreferencesReader>();
+        var eventBus = new Mock<FinanceSentry.Core.Cqrs.IEventBus>();
 
         var sut = new ScheduledSyncService(
             accountRepo.Object, txRepo.Object, jobRepo.Object,
@@ -65,7 +67,7 @@ public class ScheduledSyncServiceTests
             providerFactory.Object, monobankCreds.Object,
             truelayerConnections.Object, truelayerClient.Object,
             monobankBalanceCache,
-            alertGen.Object, userPrefs.Object);
+            alertGen.Object, userPrefs.Object, eventBus.Object);
 
         // Default TrueLayer wiring: a linked connection with a decryptable refresh token that
         // exchanges for an access token without rotating, and a provider resolvable by name.
@@ -103,7 +105,7 @@ public class ScheduledSyncServiceTests
         providerFactory.Setup(f => f.Resolve("truelayer")).Returns(provider.Object);
 
         return new Harness(sut, accountRepo, txRepo, jobRepo, encryption, dedup,
-            providerFactory, truelayerConnections, truelayerClient, provider, account, connection);
+            providerFactory, truelayerConnections, truelayerClient, provider, eventBus, account, connection);
     }
 
     private static void SetupProviderCandidates(Harness h, IReadOnlyList<TransactionCandidate> candidates)
@@ -266,6 +268,45 @@ public class ScheduledSyncServiceTests
         result.Success.Should().BeTrue();
         result.TransactionCountFetched.Should().Be(2);  // 2 from the provider
         result.TransactionCountDeduped.Should().Be(1);  // 1 new after dedup
+    }
+
+    // ── Successful sync publishes AccountSyncCompletedEvent ─────────────────
+
+    [Fact]
+    public async Task PerformFullSyncAsync_Success_PublishesSyncCompletedEvent()
+    {
+        // Regression: the event was defined and handled but never published, so the
+        // intraday snapshot refresh (FirstSyncSnapshotTrigger) was dead code.
+        var h = BuildSut();
+        SetupProviderCandidates(h, []);
+        h.Dedup.Setup(d => d.FilterDuplicates(It.IsAny<IEnumerable<TransactionCandidate>>(), It.IsAny<IReadOnlySet<string>>()))
+             .Returns([]);
+
+        var result = await h.Sut.PerformFullSyncAsync(h.Account.Id);
+
+        result.Success.Should().BeTrue();
+        h.EventBus.Verify(b => b.Publish(
+            It.Is<FinanceSentry.Modules.BankSync.Domain.Events.AccountSyncCompletedEvent>(e =>
+                e.AccountId == h.Account.Id && e.UserId == UserId && e.Status == "success"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task PerformFullSyncAsync_Failure_DoesNotPublishSyncCompletedEvent()
+    {
+        var h = BuildSut();
+        h.Provider
+            .Setup(p => p.SyncTransactionsAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<Guid>(),
+                It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("SERVER_ERROR: boom"));
+
+        var result = await h.Sut.PerformFullSyncAsync(h.Account.Id);
+
+        result.Success.Should().BeFalse();
+        h.EventBus.Verify(b => b.Publish(
+            It.IsAny<FinanceSentry.Modules.BankSync.Domain.Events.AccountSyncCompletedEvent>(),
+            It.IsAny<CancellationToken>()), Times.Never);
     }
 
     // ── Same-hash settlement: a cleared hold flips the stored pending row ───
