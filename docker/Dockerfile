@@ -12,15 +12,15 @@ COPY backend/ backend/
 COPY agent/ agent/
 
 WORKDIR /src/backend
-RUN --mount=type=cache,target=/root/.nuget/packages \
+RUN --mount=type=cache,sharing=locked,target=/root/.nuget/packages \
     dotnet restore FinanceSentry.sln
 
-RUN --mount=type=cache,target=/root/.nuget/packages \
+RUN --mount=type=cache,sharing=locked,target=/root/.nuget/packages \
     dotnet build FinanceSentry.sln -c Release
 
 RUN dotnet test tests/FinanceSentry.Tests.Unit/FinanceSentry.Tests.Unit.csproj -c Release --no-build --nologo --verbosity minimal
 
-RUN --mount=type=cache,target=/root/.nuget/packages \
+RUN --mount=type=cache,sharing=locked,target=/root/.nuget/packages \
     dotnet publish src/FinanceSentry.API/FinanceSentry.API.csproj -c Release -o /app/publish --no-build
 
 # Stage 2: Runtime
