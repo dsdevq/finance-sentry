@@ -14,8 +14,26 @@ public class NetWorthSnapshotRepository(WealthDbContext db) : INetWorthSnapshotR
         await _db.SaveChangesAsync(ct);
     }
 
+    public async Task UpsertAsync(NetWorthSnapshot snapshot, CancellationToken ct = default)
+    {
+        var existing = await _db.NetWorthSnapshots
+            .FirstOrDefaultAsync(s => s.UserId == snapshot.UserId && s.SnapshotDate == snapshot.SnapshotDate, ct);
+        if (existing is not null)
+            _db.NetWorthSnapshots.Remove(existing);
+
+        _db.NetWorthSnapshots.Add(snapshot);
+        await _db.SaveChangesAsync(ct);
+    }
+
     public Task<bool> ExistsAsync(Guid userId, DateOnly snapshotDate, CancellationToken ct = default)
         => _db.NetWorthSnapshots.AnyAsync(s => s.UserId == userId && s.SnapshotDate == snapshotDate, ct);
+
+    public Task<NetWorthSnapshot?> GetLatestBeforeAsync(Guid userId, DateOnly date, CancellationToken ct = default)
+        => _db.NetWorthSnapshots
+            .Where(s => s.UserId == userId && s.SnapshotDate < date)
+            .OrderByDescending(s => s.SnapshotDate)
+            .ThenByDescending(s => s.TakenAt)
+            .FirstOrDefaultAsync(ct);
 
     public Task<NetWorthSnapshot?> GetLatestByUserIdAsync(Guid userId, CancellationToken ct = default)
         => _db.NetWorthSnapshots

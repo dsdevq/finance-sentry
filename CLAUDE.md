@@ -65,6 +65,7 @@ The gates below apply to every change — they are imported into context on ever
 
 Not auto-loaded — follow these links when the task touches them:
 
+- [Money semantics](docs/money-semantics.md) — **source of truth for every money calculation** (balance meaning per provider, liability signs, flow windows, snapshot rules); any PR changing money math updates it in the same diff
 - [App state & key files](docs/claude/app-state.md) — what's built/running per feature; update the relevant block when a feature lands
 - [QA guide](docs/claude/qa.md) — test creds, golden-path scenarios, post-implementation e2e process
 - [AI development pipeline](docs/claude/ai-pipeline.md) — Claude/Qwen roles (Qwen path currently disabled)

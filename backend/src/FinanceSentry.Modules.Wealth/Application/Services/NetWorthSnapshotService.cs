@@ -10,14 +10,13 @@ public class NetWorthSnapshotService(INetWorthSnapshotRepository repository) : I
 
     public async Task PersistSnapshotAsync(Guid userId, NetWorthSnapshotData data, CancellationToken ct = default)
     {
-        if (await _repository.ExistsAsync(userId, data.SnapshotDate, ct))
-            return;
-
         // Never let a stale/missing/failed sync write a $0 or stale sleeve as if it were
         // real movement. When a sleeve isn't trustworthy this run, carry forward its last
         // known-good value and record which sleeves were estimated so trend analysis can
-        // tell a measured net worth from a partially carried-forward one.
-        var previous = await _repository.GetLatestByUserIdAsync(userId, ct);
+        // tell a measured net worth from a partially carried-forward one. The baseline is
+        // the latest snapshot BEFORE the target date — same-day refreshes must not carry
+        // forward from themselves.
+        var previous = await _repository.GetLatestBeforeAsync(userId, data.SnapshotDate, ct);
         var stale = new List<string>();
 
         var banking = ResolveSleeve("banking", data.BankingTotal, data.BankingFresh, previous?.BankingTotal, stale);
@@ -38,7 +37,9 @@ public class NetWorthSnapshotService(INetWorthSnapshotRepository repository) : I
             StaleSleeves = stale.Count > 0 ? string.Join(',', stale) : null,
         };
 
-        await _repository.PersistAsync(snapshot, ct);
+        // Upsert: the day's row is refreshed on every successful sync rather than frozen
+        // at first write, so the chart's newest point tracks the live position.
+        await _repository.UpsertAsync(snapshot, ct);
     }
 
     /// <summary>
@@ -61,9 +62,4 @@ public class NetWorthSnapshotService(INetWorthSnapshotRepository repository) : I
         return previousValue.Value;
     }
 
-    public async Task<bool> HasSnapshotForTodayAsync(Guid userId, CancellationToken ct = default)
-    {
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        return await _repository.ExistsAsync(userId, today, ct);
-    }
 }

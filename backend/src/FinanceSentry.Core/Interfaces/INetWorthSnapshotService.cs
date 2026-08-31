@@ -6,10 +6,6 @@ public interface INetWorthSnapshotService
         Guid userId,
         NetWorthSnapshotData data,
         CancellationToken ct = default);
-
-    Task<bool> HasSnapshotForTodayAsync(
-        Guid userId,
-        CancellationToken ct = default);
 }
 
 public record NetWorthSnapshotData(

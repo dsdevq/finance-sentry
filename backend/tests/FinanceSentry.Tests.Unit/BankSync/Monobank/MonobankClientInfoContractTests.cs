@@ -60,11 +60,24 @@ public class MonobankClientInfoContractTests
         var black = result.Accounts[0];
         black.Id.Should().Be("kKGVoZuHWzqVoZuH");
         black.Name.Should().Be("black UAH");
-        black.Type.Should().Be("checking");
+        // Carries a credit line, so the product-name map is overridden: it's a liability
+        // account, not a checking asset (its balance includes the limit).
+        black.Type.Should().Be("credit");
         black.MaskedPan.Should().Be("537541******1234");
         black.CurrencyCode.Should().Be(980);
         black.Balance.Should().Be(10000000L); // raw kopecks at the client layer
         black.CreditLimit.Should().Be(500000L);
+    }
+
+    [Fact]
+    public async Task GetClientInfo_CardWithoutCreditLimit_KeepsProductTypeMapping()
+    {
+        var body = ClientInfoBody.Replace("\"creditLimit\": 500000", "\"creditLimit\": 0");
+        var handler = new MonobankStubHttpHandler().Enqueue(HttpStatusCode.OK, body);
+
+        var result = await handler.BuildClient().GetClientInfoAsync(Token);
+
+        result.Accounts[0].Type.Should().Be("checking");
     }
 
     [Fact]

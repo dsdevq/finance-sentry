@@ -137,6 +137,55 @@ public sealed class TrueLayerHttpClient(
         return (raw.Results ?? []).Select(t => MapTransaction(t, isPending: true)).ToList();
     }
 
+    public async Task<IReadOnlyList<TrueLayerAccountInfo>> ListCardsAsync(string accessToken, CancellationToken ct = default)
+    {
+        var raw = await GetWithBearerAsync<CardsResponse>(accessToken, "/data/v1/cards", ct);
+        return (raw.Results ?? []).Select(MapCard).ToList();
+    }
+
+    public async Task<TrueLayerCardBalance?> GetCardBalanceAsync(string accessToken, string cardId, CancellationToken ct = default)
+    {
+        var raw = await GetWithBearerAsync<CardBalanceResponse>(
+            accessToken, $"/data/v1/cards/{Uri.EscapeDataString(cardId)}/balance", ct);
+
+        var entry = raw.Results?.FirstOrDefault();
+        if (entry is null)
+            return null;
+
+        return new TrueLayerCardBalance(
+            Current: entry.Current,
+            Available: entry.Available ?? entry.Current,
+            CreditLimit: entry.CreditLimit,
+            Currency: entry.Currency ?? "EUR");
+    }
+
+    public async Task<IReadOnlyList<TrueLayerTransaction>> GetCardTransactionsAsync(
+        string accessToken, string cardId, DateOnly? dateFrom, DateOnly? dateTo, CancellationToken ct = default)
+    {
+        var qp = new List<string>();
+        if (dateFrom.HasValue)
+            qp.Add($"from={dateFrom.Value:yyyy-MM-dd}");
+        if (dateTo.HasValue)
+            qp.Add($"to={dateTo.Value:yyyy-MM-dd}");
+
+        var path = $"/data/v1/cards/{Uri.EscapeDataString(cardId)}/transactions";
+        if (qp.Count > 0)
+            path += "?" + string.Join("&", qp);
+
+        var raw = await GetWithBearerAsync<TransactionsResponse>(accessToken, path, ct);
+        return (raw.Results ?? []).Select(t => MapTransaction(t, isPending: false)).ToList();
+    }
+
+    public async Task<IReadOnlyList<TrueLayerTransaction>> GetCardPendingTransactionsAsync(
+        string accessToken, string cardId, CancellationToken ct = default)
+    {
+        var raw = await GetWithBearerAsync<TransactionsResponse>(
+            accessToken,
+            $"/data/v1/cards/{Uri.EscapeDataString(cardId)}/transactions/pending",
+            ct);
+        return (raw.Results ?? []).Select(t => MapTransaction(t, isPending: true)).ToList();
+    }
+
     private static TrueLayerAccountInfo MapAccount(AccountEntry a) => new(
         AccountId: a.AccountId,
         DisplayName: a.DisplayName ?? a.ProviderDisplayName ?? "Account",
@@ -145,6 +194,15 @@ public sealed class TrueLayerHttpClient(
         AccountType: MapAccountType(a.AccountType),
         Iban: a.AccountNumber?.Iban,
         AccountNumberLast4: ExtractLast4(a.AccountNumber?.Iban, a.AccountNumber?.Number));
+
+    private static TrueLayerAccountInfo MapCard(CardEntry c) => new(
+        AccountId: c.AccountId,
+        DisplayName: c.DisplayName ?? c.ProviderDisplayName ?? "Card",
+        Currency: c.Currency ?? "EUR",
+        ProviderName: c.ProviderDisplayName ?? string.Empty,
+        AccountType: "credit",
+        Iban: null,
+        AccountNumberLast4: ExtractLast4(iban: null, number: c.PartialCardNumber));
 
     private static TrueLayerTransaction MapTransaction(TransactionEntry t, bool isPending)
     {
@@ -311,9 +369,38 @@ public sealed class TrueLayerHttpClient(
         [JsonPropertyName("sort_code")] public string? SortCode { get; set; }
     }
 
+    private sealed class CardsResponse
+    {
+        [JsonPropertyName("results")] public List<CardEntry>? Results { get; set; }
+    }
+
+    private sealed class CardEntry
+    {
+        [JsonPropertyName("account_id")] public string AccountId { get; set; } = string.Empty;
+        [JsonPropertyName("display_name")] public string? DisplayName { get; set; }
+        [JsonPropertyName("currency")] public string? Currency { get; set; }
+        [JsonPropertyName("partial_card_number")] public string? PartialCardNumber { get; set; }
+        [JsonPropertyName("provider")] public ProviderRef? Provider { get; set; }
+
+        public string? ProviderDisplayName => Provider?.DisplayName;
+    }
+
     private sealed class BalanceResponse
     {
         [JsonPropertyName("results")] public List<BalanceEntry>? Results { get; set; }
+    }
+
+    private sealed class CardBalanceResponse
+    {
+        [JsonPropertyName("results")] public List<CardBalanceEntry>? Results { get; set; }
+    }
+
+    private sealed class CardBalanceEntry
+    {
+        [JsonPropertyName("current")] public decimal Current { get; set; }
+        [JsonPropertyName("available")] public decimal? Available { get; set; }
+        [JsonPropertyName("credit_limit")] public decimal? CreditLimit { get; set; }
+        [JsonPropertyName("currency")] public string? Currency { get; set; }
     }
 
     private sealed class BalanceEntry

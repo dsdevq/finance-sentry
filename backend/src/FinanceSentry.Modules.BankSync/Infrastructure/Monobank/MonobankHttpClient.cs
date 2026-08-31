@@ -24,6 +24,14 @@ public class MonobankHttpClient(HttpClient http)
 
     public static decimal KopecksToDecimal(long amount) => amount / 100m;
 
+    /// <summary>
+    /// Monobank's client-info <c>balance</c> includes the credit limit on credit-enabled
+    /// cards (balance = own funds + creditLimit). Converts to the stored convention:
+    /// amount owed (positive = debt) for credit accounts, own funds for everything else.
+    /// </summary>
+    public static decimal ToStoredBalance(long balance, long creditLimit)
+        => KopecksToDecimal(creditLimit > 0 ? creditLimit - balance : balance);
+
     public async Task<MonobankClientInfo> GetClientInfoAsync(string token, CancellationToken ct = default)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, "/personal/client-info");
@@ -36,7 +44,10 @@ public class MonobankHttpClient(HttpClient http)
         var accounts = raw.Accounts.Select(a => new MonobankAccountInfo(
             Id: a.Id,
             Name: a.Type + " " + MapCurrency(a.CurrencyCode),
-            Type: MapAccountType(a.Type),
+            // Any card with a credit line is a liability account, whatever the product
+            // (black/platinum/… cards can all carry one) — the product-name map alone
+            // would count it as a checking asset.
+            Type: a.CreditLimit > 0 ? "credit" : MapAccountType(a.Type),
             MaskedPan: a.MaskedPan?.LastOrDefault() ?? "0000",
             CurrencyCode: a.CurrencyCode,
             Balance: a.Balance,

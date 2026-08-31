@@ -10,7 +10,8 @@ public record BankAccountInfo(
     decimal? CurrentBalance,
     string Currency,
     string OwnerName,
-    string? ProductType = null);
+    string? ProductType = null,
+    decimal? CreditLimit = null);
 
 public interface IBankProvider
 {

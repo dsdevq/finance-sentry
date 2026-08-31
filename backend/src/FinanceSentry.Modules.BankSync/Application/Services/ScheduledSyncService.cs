@@ -233,27 +233,19 @@ public class ScheduledSyncService(
 
         // Refresh live balance from Monobank /personal/client-info. The endpoint
         // is rate-limited to one call per 60s per token, so we check the shared
-        // MonobankBalanceCache first (primed by BulkSyncMonobank) and only call the
-        // API when the cache is cold. On rate-limit / transient failure we keep
-        // the prior balance rather than zeroing it.
-        decimal? latestBalance = _monobankBalanceCache.TryGet(plainToken, account.ExternalAccountId);
-        if (latestBalance is null)
+        // MonobankBalanceCache first (primed by whichever sibling account synced
+        // first this cycle) and only call the API when the cache is cold. On
+        // rate-limit / transient failure we keep the prior balance rather than
+        // zeroing it.
+        var freshSelf = _monobankBalanceCache.TryGet(plainToken, account.ExternalAccountId);
+        if (freshSelf is null)
         {
             try
             {
                 var freshAccounts = await provider.GetAccountsAsync(plainToken, ct);
                 foreach (var fa in freshAccounts)
-                {
-                    if (fa.CurrentBalance.HasValue)
-                        _monobankBalanceCache.Set(plainToken, fa.ExternalAccountId, fa.CurrentBalance.Value);
-                }
-                var freshSelf = freshAccounts.FirstOrDefault(a => a.ExternalAccountId == account.ExternalAccountId);
-                latestBalance = freshSelf?.CurrentBalance;
-
-                // Backfill / refresh the card product type (black/white/…) from client-info so
-                // pre-existing accounts (connected before ProductType was captured) get grouped.
-                if (freshSelf?.ProductType is { Length: > 0 } productType && account.ProductType != productType)
-                    account.ProductType = productType;
+                    _monobankBalanceCache.Set(plainToken, fa.ExternalAccountId, fa);
+                freshSelf = freshAccounts.FirstOrDefault(a => a.ExternalAccountId == account.ExternalAccountId);
             }
             catch (Infrastructure.Monobank.MonobankException)
             {
@@ -261,7 +253,21 @@ public class ScheduledSyncService(
             }
         }
 
-        account.MarkActive(latestBalance ?? account.CurrentBalance ?? 0m);
+        if (freshSelf is not null)
+        {
+            // Backfill / refresh the card product type (black/white/…) from client-info so
+            // pre-existing accounts (connected before ProductType was captured) get grouped,
+            // and heal the account type + credit limit so a card that gained (or always had)
+            // a credit line flips to the liability convention instead of counting its limit
+            // as own money.
+            if (freshSelf.ProductType is { Length: > 0 } productType && account.ProductType != productType)
+                account.ProductType = productType;
+            if (!string.IsNullOrEmpty(freshSelf.AccountType) && account.AccountType != freshSelf.AccountType)
+                account.AccountType = freshSelf.AccountType;
+            account.CreditLimit = freshSelf.CreditLimit;
+        }
+
+        account.MarkActive(freshSelf?.CurrentBalance ?? account.CurrentBalance ?? 0m);
         await _accounts.UpdateAsync(account, ct);
 
         var lastTxDate = entities.Count > 0
@@ -307,12 +313,19 @@ public class ScheduledSyncService(
         // fetch windows (accounts added later never received their initial history import).
         var since = account.LastTransactionSyncAt;
 
+        // Credit cards live behind the /data/v1/cards endpoint family — the accounts
+        // endpoints return 404 for them, so both transactions and balance must route on it.
+        var isCard = account.ProductType == TrueLayerAdapter.CardProductType;
+
         IReadOnlyList<Domain.Transaction> entities;
         int candidateCount;
         try
         {
-            var (candidates, _) = await provider.SyncTransactionsAsync(
-                accessToken, account.ExternalAccountId, account.Id, account.UserId, since, ct);
+            var (candidates, _) = isCard && provider is TrueLayerAdapter cardAdapter
+                ? await cardAdapter.SyncCardTransactionsAsync(
+                    accessToken, account.ExternalAccountId, account.Id, account.UserId, since, ct)
+                : await provider.SyncTransactionsAsync(
+                    accessToken, account.ExternalAccountId, account.Id, account.UserId, since, ct);
 
             entities = await PersistAndReconcileAsync(account.Id, candidates, ct);
             candidateCount = candidates.Count;
@@ -337,21 +350,33 @@ public class ScheduledSyncService(
         }
 
         // Refresh the live balance — TrueLayer balances can move independently of
-        // dedup'd transactions (e.g. an overdraft on AIB), so re-query rather than
-        // hardcoding zero.
-        decimal latestBalance = 0m;
+        // dedup'd transactions (e.g. an overdraft on AIB), so re-query. On failure or an
+        // empty result keep the prior balance (matching the Monobank path) — zeroing it
+        // would record a phantom drop in every consumer, net-worth snapshots included.
+        decimal? latestBalance = null;
         try
         {
-            var bal = await _truelayerClient.GetBalanceAsync(accessToken, account.ExternalAccountId, ct);
-            if (bal is not null)
-                latestBalance = bal.Current;
+            if (isCard)
+            {
+                var cardBal = await _truelayerClient.GetCardBalanceAsync(accessToken, account.ExternalAccountId, ct);
+                // Card "current" is the outstanding amount owed — exactly the stored
+                // convention for credit accounts.
+                latestBalance = cardBal?.Current;
+                if (cardBal?.CreditLimit is not null)
+                    account.CreditLimit = cardBal.CreditLimit;
+            }
+            else
+            {
+                var bal = await _truelayerClient.GetBalanceAsync(accessToken, account.ExternalAccountId, ct);
+                latestBalance = bal?.Current;
+            }
         }
         catch (Infrastructure.TrueLayer.TrueLayerException)
         {
-            // Best-effort — fall back to 0 if the balance endpoint trips.
+            // Best-effort — keep the prior balance if the balance endpoint trips.
         }
 
-        account.MarkActive(latestBalance);
+        account.MarkActive(latestBalance ?? account.CurrentBalance ?? 0m);
         await _accounts.UpdateAsync(account, ct);
 
         var lastTxDate = entities.Count > 0
@@ -457,13 +482,38 @@ public class ScheduledSyncService(
     private async Task<IReadOnlyList<Domain.Transaction>> PersistAndReconcileAsync(
         Guid accountId, IEnumerable<TransactionCandidate> candidates, CancellationToken ct)
     {
+        var candidateList = candidates as IReadOnlyList<TransactionCandidate> ?? candidates.ToList();
         var existingRows = (await _transactions.GetByAccountIdAsync(accountId, ct)).ToList();
         // Dedup against ALL hashes — including soft-deleted rows, which still occupy the unique
         // (AccountId, UniqueHash) index — not just the active rows above. Missing a soft-deleted
         // hash here re-inserts it and violates the constraint, poisoning the whole batch.
         var existingHashes = (await _transactions.GetAllUniqueHashesByAccountIdAsync(accountId, ct)).ToHashSet();
 
-        var entities = _dedup.FilterDuplicates(candidates, existingHashes)
+        // Settle in place: a Monobank hold keeps its date when it clears, so the settled
+        // version hashes identically to the stored pending row. Dedup then discards the
+        // settled copy and the row would stay IsPending forever — flip it here instead.
+        var pendingByHash = existingRows
+            .Where(t => t.IsPending)
+            .ToDictionary(t => t.UniqueHash);
+        if (pendingByHash.Count > 0)
+        {
+            var settled = false;
+            foreach (var candidate in candidateList.Where(c => !c.IsPending))
+            {
+                var hash = _dedup.ComputeHash(
+                    candidate.AccountId, candidate.Amount, candidate.HashDate, candidate.Description);
+                if (hash is not null && pendingByHash.TryGetValue(hash, out var row))
+                {
+                    row.IsPending = false;
+                    row.PostedDate = candidate.PostedDate ?? row.PostedDate ?? row.TransactionDate;
+                    settled = true;
+                }
+            }
+            if (settled)
+                await _transactions.SaveChangesAsync(ct);
+        }
+
+        var entities = _dedup.FilterDuplicates(candidateList, existingHashes)
             .Select(_dedup.ToEntity)
             // Guard against duplicate hashes *within* a single provider batch (e.g. a pending and
             // booked copy that hash alike) — FilterDuplicates only compares against existing rows.

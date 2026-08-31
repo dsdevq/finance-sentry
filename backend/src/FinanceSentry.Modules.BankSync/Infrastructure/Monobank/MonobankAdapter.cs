@@ -52,10 +52,12 @@ public class MonobankAdapter(MonobankHttpClient client, ICategoryResolver catego
             AccountType: a.Type,
             AccountNumberLast4: a.MaskedPan.Length >= 4
                 ? a.MaskedPan[^4..] : a.MaskedPan.PadLeft(4, '0'),
-            CurrentBalance: MonobankHttpClient.KopecksToDecimal(a.Balance),
+            CurrentBalance: MonobankHttpClient.ToStoredBalance(a.Balance, a.CreditLimit),
             Currency: MonobankHttpClient.MapCurrency(a.CurrencyCode),
             OwnerName: info.Name,
-            ProductType: a.ProductType)).ToList();
+            ProductType: a.ProductType,
+            CreditLimit: a.CreditLimit > 0
+                ? MonobankHttpClient.KopecksToDecimal(a.CreditLimit) : null)).ToList();
     }
 
     public async Task<(IReadOnlyList<TransactionCandidate> Candidates, DateTime? NextSyncFrom)> SyncTransactionsAsync(

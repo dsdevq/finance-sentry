@@ -18,7 +18,8 @@ public interface IMerchantCategoryStatisticsService
     /// <summary>
     /// Returns the top <paramref name="limit"/> spending categories over the last
     /// <paramref name="months"/> calendar months, sorted by TotalSpend DESC.
-    /// Only posted (non-pending), active debit transactions are included.
+    /// Active debit transactions are included, pending ones too — matching the
+    /// money-flow convention (a hold is real spending).
     /// </summary>
     Task<IReadOnlyList<CategoryStat>> GetTopCategoriesAsync(
         Guid userId, int limit = 10, int months = 6, CancellationToken ct = default);
@@ -53,7 +54,7 @@ public class MerchantCategoryStatisticsService(
             CurrencyConverter.ToUsd(t.Amount, currencyByAccount.TryGetValue(t.AccountId, out var c) ? c : "USD");
 
         var debits = txList
-            .Where(t => !t.IsPending && t.IsActive && t.TransactionType == "debit"
+            .Where(t => t.IsActive && t.TransactionType == "debit"
                         && !transferIds.Contains(t.Id)
                         && !CategoryKeys.IsTransfer(t.MerchantCategory))
             .ToList();

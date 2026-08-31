@@ -268,6 +268,41 @@ public class ScheduledSyncServiceTests
         result.TransactionCountDeduped.Should().Be(1);  // 1 new after dedup
     }
 
+    // ── Same-hash settlement: a cleared hold flips the stored pending row ───
+
+    [Fact]
+    public async Task PerformFullSyncAsync_PostedTwinWithSameHash_SettlesStoredPendingRow()
+    {
+        // Monobank holds keep their date when they clear, so the settled version hashes
+        // identically to the stored pending row. Dedup then drops the settled copy — the
+        // stored row must be flipped to posted in place, or it stays pending forever.
+        var h = BuildSut();
+
+        var txDate = DateTime.UtcNow.AddDays(-1);
+        var pendingRow = new Transaction(h.Account.Id, UserId, 50m, txDate, "Coffee", "same_hash", isPending: true);
+        h.TxRepo.Setup(r => r.GetByAccountIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+              .ReturnsAsync([pendingRow]);
+        h.TxRepo.Setup(r => r.GetAllUniqueHashesByAccountIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+              .ReturnsAsync(["same_hash"]);
+
+        var settledCandidate = new TransactionCandidate(
+            h.Account.Id, UserId, 50m, txDate, txDate, "Coffee", IsPending: false, "debit", null, null);
+        SetupProviderCandidates(h, [settledCandidate]);
+
+        h.Dedup.Setup(d => d.ComputeHash(h.Account.Id, 50m, It.IsAny<DateTime>(), "Coffee"))
+             .Returns("same_hash");
+        // The settled copy is a duplicate by hash, so dedup filters it out.
+        h.Dedup.Setup(d => d.FilterDuplicates(It.IsAny<IEnumerable<TransactionCandidate>>(), It.IsAny<IReadOnlySet<string>>()))
+             .Returns([]);
+
+        var result = await h.Sut.PerformFullSyncAsync(h.Account.Id);
+
+        result.Success.Should().BeTrue();
+        pendingRow.IsPending.Should().BeFalse("the cleared hold must settle the stored row in place");
+        pendingRow.PostedDate.Should().Be(txDate);
+        h.TxRepo.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     // ── T313-4: Hard failure during sync marks job + account failed and alerts ──
 
     [Fact]
@@ -331,6 +366,55 @@ public class ScheduledSyncServiceTests
         alertGen.Verify(a => a.GenerateSyncFailureAlertAsync(
             It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<Guid?>(),
             It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    // ── Balance refresh keeps the prior value when the endpoint trips ───────
+
+    [Fact]
+    public async Task SyncTrueLayer_BalanceEndpointFails_KeepsPriorBalance()
+    {
+        // Regression: a failed /balance call used to zero the account, recording a phantom
+        // drop in every consumer (net-worth snapshots included).
+        var h = BuildSut();
+        h.Account.CurrentBalance = 123.45m;
+
+        SetupProviderCandidates(h, []);
+        h.Dedup.Setup(d => d.FilterDuplicates(It.IsAny<IEnumerable<TransactionCandidate>>(), It.IsAny<IReadOnlySet<string>>()))
+             .Returns([]);
+        h.TrueLayerClient
+            .Setup(c => c.GetBalanceAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new TrueLayerException("TRUELAYER_ERROR", "balance endpoint down", 500));
+
+        var result = await h.Sut.PerformFullSyncAsync(h.Account.Id);
+
+        result.Success.Should().BeTrue();
+        h.Account.CurrentBalance.Should().Be(123.45m);
+    }
+
+    // ── Card accounts route balance through the /cards endpoint family ──────
+
+    [Fact]
+    public async Task SyncTrueLayer_CardAccount_UsesCardBalanceAndHealsCreditLimit()
+    {
+        var h = BuildSut();
+        h.Account.ProductType = TrueLayerAdapter.CardProductType;
+        h.Account.AccountType = "credit";
+
+        SetupProviderCandidates(h, []);
+        h.Dedup.Setup(d => d.FilterDuplicates(It.IsAny<IEnumerable<TransactionCandidate>>(), It.IsAny<IReadOnlySet<string>>()))
+             .Returns([]);
+        h.TrueLayerClient
+            .Setup(c => c.GetCardBalanceAsync("access-token", h.Account.ExternalAccountId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new TrueLayerCardBalance(Current: 250m, Available: 3750m, CreditLimit: 4000m, Currency: "EUR"));
+
+        var result = await h.Sut.PerformFullSyncAsync(h.Account.Id);
+
+        result.Success.Should().BeTrue();
+        h.Account.CurrentBalance.Should().Be(250m, "a card's current balance is the amount owed");
+        h.Account.CreditLimit.Should().Be(4000m);
+        h.TrueLayerClient.Verify(
+            c => c.GetBalanceAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     // ── Unknown provider is an explicit failure, not a silent fallback ──────

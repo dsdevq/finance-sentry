@@ -25,6 +25,16 @@ public record TrueLayerAccountBalance(
     decimal Available,
     string Currency);
 
+/// <summary>
+/// Balance of a credit card from /data/v1/cards/{id}/balance. Unlike an account balance,
+/// <see cref="Current"/> is the outstanding amount owed (positive = debt).
+/// </summary>
+public record TrueLayerCardBalance(
+    decimal Current,
+    decimal Available,
+    decimal? CreditLimit,
+    string Currency);
+
 public record TrueLayerTransaction(
     string TransactionId,
     DateTime Timestamp,

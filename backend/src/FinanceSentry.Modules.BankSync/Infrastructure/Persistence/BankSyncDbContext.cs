@@ -33,6 +33,7 @@ public class BankSyncDbContext(DbContextOptions<BankSyncDbContext> options) : Db
         bab.Property(ba => ba.OwnerName).IsRequired().HasMaxLength(255);
         bab.Property(ba => ba.Currency).IsRequired().HasMaxLength(3).HasDefaultValue("EUR");
         bab.Property(ba => ba.CurrentBalance).HasPrecision(15, 2);
+        bab.Property(ba => ba.CreditLimit).HasPrecision(15, 2);
         bab.Property(ba => ba.SyncStatus).IsRequired().HasMaxLength(50).HasDefaultValue("pending");
         bab.Property(ba => ba.IsActive).HasDefaultValue(true);
         bab.Property(ba => ba.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
