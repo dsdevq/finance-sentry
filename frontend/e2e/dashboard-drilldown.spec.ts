@@ -444,8 +444,12 @@ test.describe('Dashboard → Ledger spending consistency', () => {
     const outflowText = (await outflowCard.innerText()).trim();
     const ledgerAmount = extractAmount(outflowText);
 
-    // Both surfaces must display the same underlying dollar amount derived from the backend
-    // aggregate. Compact notation ($2.9K) and full precision ($2,900.00) are the same number.
+    // Transfer pair (tx-3 debit $1,000 + tx-6 credit $1,000) is in the loaded transaction
+    // list but excluded from the backend aggregate. If the ledger used a client-side debit
+    // sum it would show $1,900 (400+500+1000 from the page), not $2,900 — the explicit
+    // value check below proves the pair is excluded from the ledger, and the equality
+    // check proves the dashboard shows the same server-side number.
+    expect(ledgerAmount).toBeCloseTo(2900, 1);
     expect(dashboardAmount).toBeCloseTo(ledgerAmount, 1);
   });
 });
