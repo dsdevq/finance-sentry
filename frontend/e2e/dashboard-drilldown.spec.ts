@@ -1,5 +1,17 @@
 import {expect, type Page, test} from '@playwright/test';
 
+// Parse compact ($2.9K) or full-precision ($2,900.00) currency strings to a number.
+// Both formats are used: dashboard uses compact notation, ledger uses decimal pipe.
+function extractAmount(cardText: string): number {
+  const match = cardText.match(/\$[\d,.]+[KkMmBb]?/);
+  if (!match) throw new Error(`No dollar amount found in: ${cardText}`);
+  const cleaned = match[0].replace(/[$,\s]/g, '');
+  const upper = cleaned.toUpperCase();
+  if (upper.endsWith('K')) return parseFloat(upper.slice(0, -1)) * 1_000;
+  if (upper.endsWith('M')) return parseFloat(upper.slice(0, -1)) * 1_000_000;
+  return parseFloat(cleaned);
+}
+
 // Origin-agnostic glob, NOT the dev apiBaseUrl. `ng build` defaults to the
 // production configuration, which file-replaces environment.ts and makes
 // apiBaseUrl the relative '/api/v1' — so the built app calls the e2e server's
@@ -375,5 +387,41 @@ test.describe('Transaction ledger — Monthly Outflow stat', () => {
     // …the button is gone (hasMore now false) and the stat did not move.
     await expect(page.getByRole('button', {name: /load more/i})).not.toBeVisible();
     await expect(page.getByText('$2,900.00')).toBeVisible();
+  });
+});
+
+// Spans dashboard → ledger in a single navigation so the test directly compares what
+// each surface renders from the same mocked API call — not two independent assertions
+// against a shared constant. Test data includes a pending debit ($500) and a transfer
+// debit ($1,000) that a client-side sum would include but the backend aggregate excludes.
+// Note: pending transactions ARE included in the backend aggregate (MoneyFlowStatisticsService
+// explicitly documents this — a card hold is real spending). The consistency guarantee is
+// that BOTH surfaces show the same server-side number, not that pending is excluded.
+test.describe('Dashboard → Ledger spending consistency', () => {
+  test('Spending (MTD) and Monthly Outflow show the same underlying number', async ({page}) => {
+    await mockApisWithLedger(page);
+    await page.goto('/dashboard');
+    await expect(page.getByRole('heading', {name: 'Dashboard'})).toBeVisible();
+
+    // Read the "Spending (MTD)" stat value from the dashboard card.
+    const spendingCard = page.locator('cmn-stat-card').filter({hasText: 'Spending (MTD)'});
+    await expect(spendingCard).toBeVisible();
+    const spendingText = (await spendingCard.innerText()).trim();
+    const dashboardAmount = extractAmount(spendingText);
+
+    // Navigate to the drill-down (same button the user clicks in the real flow).
+    await page.getByRole('button', {name: /view spending details/i}).click();
+    await expect(page).toHaveURL(/\/transactions.*type=debit/);
+    await expect(page.getByRole('heading', {name: 'Transaction Ledger'})).toBeVisible();
+
+    // Read the "Monthly Outflow" stat value from the ledger card.
+    const outflowCard = page.locator('cmn-stat-card').filter({hasText: 'Monthly Outflow'});
+    await expect(outflowCard).toBeVisible();
+    const outflowText = (await outflowCard.innerText()).trim();
+    const ledgerAmount = extractAmount(outflowText);
+
+    // Both surfaces must display the same underlying dollar amount derived from the backend
+    // aggregate. Compact notation ($2.9K) and full precision ($2,900.00) are the same number.
+    expect(dashboardAmount).toBeCloseTo(ledgerAmount, 1);
   });
 });
