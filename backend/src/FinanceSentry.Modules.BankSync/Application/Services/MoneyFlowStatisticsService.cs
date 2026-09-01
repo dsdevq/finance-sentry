@@ -30,8 +30,9 @@ public interface IMoneyFlowStatisticsService
     /// boundary (see <see cref="MonthWindow"/>) so no bucket is a partial fragment of a month;
     /// the trailing in-progress bucket is included so callers can render a month-to-date
     /// figure, and it is up to them to keep it out of month-over-month comparisons.
-    /// Only posted (non-pending) transactions are counted — the dashboard's definition of
-    /// spending is "posted, active, excluding internal transfers and transfer-category".
+    /// Pending transactions count — a card hold is real spending, and excluding it made the
+    /// current month's outflow a fraction of reality. Settlement retires or flips the pending
+    /// row in place, so it is never double-counted for long.
     /// </summary>
     Task<IReadOnlyList<MonthlyFlow>> GetMonthlyFlowAsync(
         Guid userId, int months = 6, CancellationToken ct = default);
@@ -70,10 +71,10 @@ public class MoneyFlowStatisticsService(
         // Currency map enables cross-currency pairing (e.g. Revolut EUR → Monobank UAH).
         var transferIds = _transferDetection.DetectTransferTransactionIds(txList.ToList(), accountCurrencies);
 
-        // 4. Group by (currency, year-month) and sum inflow/outflow (posted only —
-        // same definition as the dashboard: active, non-pending, non-transfer).
+        // 4. Group by (currency, year-month) and sum inflow/outflow (pending included —
+        // a hold is committed money; see interface doc)
         var result = txList
-            .Where(t => t.IsActive && !t.IsPending && !transferIds.Contains(t.Id)
+            .Where(t => t.IsActive && !transferIds.Contains(t.Id)
                         && !CategoryKeys.IsTransfer(t.MerchantCategory))
             .Select(t => new
             {

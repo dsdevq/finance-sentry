@@ -85,13 +85,13 @@ public class MoneyFlowStatisticsTests
         months.Should().BeInDescendingOrder();
     }
 
-    // ── T413 Test 2: Pending transactions excluded ────────────────────────────
+    // ── T413 Test 2: Pending transactions counted ─────────────────────────────
 
     [Fact]
-    public async Task GetMonthlyFlow_ExcludesPendingTransactions()
+    public async Task GetMonthlyFlow_IncludesPendingTransactions()
     {
-        // Pending transactions are excluded — the dashboard definition is "posted,
-        // active, excluding internal transfers and transfer-category".
+        // A card hold is committed money — excluding pending debits made the current
+        // month's outflow a fraction of real spending (the "$688 outflow" bug).
         var (account, accountId) = MakeAccount("EUR");
         var date = new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc);
 
@@ -115,11 +115,11 @@ public class MoneyFlowStatisticsTests
         // Act
         var result = await sut.GetMonthlyFlowAsync(UserId, 6);
 
-        // Assert: the pending debit is excluded → outflow = 100 only
+        // Assert: the pending debit counts → outflow = 100 + 40
         result.Should().HaveCount(1);
         result[0].Inflow.Should().Be(500m);
-        result[0].Outflow.Should().Be(100m);
-        result[0].Net.Should().Be(400m);
+        result[0].Outflow.Should().Be(140m);
+        result[0].Net.Should().Be(360m);
     }
 
     // ── T413 Test 3: Multi-currency separate stats ────────────────────────────
