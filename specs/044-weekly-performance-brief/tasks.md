@@ -16,3 +16,4 @@
 ## [US2] Cron failure alerting
 
 - [x] Satisfied by existing global `ConsecutiveFailureAlertFilter` — no new code needed
+- [x] Lower `Observability:JobFailureAlertThreshold` from 3 → 2 in `appsettings.json` so the brief job alerts after 2 consecutive failures (matches AC)
