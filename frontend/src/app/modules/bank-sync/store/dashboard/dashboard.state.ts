@@ -11,6 +11,7 @@ export interface DashboardState {
   historyHasHistory: boolean;
   historyLoading: boolean;
   historyError: string | null;
+  netWorthStacked: boolean;
 }
 
 export const initialDashboardState: DashboardState = {
@@ -20,4 +21,5 @@ export const initialDashboardState: DashboardState = {
   historyHasHistory: false,
   historyLoading: false,
   historyError: null,
+  netWorthStacked: true,
 };
