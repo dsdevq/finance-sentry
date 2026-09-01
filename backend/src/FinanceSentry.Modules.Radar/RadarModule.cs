@@ -54,6 +54,12 @@ public static class RadarModule
                 "book-performance-brief",
                 job => job.ExecuteAsync(CancellationToken.None),
                 "0 8 * * 1");
+
+            // 413: daily portfolio-state scanner; 02:00 UTC after banking/brokerage sync.
+            mgr.AddOrUpdate<PortfolioScannerJob>(
+                "portfolio-scanner",
+                job => job.ExecuteAsync(CancellationToken.None),
+                Cron.Daily(2));
         }
     }
 
@@ -84,6 +90,7 @@ public static class RadarModule
         services.AddScoped<RadarIngestionJob>();
         services.AddScoped<RadarComputeJob>();
         services.AddScoped<RadarFreshnessWatchdogJob>();
+        services.AddScoped<PortfolioScannerJob>();
 
         services.AddHttpClient(YahooMarketHistorySource.HttpClientName, client =>
         {
