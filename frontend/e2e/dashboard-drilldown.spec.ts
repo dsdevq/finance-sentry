@@ -99,8 +99,11 @@ const INCOME_TRANSACTIONS = {
   hasMore: false,
 };
 
-// Transactions for the ledger page — deliberately includes a pending debit and a
-// "transfer" debit that would inflate a client-side sum beyond the backend value (2900).
+// Transactions for the ledger page — deliberately includes a pending debit and a TRUE
+// internal-transfer PAIR (the $1,000 debit leg out of acc-1 and its matching $1,000
+// credit leg into acc-2: same amount, same date, mirrored descriptions). The debit leg
+// would inflate a client-side sum beyond the backend value (2900); the backend's
+// pair detection excludes both legs.
 const LEDGER_TRANSACTIONS = {
   items: [
     {
@@ -152,6 +155,26 @@ const LEDGER_TRANSACTIONS = {
       updatedAt: '2026-08-13T00:00:00Z',
     },
     {
+      // The matching credit leg of tx-3's internal transfer — same amount,
+      // same date, mirrored description, opposite direction, other account.
+      // A category filter alone would miss this pair; description/amount
+      // matching is what identifies it.
+      transactionId: 'tx-6',
+      accountId: 'acc-2',
+      bankName: 'Savings Bank',
+      currency: 'USD',
+      amount: 1000,
+      amountUsd: 1000,
+      date: '2026-08-13',
+      postedDate: '2026-08-13',
+      description: 'Transfer from checking',
+      transactionType: 'credit',
+      merchantCategory: 'TRANSFER_IN',
+      isPending: false,
+      createdAt: '2026-08-13T00:00:00Z',
+      updatedAt: '2026-08-13T00:00:00Z',
+    },
+    {
       transactionId: 'tx-4',
       accountId: 'acc-2',
       bankName: 'Savings Bank',
@@ -168,7 +191,7 @@ const LEDGER_TRANSACTIONS = {
       updatedAt: '2026-08-15T00:00:00Z',
     },
   ],
-  totalCount: 4,
+  totalCount: 5,
   hasMore: false,
 };
 
@@ -361,14 +384,14 @@ test.describe('Transaction ledger — Monthly Outflow stat', () => {
           updatedAt: '2026-08-18T00:00:00Z',
         },
       ],
-      totalCount: 5,
+      totalCount: 6,
       hasMore: false,
     };
     await page.route(`${API}/accounts/transactions**`, route => {
       const offset = new URL(route.request().url()).searchParams.get('offset');
       const body =
         offset === null || offset === '0'
-          ? {...LEDGER_TRANSACTIONS, totalCount: 5, hasMore: true}
+          ? {...LEDGER_TRANSACTIONS, totalCount: 6, hasMore: true}
           : pageTwo;
       return route.fulfill({
         status: 200,
@@ -392,8 +415,9 @@ test.describe('Transaction ledger — Monthly Outflow stat', () => {
 
 // Spans dashboard → ledger in a single navigation so the test directly compares what
 // each surface renders from the same mocked API call — not two independent assertions
-// against a shared constant. Test data includes a pending debit ($500) and a transfer
-// debit ($1,000) that a client-side sum would include but the backend aggregate excludes.
+// against a shared constant. Test data includes a pending debit ($500) and a true
+// internal-transfer PAIR (the $1,000 debit leg + its matching credit leg) whose debit
+// a client-side sum would include but the backend's pair detection excludes.
 // Note: pending transactions ARE included in the backend aggregate (MoneyFlowStatisticsService
 // explicitly documents this — a card hold is real spending). The consistency guarantee is
 // that BOTH surfaces show the same server-side number, not that pending is excluded.
