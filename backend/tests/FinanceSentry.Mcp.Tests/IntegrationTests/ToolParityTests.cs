@@ -216,6 +216,7 @@ public sealed class ToolParityTests
         services.AddScoped<RunThesisMonitorTool>();
         services.AddScoped<ListThesisBreaksTool>();
         services.AddScoped<ListThesisEventsTool>();
+        services.AddScoped<SaveThesisTool>();
         services.AddScoped<GetThesisPerformanceTool>();
         services.AddScoped<GetTrackRecordTool>();
         services.AddScoped<GetPostmortemPacketTool>();
@@ -887,6 +888,31 @@ public sealed class ToolParityTests
     }
 
     [Fact]
+    public async Task SaveThesis_AcceptsLongNarrativeThesisText()
+    {
+        var userId = Guid.NewGuid();
+        await using var sp = BuildProvider(Guid.NewGuid().ToString("N"));
+        await using var scope = sp.CreateAsyncScope();
+        var svc = scope.ServiceProvider;
+        var thesisText = string.Join(
+            " ",
+            Enumerable.Repeat("Micron memory cycle recovery remains intact through pricing discipline.", 4));
+
+        var saveTool = svc.GetRequiredService<SaveThesisTool>();
+        var thesis = await saveTool.ExecuteAsync(
+            ticker: "MU",
+            thesisText: thesisText,
+            keyDataPoints: [],
+            catalysts: [],
+            invalidationTriggers: [],
+            userId: userId);
+
+        thesis.Should().NotBeNull();
+        thesis!.ThesisText.Should().Be(thesisText);
+        thesis.ThesisText.Length.Should().BeGreaterThan(200);
+    }
+
+    [Fact]
     public async Task GetThesisPerformance_ComputesExcessReturn_AgainstLiveQuote()
     {
         var userId = Guid.NewGuid();
@@ -1178,6 +1204,49 @@ public sealed class ToolParityTests
         verdict!.Decision.Should().Be(RiskDecision.Refused);
         verdict.RuleKey.Should().Be(RiskRuleKeys.MaxPositionWeight);
         verdict.MaxCompliantSizeUsd.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task CheckRiskRules_Proposal_UsesCurrentValueBook_ForMinCashBuffer()
+    {
+        var userId = Guid.NewGuid();
+        await using var sp = BuildProvider(Guid.NewGuid().ToString("N"));
+        await using var scope = sp.CreateAsyncScope();
+        var svc = scope.ServiceProvider;
+
+        var bankDb = svc.GetRequiredService<BankSyncDbContext>();
+        var account = new BankAccount(userId, "ext-risk-cash", "Chase", "checking", "1234", "Test", "USD", userId, "truelayer");
+        account.BeginSync();
+        account.MarkActive(2_446m);
+        bankDb.BankAccounts.Add(account);
+
+        var cryptoHolding = CryptoHolding.Create(userId, "SOL", 10m, 0m, 12_054m);
+        cryptoHolding.SetCostBasis(100_000m, 10_000m, null, DateTime.UtcNow, 1, 1);
+        var cryptoDb = svc.GetRequiredService<CryptoSyncDbContext>();
+        cryptoDb.CryptoHoldings.Add(cryptoHolding);
+
+        await bankDb.SaveChangesAsync();
+        await cryptoDb.SaveChangesAsync();
+
+        var saveTool = svc.GetRequiredService<SaveRiskRulesTool>();
+        await saveTool.ExecuteAsync(minCashBufferPct: 0.10m, userId: userId);
+
+        var checkTool = svc.GetRequiredService<CheckRiskRulesTool>();
+
+        // $800 fits within the 10% buffer against the $14,500 market-value book: Allowed.
+        var verdict = await checkTool.ExecuteAsync(ticker: "MHPC", proposedUsd: 800m, userId: userId);
+        verdict.Should().NotBeNull();
+        verdict!.Decision.Should().Be(RiskDecision.Allowed);
+        verdict.RuleKey.Should().NotBe(RiskRuleKeys.MinCashBuffer);
+
+        // Headroom = cash − (10% × totalBook) = $2,446 − $1,450 = $996.
+        // A proposal just above headroom must Refuse and expose the ≈$996 figure,
+        // proving the denominator is current market value, not phantom cost basis.
+        var refused = await checkTool.ExecuteAsync(ticker: "MHPC", proposedUsd: 997m, userId: userId);
+        refused.Should().NotBeNull();
+        refused!.Decision.Should().Be(RiskDecision.Refused);
+        refused.RuleKey.Should().Be(RiskRuleKeys.MinCashBuffer);
+        refused.HeadroomUsd.Should().BeApproximately(996m, 10m, "headroom is based on current market value, not phantom cost basis");
     }
 
     // ── Opportunity scanner (019) parity ──────────────────────────────────────
