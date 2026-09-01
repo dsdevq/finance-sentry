@@ -1,0 +1,103 @@
+namespace FinanceSentry.Tests.Integration.Research;
+
+using FinanceSentry.Modules.Research.Domain;
+using FinanceSentry.Modules.Research.Infrastructure.Persistence;
+using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
+using Testcontainers.PostgreSql;
+using Xunit;
+
+/// <summary>
+/// Integration tests that write a thesis with thesisText at the column limit (4000 chars) to a
+/// real PostgreSQL instance and read it back to confirm no truncation occurs.
+/// Exercises the varchar(4000) column constraint widened in the #443 fix — the in-memory EF
+/// provider cannot catch a misconfigured max-length because it does not enforce storage-layer
+/// constraints.
+///
+/// Requires Docker. Tagged [Category=Integration] so that the tests are excluded by the
+/// --filter Category!=Integration CI shortcut when Docker is unavailable.
+/// To run locally: ensure Docker is running, then execute
+///   dotnet test --filter "Category=Integration&amp;FullyQualifiedName~ThesisTextColumn"
+/// </summary>
+[Trait("Category", "Integration")]
+public sealed class ThesisTextColumnLimitTests : IAsyncLifetime
+{
+    private PostgreSqlContainer? _postgres;
+
+    public async Task InitializeAsync()
+    {
+        _postgres = new PostgreSqlBuilder()
+            .WithImage("postgres:16-alpine")
+            .Build();
+        await _postgres.StartAsync();
+    }
+
+    public async Task DisposeAsync()
+    {
+        if (_postgres is not null)
+            await _postgres.DisposeAsync();
+    }
+
+    private ResearchDbContext CreateContext() =>
+        new(new DbContextOptionsBuilder<ResearchDbContext>()
+            .UseNpgsql(_postgres!.GetConnectionString())
+            .Options);
+
+    [Fact]
+    public async Task ThesisText_At4000CharLimit_RoundTripsWithoutTruncation()
+    {
+        await using var ctx = CreateContext();
+        await ctx.Database.EnsureCreatedAsync();
+
+        var userId = Guid.NewGuid();
+        var thesisText = new string('M', 4000);
+
+        var thesis = new InvestmentThesis
+        {
+            UserId = userId,
+            Ticker = "MU",
+            ThesisText = thesisText,
+        };
+        ctx.Theses.Add(thesis);
+        await ctx.SaveChangesAsync();
+
+        await using var readCtx = CreateContext();
+        var loaded = await readCtx.Theses
+            .AsNoTracking()
+            .SingleAsync(t => t.Id == thesis.Id);
+
+        loaded.ThesisText.Should().Be(thesisText,
+            "a 4000-char thesis must round-trip through the varchar(4000) column without truncation");
+        loaded.ThesisText.Length.Should().Be(4000);
+    }
+
+    [Fact]
+    public async Task ThesisText_LongNarrative3900Chars_RoundTripsWithoutTruncation()
+    {
+        await using var ctx = CreateContext();
+        await ctx.Database.EnsureCreatedAsync();
+
+        var userId = Guid.NewGuid();
+        var sentence = "Micron memory cycle recovery remains intact through pricing discipline. ";
+        var thesisText = string.Join(string.Empty, Enumerable.Repeat(sentence, 3900 / sentence.Length + 1))
+            .Substring(0, 3900);
+
+        var thesis = new InvestmentThesis
+        {
+            UserId = userId,
+            Ticker = "MU",
+            ThesisText = thesisText,
+        };
+        ctx.Theses.Add(thesis);
+        await ctx.SaveChangesAsync();
+
+        await using var readCtx = CreateContext();
+        var loaded = await readCtx.Theses
+            .AsNoTracking()
+            .SingleAsync(t => t.Id == thesis.Id);
+
+        loaded.ThesisText.Should().Be(thesisText,
+            "a 3,900-char narrative must round-trip through the varchar(4000) column without truncation");
+        loaded.ThesisText.Length.Should().Be(3900);
+    }
+}
