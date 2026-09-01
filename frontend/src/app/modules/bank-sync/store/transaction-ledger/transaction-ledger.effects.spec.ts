@@ -162,9 +162,7 @@ describe('transactionLedgerEffects', () => {
       const store = buildStore();
       const service = buildService();
       service.getAllTransactions.mockReturnValue(of(TX_RESPONSE));
-      service.getDashboardData.mockReturnValue(
-        of({...buildDashboardData(2900), monthlyFlow: []})
-      );
+      service.getDashboardData.mockReturnValue(of({...buildDashboardData(2900), monthlyFlow: []}));
       configure(service);
 
       TestBed.runInInjectionContext(() => transactionLedgerEffects(store).load());
