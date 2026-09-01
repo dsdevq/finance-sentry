@@ -164,9 +164,13 @@ public class GetInstallmentFxImpactQueryHandlerTests
         result.CurrentCostTotal.Should().BeApproximately(
             result.Plans.Sum(p => p.CurrentCost), 0.01m);
 
-        // Series spans May 2024 → Aug 2026 inclusive.
-        result.Points.Should().HaveCount(28);
-        result.Points[0].Date.Should().Be(new DateOnly(2024, 5, 1));
+        // Series spans May 2024 → today inclusive; count is date-relative so the test
+        // doesn't drift as calendar months pass.
+        var seriesStart = new DateOnly(2024, 5, 1);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var expectedMonths = (today.Year - seriesStart.Year) * 12 + today.Month - seriesStart.Month + 1;
+        result.Points.Should().HaveCount(expectedMonths);
+        result.Points[0].Date.Should().Be(seriesStart);
         // The second plan only starts contributing from its own baseline, so the total
         // steps up then — the line tracks rate movement, not plans appearing.
         result.Points[0].MonthlyCost.Should().BeLessThan(result.Points[^1].MonthlyCost);
