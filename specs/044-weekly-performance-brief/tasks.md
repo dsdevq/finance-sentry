@@ -17,3 +17,11 @@
 
 - [x] Satisfied by existing global `ConsecutiveFailureAlertFilter` — no new code needed
 - [x] Lower `Observability:JobFailureAlertThreshold` from 3 → 2 in `appsettings.json` so the brief job alerts after 2 consecutive failures (matches AC)
+
+## [US3] Regression coverage for materiality + dedup paths
+
+- [x] Add `[InlineData("PerformanceBrief", CompanionEventKind.PerformanceBrief)]` to `MaterialityPolicyTests.Known_alert_types_map_to_kinds` — confirms Telegram routing is under test
+- [x] Add `GeneratePerformanceBrief_NoRecent_AddsInfoAlert` to `AlertGeneratorServiceTests` — confirms fresh-alert path calls `AddAsync`
+- [x] Add `GeneratePerformanceBrief_WithinSixDaySuppressWindow_SkipsCreation` to `AlertGeneratorServiceTests` — confirms 6-day suppression window blocks duplicate delivery
+- [x] `dotnet build FinanceSentry.sln -c Release` → 0 warnings, 0 errors
+- [x] `dotnet test --filter "Category!=Integration"` → 553 unit / 102 MCP / 120 integration all pass
