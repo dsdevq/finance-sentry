@@ -11,7 +11,7 @@
 - [x] Write unit tests (`FinanceSentry.Tests.Unit/Radar/BookPerformanceBriefJobTests.cs`) — 10 tests
 - [x] `dotnet build FinanceSentry.sln` → zero warnings
 - [x] `dotnet test --filter "Category!=Integration"` → all pass (551 unit, 102 MCP, 120 integration)
-- [ ] Commit spec artifacts + code
+- [x] Commit spec artifacts + code
 
 ## [US2] Cron failure alerting
 
