@@ -16,4 +16,4 @@
 
 ## [US2] Queryable via existing MCP tools
 
-- [ ] Verify `list_signals?scanner=portfolio_scanner` returns portfolio signals (manual check or integration test)
+- [x] Verify `list_signals?scanner=portfolio_scanner` returns portfolio signals (integration test in ToolParityTests: ListSignals_ReturnsPortfolioScannerSignal_WhenSeeded)
