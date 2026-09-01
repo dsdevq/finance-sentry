@@ -1,5 +1,17 @@
 import {expect, type Page, test} from '@playwright/test';
 
+// Parse compact ($2.9K) or full-precision ($2,900.00) currency strings to a number.
+// Both formats are used: dashboard uses compact notation, ledger uses decimal pipe.
+function extractAmount(cardText: string): number {
+  const match = cardText.match(/\$[\d,.]+[KkMmBb]?/);
+  if (!match) throw new Error(`No dollar amount found in: ${cardText}`);
+  const cleaned = match[0].replace(/[$,\s]/g, '');
+  const upper = cleaned.toUpperCase();
+  if (upper.endsWith('K')) return parseFloat(upper.slice(0, -1)) * 1_000;
+  if (upper.endsWith('M')) return parseFloat(upper.slice(0, -1)) * 1_000_000;
+  return parseFloat(cleaned);
+}
+
 // Origin-agnostic glob, NOT the dev apiBaseUrl. `ng build` defaults to the
 // production configuration, which file-replaces environment.ts and makes
 // apiBaseUrl the relative '/api/v1' — so the built app calls the e2e server's
@@ -87,8 +99,11 @@ const INCOME_TRANSACTIONS = {
   hasMore: false,
 };
 
-// Transactions for the ledger page — deliberately includes a pending debit and a
-// "transfer" debit that would inflate a client-side sum beyond the backend value (2900).
+// Transactions for the ledger page — deliberately includes a pending debit and a TRUE
+// internal-transfer PAIR (the $1,000 debit leg out of acc-1 and its matching $1,000
+// credit leg into acc-2: same amount, same date, mirrored descriptions). The debit leg
+// would inflate a client-side sum beyond the backend value (2900); the backend's
+// pair detection excludes both legs.
 const LEDGER_TRANSACTIONS = {
   items: [
     {
@@ -140,6 +155,26 @@ const LEDGER_TRANSACTIONS = {
       updatedAt: '2026-08-13T00:00:00Z',
     },
     {
+      // The matching credit leg of tx-3's internal transfer — same amount,
+      // same date, mirrored description, opposite direction, other account.
+      // A category filter alone would miss this pair; description/amount
+      // matching is what identifies it.
+      transactionId: 'tx-6',
+      accountId: 'acc-2',
+      bankName: 'Savings Bank',
+      currency: 'USD',
+      amount: 1000,
+      amountUsd: 1000,
+      date: '2026-08-13',
+      postedDate: '2026-08-13',
+      description: 'Transfer from checking',
+      transactionType: 'credit',
+      merchantCategory: 'TRANSFER_IN',
+      isPending: false,
+      createdAt: '2026-08-13T00:00:00Z',
+      updatedAt: '2026-08-13T00:00:00Z',
+    },
+    {
       transactionId: 'tx-4',
       accountId: 'acc-2',
       bankName: 'Savings Bank',
@@ -156,7 +191,7 @@ const LEDGER_TRANSACTIONS = {
       updatedAt: '2026-08-15T00:00:00Z',
     },
   ],
-  totalCount: 4,
+  totalCount: 5,
   hasMore: false,
 };
 
@@ -349,14 +384,14 @@ test.describe('Transaction ledger — Monthly Outflow stat', () => {
           updatedAt: '2026-08-18T00:00:00Z',
         },
       ],
-      totalCount: 5,
+      totalCount: 6,
       hasMore: false,
     };
     await page.route(`${API}/accounts/transactions**`, route => {
       const offset = new URL(route.request().url()).searchParams.get('offset');
       const body =
         offset === null || offset === '0'
-          ? {...LEDGER_TRANSACTIONS, totalCount: 5, hasMore: true}
+          ? {...LEDGER_TRANSACTIONS, totalCount: 6, hasMore: true}
           : pageTwo;
       return route.fulfill({
         status: 200,
@@ -375,5 +410,46 @@ test.describe('Transaction ledger — Monthly Outflow stat', () => {
     // …the button is gone (hasMore now false) and the stat did not move.
     await expect(page.getByRole('button', {name: /load more/i})).not.toBeVisible();
     await expect(page.getByText('$2,900.00')).toBeVisible();
+  });
+});
+
+// Spans dashboard → ledger in a single navigation so the test directly compares what
+// each surface renders from the same mocked API call — not two independent assertions
+// against a shared constant. Test data includes a pending debit ($500) and a true
+// internal-transfer PAIR (the $1,000 debit leg + its matching credit leg) whose debit
+// a client-side sum would include but the backend's pair detection excludes.
+// Note: pending transactions ARE included in the backend aggregate (MoneyFlowStatisticsService
+// explicitly documents this — a card hold is real spending). The consistency guarantee is
+// that BOTH surfaces show the same server-side number, not that pending is excluded.
+test.describe('Dashboard → Ledger spending consistency', () => {
+  test('Spending (MTD) and Monthly Outflow show the same underlying number', async ({page}) => {
+    await mockApisWithLedger(page);
+    await page.goto('/dashboard');
+    await expect(page.getByRole('heading', {name: 'Dashboard'})).toBeVisible();
+
+    // Read the "Spending (MTD)" stat value from the dashboard card.
+    const spendingCard = page.locator('cmn-stat-card').filter({hasText: 'Spending (MTD)'});
+    await expect(spendingCard).toBeVisible();
+    const spendingText = (await spendingCard.innerText()).trim();
+    const dashboardAmount = extractAmount(spendingText);
+
+    // Navigate to the drill-down (same button the user clicks in the real flow).
+    await page.getByRole('button', {name: /view spending details/i}).click();
+    await expect(page).toHaveURL(/\/transactions.*type=debit/);
+    await expect(page.getByRole('heading', {name: 'Transaction Ledger'})).toBeVisible();
+
+    // Read the "Monthly Outflow" stat value from the ledger card.
+    const outflowCard = page.locator('cmn-stat-card').filter({hasText: 'Monthly Outflow'});
+    await expect(outflowCard).toBeVisible();
+    const outflowText = (await outflowCard.innerText()).trim();
+    const ledgerAmount = extractAmount(outflowText);
+
+    // Transfer pair (tx-3 debit $1,000 + tx-6 credit $1,000) is in the loaded transaction
+    // list but excluded from the backend aggregate. If the ledger used a client-side debit
+    // sum it would show $1,900 (400+500+1000 from the page), not $2,900 — the explicit
+    // value check below proves the pair is excluded from the ledger, and the equality
+    // check proves the dashboard shows the same server-side number.
+    expect(ledgerAmount).toBeCloseTo(2900, 1);
+    expect(dashboardAmount).toBeCloseTo(ledgerAmount, 1);
   });
 });
