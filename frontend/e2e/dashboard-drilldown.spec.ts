@@ -393,10 +393,9 @@ test.describe('Transaction ledger — Monthly Outflow stat', () => {
 // Spans dashboard → ledger in a single navigation so the test directly compares what
 // each surface renders from the same mocked API call — not two independent assertions
 // against a shared constant. Test data includes a pending debit ($500) and a transfer
-// debit ($1,000) that a client-side sum would include but the backend aggregate excludes.
-// Note: pending transactions ARE included in the backend aggregate (MoneyFlowStatisticsService
-// explicitly documents this — a card hold is real spending). The consistency guarantee is
-// that BOTH surfaces show the same server-side number, not that pending is excluded.
+// debit ($1,000) that a client-side sum would include but the backend aggregate excludes
+// (definition: posted, active, excluding internal transfers and transfer-category).
+// The consistency guarantee is that BOTH surfaces show the same server-side number.
 test.describe('Dashboard → Ledger spending consistency', () => {
   test('Spending (MTD) and Monthly Outflow show the same underlying number', async ({page}) => {
     await mockApisWithLedger(page);
