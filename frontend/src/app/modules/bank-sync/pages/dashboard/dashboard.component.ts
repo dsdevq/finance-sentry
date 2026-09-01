@@ -155,15 +155,31 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
           <div>
             <div class="mb-cmn-3 flex items-center justify-between">
               <span class="text-cmn-sm font-medium text-text-secondary">Net Worth Over Time</span>
-              <div class="flex gap-cmn-1">
-                @for (r of ranges; track r.value) {
+              <div class="flex items-center gap-cmn-3">
+                <div class="flex gap-cmn-1">
                   <cmn-button
-                    [variant]="store.historyRange() === r.value ? 'primary' : 'secondary'"
-                    (clicked)="store.setHistoryRange(r.value)"
+                    [variant]="store.netWorthStacked() ? 'primary' : 'secondary'"
+                    (clicked)="store.setNetWorthStacked(true)"
                     size="sm"
-                    >{{ r.label }}</cmn-button
+                    >Stacked</cmn-button
                   >
-                }
+                  <cmn-button
+                    [variant]="store.netWorthStacked() ? 'secondary' : 'primary'"
+                    (clicked)="store.setNetWorthStacked(false)"
+                    size="sm"
+                    >Lines</cmn-button
+                  >
+                </div>
+                <div class="flex gap-cmn-1">
+                  @for (r of ranges; track r.value) {
+                    <cmn-button
+                      [variant]="store.historyRange() === r.value ? 'primary' : 'secondary'"
+                      (clicked)="store.setHistoryRange(r.value)"
+                      size="sm"
+                      >{{ r.label }}</cmn-button
+                    >
+                  }
+                </div>
               </div>
             </div>
 
@@ -176,6 +192,7 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
             } @else {
               <cmn-area-chart
                 [series]="store.netWorthAreaSeries()"
+                [stacked]="store.netWorthStacked()"
                 label="Net worth by sleeve"
                 currency="USD"
               />
