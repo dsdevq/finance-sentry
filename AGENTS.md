@@ -41,13 +41,24 @@ cd /tmp/lifekit-common/dist/lifekit-hq/ui && npm pack --pack-destination /tmp/
 cd /tmp/lifekit-common/projects/tokens && npm pack --pack-destination /tmp/
 cd /tmp/lifekit-common/projects/config && npm pack --pack-destination /tmp/
 
-# Strip @lifekit-hq/charts-core dep from UI package.json (it's inlined in the bundle)
-# then install all tarballs in finance-sentry frontend
+# Install all tarballs in finance-sentry frontend. Restore package.json + package-lock.json
+# from git afterwards — these local refs must never be committed.
 cd /workspace/frontend
 NODE_OPTIONS="--max-old-space-size=2048" npm install \
   /tmp/lifekit-hq-tokens-*.tgz /tmp/lifekit-hq-core-*.tgz \
-  /tmp/lifekit-hq-charts-core-*.tgz /tmp/lifekit-hq-ui-*-local.tgz \
+  /tmp/lifekit-hq-charts-core-*.tgz /tmp/lifekit-hq-ui-*.tgz \
   /tmp/lifekit-hq-config-*.tgz --legacy-peer-deps --prefer-offline
+
+# The locally built @lifekit-hq/ui has `stacked` in the FESM but NOT in its .d.ts, so the
+# postinstall shim short-circuits and `ng build` fails type-check on [stacked]. Add
+# `readonly stacked: _angular_core.InputSignal<boolean>;` plus a matching "stacked" entry in
+# AreaChartComponent's ɵcmp inputs in node_modules/@lifekit-hq/ui/types/lifekit-hq-ui.d.ts.
+
+# Unit tests need the `ci` configuration — the default launches a HEADED browser and dies
+# with "Missing X server or $DISPLAY".
+NODE_OPTIONS="--max-old-space-size=2048" \
+PLAYWRIGHT_BROWSERS_PATH=/home/agent/.cache/ms-playwright \
+LD_LIBRARY_PATH=/tmp:$LD_LIBRARY_PATH npx ng test finance-sentry --configuration ci
 
 # Build the Angular app, then run Playwright
 NODE_OPTIONS="--max-old-space-size=2048" npx ng build --configuration=production
