@@ -31,7 +31,7 @@ public class MoneyFlowStatisticsTests
 
     private static Transaction MakeTx(
         Guid accountId, decimal amount, string type, DateTime date, bool isPending = false,
-        string? merchantName = null, string description = "desc")
+        string? merchantName = null, string description = "desc", int? mcc = null)
     {
         var hash = Guid.NewGuid().ToString("N");
         var tx = new Transaction(accountId, UserId, amount, date, description, hash, isPending)
@@ -39,7 +39,8 @@ public class MoneyFlowStatisticsTests
             TransactionType = type,
             PostedDate = isPending ? null : date,
             IsActive = true,
-            MerchantName = merchantName
+            MerchantName = merchantName,
+            Mcc = mcc
         };
         return tx;
     }
@@ -440,5 +441,112 @@ public class MoneyFlowStatisticsTests
 
         result[0].CommittedOutflowUsd.Should().Be(0m);
         result[0].DiscretionaryOutflowUsd.Should().Be(15m);
+    }
+
+    [Fact]
+    public async Task GetMonthlyFlow_InstallmentRepayment_CountsAsCommitted()
+    {
+        // A розстрочка repayment is the most committed spend there is, but the detector keys
+        // its plans as installment:{merchant}:{amount} — a form no merchant key ever takes, so
+        // matching on the merchant key alone booked every repayment as discretionary.
+        var (account, accountId) = MakeAccount("UAH");
+        var date = new DateTime(2026, 4, 12, 0, 0, 0, DateTimeKind.Utc);
+
+        var transactions = new List<Transaction>
+        {
+            MakeTx(accountId, 6499.84m, "debit", date, description: "Щомісячний платіж telemart - monomarket"),
+            MakeTx(accountId, 900m, "debit", date, merchantName: "Silpo"),
+        };
+
+        var sut = new MoneyFlowStatisticsService(
+            TxRepo(transactions).Object, AccountRepo(account).Object, new TransferDetectionService(),
+            CommitmentsReader("installment:telemart:6500"));
+
+        var result = await sut.GetMonthlyFlowAsync(UserId, 6);
+
+        result[0].CommittedOutflowUsd.Should().Be(CurrencyConverter.ToUsd(6499.84m, "UAH"));
+        result[0].DiscretionaryOutflowUsd.Should().Be(CurrencyConverter.ToUsd(900m, "UAH"));
+        (result[0].CommittedOutflowUsd + result[0].DiscretionaryOutflowUsd)
+            .Should().Be(result[0].OutflowUsd);
+    }
+
+    [Fact]
+    public async Task GetMonthlyFlow_InstallmentAtASecondPlanAmount_IsNotClaimedByTheFirstPlan()
+    {
+        // The same shop can carry concurrent розстрочки; only the plan the user actually has
+        // an active row for is committed. Merchant-level matching would claim both.
+        var (account, accountId) = MakeAccount("UAH");
+        var date = new DateTime(2026, 4, 12, 0, 0, 0, DateTimeKind.Utc);
+
+        var transactions = new List<Transaction>
+        {
+            MakeTx(accountId, 2339.95m, "debit", date, description: "Погашення наступного платежу ТОВ Алло - monomarket"),
+            MakeTx(accountId, 2999.95m, "debit", date, description: "Погашення наступного платежу ТОВ Алло - monomarket"),
+        };
+
+        var sut = new MoneyFlowStatisticsService(
+            TxRepo(transactions).Object, AccountRepo(account).Object, new TransferDetectionService(),
+            CommitmentsReader("installment:тов алло:2340"));
+
+        var result = await sut.GetMonthlyFlowAsync(UserId, 6);
+
+        result[0].CommittedOutflowUsd.Should().Be(CurrencyConverter.ToUsd(2339.95m, "UAH"));
+        result[0].DiscretionaryOutflowUsd.Should().Be(CurrencyConverter.ToUsd(2999.95m, "UAH"));
+    }
+
+    [Fact]
+    public async Task GetMonthlyFlow_InstallmentsInTwoCurrencies_AreConvertedPerBucket()
+    {
+        // Installment plans are billed in the account's currency; summing ₴6,499.84 with
+        // €120 natively would produce a number that is neither.
+        var (uahAccount, uahAccountId) = MakeAccount("UAH");
+        var (eurAccount, eurAccountId) = MakeAccount("EUR");
+        var date = new DateTime(2026, 4, 12, 0, 0, 0, DateTimeKind.Utc);
+
+        var transactions = new List<Transaction>
+        {
+            MakeTx(uahAccountId, 6499.84m, "debit", date, description: "Щомісячний платіж telemart - monomarket"),
+            MakeTx(eurAccountId, 120m, "debit", date, description: "Платіж Pandora", mcc: 4829),
+        };
+
+        var sut = new MoneyFlowStatisticsService(
+            TxRepo(transactions).Object, AccountRepo(uahAccount, eurAccount).Object,
+            new TransferDetectionService(),
+            CommitmentsReader("installment:telemart:6500", "installment:pandora:120"));
+
+        var result = await sut.GetMonthlyFlowAsync(UserId, 6);
+
+        var expectedUah = CurrencyConverter.ToUsd(6499.84m, "UAH");
+        var expectedEur = CurrencyConverter.ToUsd(120m, "EUR");
+
+        result.Should().HaveCount(2);
+        result.Sum(r => r.CommittedOutflowUsd).Should().Be(expectedUah + expectedEur);
+        result.Sum(r => r.DiscretionaryOutflowUsd).Should().Be(0m);
+
+        // The figure a native `.Sum(x => x.Amount)` would have produced.
+        result.Sum(r => r.CommittedOutflowUsd).Should().NotBe(6619.84m);
+    }
+
+    [Fact]
+    public async Task GetMonthlyFlow_CompletedInstallmentPlan_IsDiscretionary()
+    {
+        // A plan the detector marked completed leaves the active key set, so its repayments
+        // stop counting as committed — the same "active only" rule subscriptions follow.
+        var (account, accountId) = MakeAccount("UAH");
+        var date = new DateTime(2026, 4, 12, 0, 0, 0, DateTimeKind.Utc);
+
+        var transactions = new List<Transaction>
+        {
+            MakeTx(accountId, 6499.84m, "debit", date, description: "Щомісячний платіж telemart - monomarket"),
+        };
+
+        var sut = new MoneyFlowStatisticsService(
+            TxRepo(transactions).Object, AccountRepo(account).Object, new TransferDetectionService(),
+            CommitmentsReader("installment:rozetkapay:2340"));
+
+        var result = await sut.GetMonthlyFlowAsync(UserId, 6);
+
+        result[0].CommittedOutflowUsd.Should().Be(0m);
+        result[0].DiscretionaryOutflowUsd.Should().Be(result[0].OutflowUsd);
     }
 }

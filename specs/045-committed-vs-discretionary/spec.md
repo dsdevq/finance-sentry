@@ -4,7 +4,7 @@
 
 **Created**: 2026-09-02
 
-**Status**: US1 implemented; US2 blocked on the coverage gate (see [US2])
+**Status**: US1 + US1b implemented; US2 blocked on the coverage gate (see [US2])
 
 **GitHub Issue**: #538
 
@@ -57,6 +57,36 @@ outflow is read straight off `GET /api/v1/dashboard/aggregated` — no bespoke d
    flow is computed, **Then** it is excluded from all three outflow figures alike — the split
    inherits the existing transfer exclusion rather than re-deriving it.
 
+### [US1b] Installment repayments count as committed (P1)
+
+US1 shipped a matcher that keyed every transaction as a *merchant*. The detector, however,
+stores installment (розстрочка) plans under a synthetic `installment:{merchant}:{roundedAmount}`
+key that no merchant key can ever take, so every розстрочка repayment — the most committed spend
+a user has — was booked as discretionary. That is a defect in US1's match rule, not a widening of
+the agreed definition: these rows already are active `DetectedSubscription`s.
+
+`CommitmentKeyResolver` now mirrors `SubscriptionDetectionJob`'s own routing — installment
+repayments resolve to their plan key, everything else to its merchant key — so both kinds of
+stored commitment are reachable.
+
+**Acceptance Scenarios**:
+
+1. **Given** an outflow whose description marks it a розстрочка repayment and whose
+   (merchant, rounded amount) matches an active installment plan, **When** monthly flow is
+   computed, **Then** its amount lands in `CommittedOutflowUsd`.
+2. **Given** two concurrent plans at one shop and an active row for only one of them, **When**
+   monthly flow is computed, **Then** only the repayment at that plan's amount is committed —
+   plan identity includes the rounded amount, so merchant-level matching may not claim both.
+3. **Given** cent-level jitter between two months of the same plan (₴6,499.84 / ₴6,499.85),
+   **When** each is keyed, **Then** both resolve to one plan key.
+4. **Given** installment repayments on a UAH and a EUR account, **When** monthly flow is
+   computed, **Then** each is converted with `CurrencyConverter.ToUsd` in its own bucket.
+5. **Given** a plan the detector marked completed, **When** monthly flow is computed, **Then**
+   its repayments are discretionary — the "active only" rule is unchanged.
+6. **Given** any batch of repayments, **When** `DetectInstallments` stores their plans, **Then**
+   every stored key is reproducible by `CommitmentKeyResolver.Resolve` from the transaction
+   alone (the drift guard).
+
 ### [US2] Dashboard stacked spending chart (P2 — GATED, not implemented)
 
 The dashboard spending chart renders the split as a stacked bar over `completeMonths()`, reusing the
@@ -69,10 +99,14 @@ complete months on the same transfer-excluded basis the dashboard uses. **If cov
 do not ship the chart.** A split that buckets three-quarters of spending as "discretionary" is worse
 than no split — it labels a gap in the detector as a finding about the user's spending.
 
-**Gate status (2026-09-02): FAILS.** The issue filer measured ~22% on production data (13 active
-subscriptions ≈ $708/mo against ~$3.2k/mo of real outflow). US1's structural analysis corroborates
-why coverage is low rather than mismeasured — see "Known coverage limits" below. Widening the
-definition of "committed" is a separate ticket, not a silent workaround here.
+**Gate status (2026-09-02): UNMEASURED SINCE US1b.** The issue filer measured ~22% on production
+data (13 active subscriptions ≈ $708/mo against ~$3.2k/mo of real outflow) — but that was against
+US1's matcher, which could not match installment plans at all (US1b). The gate must be re-run
+before it can be called either way, and re-running it needs production data: read
+`committedOutflowUsd` / `outflowUsd` off `GET /api/v1/dashboard/aggregated` for the last three
+complete months. No agent sandbox on this branch has had database or GitHub access, so the
+measurement and the issue comment are still outstanding. Widening the *definition* of "committed"
+beyond `DetectedSubscription` remains a separate ticket.
 
 ---
 
@@ -81,11 +115,13 @@ definition of "committed" is a separate ticket, not a silent workaround here.
 Matching is on the detector's own normalized merchant key, so what the detector cannot key, the
 split cannot claim:
 
-- **Installment plans keyed synthetically.** `SubscriptionDetectionJob.DetectInstallments` stores
-  `MerchantNameNormalized` as `installment:{merchant}:{roundedAmount}`. No transaction's normalized
-  merchant key ever takes that form, so розстрочка repayments fall into discretionary. (Installments
-  detected via the masked-PAN path in `DetectSubscriptions` *do* carry a real merchant key and do
-  match.)
+- ~~**Installment plans keyed synthetically.**~~ **Fixed in US1b** — `CommitmentKeyResolver`
+  now derives the same `installment:{merchant}:{roundedAmount}` key from a transaction that
+  `DetectInstallments` stores, so розстрочка repayments are committed. This was the one limit
+  on the list that was a defect rather than a property of the definition; the rest stand.
+- **Full early payoffs are not plan-keyed.** A "Повне погашення" completes its plan, and a
+  completed plan is not `active`, so the payoff itself reads as discretionary — a lumpy one-off
+  in the wrong bucket. Consistent with the agreed "only active counts" rule; noted as a wart.
 - **Mortgage/loan repayments are transfers.** A recurring transfer to a masked card number is
   excluded from outflow altogether by the transfer filter, so it is neither committed nor
   discretionary — it is not in the denominator either.

@@ -43,14 +43,16 @@ public interface IMoneyFlowStatisticsService
     /// current month's outflow a fraction of reality. Settlement retires or flips the pending
     /// row in place, so it is never double-counted for long.
     /// <para>
-    /// <b>Committed vs discretionary match rule.</b> An outflow is COMMITTED when the merchant
-    /// key derived from it by <see cref="MerchantNameNormalizer.NormalizeDetectionKey"/> is the
-    /// key of one of the user's detected commitments whose status is <c>active</c> — the same
-    /// key the detector grouped the charge under, so the two sides cannot drift apart. Every
-    /// other non-transfer outflow is DISCRETIONARY. Transfers are excluded from both, exactly
-    /// as they are from <c>Outflow</c>. Note that installment plans keyed synthetically by
-    /// <c>DetectInstallments</c> (<c>installment:{merchant}:{amount}</c>) can never match a
-    /// transaction key and therefore read as discretionary today.
+    /// <b>Committed vs discretionary match rule.</b> An outflow is COMMITTED when the key
+    /// derived from it by <see cref="CommitmentKeyResolver.Resolve"/> is the key of one of the
+    /// user's detected commitments whose status is <c>active</c> — the same key the detector
+    /// grouped the charge under, so the two sides cannot drift apart. That covers both kinds of
+    /// commitment the detector stores: recurring services, keyed by normalized merchant name,
+    /// and installment (розстрочка) plans, keyed as
+    /// <c>installment:{merchant}:{roundedAmount}</c>. Every other non-transfer outflow is
+    /// DISCRETIONARY. Transfers are excluded from both, exactly as they are from
+    /// <c>Outflow</c> — so a mortgage repayment made as a transfer to a masked card is in no
+    /// bucket and in no denominator.
     /// </para>
     /// </summary>
     Task<IReadOnlyList<MonthlyFlow>> GetMonthlyFlowAsync(
@@ -116,8 +118,9 @@ public class MoneyFlowStatisticsService(
                 var outflow = debits.Sum(x => x.Transaction.Amount);
                 var committed = debits
                     .Where(x => committedMerchantKeys.Contains(
-                        MerchantNameNormalizer.NormalizeDetectionKey(
-                            x.Transaction.MerchantName, x.Transaction.Description)))
+                        CommitmentKeyResolver.Resolve(
+                            x.Transaction.MerchantName, x.Transaction.Description,
+                            x.Transaction.Amount, x.Transaction.Mcc)))
                     .Sum(x => x.Transaction.Amount);
 
                 var inflowUsd = CurrencyConverter.ToUsd(inflow, g.Key.Currency);

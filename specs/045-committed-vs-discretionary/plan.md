@@ -30,6 +30,28 @@ Constraint discovered while planning: `MonthlyFlow` is a positional record consu
 `DashboardQueryService` → `DashboardController` → the Angular `MonthlyFlow` interface. Appending
 fields is additive for JSON consumers, so the frontend model can stay untouched until US2.
 
+## US1b architecture decisions
+
+| Decision | Choice | Why |
+|---|---|---|
+| Where installment recognition lives | Moved out of `SubscriptionDetectionJob` (Infrastructure) into `Application/Services/InstallmentPlanRecognizer` | Two callers now need it, and an Application-layer service (`MoneyFlowStatisticsService`) may not reach into an Infrastructure job. Same move US1 made for `NormalizeDetectionKey`; no delegating wrappers left behind, the 5 test call sites were repointed |
+| How a transaction picks its key | `CommitmentKeyResolver.Resolve(merchantName, description, amount, mcc)` routing to plan key or merchant key | The detector routes debits into two detectors *before* keying them; a matcher that keys everything as a merchant can never reach the installment half. The resolver is the mirror of that routing and says so in its XML doc |
+| Guarding the mirror | A test that runs the real `DetectInstallments` and asserts every stored key is reproducible by `Resolve` | The two sides are only correct relative to each other. Asserting literal key strings would let both drift together; running the detector pins the actual invariant |
+| Plan key needs the amount | `Resolve` takes `amount` + `mcc`, not just the name pair | Plan identity is (merchant, rounded amount) — the same shop can carry concurrent розстрочки. `Transaction` already carries both fields, so no new data has to be threaded in |
+| Full early payoffs | Not plan-keyed; fall through to the merchant key and read as discretionary | The detector never stores a plan under a payoff's own amount, and the payoff marks the plan completed → not `active`. Matching it would require breaking the "only active counts" rule agreed in US1 |
+| Rounding reuse | `PlanKey` rounds internally via `RoundPlanAmount`; the job passes its already-rounded group key through it | Rounding an integer is idempotent, so one method serves both call sites — no second `PlanKeyFromRounded` overload to keep in sync |
+
+### [US1b] Installment matching — files touched / created
+
+- `FinanceSentry.Modules.BankSync/Application/Services/InstallmentPlanRecognizer.cs` — **new**; markers, MCC, prefixes, `ExtractMerchant`, `RoundPlanAmount`, `PlanKey`, `PlanKeyForTransaction`
+- `FinanceSentry.Modules.BankSync/Application/Services/CommitmentKeyResolver.cs` — **new**; the routing mirror
+- `FinanceSentry.Modules.BankSync/Infrastructure/Jobs/SubscriptionDetectionJob.cs` — moved members deleted, call sites delegate
+- `FinanceSentry.Modules.BankSync/Application/Services/MoneyFlowStatisticsService.cs` — matcher calls the resolver; match-rule XML doc rewritten
+- `tests/…/Subscriptions/CommitmentKeyResolverTests.cs` — **new**; routing + the drift guard
+- `tests/…/MoneyFlowStatisticsTests.cs` — `MakeTx` gains `mcc`; 4 new classification tests
+- `tests/…/Subscriptions/SubscriptionDetectionAlgorithmTests.cs` — repointed to the recognizer
+- `docs/money-semantics.md` §5a — match rule + known-limits rewritten
+
 ### [US2] Stacked chart — surface (NOT built; recorded for the next session)
 
 - `frontend/src/app/modules/bank-sync/models/dashboard/dashboard.model.ts` — mirror the two fields
