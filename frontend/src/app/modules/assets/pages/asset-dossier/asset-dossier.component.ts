@@ -30,7 +30,9 @@ export class AssetDossierComponent {
 
   public readonly radarSparklinePoints = computed(() => {
     const signals = this.store.dossier()?.radarSignals ?? [];
-    if (signals.length < SPARKLINE_MIN_POINTS) return null;
+    if (signals.length < SPARKLINE_MIN_POINTS) {
+      return null;
+    }
     const sorted = [...signals].sort(
       (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
@@ -49,12 +51,13 @@ export class AssetDossierComponent {
       .join(' ');
   });
 
-  public readonly sparklineFillClose =
-    ` ${SPARKLINE_RIGHT_X},${SPARKLINE_HEIGHT} ${SPARKLINE_MARGIN},${SPARKLINE_HEIGHT}`;
+  public readonly sparklineFillClose = ` ${SPARKLINE_RIGHT_X},${SPARKLINE_HEIGHT} ${SPARKLINE_MARGIN},${SPARKLINE_HEIGHT}`;
 
   public readonly latestSignal = computed((): DossierSignalItem | null => {
     const signals = this.store.dossier()?.radarSignals ?? [];
-    if (signals.length === 0) return null;
+    if (signals.length === 0) {
+      return null;
+    }
     return [...signals].sort(
       (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
     )[0];

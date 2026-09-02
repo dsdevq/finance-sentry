@@ -22,7 +22,11 @@ function mkDossier(overrides: Partial<AssetDossierDto> = {}): AssetDossierDto {
 
 describe('dossierMethods', () => {
   it('setDossierLoading transitions to loading and clears error', () => {
-    const state = signalState({...initialDossierState, dossierStatus: 'error' as const, dossierErrorCode: 'SOME_ERROR'});
+    const state = signalState({
+      ...initialDossierState,
+      dossierStatus: 'error' as const,
+      dossierErrorCode: 'SOME_ERROR',
+    });
     const methods = dossierMethods(state);
 
     methods.setDossierLoading();
