@@ -126,4 +126,40 @@ public class AlertRepository(AlertsDbContext db) : IAlertRepository
         _db.Alerts.Add(alert);
         await _db.SaveChangesAsync(ct);
     }
+
+    public async Task<bool> AcknowledgeAsync(Guid userId, Guid alertId, string decision, CancellationToken ct = default)
+    {
+        var alert = await _db.Alerts.FirstOrDefaultAsync(a => a.Id == alertId && a.UserId == userId, ct);
+        return await ApplyAcknowledgement(alert, decision, ct);
+    }
+
+    public async Task<bool> AcknowledgeByReferenceAsync(Guid userId, string alertType, Guid referenceId, string decision, CancellationToken ct = default)
+    {
+        var alert = await _db.Alerts
+            .FirstOrDefaultAsync(a => a.UserId == userId
+                                   && a.Type == alertType
+                                   && a.ReferenceId == referenceId
+                                   && !a.IsResolved
+                                   && !a.IsDismissed, ct);
+        return await ApplyAcknowledgement(alert, decision, ct);
+    }
+
+    private async Task<bool> ApplyAcknowledgement(Alert? alert, string decision, CancellationToken ct)
+    {
+        if (alert is null) return false;
+
+        var now = DateTimeOffset.UtcNow;
+        alert.AcknowledgementDecision = decision;
+        alert.AcknowledgedAt = now;
+        alert.UpdatedAt = now;
+
+        if (decision == "Accept")
+        {
+            alert.IsResolved = true;
+            alert.ResolvedAt = now;
+        }
+
+        await _db.SaveChangesAsync(ct);
+        return true;
+    }
 }

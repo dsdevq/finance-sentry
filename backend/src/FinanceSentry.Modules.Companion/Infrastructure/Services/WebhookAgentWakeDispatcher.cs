@@ -20,6 +20,12 @@ public sealed class WebhookAgentWakeDispatcher(
 
     private readonly CompanionOptions _options = options.Value;
 
+    private static readonly HashSet<CompanionEventKind> ProposalKinds =
+    [
+        CompanionEventKind.RebalanceProposal,
+        CompanionEventKind.CashSweepProposal,
+    ];
+
     public async Task<WakeResult> WakeAsync(CompanionEvent evt, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(_options.AgentTriggerUrl))
@@ -27,6 +33,9 @@ public sealed class WebhookAgentWakeDispatcher(
             return WakeResult.NotConfigured;
         }
 
+        // Proposal events carry acknowledgement metadata so the bot can render inline-keyboard buttons.
+        // referenceId is the stable per-user anchor GUID; the bot calls PATCH /alerts/{referenceId}/acknowledge.
+        var isProposal = ProposalKinds.Contains(evt.Kind);
         var payload = new
         {
             eventId = evt.Id,
@@ -34,6 +43,8 @@ public sealed class WebhookAgentWakeDispatcher(
             subject = evt.Subject,
             severity = evt.Severity,
             occurredAt = evt.OccurredAt,
+            requiresAcknowledgement = isProposal ? (bool?)true : null,
+            referenceId = isProposal ? evt.ReferenceId : null,
         };
 
         return await PostAsync(payload, $"event {evt.Id}", ct);

@@ -22,6 +22,8 @@ public sealed class MaterialityPolicy : IMaterialityPolicy
         "CashShortfall" => CompanionEventKind.CashShortfall,
         "ConsentExpiring" => CompanionEventKind.ConsentExpiring,
         "JobFailure" => CompanionEventKind.OperationalFailure,
+        "RebalanceProposal" => CompanionEventKind.RebalanceProposal,
+        "CashSweepProposal" => CompanionEventKind.CashSweepProposal,
         _ => null,
     };
 
