@@ -30,7 +30,10 @@ public sealed class DuplicateChargeDetectionJob(
         {
             var rawRows = await db.Transactions
                 .AsNoTracking()
-                .Where(t => t.MerchantName != null && t.TransactionDate >= since)
+                .Where(t => t.MerchantName != null
+                         && t.TransactionDate >= since
+                         && t.IsActive
+                         && !t.IsPending)
                 .Select(t => new TransactionRow(t.UserId, t.AccountId, t.MerchantName!, t.Amount))
                 .ToListAsync(ct);
 

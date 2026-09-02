@@ -20,7 +20,9 @@ public sealed class CategorySpikeDetectionJob(
     ILogger<CategorySpikeDetectionJob> logger)
 {
     private const int BaselineMonths = 6;
-    private const decimal DefaultSpikeMultiplier = 1.5m;
+    // Spec requires ≥4 months before firing; still average over all BaselineMonths when available.
+    private const int MinHistoryMonths = 4;
+    private const decimal DefaultSpikeMultiplier = 2.0m;
 
     public async Task ExecuteAsync(CancellationToken ct = default)
     {
@@ -37,7 +39,8 @@ public sealed class CategorySpikeDetectionJob(
                 .AsNoTracking()
                 .Where(t => t.MerchantCategory != null
                          && t.Amount < 0
-                         && t.TransactionDate >= historyStart)
+                         && t.TransactionDate >= historyStart
+                         && t.IsActive)
                 .Select(t => new SpendRow(t.UserId, t.AccountId, t.MerchantCategory!, t.TransactionDate, t.Amount))
                 .ToListAsync(ct);
 
@@ -68,7 +71,7 @@ public sealed class CategorySpikeDetectionJob(
                 .Where(kv => new DateTime(kv.Key.Year, kv.Key.Month, 1) < currentMonthStart)
                 .ToList();
 
-            if (historicMonths.Count < BaselineMonths) continue;
+            if (historicMonths.Count < MinHistoryMonths) continue;
 
             var currentKey = new { currentMonthStart.Year, currentMonthStart.Month };
             if (!byMonth.TryGetValue(currentKey, out var currentMonth) || currentMonth <= 0) continue;

@@ -12,7 +12,8 @@ using Xunit;
 
 /// <summary>
 /// Unit tests for <see cref="CategorySpikeDetectionJob"/> (044/US3).
-/// Verifies the 6-month baseline requirement, configurable multiplier, and USD-normalised comparison.
+/// Verifies the 4-month minimum history gate, 6-month baseline averaging, configurable multiplier,
+/// and USD-normalised comparison.
 /// </summary>
 public class CategorySpikeDetectionJobTests
 {
@@ -73,7 +74,7 @@ public class CategorySpikeDetectionJobTests
                 currentMonthStart.AddMonths(-i).AddDays(5)));
         }
 
-        // Current month: 300 EUR — 3× the baseline, well above the default 1.5× threshold
+        // Current month: 300 EUR — 3× the baseline, well above the default 2.0× threshold
         db.Transactions.Add(MakeTx(account, -300m, "FOOD_AND_DRINK", currentMonthStart.AddDays(5)));
 
         await db.SaveChangesAsync();
@@ -101,7 +102,7 @@ public class CategorySpikeDetectionJobTests
             db.Transactions.Add(MakeTx(account, -100m, "TRANSPORT",
                 currentMonthStart.AddMonths(-i).AddDays(5)));
         }
-        // Current month: 110 EUR — 10% above baseline, well below the 1.5× default
+        // Current month: 110 EUR — 10% above baseline, well below the 2.0× default
         db.Transactions.Add(MakeTx(account, -110m, "TRANSPORT", currentMonthStart.AddDays(5)));
 
         await db.SaveChangesAsync();
@@ -124,7 +125,7 @@ public class CategorySpikeDetectionJobTests
         var now = DateTime.UtcNow;
         var currentMonthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
 
-        // Only 3 months of history — below the 6-month requirement
+        // Only 3 months of history — below the 4-month minimum requirement
         for (var i = 1; i <= 3; i++)
         {
             db.Transactions.Add(MakeTx(account, -100m, "SHOPPING",
@@ -143,6 +144,36 @@ public class CategorySpikeDetectionJobTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_AlertFired_WhenExactlyMinimumHistoryMonths()
+    {
+        await using var db = NewDb();
+        var userId = Guid.NewGuid();
+        var account = MakeAccount(userId);
+        db.BankAccounts.Add(account);
+
+        var now = DateTime.UtcNow;
+        var currentMonthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        // Exactly 4 months of history — meets the minimum; current-month spike should fire.
+        for (var i = 1; i <= 4; i++)
+        {
+            db.Transactions.Add(MakeTx(account, -100m, "SHOPPING",
+                currentMonthStart.AddMonths(-i).AddDays(5)));
+        }
+        // 400 EUR — 4× the 100 EUR baseline, comfortably above the 2.0× threshold
+        db.Transactions.Add(MakeTx(account, -400m, "SHOPPING", currentMonthStart.AddDays(5)));
+
+        await db.SaveChangesAsync();
+
+        await MakeJob(db).ExecuteAsync();
+
+        _alerts.Verify(a => a.GenerateCategorySpikeAlertAsync(
+            userId, "SHOPPING", It.IsAny<decimal>(), It.IsAny<decimal>(),
+            It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_UsesConfigurableMultiplier()
     {
         await using var db = NewDb();
@@ -158,7 +189,7 @@ public class CategorySpikeDetectionJobTests
             db.Transactions.Add(MakeTx(account, -100m, "ENTERTAINMENT",
                 currentMonthStart.AddMonths(-i).AddDays(5)));
         }
-        // 120 EUR — 20% above baseline: above 1.1× custom threshold, below 1.5× default
+        // 120 EUR — 20% above baseline: above 1.1× custom threshold, below 2.0× default
         db.Transactions.Add(MakeTx(account, -120m, "ENTERTAINMENT", currentMonthStart.AddDays(5)));
 
         await db.SaveChangesAsync();

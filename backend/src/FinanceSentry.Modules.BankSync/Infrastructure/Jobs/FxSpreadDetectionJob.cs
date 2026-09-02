@@ -23,7 +23,7 @@ public sealed class FxSpreadDetectionJob(
     IConfiguration config,
     ILogger<FxSpreadDetectionJob> logger)
 {
-    private const int DefaultLookbackDays = 30;
+    private const int DefaultLookbackDays = 3;
     private const decimal DefaultSpreadThreshold = 0.03m;
 
     public async Task ExecuteAsync(CancellationToken ct = default)
@@ -64,7 +64,9 @@ public sealed class FxSpreadDetectionJob(
         {
             transactions = await db.Transactions
                 .AsNoTracking()
-                .Where(t => relevantAccountIds.Contains(t.AccountId) && t.TransactionDate >= since)
+                .Where(t => relevantAccountIds.Contains(t.AccountId)
+                         && t.TransactionDate >= since
+                         && t.IsActive)
                 .Select(t => new TxRow(t.AccountId, t.UserId, t.Amount, t.TransactionDate.Date))
                 .ToListAsync(ct);
         }
@@ -139,6 +141,10 @@ public sealed class FxSpreadDetectionJob(
 
                     try
                     {
+                        // Dedup key is (UserId, fromCurrency, toCurrency) rather than per debit-transaction-id.
+                        // This is deliberate: the aggregation-based matching combines daily outflows across
+                        // multiple transactions into a single implied rate — there is no single "debit transaction id"
+                        // to attach. Currency-pair-level dedup prevents re-alerting while the routing pattern persists.
                         await alerts.GenerateFxSpreadAlertAsync(
                             userId, fromCurrency, toCurrency, avgImplied, marketRate, ct);
                     }

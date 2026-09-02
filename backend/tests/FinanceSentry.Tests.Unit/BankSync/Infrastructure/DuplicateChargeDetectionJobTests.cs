@@ -174,6 +174,30 @@ public class DuplicateChargeDetectionJobTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_NoAlert_WhenDuplicateTransactionsArePendingOrInactive()
+    {
+        await using var db = NewDb();
+        var account = MakeAccount(Guid.NewGuid());
+        db.BankAccounts.Add(account);
+
+        // One real active charge, one pending (not yet posted), one soft-deleted — only 1 active non-pending
+        var active = MakeTx(account, -9.99m, "Netflix");
+        var pending = MakeTx(account, -9.99m, "Netflix");
+        pending.IsPending = true;
+        var inactive = MakeTx(account, -9.99m, "Netflix");
+        inactive.IsActive = false;
+        db.Transactions.AddRange(active, pending, inactive);
+        await db.SaveChangesAsync();
+
+        await MakeJob(db).ExecuteAsync();
+
+        _alerts.Verify(a => a.GenerateDuplicateChargeAlertAsync(
+            It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<decimal>(),
+            It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_ContinuesOtherGroups_WhenOneAlertThrows()
     {
         await using var db = NewDb();
