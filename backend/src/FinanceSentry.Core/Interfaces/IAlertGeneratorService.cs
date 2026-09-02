@@ -172,4 +172,42 @@ public interface IAlertGeneratorService
         decimal currentAmount,
         string currency,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Raises a Warning alert when the same merchant charges the same amount multiple times within
+    /// the detection window on the same account (044/US2). Deduped per (accountId, merchant, amount)
+    /// so a daily sentinel never re-fires while the alert is active.
+    /// </summary>
+    Task GenerateDuplicateChargeAlertAsync(
+        Guid userId,
+        Guid accountId,
+        string merchantName,
+        decimal chargeAmount,
+        string currency,
+        int chargeCount,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Raises a Warning alert when month-to-date spend in a category exceeds the 6-month baseline
+    /// by more than the configured multiplier (044/US3). Deduped per (userId, category).
+    /// </summary>
+    Task GenerateCategorySpikeAlertAsync(
+        Guid userId,
+        string category,
+        decimal currentMonthSpend,
+        decimal baselineSpend,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Raises a Warning alert when a cross-currency routing pattern (e.g. EUR→UAH via white card)
+    /// is losing more than the configured percentage to the FX spread (044/US4). Deduped per
+    /// (userId, fromCurrency, toCurrency).
+    /// </summary>
+    Task GenerateFxSpreadAlertAsync(
+        Guid userId,
+        string fromCurrency,
+        string toCurrency,
+        decimal impliedRate,
+        decimal marketRate,
+        CancellationToken ct = default);
 }

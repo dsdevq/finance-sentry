@@ -28,6 +28,12 @@ public class AlertGeneratorService(IAlertRepository alerts) : IAlertGeneratorSer
     private static readonly TimeSpan CashShortfallSilenceWindow = TimeSpan.FromHours(24);
     // Active-alert gate is the primary guard; 30-day backstop prevents re-alert after manual dismiss until next price move.
     private static readonly TimeSpan PriceHikeSilenceWindow = TimeSpan.FromDays(30);
+    // Active-alert gate is the primary guard; 7-day backstop prevents re-alert in the same week after manual dismiss.
+    private static readonly TimeSpan DuplicateChargeSilenceWindow = TimeSpan.FromDays(7);
+    // Same window as UnusualSpend — 7-day backstop while the spike persists within the month.
+    private static readonly TimeSpan CategorySpikeSilenceWindow = TimeSpan.FromDays(7);
+    // 7-day backstop; daily detector doesn't spam while the routing pattern persists.
+    private static readonly TimeSpan FxSpreadSilenceWindow = TimeSpan.FromDays(7);
 
     private readonly IAlertRepository _alerts = alerts;
 
@@ -386,10 +392,110 @@ public class AlertGeneratorService(IAlertRepository alerts) : IAlertGeneratorSer
         }, ct);
     }
 
+    public async Task GenerateDuplicateChargeAlertAsync(
+        Guid userId, Guid accountId, string merchantName, decimal chargeAmount, string currency,
+        int chargeCount, CancellationToken ct = default)
+    {
+        var referenceId = DuplicateChargeReferenceId(accountId, merchantName, chargeAmount);
+
+        var existing = await _alerts.FindActiveAsync(userId, AlertType.DuplicateCharge, referenceId, ct);
+        if (existing is not null) return;
+
+        var quietSince = DateTimeOffset.UtcNow - DuplicateChargeSilenceWindow;
+        if (await _alerts.HasRecentAsync(userId, AlertType.DuplicateCharge, referenceId, merchantName, quietSince, ct))
+            return;
+
+        await _alerts.AddAsync(new Alert
+        {
+            UserId = userId,
+            Type = AlertType.DuplicateCharge,
+            Severity = AlertSeverity.Warning,
+            Title = $"Possible duplicate charge: {merchantName}",
+            Message = $"Charged {chargeCount}× for {chargeAmount:F2} {currency} at {merchantName} within the detection window.",
+            ReferenceId = referenceId,
+            ReferenceLabel = merchantName,
+        }, ct);
+    }
+
+    public async Task GenerateCategorySpikeAlertAsync(
+        Guid userId, string category, decimal currentMonthSpend, decimal baselineSpend,
+        CancellationToken ct = default)
+    {
+        var referenceId = CategorySpikeReferenceId(userId, category);
+
+        var existing = await _alerts.FindActiveAsync(userId, AlertType.CategorySpike, referenceId, ct);
+        if (existing is not null) return;
+
+        var quietSince = DateTimeOffset.UtcNow - CategorySpikeSilenceWindow;
+        if (await _alerts.HasRecentAsync(userId, AlertType.CategorySpike, referenceId, category, quietSince, ct))
+            return;
+
+        var spikePct = (int)Math.Round((currentMonthSpend - baselineSpend) / baselineSpend * 100);
+
+        await _alerts.AddAsync(new Alert
+        {
+            UserId = userId,
+            Type = AlertType.CategorySpike,
+            Severity = AlertSeverity.Warning,
+            Title = $"Spending spike: {category}",
+            Message = $"Your {category} spend this month ({currentMonthSpend:F2}) is +{spikePct}% above the 6-month baseline ({baselineSpend:F2}).",
+            ReferenceId = referenceId,
+            ReferenceLabel = category,
+        }, ct);
+    }
+
+    public async Task GenerateFxSpreadAlertAsync(
+        Guid userId, string fromCurrency, string toCurrency, decimal impliedRate, decimal marketRate,
+        CancellationToken ct = default)
+    {
+        var referenceId = FxSpreadReferenceId(userId, fromCurrency, toCurrency);
+
+        var existing = await _alerts.FindActiveAsync(userId, AlertType.FxSpread, referenceId, ct);
+        if (existing is not null) return;
+
+        var quietSince = DateTimeOffset.UtcNow - FxSpreadSilenceWindow;
+        if (await _alerts.HasRecentAsync(userId, AlertType.FxSpread, referenceId, $"{fromCurrency}/{toCurrency}", quietSince, ct))
+            return;
+
+        var spreadPct = (int)Math.Round((marketRate - impliedRate) / marketRate * 100);
+
+        await _alerts.AddAsync(new Alert
+        {
+            UserId = userId,
+            Type = AlertType.FxSpread,
+            Severity = AlertSeverity.Warning,
+            Title = $"FX spread alert: {fromCurrency}→{toCurrency}",
+            Message = $"Your {fromCurrency}→{toCurrency} conversion rate ({impliedRate:F4}) was {spreadPct}% below the market rate ({marketRate:F4}). Consider a different routing path.",
+            ReferenceId = referenceId,
+            ReferenceLabel = $"{fromCurrency}/{toCurrency}",
+        }, ct);
+    }
+
     /// <summary>Deterministic pseudo-GUID from (ruleKey, subject) so find/resolve are stable across runs.</summary>
     private static Guid ViolationReferenceId(string ruleKey, string subject)
     {
         var bytes = MD5.HashData(Encoding.UTF8.GetBytes($"{ruleKey}:{subject.ToUpperInvariant()}"));
+        return new Guid(bytes);
+    }
+
+    private static Guid DuplicateChargeReferenceId(Guid accountId, string merchantName, decimal amount)
+    {
+        var bytes = MD5.HashData(Encoding.UTF8.GetBytes(
+            $"dupcharge:{accountId:N}:{merchantName.ToUpperInvariant()}:{amount:F2}"));
+        return new Guid(bytes);
+    }
+
+    private static Guid CategorySpikeReferenceId(Guid userId, string category)
+    {
+        var bytes = MD5.HashData(Encoding.UTF8.GetBytes(
+            $"catspike:{userId:N}:{category.ToUpperInvariant()}"));
+        return new Guid(bytes);
+    }
+
+    private static Guid FxSpreadReferenceId(Guid userId, string fromCurrency, string toCurrency)
+    {
+        var bytes = MD5.HashData(Encoding.UTF8.GetBytes(
+            $"fxspread:{userId:N}:{fromCurrency.ToUpperInvariant()}:{toCurrency.ToUpperInvariant()}"));
         return new Guid(bytes);
     }
 }

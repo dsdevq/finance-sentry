@@ -11,21 +11,21 @@
 
 ## [US2] Duplicate charge detection
 
-- [ ] Add `DuplicateCharge` to `AlertType`, `IAlertGeneratorService`, `AlertGeneratorService`
-- [ ] Add `DuplicateCharge` to `CompanionEventKind` + `MaterialityPolicy`
-- [ ] Implement `DuplicateChargeDetectionJob` + register + schedule in BankSyncModule
-- [ ] Write unit tests for `DuplicateChargeDetectionJob`
+- [x] Add `DuplicateCharge` to `AlertType`, `IAlertGeneratorService`, `AlertGeneratorService`
+- [x] Add `DuplicateCharge` to `CompanionEventKind` + `MaterialityPolicy`
+- [x] Implement `DuplicateChargeDetectionJob` + register + schedule in BankSyncModule
+- [x] Write unit tests for `DuplicateChargeDetectionJob`
 
 ## [US3] Category spike detection
 
-- [ ] Add `CategorySpike` to `AlertType`, `IAlertGeneratorService`, `AlertGeneratorService`
-- [ ] Add `CategorySpike` to `CompanionEventKind` + `MaterialityPolicy`
-- [ ] Implement `CategorySpikeDetectionJob` + register + schedule in BankSyncModule
-- [ ] Write unit tests for `CategorySpikeDetectionJob`
+- [x] Add `CategorySpike` to `AlertType`, `IAlertGeneratorService`, `AlertGeneratorService`
+- [x] Add `CategorySpike` to `CompanionEventKind` + `MaterialityPolicy`
+- [x] Implement `CategorySpikeDetectionJob` + register + schedule in BankSyncModule
+- [x] Write unit tests for `CategorySpikeDetectionJob`
 
 ## [US4] FX spread detection
 
-- [ ] Add `FxSpread` to `AlertType`, `IAlertGeneratorService`, `AlertGeneratorService`
-- [ ] Add `FxSpread` to `CompanionEventKind` + `MaterialityPolicy`
-- [ ] Implement `FxSpreadDetectionJob` + register + schedule in BankSyncModule
-- [ ] Write unit tests for `FxSpreadDetectionJob`
+- [x] Add `FxSpread` to `AlertType`, `IAlertGeneratorService`, `AlertGeneratorService`
+- [x] Add `FxSpread` to `CompanionEventKind` + `MaterialityPolicy`
+- [x] Implement `FxSpreadDetectionJob` + register + schedule in BankSyncModule
+- [x] Write unit tests for `FxSpreadDetectionJob`

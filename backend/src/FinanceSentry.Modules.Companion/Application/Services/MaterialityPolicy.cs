@@ -23,6 +23,9 @@ public sealed class MaterialityPolicy : IMaterialityPolicy
         "ConsentExpiring" => CompanionEventKind.ConsentExpiring,
         "JobFailure" => CompanionEventKind.OperationalFailure,
         "PriceHike" => CompanionEventKind.PriceHike,
+        "DuplicateCharge" => CompanionEventKind.DuplicateCharge,
+        "CategorySpike" => CompanionEventKind.CategorySpike,
+        "FxSpread" => CompanionEventKind.FxSpread,
         _ => null,
     };
 

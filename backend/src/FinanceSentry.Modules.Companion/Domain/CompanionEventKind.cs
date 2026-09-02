@@ -19,4 +19,7 @@ public enum CompanionEventKind
     ConsentExpiring,
     OperationalFailure,
     PriceHike,
+    DuplicateCharge,
+    CategorySpike,
+    FxSpread,
 }

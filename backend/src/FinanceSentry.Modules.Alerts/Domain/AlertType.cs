@@ -14,4 +14,7 @@ public static class AlertType
     public const string PerformanceBrief = "PerformanceBrief";
     public const string CashShortfall = "CashShortfall";
     public const string PriceHike = "PriceHike";
+    public const string DuplicateCharge = "DuplicateCharge";
+    public const string CategorySpike = "CategorySpike";
+    public const string FxSpread = "FxSpread";
 }
