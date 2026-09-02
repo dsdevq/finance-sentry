@@ -22,6 +22,7 @@ public sealed class MaterialityPolicy : IMaterialityPolicy
         "CashShortfall" => CompanionEventKind.CashShortfall,
         "ConsentExpiring" => CompanionEventKind.ConsentExpiring,
         "JobFailure" => CompanionEventKind.OperationalFailure,
+        "PriceHike" => CompanionEventKind.PriceHike,
         _ => null,
     };
 

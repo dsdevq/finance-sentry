@@ -18,4 +18,5 @@ public enum CompanionEventKind
     AnalystAction,
     ConsentExpiring,
     OperationalFailure,
+    PriceHike,
 }

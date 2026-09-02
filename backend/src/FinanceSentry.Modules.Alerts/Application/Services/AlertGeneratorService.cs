@@ -26,6 +26,8 @@ public class AlertGeneratorService(IAlertRepository alerts) : IAlertGeneratorSer
     private static readonly TimeSpan PerformanceBriefSilenceWindow = TimeSpan.FromDays(6);
     // Active-alert dedup is the primary guard; 24h HasRecent prevents re-alert on the same day after manual resolve.
     private static readonly TimeSpan CashShortfallSilenceWindow = TimeSpan.FromHours(24);
+    // Active-alert gate is the primary guard; 30-day backstop prevents re-alert after manual dismiss until next price move.
+    private static readonly TimeSpan PriceHikeSilenceWindow = TimeSpan.FromDays(30);
 
     private readonly IAlertRepository _alerts = alerts;
 
@@ -356,6 +358,32 @@ public class AlertGeneratorService(IAlertRepository alerts) : IAlertGeneratorSer
         var existing = await _alerts.FindActiveAsync(userId, AlertType.CashShortfall, accountId, ct);
         if (existing is null) return;
         await _alerts.ResolveAsync(existing.Id, ct);
+    }
+
+    public async Task GeneratePriceHikeAlertAsync(
+        Guid userId, Guid subscriptionId, string merchantName,
+        decimal baselineAmount, decimal currentAmount, string currency,
+        CancellationToken ct = default)
+    {
+        var existing = await _alerts.FindActiveAsync(userId, AlertType.PriceHike, subscriptionId, ct);
+        if (existing is not null) return;
+
+        var quietSince = DateTimeOffset.UtcNow - PriceHikeSilenceWindow;
+        if (await _alerts.HasRecentAsync(userId, AlertType.PriceHike, subscriptionId, merchantName, quietSince, ct))
+            return;
+
+        var hikePct = (int)Math.Round((currentAmount - baselineAmount) / baselineAmount * 100);
+
+        await _alerts.AddAsync(new Alert
+        {
+            UserId = userId,
+            Type = AlertType.PriceHike,
+            Severity = AlertSeverity.Warning,
+            Title = $"Price hike: {merchantName}",
+            Message = $"{merchantName} now charges {currentAmount:F2} {currency} (+{hikePct}% above the {baselineAmount:F2} {currency} baseline).",
+            ReferenceId = subscriptionId,
+            ReferenceLabel = merchantName,
+        }, ct);
     }
 
     /// <summary>Deterministic pseudo-GUID from (ruleKey, subject) so find/resolve are stable across runs.</summary>

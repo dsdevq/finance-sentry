@@ -158,4 +158,18 @@ public interface IAlertGeneratorService
         Guid userId,
         Guid accountId,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Raises a Warning alert when a recurring subscription or installment's latest charge is
+    /// significantly above the historical average (044). <paramref name="subscriptionId"/> is the
+    /// dedup key so a daily sentinel never duplicates while the price remains elevated.
+    /// </summary>
+    Task GeneratePriceHikeAlertAsync(
+        Guid userId,
+        Guid subscriptionId,
+        string merchantName,
+        decimal baselineAmount,
+        decimal currentAmount,
+        string currency,
+        CancellationToken ct = default);
 }

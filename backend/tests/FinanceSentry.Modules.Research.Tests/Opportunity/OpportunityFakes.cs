@@ -184,6 +184,7 @@ internal sealed class FakeOpportunityAlertGenerator : IAlertGeneratorService
     public Task GeneratePerformanceBriefAlertAsync(Guid userId, string headline, string body, CancellationToken ct = default) => Task.CompletedTask;
     public Task GenerateCashShortfallAlertAsync(Guid userId, Guid accountId, string accountName, DateOnly shortfallDate, decimal shortfallAmount, string currency, CancellationToken ct = default) => Task.CompletedTask;
     public Task ResolveCashShortfallAlertAsync(Guid userId, Guid accountId, CancellationToken ct = default) => Task.CompletedTask;
+    public Task GeneratePriceHikeAlertAsync(Guid userId, Guid subscriptionId, string merchantName, decimal baselineAmount, decimal currentAmount, string currency, CancellationToken ct = default) => Task.CompletedTask;
 }
 
 internal sealed class FakeRiskPolicyGate(RiskGateVerdict verdict) : IRiskPolicyGate
