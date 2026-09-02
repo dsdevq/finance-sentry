@@ -369,5 +369,8 @@ public class RunThesisMonitorHandlerTests
 
         public Task ResolveCashShortfallAlertAsync(Guid userId, Guid accountId, CancellationToken ct = default)
             => Task.CompletedTask;
+
+        public Task GenerateRebalanceProposalAlertAsync(Guid userId, int orderCount, string orderSummary, CancellationToken ct = default)
+            => Task.CompletedTask;
     }
 }

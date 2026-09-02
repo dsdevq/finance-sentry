@@ -158,4 +158,16 @@ public interface IAlertGeneratorService
         Guid userId,
         Guid accountId,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Raises a Warning alert proposing a concrete rebalance order list when IPS bands are breached
+    /// (432). <paramref name="orderCount"/> is the number of order lines; <paramref name="orderSummary"/>
+    /// is the human-readable formatted list. Silenced 24 hours so the daily job doesn't re-propose
+    /// while a prior one is still open or was recently dismissed.
+    /// </summary>
+    Task GenerateRebalanceProposalAlertAsync(
+        Guid userId,
+        int orderCount,
+        string orderSummary,
+        CancellationToken ct = default);
 }
