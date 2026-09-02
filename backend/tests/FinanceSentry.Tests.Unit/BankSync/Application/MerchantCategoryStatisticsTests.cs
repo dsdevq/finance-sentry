@@ -44,7 +44,7 @@ public class MerchantCategoryStatisticsTests
         acctRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
                     .ReturnsAsync(accounts.ToList());
 
-        return new MerchantCategoryStatisticsService(txRepoMock.Object, acctRepoMock.Object, new TransferDetectionService());
+        return new MerchantCategoryStatisticsService(txRepoMock.Object, acctRepoMock.Object, new TransferDetectionService(), new NoOpCounterpartyClassificationService());
     }
 
     [Fact]
@@ -146,7 +146,7 @@ public class MerchantCategoryStatisticsTests
                     .ReturnsAsync([account]);
 
         var sut = new MerchantCategoryStatisticsService(
-            txRepoMock.Object, acctRepoMock.Object, new TransferDetectionService());
+            txRepoMock.Object, acctRepoMock.Object, new TransferDetectionService(), new NoOpCounterpartyClassificationService());
 
         await sut.GetTopCategoriesAsync(UserId, limit: 10, months: 3);
 

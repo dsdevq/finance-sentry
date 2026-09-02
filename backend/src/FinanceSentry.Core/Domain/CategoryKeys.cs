@@ -29,6 +29,13 @@ public static class CategoryKeys
     public const string Uncategorized = "UNCATEGORIZED";
 
     /// <summary>
+    /// Net outbound payments to family counterparties (monthly netting result).
+    /// Produced by <c>CounterpartyClassificationService</c>; never stored on a
+    /// transaction row — it is a computed bucket that appears in top-categories output.
+    /// </summary>
+    public const string FamilySupport = "FAMILY_SUPPORT";
+
+    /// <summary>
     /// True for the two directional-transfer keys. Transfers move money between a user's own
     /// accounts (incl. single-sided ones like savings-jar top-ups whose counterpart account is
     /// not synced), so they must never be counted as spend or cash-flow.

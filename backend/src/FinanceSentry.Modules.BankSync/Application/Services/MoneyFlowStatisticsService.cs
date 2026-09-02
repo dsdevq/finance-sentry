@@ -33,6 +33,8 @@ public interface IMoneyFlowStatisticsService
     /// Pending transactions count — a card hold is real spending, and excluding it made the
     /// current month's outflow a fraction of reality. Settlement retires or flips the pending
     /// row in place, so it is never double-counted for long.
+    /// Counterparty transactions (e.g. family rent / support) are netted separately and
+    /// folded into each month's inflow/outflow so the savings rate is honest.
     /// </summary>
     Task<IReadOnlyList<MonthlyFlow>> GetMonthlyFlowAsync(
         Guid userId, int months = 6, CancellationToken ct = default);
@@ -42,20 +44,19 @@ public interface IMoneyFlowStatisticsService
 public class MoneyFlowStatisticsService(
     ITransactionRepository transactions,
     IBankAccountRepository accounts,
-    ITransferDetectionService transferDetection) : IMoneyFlowStatisticsService
+    ITransferDetectionService transferDetection,
+    ICounterpartyClassificationService counterpartyClassification) : IMoneyFlowStatisticsService
 {
     private readonly ITransactionRepository _transactions = transactions ?? throw new ArgumentNullException(nameof(transactions));
     private readonly IBankAccountRepository _accounts = accounts ?? throw new ArgumentNullException(nameof(accounts));
     private readonly ITransferDetectionService _transferDetection = transferDetection ?? throw new ArgumentNullException(nameof(transferDetection));
+    private readonly ICounterpartyClassificationService _counterpartyClassification = counterpartyClassification ?? throw new ArgumentNullException(nameof(counterpartyClassification));
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<MonthlyFlow>> GetMonthlyFlowAsync(
           Guid userId, int months = 6, CancellationToken ct = default)
     {
         // Floor to the first day of the month so the oldest bucket is a WHOLE month.
-        // A raw UtcNow.AddMonths(-months) starts mid-month, leaving the leading bucket
-        // holding only a few days of transactions — it rendered as a near-zero bar and
-        // produced a savings rate computed from a single day.
         var since = MonthWindow.StartOfMonthsAgo(months);
 
         // 1. Build currency map from active accounts
@@ -65,16 +66,23 @@ public class MoneyFlowStatisticsService(
             .ToDictionary(a => a.Id, a => a.Currency);
 
         // 2. Fetch transactions in window
-        var txList = await _transactions.GetByUserIdSinceAsync(userId, since, ct);
+        var txList = (await _transactions.GetByUserIdSinceAsync(userId, since, ct)).ToList();
 
-        // 3. Detect internal transfer pairs so they don't inflate inflow / outflow.
-        // Currency map enables cross-currency pairing (e.g. Revolut EUR → Monobank UAH).
-        var transferIds = _transferDetection.DetectTransferTransactionIds(txList.ToList(), accountCurrencies);
+        // 3. Counterparty classification: identifies transactions that belong to known
+        //    counterparties (e.g. family rent / support) and computes their net monthly flows.
+        //    These are excluded from the normal transfer-detection pass to avoid double-exclusion.
+        var cpResult = await _counterpartyClassification.ClassifyAsync(userId, txList, accountCurrencies, ct);
+        var matchedIds = cpResult.MatchedTransactionIds;
 
-        // 4. Group by (currency, year-month) and sum inflow/outflow (pending included —
-        // a hold is committed money; see interface doc)
-        var result = txList
-            .Where(t => t.IsActive && !transferIds.Contains(t.Id)
+        // 4. Detect internal transfer pairs among NON-counterparty transactions.
+        var nonCounterpartyTx = txList.Where(t => !matchedIds.Contains(t.Id)).ToList();
+        var transferIds = _transferDetection.DetectTransferTransactionIds(nonCounterpartyTx, accountCurrencies);
+
+        // 5. Normal flow: exclude counterparty-matched, transfer pairs, and TRANSFER category.
+        var normalGroups = txList
+            .Where(t => t.IsActive
+                        && !matchedIds.Contains(t.Id)
+                        && !transferIds.Contains(t.Id)
                         && !CategoryKeys.IsTransfer(t.MerchantCategory))
             .Select(t => new
             {
@@ -89,19 +97,63 @@ public class MoneyFlowStatisticsService(
                 var outflow = g.Where(x => x.Transaction.TransactionType == "debit").Sum(x => x.Transaction.Amount);
                 var inflowUsd = CurrencyConverter.ToUsd(inflow, g.Key.Currency);
                 var outflowUsd = CurrencyConverter.ToUsd(outflow, g.Key.Currency);
-                return new MonthlyFlow(
-                    g.Key.Month,
-                    g.Key.Currency,
-                    inflow,
-                    outflow,
-                    inflow - outflow,
-                    inflowUsd,
-                    outflowUsd,
-                    inflowUsd - outflowUsd);
+                return (Month: g.Key.Month, Currency: g.Key.Currency, InflowUsd: inflowUsd, OutflowUsd: outflowUsd, Inflow: inflow, Outflow: outflow);
             })
+            .ToDictionary(x => (x.Month, x.Currency));
+
+        // 6. Build the complete set of months from both normal and counterparty flows.
+        //    Counterparty flows are accumulated into a synthetic "USD" bucket since the
+        //    netting is already currency-normalised; we merge into the USD-denominated totals.
+        var allMonths = new HashSet<string>(normalGroups.Keys.Select(k => k.Month));
+        foreach (var cpFlow in cpResult.MonthlyFlows)
+            allMonths.Add(cpFlow.Month);
+
+        // Build final result: counterparty net income/expense is folded into the USD bucket.
+        // We use a single combined USD key per month for the counterparty contribution.
+        var cpByMonth = cpResult.MonthlyFlows
+            .GroupBy(f => f.Month)
+            .ToDictionary(
+                g => g.Key,
+                g => (IncomeUsd: g.Sum(f => f.NetIncomeUsd), ExpenseUsd: g.Sum(f => f.NetExpenseUsd)));
+
+        var result = new List<MonthlyFlow>();
+
+        // Emit one row per (currency, month) from the normal flow.
+        foreach (var kv in normalGroups)
+        {
+            var (month, currency) = kv.Key;
+            var n = kv.Value;
+            var inflowUsd = n.InflowUsd;
+            var outflowUsd = n.OutflowUsd;
+
+            // Attach counterparty adjustment to the first (often only) currency bucket for
+            // this month. For most users there is one dominant currency (UAH or EUR).
+            if (cpByMonth.TryGetValue(month, out var cp))
+            {
+                inflowUsd += cp.IncomeUsd;
+                outflowUsd += cp.ExpenseUsd;
+                cpByMonth.Remove(month); // consumed — do not double-add across currencies
+            }
+
+            result.Add(new MonthlyFlow(
+                month, currency,
+                n.Inflow, n.Outflow, n.Inflow - n.Outflow,
+                inflowUsd, outflowUsd, inflowUsd - outflowUsd));
+        }
+
+        // Emit synthetic USD rows for months that are ONLY in the counterparty flows
+        // (no normal transactions that month but counterparty flows exist).
+        foreach (var kv in cpByMonth)
+        {
+            var month = kv.Key;
+            result.Add(new MonthlyFlow(
+                month, "USD",
+                0m, 0m, 0m,
+                kv.Value.IncomeUsd, kv.Value.ExpenseUsd, kv.Value.IncomeUsd - kv.Value.ExpenseUsd));
+        }
+
+        return result
             .OrderByDescending(mf => mf.Month)
             .ToList();
-
-        return result;
     }
 }

@@ -65,7 +65,7 @@ public class MoneyFlowStatisticsTests
         accountRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
                        .ReturnsAsync([account]);
 
-        var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService());
+        var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService(), new NoOpCounterpartyClassificationService());
 
         // Act
         var result = await sut.GetMonthlyFlowAsync(UserId, 6);
@@ -110,7 +110,7 @@ public class MoneyFlowStatisticsTests
         accountRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
                        .ReturnsAsync([account]);
 
-        var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService());
+        var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService(), new NoOpCounterpartyClassificationService());
 
         // Act
         var result = await sut.GetMonthlyFlowAsync(UserId, 6);
@@ -148,7 +148,7 @@ public class MoneyFlowStatisticsTests
         accountRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
                        .ReturnsAsync([eurAccount, usdAccount]);
 
-        var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService());
+        var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService(), new NoOpCounterpartyClassificationService());
 
         // Act
         var result = await sut.GetMonthlyFlowAsync(UserId, 6);
@@ -197,7 +197,7 @@ public class MoneyFlowStatisticsTests
         accountRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
                        .ReturnsAsync([accountA, accountB]);
 
-        var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService());
+        var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService(), new NoOpCounterpartyClassificationService());
 
         var result = await sut.GetMonthlyFlowAsync(UserId, 6);
 
@@ -231,7 +231,7 @@ public class MoneyFlowStatisticsTests
         accountRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
                        .ReturnsAsync([account]);
 
-        var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService());
+        var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService(), new NoOpCounterpartyClassificationService());
 
         // Act
         var result = await sut.GetMonthlyFlowAsync(UserId, 6);

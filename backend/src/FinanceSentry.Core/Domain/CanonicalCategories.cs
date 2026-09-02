@@ -25,6 +25,7 @@ public static class CanonicalCategories
         new(CategoryKeys.GovernmentAndNonProfit, "Government & Non-Profit", 110),
         new(CategoryKeys.LoanPayments, "Loan Payments", 120),
         new(CategoryKeys.BankFees, "Bank Fees", 130),
+        new(CategoryKeys.FamilySupport, "Family Support", 135),
         new(CategoryKeys.Income, "Income", 140),
         new(CategoryKeys.TransferIn, "Transfer In", 150),
         new(CategoryKeys.TransferOut, "Transfer Out", 160),

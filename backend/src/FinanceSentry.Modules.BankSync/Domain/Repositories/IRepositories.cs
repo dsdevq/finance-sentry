@@ -212,6 +212,19 @@ public interface IMonobankCredentialRepository
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
 
+/// <summary>
+/// Repository for counterparty definitions and their match rules.
+/// </summary>
+public interface ICounterpartyRepository
+{
+    /// <summary>
+    /// Returns counterparties that apply to <paramref name="userId"/>: those owned by the
+    /// user plus system defaults (UserId == Guid.Empty), with Rules eagerly loaded.
+    /// </summary>
+    Task<IReadOnlyList<Counterparty>> GetForUserAsync(
+        Guid userId, CancellationToken cancellationToken = default);
+}
+
 public interface ITrueLayerConnectionRepository
 {
     Task<TrueLayerConnection> AddAsync(TrueLayerConnection connection, CancellationToken cancellationToken = default);
