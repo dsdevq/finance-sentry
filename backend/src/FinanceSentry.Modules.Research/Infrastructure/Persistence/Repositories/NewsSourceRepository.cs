@@ -27,4 +27,10 @@ public class NewsSourceRepository(ResearchDbContext db) : INewsSourceRepository
         db.NewsSources.Update(source);
         await db.SaveChangesAsync(ct);
     }
+
+    public async Task RemoveAsync(NewsSource source, CancellationToken ct = default)
+    {
+        db.NewsSources.Remove(source);
+        await db.SaveChangesAsync(ct);
+    }
 }
