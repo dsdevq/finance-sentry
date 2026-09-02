@@ -1,0 +1,358 @@
+<div class="space-y-cmn-5">
+  @if (store.isDossierLoading()) {
+    <div class="h-32 animate-pulse rounded-xl bg-neutral-100 dark:bg-neutral-800"></div>
+    <div class="h-48 animate-pulse rounded-xl bg-neutral-100 dark:bg-neutral-800"></div>
+    <div class="h-64 animate-pulse rounded-xl bg-neutral-100 dark:bg-neutral-800"></div>
+  } @else if (store.dossierErrorMessage()) {
+    <cmn-alert variant="error">{{ store.dossierErrorMessage() }}</cmn-alert>
+  } @else if (store.dossier(); as dossier) {
+    <!-- Header -->
+    <cmn-card class="block">
+      <div class="flex items-start justify-between">
+        <div>
+          <p class="text-cmn-xs uppercase tracking-wide text-text-secondary">Asset Dossier</p>
+          <h1 class="mt-cmn-1 font-headline text-cmn-3xl font-bold text-text-primary">
+            {{ dossier.symbol }}
+          </h1>
+          <p class="mt-cmn-1 text-cmn-xs text-text-secondary">
+            Generated {{ dossier.generatedAt | date: 'medium' }}
+          </p>
+        </div>
+        <button
+          (click)="goBack()"
+          class="text-cmn-sm text-text-secondary underline-offset-2 hover:text-text-primary hover:underline transition-colors"
+        >
+          ← Back to investments
+        </button>
+      </div>
+    </cmn-card>
+
+    <!-- Position & P&L -->
+    @if (dossier.position; as position) {
+      <cmn-card class="block">
+        <h2 class="font-headline text-cmn-lg font-semibold text-text-primary">Position</h2>
+        <p class="text-cmn-xs text-text-secondary">{{ position.provider }}</p>
+
+        <div class="mt-cmn-4 grid grid-cols-2 gap-cmn-4 md:grid-cols-4">
+          <div>
+            <p class="text-cmn-xs uppercase tracking-wide text-text-secondary">Quantity</p>
+            <p class="mt-cmn-1 font-mono tabular-nums text-text-primary">
+              {{ position.quantity | number: '1.0-8' }}
+            </p>
+          </div>
+          <div>
+            <p class="text-cmn-xs uppercase tracking-wide text-text-secondary">Current Value</p>
+            <p class="mt-cmn-1 font-mono font-semibold tabular-nums text-text-primary">
+              {{ position.currentValueUsd | number: '1.2-2' }} USD
+            </p>
+          </div>
+          @if (position.costBasisUsd !== null) {
+            <div>
+              <p class="text-cmn-xs uppercase tracking-wide text-text-secondary">Cost Basis</p>
+              <p class="mt-cmn-1 font-mono tabular-nums text-text-primary">
+                {{ position.costBasisUsd | number: '1.2-2' }} USD
+              </p>
+            </div>
+          }
+          @if (position.unrealizedPnlPercent !== null) {
+            <div>
+              <p class="text-cmn-xs uppercase tracking-wide text-text-secondary">Unrealized P&L</p>
+              <p
+                [class]="position.unrealizedPnlPercent >= 0 ? pnlPositiveClass : pnlNegativeClass"
+                class="mt-cmn-1 font-mono tabular-nums font-semibold"
+              >
+                {{ position.unrealizedPnlPercent | number: '1.2-2' }}%
+                @if (position.unrealizedPnlUsd !== null) {
+                  <span class="text-cmn-xs font-normal"
+                    >({{ position.unrealizedPnlUsd | number: '1.2-2' }} USD)</span
+                  >
+                }
+              </p>
+            </div>
+          }
+        </div>
+
+        @if (position.taxLots.length > 0) {
+          <div class="mt-cmn-5 border-t border-border-default pt-cmn-4">
+            <p class="mb-cmn-3 text-cmn-sm font-medium text-text-primary">
+              Tax Lots ({{ position.taxLots.length }})
+            </p>
+            <div class="space-y-cmn-2">
+              @for (lot of position.taxLots; track $index) {
+                <div
+                  class="flex flex-wrap items-center gap-cmn-4 rounded-lg bg-neutral-50 px-cmn-3 py-cmn-2 text-cmn-sm dark:bg-neutral-800"
+                >
+                  <span class="font-mono tabular-nums text-text-primary">{{
+                    lot.quantity | number: '1.0-8'
+                  }}</span>
+                  <span class="font-mono tabular-nums text-text-primary"
+                    >{{ lot.currentValueUsd | number: '1.2-2' }} USD</span
+                  >
+                  @if (lot.unrealizedPnlPercent !== null) {
+                    <span
+                      [class]="lot.unrealizedPnlPercent >= 0 ? pnlPositiveClass : pnlNegativeClass"
+                      class="font-mono tabular-nums"
+                    >
+                      {{ lot.unrealizedPnlPercent | number: '1.2-2' }}%
+                    </span>
+                  }
+                  @if (lot.acquiredAt) {
+                    <span class="text-text-secondary">{{
+                      lot.acquiredAt | date: 'mediumDate'
+                    }}</span>
+                  }
+                  @if (lot.isLongTerm) {
+                    <cmn-tag variant="success">Long-term</cmn-tag>
+                  } @else {
+                    <cmn-tag variant="warning">Short-term</cmn-tag>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </cmn-card>
+    }
+
+    <!-- Investment Thesis -->
+    @if (dossier.thesis; as thesis) {
+      <cmn-card class="block">
+        <div class="flex items-start justify-between gap-cmn-3">
+          <h2 class="font-headline text-cmn-lg font-semibold text-text-primary">
+            Investment Thesis
+          </h2>
+          @if (thesis.brokenAt) {
+            <cmn-tag variant="error">Invalidated</cmn-tag>
+          } @else {
+            <cmn-tag variant="success">Active</cmn-tag>
+          }
+        </div>
+
+        <p class="mt-cmn-3 text-cmn-sm leading-relaxed text-text-primary">
+          {{ thesis.thesisText }}
+        </p>
+
+        @if (thesis.brokenReason) {
+          <cmn-alert variant="error" class="mt-cmn-3">{{ thesis.brokenReason }}</cmn-alert>
+        }
+
+        @if (thesis.invalidationTriggers.length > 0) {
+          <div class="mt-cmn-4 border-t border-border-default pt-cmn-4">
+            <p class="mb-cmn-2 text-cmn-sm font-medium text-text-primary">Invalidation Triggers</p>
+            <ul class="space-y-cmn-1">
+              @for (trigger of thesis.invalidationTriggers; track $index) {
+                <li class="text-cmn-sm text-text-secondary">
+                  <span class="font-mono text-text-primary">{{ trigger.metric }}</span>
+                  {{ trigger.direction }}
+                  <span class="font-mono text-text-primary">{{ trigger.threshold }}</span>
+                  @if (trigger.proxyTicker) {
+                    (via {{ trigger.proxyTicker }})
+                  }
+                </li>
+              }
+            </ul>
+          </div>
+        }
+
+        @if (thesis.catalysts.length > 0) {
+          <div class="mt-cmn-4 border-t border-border-default pt-cmn-4">
+            <p class="mb-cmn-2 text-cmn-sm font-medium text-text-primary">Catalysts</p>
+            <ul class="space-y-cmn-1">
+              @for (catalyst of thesis.catalysts; track $index) {
+                <li class="flex items-start gap-cmn-3 text-cmn-sm">
+                  <span class="shrink-0 font-mono text-text-secondary">{{ catalyst.date }}</span>
+                  <span class="text-text-primary">{{ catalyst.event }}</span>
+                </li>
+              }
+            </ul>
+          </div>
+        }
+      </cmn-card>
+    }
+
+    <!-- Valuation -->
+    @if (dossier.valuation; as valuation) {
+      @if (!valuation.notApplicable) {
+        <cmn-card class="block">
+          <div class="flex items-center justify-between gap-cmn-3">
+            <h2 class="font-headline text-cmn-lg font-semibold text-text-primary">Valuation</h2>
+            @if (valuation.isStale) {
+              <cmn-tag variant="warning">Stale</cmn-tag>
+            }
+          </div>
+
+          <div class="mt-cmn-4 grid grid-cols-2 gap-cmn-4 md:grid-cols-4">
+            @if (valuation.metrics.trailingPe.value !== null) {
+              <div>
+                <p class="text-cmn-xs uppercase tracking-wide text-text-secondary">Trailing P/E</p>
+                <p class="mt-cmn-1 font-mono tabular-nums text-text-primary">
+                  {{ valuation.metrics.trailingPe.value | number: '1.1-1' }}x
+                </p>
+                @if (valuation.metrics.trailingPe.fiveYearAvg !== null) {
+                  <p class="text-cmn-xs text-text-secondary">
+                    5Y avg {{ valuation.metrics.trailingPe.fiveYearAvg | number: '1.1-1' }}x
+                  </p>
+                }
+              </div>
+            }
+            @if (valuation.metrics.forwardPe.value !== null) {
+              <div>
+                <p class="text-cmn-xs uppercase tracking-wide text-text-secondary">Forward P/E</p>
+                <p class="mt-cmn-1 font-mono tabular-nums text-text-primary">
+                  {{ valuation.metrics.forwardPe.value | number: '1.1-1' }}x
+                </p>
+                @if (valuation.metrics.forwardPe.fiveYearAvg !== null) {
+                  <p class="text-cmn-xs text-text-secondary">
+                    5Y avg {{ valuation.metrics.forwardPe.fiveYearAvg | number: '1.1-1' }}x
+                  </p>
+                }
+              </div>
+            }
+            @if (valuation.metrics.evToEbitda.value !== null) {
+              <div>
+                <p class="text-cmn-xs uppercase tracking-wide text-text-secondary">EV/EBITDA</p>
+                <p class="mt-cmn-1 font-mono tabular-nums text-text-primary">
+                  {{ valuation.metrics.evToEbitda.value | number: '1.1-1' }}x
+                </p>
+              </div>
+            }
+            @if (valuation.consensusTarget !== null) {
+              <div>
+                <p class="text-cmn-xs uppercase tracking-wide text-text-secondary">
+                  Consensus Target
+                </p>
+                <p class="mt-cmn-1 font-mono tabular-nums text-text-primary">
+                  {{ valuation.consensusTarget | number: '1.2-2' }} USD
+                </p>
+                @if (valuation.impliedUpsidePct !== null) {
+                  <p
+                    [class]="valuation.impliedUpsidePct >= 0 ? pnlPositiveClass : pnlNegativeClass"
+                    class="text-cmn-xs tabular-nums font-mono"
+                  >
+                    {{ valuation.impliedUpsidePct | number: '1.1-1' }}% upside
+                  </p>
+                }
+              </div>
+            }
+          </div>
+        </cmn-card>
+      }
+    }
+
+    <!-- Analyst Coverage -->
+    @if (dossier.analysts; as analysts) {
+      <cmn-card class="block">
+        <div class="flex items-center justify-between gap-cmn-3">
+          <h2 class="font-headline text-cmn-lg font-semibold text-text-primary">
+            Analyst Coverage
+          </h2>
+          <span class="text-cmn-xs text-text-secondary">{{ analysts.coverage }}</span>
+        </div>
+
+        @if (analysts.recentActions.length > 0) {
+          <div class="mt-cmn-4 space-y-cmn-2">
+            @for (action of analysts.recentActions; track $index) {
+              <div
+                class="flex flex-wrap items-start gap-cmn-3 border-b border-border-default pb-cmn-2 text-cmn-sm last:border-0 last:pb-0"
+              >
+                <span class="shrink-0 font-medium text-text-primary">{{ action.firm }}</span>
+                <span
+                  class="rounded-md bg-neutral-100 px-cmn-2 py-0.5 text-cmn-xs text-text-secondary dark:bg-neutral-800"
+                >
+                  {{ action.actionType }}
+                </span>
+                @if (action.newRating) {
+                  <span class="text-text-primary">→ {{ action.newRating }}</span>
+                }
+                @if (action.newTarget !== null) {
+                  <span class="font-mono tabular-nums text-text-secondary"
+                    >PT {{ action.newTarget | number: '1.2-2' }} USD</span
+                  >
+                }
+                <span class="ml-auto shrink-0 text-text-secondary">{{ action.actionDate }}</span>
+              </div>
+            }
+          </div>
+        } @else {
+          <p class="mt-cmn-3 text-cmn-sm text-text-secondary">No recent analyst actions.</p>
+        }
+      </cmn-card>
+    }
+
+    <!-- Next Earnings -->
+    @if (dossier.nextEarnings; as earnings) {
+      <cmn-card class="block">
+        <h2 class="font-headline text-cmn-lg font-semibold text-text-primary">Next Earnings</h2>
+        <div class="mt-cmn-3 flex flex-wrap items-center gap-cmn-4">
+          <span class="font-mono text-cmn-xl font-semibold tabular-nums text-text-primary">
+            {{ earnings.eventDate }}
+          </span>
+          <span class="text-cmn-sm text-text-secondary">{{ earnings.eventType }}</span>
+          @if (earnings.isEstimate) {
+            <cmn-tag variant="warning">Estimate</cmn-tag>
+          }
+        </div>
+      </cmn-card>
+    }
+
+    <!-- Recent News -->
+    @if (dossier.recentNews.length > 0) {
+      <cmn-card class="block">
+        <h2 class="font-headline text-cmn-lg font-semibold text-text-primary">Recent News</h2>
+        <ul class="mt-cmn-4 space-y-cmn-4">
+          @for (article of dossier.recentNews; track article.id) {
+            <li class="border-b border-border-default pb-cmn-4 last:border-0 last:pb-0">
+              <a
+                [href]="article.url"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-cmn-sm font-medium text-text-primary underline-offset-2 hover:underline"
+              >
+                {{ article.title }}
+              </a>
+              <p class="mt-cmn-1 text-cmn-xs text-text-secondary">
+                {{ article.source }} · {{ article.publishedAt | date: 'mediumDate' }}
+              </p>
+              @if (article.summary) {
+                <p class="mt-cmn-1 text-cmn-sm text-text-secondary">{{ article.summary }}</p>
+              }
+            </li>
+          }
+        </ul>
+      </cmn-card>
+    }
+
+    <!-- Radar Signals -->
+    @if (dossier.radarSignals.length > 0) {
+      <cmn-card class="block">
+        <h2 class="font-headline text-cmn-lg font-semibold text-text-primary">Radar Signals</h2>
+        <p class="mt-cmn-1 text-cmn-xs text-text-secondary">
+          {{ dossier.radarSignals.length }} signal{{ dossier.radarSignals.length !== 1 ? 's' : '' }}
+          in the last 30 days
+        </p>
+        <ul class="mt-cmn-4 space-y-cmn-2">
+          @for (signal of dossier.radarSignals; track $index) {
+            <li
+              class="flex flex-wrap items-center gap-cmn-3 rounded-lg bg-neutral-50 px-cmn-3 py-cmn-2 text-cmn-sm dark:bg-neutral-800"
+            >
+              <span class="shrink-0 font-mono text-cmn-xs text-text-secondary">
+                {{ signal.timestamp | date: 'mediumDate' }}
+              </span>
+              <span class="font-medium text-text-primary">{{ signal.signalType }}</span>
+              <span class="text-text-secondary">{{ signal.scanner }}</span>
+              <span class="ml-auto">
+                @if (signal.severity === 'high') {
+                  <cmn-tag variant="error">{{ signal.severity }}</cmn-tag>
+                } @else if (signal.severity === 'medium') {
+                  <cmn-tag variant="warning">{{ signal.severity }}</cmn-tag>
+                } @else {
+                  <cmn-tag variant="success">{{ signal.severity }}</cmn-tag>
+                }
+              </span>
+            </li>
+          }
+        </ul>
+      </cmn-card>
+    }
+  }
+</div>

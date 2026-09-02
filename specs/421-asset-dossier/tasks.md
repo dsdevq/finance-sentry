@@ -33,15 +33,15 @@ Research/API/Controllers, Integration adapters + registration, contract test.
 **Surface area**: AppRoute enum, new `assets` module (model, service, store, page), app.routes.ts,
 holdings page (click navigation), Playwright spec.
 
-- [ ] T011 Add `AssetDossier` and `AssetDossierParam` to `AppRoute` enum
-- [ ] T012 Create `dossier.model.ts` mirroring backend DTOs in `frontend/src/app/modules/assets/models/`
-- [ ] T013 Create `dossier.service.ts` HTTP service in `frontend/src/app/modules/assets/services/`
-- [ ] T014 Create NgRx SignalStore (state/computed/methods/effects/store) in `frontend/src/app/modules/assets/store/`
-- [ ] T015 Create `asset-dossier.component.ts` + template in `frontend/src/app/modules/assets/pages/asset-dossier/`
-- [ ] T016 Add lazy-loaded route to `app.routes.ts`
-- [ ] T017 Add click navigation on holding rows in `holdings.component.html`
-- [ ] T018 Write Playwright spec: click holding → dossier renders → back navigation
-- [ ] T019 Run `ng lint` — zero errors; run `npx ng test --watch=false` — green
+- [x] T011 Add `AssetDossier` and `AssetDossierParam` to `AppRoute` enum
+- [x] T012 Create `dossier.model.ts` mirroring backend DTOs in `frontend/src/app/modules/assets/models/`
+- [x] T013 Create `dossier.service.ts` HTTP service in `frontend/src/app/modules/assets/services/`
+- [x] T014 Create NgRx SignalStore (state/computed/methods/effects/store) in `frontend/src/app/modules/assets/store/`
+- [x] T015 Create `asset-dossier.component.ts` + template in `frontend/src/app/modules/assets/pages/asset-dossier/`
+- [x] T016 Add lazy-loaded route to `app.routes.ts`
+- [x] T017 Add click navigation on holding rows in `holdings.component.html`
+- [x] T018 Write Playwright spec: click holding → dossier renders → back navigation
+- [x] T019 `ng lint` — zero errors; `npx playwright test` — 18/18 pass (7 new dossier tests)
 
 ---
 
