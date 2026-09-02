@@ -204,6 +204,34 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
                     </p>
                   </div>
                 </div>
+
+                <!--
+                  The headline split into the addends that make it. Only the market-return
+                  line moves with the rate toggle, so "held separate" is something the reader
+                  can check against the number rather than a claim in the prose above.
+                -->
+                <dl
+                  class="mt-cmn-4 grid grid-cols-3 gap-cmn-2 border-t border-border-default pt-cmn-3 text-cmn-xs"
+                >
+                  <div>
+                    <dt class="text-text-secondary">Today</dt>
+                    <dd class="font-medium text-text-primary">
+                      {{ store.projectionTodayFormatted() }}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt class="text-text-secondary">Contributions</dt>
+                    <dd class="font-medium text-text-primary">
+                      {{ store.projectedContributionsFormatted() }}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt class="text-text-secondary">Market return</dt>
+                    <dd class="font-medium text-text-primary">
+                      {{ store.projectedMarketReturnFormatted() }}
+                    </dd>
+                  </div>
+                </dl>
               </cmn-card>
             </div>
           }

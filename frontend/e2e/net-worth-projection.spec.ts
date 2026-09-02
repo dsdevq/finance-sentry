@@ -167,4 +167,27 @@ test.describe('Dashboard — twelve-month net worth projection', () => {
 
     expect(dataRequests.length).toBe(requestsAfterLoad);
   });
+
+  test('breaks the headline into addends and moves only the market-return one', async ({page}) => {
+    await mockApis(page, [...COMPLETE_MONTHS, CURRENT_MONTH]);
+    await page.goto('/dashboard');
+    await expect(page.getByRole('heading', {name: 'Dashboard'})).toBeVisible();
+
+    const today = page.getByText('Today', {exact: true}).locator('..');
+    const contributions = page.getByText('Contributions', {exact: true}).locator('..');
+    const marketReturn = page.getByText('Market return', {exact: true}).locator('..');
+
+    // 10,000 + 12,000 + 0 = the $22,000 headline. The flat default reads as a plain $0.
+    await expect(today).toContainText('$10,000');
+    await expect(contributions).toContainText('+$12,000');
+    await expect(marketReturn).toContainText('$0');
+
+    await page.getByRole('button', {name: '5%', exact: true}).click();
+
+    // Only the assumption line moves; today and contributions are behaviour, not a guess.
+    await expect(marketReturn).toContainText('+$500');
+    await expect(today).toContainText('$10,000');
+    await expect(contributions).toContainText('+$12,000');
+    await expect(page.getByText(PROJECTED_LABEL).locator('..')).toContainText('$22,500');
+  });
 });

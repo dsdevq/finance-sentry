@@ -58,6 +58,36 @@ audit, which drags a mean but not a median.
 
 ---
 
+### [US2] The projection shows its parts, not just its total (P1)
+
+US1 shipped a single blended figure plus a prose sentence naming the assumption. But the
+premise of the whole feature is that contributions are *behaviour* and market return is a
+*guess*, and a blended total hides exactly the distinction the feature exists to draw — the
+US1 code says so in as many words ("the whole point of splitting return out of the projection
+is that the reader can see which part is their own behaviour and which part is a guess about
+the market"), and then renders one number.
+
+Concretely: at 7% on a $10k market sleeve the headline moves $700 with no visible attribution,
+so the reader cannot tell a good savings month from a generous assumption. The tile therefore
+breaks the projection into its addends — today's net worth, projected contributions, assumed
+market return — which also makes the 0% default *visibly* flat (`$0`) rather than merely
+described as flat.
+
+**Acceptance Scenarios**:
+
+1. **Given** the tile renders, **When** the reader looks at it, **Then** the projection is shown
+   as three addends — today's net worth, contributions over the horizon, assumed market return
+   — that sum to the headline figure.
+2. **Given** the 0% default, **When** the tile renders, **Then** the market-return addend reads
+   `$0` and the entire difference from today is the contributions line.
+3. **Given** a non-zero rate, **When** the tile renders, **Then** only the market-return addend
+   changes; today's net worth and the contributions line are untouched by the selection.
+4. **Given** a negative median month, **When** the tile renders, **Then** the contributions
+   addend carries an explicit minus sign — an addend column that sums to a total must not
+   render a withdrawal as if it were a credit.
+
+---
+
 ## Functional Requirements
 
 - **FR-001**: Baseline is the **median** of per-month `inflowUsd − outflowUsd` over the
@@ -75,6 +105,12 @@ audit, which drags a mean but not a median.
   endpoint.
 - **FR-007**: Projection arithmetic is covered in `dashboard.computed.spec.ts`: median
   selection, the <3-month gate, the 0% path, and one non-zero-return path.
+- **FR-008**: The tile renders the projection as three addends — today's net worth, projected
+  contributions (`median × horizon`), assumed market return — which sum to the headline figure.
+  Signed addends carry an explicit `+`/`−`; a zero market return renders `$0`, not `+$0`.
+- **FR-009**: The rate selection moves the market-return addend only. Today's net worth and the
+  contributions addend are independent of it, which is what makes "held separate" checkable by
+  the reader rather than a claim in prose.
 
 ---
 

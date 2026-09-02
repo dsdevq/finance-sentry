@@ -18,13 +18,36 @@
 - [x] `e2e/net-worth-projection.spec.ts` — Playwright: tile visible with 3+ complete months,
       absent below 3, rate toggle changes the figure without refetching
 
+## [US2] The projection shows its parts, not just its total
+
+- [x] `dashboard.computed.ts` — `signedUsd` formatter (U+2212 for negatives, bare `$0` for
+      zero) plus `projectionTodayFormatted`, `projectedContributionsFormatted` and
+      `projectedMarketReturnFormatted`
+- [x] `dashboard.component.ts` — addend rows inside the existing projection card, so the
+      headline is visibly `today + contributions + market return`
+- [x] `dashboard.computed.spec.ts` — addends sum to the headline at 0% and at a non-zero rate,
+      the rate moves only the return addend, a negative median renders a signed contributions
+      line, and the 0% default renders a bare `$0`
+- [x] `e2e/net-worth-projection.spec.ts` — addend rows render; selecting 5% moves the
+      market-return row off `$0` while the contributions row holds
+
 ## Verification
+
+### US1
 
 - [x] `npm run lint` (`ng lint --max-warnings 0`) — all files pass
 - [x] `npm run format:check` — all matched files use Prettier code style
 - [x] `npx ng test finance-sentry --configuration ci` — 195 passed (34 files)
 - [x] `npx ng build --configuration=production` — bundle generated
 - [x] `npx playwright test --reporter=json` — 14 expected, 0 unexpected (3 new)
+
+### US2
+
+- [x] `npm run lint` (`ng lint --max-warnings 0`) — all files pass
+- [x] `npm run format:check` — all matched files use Prettier code style
+- [x] `npx ng test finance-sentry --configuration ci` — 198 passed (34 files), 3 new
+- [x] `npx ng build --configuration=production` — bundle generated
+- [x] `npx playwright test --reporter=json` — 15 expected, 0 unexpected (1 new)
 
 The repo's declared `verifyCmd` (`devclaw.json`) already ends in
 `npx playwright test --reporter=json`, so the new browser layer is covered by the existing

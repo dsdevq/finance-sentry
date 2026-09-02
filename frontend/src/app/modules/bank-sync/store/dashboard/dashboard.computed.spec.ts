@@ -368,6 +368,58 @@ describe('dashboardComputed', () => {
       expect(c.projectedNetWorthFormatted()).toBe('$22,500');
     });
 
+    it('breaks the headline into addends that sum to it at the 0% default', () => {
+      const c = projectionFor({
+        monthlyFlow: SKEWED_MONTHS,
+        totalNetWorthUsd: 10_000,
+        netWorthHistory: [snapshot(100_000, 8000, 2000)],
+      });
+
+      // 10,000 + 12,000 + 0 = 22,000, the headline. A flat default reads "$0", not "+$0".
+      expect(c.projectionTodayFormatted()).toBe('$10,000');
+      expect(c.projectedContributionsFormatted()).toBe('+$12,000');
+      expect(c.projectedMarketReturnFormatted()).toBe('$0');
+      expect(c.projectedNetWorthFormatted()).toBe('$22,000');
+    });
+
+    it('moves only the market-return addend when a rate is selected', () => {
+      const flat = projectionFor({
+        monthlyFlow: SKEWED_MONTHS,
+        totalNetWorthUsd: 10_000,
+        netWorthHistory: [snapshot(100_000, 8000, 2000)],
+      });
+      const withReturn = projectionFor({
+        monthlyFlow: SKEWED_MONTHS,
+        totalNetWorthUsd: 10_000,
+        netWorthHistory: [snapshot(100_000, 8000, 2000)],
+        projectionReturnRate: 0.05,
+      });
+
+      // Behaviour is untouched by the assumption — that is the whole point of the split.
+      expect(withReturn.projectionTodayFormatted()).toBe(flat.projectionTodayFormatted());
+      expect(withReturn.projectedContributionsFormatted()).toBe(
+        flat.projectedContributionsFormatted()
+      );
+      // 5% of the 10,000 market-marked sleeves, and 10,000 + 12,000 + 500 = the headline.
+      expect(withReturn.projectedMarketReturnFormatted()).toBe('+$500');
+      expect(withReturn.projectedNetWorthFormatted()).toBe('$22,500');
+    });
+
+    it('signs a shrinking contributions line, so a withdrawal cannot read as a credit', () => {
+      const c = projectionFor({
+        monthlyFlow: [
+          flow('2026-05', 1000, 1200),
+          flow('2026-06', 1000, 1300),
+          flow('2026-07', 1000, 1100),
+        ],
+        totalNetWorthUsd: 10_000,
+      });
+
+      // −200/mo over twelve months. U+2212, matching netWorthChangeFormatted.
+      expect(c.projectedContributionsFormatted()).toBe('−$2,400');
+      expect(c.projectedNetWorthFormatted()).toBe('$7,600');
+    });
+
     it('says a return assumption has no effect when no snapshot carries a market balance', () => {
       const c = projectionFor({
         monthlyFlow: SKEWED_MONTHS,

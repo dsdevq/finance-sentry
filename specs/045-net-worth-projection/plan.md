@@ -65,3 +65,35 @@ nothing to modify without the tile. Issue #539 sizes the whole thing at S / 1 PR
 
 `npx eslint` on changed files, `npx ng test --watch=false` (Vitest), `npx ng build`, and
 `npx playwright test --reporter=json` for the app-surface UI gate.
+
+## Story Slice [US2] — the projection shows its addends
+
+Decided after US1 shipped: the US1 tile blends contributions and assumed return into one
+number, which contradicts the separation the feature is named for. This slice is display-layer
+only — it adds no new arithmetic, it *exposes* the two quantities `dashboard.computed.ts`
+already computes internally (`medianMonthlySavings * PROJECTION_HORIZON_MONTHS` and
+`marketGrowth`), which is why it is a separate reviewable slice rather than a rewrite.
+
+### Files touched
+
+- `frontend/src/app/modules/bank-sync/store/dashboard/dashboard.computed.ts` — a module-level
+  `signedUsd` formatter plus three exposed computeds: `projectionTodayFormatted`,
+  `projectedContributionsFormatted`, `projectedMarketReturnFormatted`
+- `frontend/src/app/modules/bank-sync/pages/dashboard/dashboard.component.ts` — the addend rows
+  inside the existing projection `cmn-card`
+- `frontend/src/app/modules/bank-sync/store/dashboard/dashboard.computed.spec.ts` — the addends
+  sum to the headline at 0% and at a non-zero rate; the rate moves only the return addend; a
+  negative median renders a signed contributions line
+- `frontend/e2e/net-worth-projection.spec.ts` — the addend rows render, and selecting 5% moves
+  the market-return row off `$0` while the contributions row holds
+
+### Constraints discovered
+
+- The tile's money figures use `currency.transform(..., '1.0-0')` (full form, `$22,000`), not
+  the `COMPACT_FORMATTER` (`$22K`) the stat cards use. The addends must match the headline's
+  formatter or the column will not visibly sum.
+- `netWorthChangeFormatted` already establishes the signed-money convention in this file:
+  U+2212 MINUS SIGN for negatives, ASCII `+` for positives. `signedUsd` follows it rather than
+  inventing a second convention two hundred lines away.
+- Exact zero is special-cased to a bare `$0`. A market return of `+$0` reads as a rounding
+  artifact; `$0` reads as the deliberate flat default, which is the point of the 0% option.

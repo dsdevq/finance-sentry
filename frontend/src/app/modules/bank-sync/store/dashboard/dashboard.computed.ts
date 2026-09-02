@@ -83,6 +83,28 @@ function median(values: number[]): number {
     : sorted[mid];
 }
 
+// Cents on a twelve-month forecast are noise, and the projection's addends have to share the
+// headline's formatter or the column will not visibly sum.
+const WHOLE_DOLLARS = '1.0-0';
+
+function wholeUsd(value: number, currency: CurrencyPipe): string {
+  return currency.transform(value, 'USD', 'symbol', WHOLE_DOLLARS) ?? '';
+}
+
+/**
+ * Money as a signed addend, following the U+2212 / ASCII-plus convention
+ * `netWorthChangeFormatted` already sets in this file. Exact zero drops the sign: "+$0" reads
+ * as a rounding artifact, while "$0" reads as the deliberate flat default the 0% option exists
+ * to express.
+ */
+function signedUsd(value: number, currency: CurrencyPipe): string {
+  const magnitude = wholeUsd(Math.abs(value), currency);
+  if (value === 0) {
+    return magnitude;
+  }
+  return `${value > 0 ? '+' : '−'}${magnitude}`;
+}
+
 function currentMonthKey(): string {
   const now = new Date();
   const MONTH_KEY_PAD = 2;
@@ -279,6 +301,10 @@ export function dashboardComputed(store: StateSignals) {
     return latest ? latest.brokerageTotal + latest.cryptoTotal : 0;
   });
 
+  // Named once and reused by both the headline and its breakdown line, so the addends the
+  // reader is invited to sum can never drift from the total they are shown against.
+  const projectedContributions = computed(() => medianMonthlySavings() * PROJECTION_HORIZON_MONTHS);
+
   const marketGrowth = computed(() => {
     const horizonYears = PROJECTION_HORIZON_MONTHS / MONTHS_PER_YEAR;
     return marketMarkedBalance() * ((1 + store.projectionReturnRate()) ** horizonYears - 1);
@@ -414,15 +440,24 @@ export function dashboardComputed(store: StateSignals) {
     // two months is noise wearing a number's clothes.
     hasProjection,
 
-    projectedNetWorthFormatted: computed(() => {
-      const contributions = medianMonthlySavings() * PROJECTION_HORIZON_MONTHS;
-      const projected = (store.data()?.totalNetWorthUsd ?? 0) + contributions + marketGrowth();
-      return currency.transform(projected, 'USD', 'symbol', '1.0-0') ?? '';
-    }),
-
-    medianMonthlySavingsFormatted: computed(
-      () => currency.transform(medianMonthlySavings(), 'USD', 'symbol', '1.0-0') ?? ''
+    projectedNetWorthFormatted: computed(() =>
+      wholeUsd(
+        (store.data()?.totalNetWorthUsd ?? 0) + projectedContributions() + marketGrowth(),
+        currency
+      )
     ),
+
+    // The headline broken into the addends that produce it. Blending saving (behaviour the
+    // reader controls) with an assumed return (a guess they picked off a toggle) into one
+    // figure hides the very distinction this tile exists to draw, so the parts are shown and
+    // the reader can check that they sum.
+    projectionTodayFormatted: computed(() =>
+      wholeUsd(store.data()?.totalNetWorthUsd ?? 0, currency)
+    ),
+    projectedContributionsFormatted: computed(() => signedUsd(projectedContributions(), currency)),
+    projectedMarketReturnFormatted: computed(() => signedUsd(marketGrowth(), currency)),
+
+    medianMonthlySavingsFormatted: computed(() => wholeUsd(medianMonthlySavings(), currency)),
 
     // Always plural: the tile is gated at three months, so the singular can never surface.
     projectionBasisLabel: computed(
