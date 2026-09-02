@@ -52,6 +52,7 @@ const DASHBOARD_DATA = {
       inflowUsd: 5000,
       outflowUsd: 3000,
       netUsd: 2000,
+      familySupportOutflowUsd: 0,
     },
     {
       month: currentUtcMonthKey(),
@@ -62,6 +63,8 @@ const DASHBOARD_DATA = {
       inflowUsd: 4800,
       outflowUsd: 2900,
       netUsd: 1900,
+      // $800 of the $2900 outflow is family-support; "Spent" = 2900 - 800 = 2100, "Kept" = 4800 - 2900 = 1900.
+      familySupportOutflowUsd: 800,
     },
   ],
   topCategories: [
@@ -324,6 +327,35 @@ test.describe('Dashboard drill-downs', () => {
     await spendingButton.click();
 
     await expect(page).toHaveURL(/\/transactions.*type=debit/);
+  });
+
+  test('flow breakdown shows Supported family separated from Spent when counterparty expense exists', async ({
+    page,
+  }) => {
+    // Mock has familySupportOutflowUsd: 800 for the current month.
+    // Spent = 2900 - 800 = 2100; Kept = 4800 - 2900 = 1900.
+    await page.goto('/dashboard');
+    await expect(page.getByRole('heading', {name: 'Dashboard'})).toBeVisible();
+
+    // Flow breakdown section must be visible.
+    await expect(page.getByText('Flow breakdown (MTD)')).toBeVisible();
+
+    // All three bucket tiles must be present.
+    const spentCard = page.locator('cmn-stat-card').filter({hasText: 'Spent'});
+    const familySupportCard = page.locator('cmn-stat-card').filter({hasText: 'Supported family'});
+    const keptCard = page.locator('cmn-stat-card').filter({hasText: 'Kept'});
+
+    await expect(spentCard).toBeVisible();
+    await expect(familySupportCard).toBeVisible();
+    await expect(keptCard).toBeVisible();
+
+    // Supported family must show the backend-reported net expense ($800), not $0 or merged into Spent.
+    const familySupportAmount = extractAmount((await familySupportCard.innerText()).trim());
+    expect(familySupportAmount).toBeCloseTo(800, 0);
+
+    // Spent must reflect outflow minus family support ($2100), not the full $2900 outflow.
+    const spentAmount = extractAmount((await spentCard.innerText()).trim());
+    expect(spentAmount).toBeCloseTo(2100, 0);
   });
 });
 

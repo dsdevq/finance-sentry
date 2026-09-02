@@ -63,9 +63,9 @@
 
 ---
 
-## [US3] Slice 2 — Dashboard four-bucket split (next PR)
+## [US3] Slice 2 — Dashboard four-bucket split (this PR)
 
-- [ ] Update `DashboardQueryService` to return family-support expense bucket
-- [ ] Update dashboard Angular component with four-bucket breakdown
-- [ ] Update `DashboardStore` with bucket state
-- [ ] Playwright test: four buckets visible; "supported family" matches backend
+- [x] Update `MonthlyFlow` record + `MoneyFlowStatisticsService` to return `FamilySupportOutflowUsd`
+- [x] Update dashboard Angular component with four-bucket breakdown (`@if hasFamilySupport`)
+- [x] Update `DashboardStore` computed signals: `monthlySpentFormatted`, `monthlyFamilySupportFormatted`, `monthlyKeptFormatted`, `hasFamilySupport`
+- [x] Playwright test: four buckets visible; "supported family" matches backend mock ($800)

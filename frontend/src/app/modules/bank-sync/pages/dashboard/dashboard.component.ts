@@ -152,6 +152,34 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
             </div>
           </div>
 
+          @if (store.hasFamilySupport()) {
+            <div>
+              <div class="mb-cmn-3">
+                <span class="text-cmn-sm font-medium text-text-secondary">Flow breakdown (MTD)</span>
+              </div>
+              <div class="grid grid-cols-1 gap-cmn-4 sm:grid-cols-3">
+                <cmn-stat-card
+                  [value]="store.monthlySpentFormatted()"
+                  [loading]="store.isLoading()"
+                  label="Spent"
+                  icon="ShoppingBag"
+                />
+                <cmn-stat-card
+                  [value]="store.monthlyFamilySupportFormatted()"
+                  [loading]="store.isLoading()"
+                  label="Supported family"
+                  icon="Heart"
+                />
+                <cmn-stat-card
+                  [value]="store.monthlyKeptFormatted()"
+                  [loading]="store.isLoading()"
+                  label="Kept"
+                  icon="Banknote"
+                />
+              </div>
+            </div>
+          }
+
           <div>
             <div class="mb-cmn-3 flex items-center justify-between">
               <span class="text-cmn-sm font-medium text-text-secondary">Net Worth Over Time</span>

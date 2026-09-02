@@ -17,7 +17,8 @@ public record MonthlyFlow(
     decimal Net,
     decimal InflowUsd,
     decimal OutflowUsd,
-    decimal NetUsd);
+    decimal NetUsd,
+    decimal FamilySupportOutflowUsd = 0m);
 
 /// <summary>
 /// Computes monthly money-flow statistics using an in-memory join of transactions and accounts.
@@ -125,6 +126,7 @@ public class MoneyFlowStatisticsService(
             var n = kv.Value;
             var inflowUsd = n.InflowUsd;
             var outflowUsd = n.OutflowUsd;
+            var familySupportUsd = 0m;
 
             // Attach counterparty adjustment to the first (often only) currency bucket for
             // this month. For most users there is one dominant currency (UAH or EUR).
@@ -132,13 +134,15 @@ public class MoneyFlowStatisticsService(
             {
                 inflowUsd += cp.IncomeUsd;
                 outflowUsd += cp.ExpenseUsd;
+                familySupportUsd = cp.ExpenseUsd;
                 cpByMonth.Remove(month); // consumed — do not double-add across currencies
             }
 
             result.Add(new MonthlyFlow(
                 month, currency,
                 n.Inflow, n.Outflow, n.Inflow - n.Outflow,
-                inflowUsd, outflowUsd, inflowUsd - outflowUsd));
+                inflowUsd, outflowUsd, inflowUsd - outflowUsd,
+                familySupportUsd));
         }
 
         // Emit synthetic USD rows for months that are ONLY in the counterparty flows
@@ -149,7 +153,8 @@ public class MoneyFlowStatisticsService(
             result.Add(new MonthlyFlow(
                 month, "USD",
                 0m, 0m, 0m,
-                kv.Value.IncomeUsd, kv.Value.ExpenseUsd, kv.Value.IncomeUsd - kv.Value.ExpenseUsd));
+                kv.Value.IncomeUsd, kv.Value.ExpenseUsd, kv.Value.IncomeUsd - kv.Value.ExpenseUsd,
+                kv.Value.ExpenseUsd));
         }
 
         return result

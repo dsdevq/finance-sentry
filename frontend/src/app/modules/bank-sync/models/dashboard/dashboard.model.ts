@@ -26,6 +26,8 @@ export interface MonthlyFlow {
   inflowUsd: number;
   outflowUsd: number;
   netUsd: number;
+  /** Net family-support expense folded into outflowUsd; zero when no counterparty expense. */
+  familySupportOutflowUsd?: number;
 }
 
 export interface CategoryStat {

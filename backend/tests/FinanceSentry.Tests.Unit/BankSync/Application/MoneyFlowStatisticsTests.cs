@@ -207,6 +207,49 @@ public class MoneyFlowStatisticsTests
         result[0].Net.Should().Be(200m);
     }
 
+    // ── T044 Test: FamilySupportOutflowUsd populated from counterparty expense ──
+
+    [Fact]
+    public async Task GetMonthlyFlow_WithCounterpartyExpense_FamilySupportOutflowUsdPopulated()
+    {
+        // Arrange: one credit and one debit in a single month; the counterparty stub
+        // reports a net expense of 50 USD for that month so the family-support split
+        // can be verified independently from the normal outflow.
+        var (account, accountId) = MakeAccount("USD");
+        var date = new DateTime(2026, 5, 10, 0, 0, 0, DateTimeKind.Utc);
+
+        var transactions = new List<Transaction>
+        {
+            MakeTx(accountId, 1000m, "credit", date),
+            MakeTx(accountId, 400m,  "debit",  date),
+        };
+
+        var txRepoMock = new Mock<ITransactionRepository>();
+        txRepoMock.Setup(r => r.GetByUserIdSinceAsync(UserId, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+                  .ReturnsAsync(transactions);
+
+        var accountRepoMock = new Mock<IBankAccountRepository>();
+        accountRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
+                       .ReturnsAsync([account]);
+
+        // Stub returns a 50 USD family-support expense for May 2026.
+        var cpFlow = new CounterpartyMonthlyFlow("2026-05", "Mom", "family_support", 0m, 50m);
+        var cpStub = new Mock<ICounterpartyClassificationService>();
+        cpStub.Setup(s => s.ClassifyAsync(UserId, It.IsAny<IReadOnlyList<Transaction>>(), It.IsAny<IReadOnlyDictionary<Guid, string>>(), It.IsAny<CancellationToken>()))
+              .ReturnsAsync(new CounterpartyClassificationResult([], [cpFlow]));
+
+        var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService(), cpStub.Object);
+
+        // Act
+        var result = await sut.GetMonthlyFlowAsync(UserId, 6);
+
+        // Assert: the single monthly row must carry the 50 USD family-support breakdown.
+        result.Should().HaveCount(1);
+        result[0].FamilySupportOutflowUsd.Should().Be(50m);
+        // OutflowUsd includes family support (total is honest); normal spend = 400 - 50 = 350.
+        result[0].OutflowUsd.Should().Be(400m + 50m);
+    }
+
     // ── T413 Test 4: Debit/credit classification ──────────────────────────────
 
     [Fact]
