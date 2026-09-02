@@ -116,6 +116,34 @@ keeps the raw positive value ("you owe X"), matching how banks present credit ca
 - **Not cached** — recomputed per `/dashboard/aggregated` request. The dashboard polls
   every 5 minutes; the transaction-ledger stat card fetches once at page load.
 
+### 5a. Committed vs discretionary outflow
+
+`OutflowUsd` is partitioned into `CommittedOutflowUsd` + `DiscretionaryOutflowUsd`; the two
+always sum back to it, and no figure is committed unless it is already in `Outflow` (so
+transfers are in none of the three).
+
+- **Committed** = the merchant key derived from the transaction by
+  `MerchantNameNormalizer.NormalizeDetectionKey(MerchantName, Description)` is the key of
+  one of the user's `DetectedSubscription` rows whose status is `active`, read through
+  `IActiveSubscriptionsReader.GetActiveCommitmentMerchantKeysAsync`. Both kinds count
+  (subscription and installment). Using the detector's own key — not the raw merchant name
+  — is what keeps the two sides from drifting apart.
+- **Discretionary** = every other non-transfer outflow. Derived as
+  `OutflowUsd − CommittedOutflowUsd` so the partition is exact; converting the two subsets
+  independently would let rounding pull them off the total.
+- **Currency**: the committed native sum is per (month, currency) bucket and is converted
+  with `CurrencyConverter.ToUsd` at the same reader boundary as `OutflowUsd`. Commitments
+  are billed in UAH, EUR and USD, so only the `…Usd` fields may be added across rows.
+- **Status is point-in-time**: cancelling a subscription today reclassifies its past charges
+  as discretionary. The split describes today's commitments, not history.
+- **Known under-count**: installment plans keyed synthetically by
+  `SubscriptionDetectionJob.DetectInstallments` (`installment:{merchant}:{amount}`) can never
+  match a transaction key and read as discretionary; recurring repayments to a masked card
+  number are classified as transfers and are outside `Outflow` entirely. Committed coverage was
+  measured at ~22% of outflow on production data (issue #538, 2026-08-31) — below the 40% bar
+  that ticket set for rendering the split on the dashboard, so the figures are exposed on the
+  API but not charted. See `specs/045-committed-vs-discretionary/`.
+
 ## 6. Top spending categories
 
 `MerchantCategoryStatisticsService`: same filters as monthly flow (active, pending

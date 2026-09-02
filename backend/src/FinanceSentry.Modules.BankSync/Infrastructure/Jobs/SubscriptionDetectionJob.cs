@@ -1,6 +1,5 @@
 namespace FinanceSentry.Modules.BankSync.Infrastructure.Jobs;
 
-using System.Text.RegularExpressions;
 using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Core.Utils;
 using FinanceSentry.Modules.BankSync.Application.Services;
@@ -197,30 +196,9 @@ public sealed class SubscriptionDetectionJob(
         return results;
     }
 
-    /// <summary>
-    /// Merchant key for recurring-service grouping. Mobile top-ups carry the phone number
-    /// in the description ("*MOBI TOP-UP 0857860057"), which both fragments the merchant
-    /// key and trips the generic top-up blocklist — collapse them to a stable per-number
-    /// key instead so a monthly top-up is tracked like any other recurring cost.
-    /// </summary>
-    public static string NormalizeForDetection(TxRow transaction)
-    {
-        var raw = transaction.MerchantName ?? transaction.Description;
-        if (raw is not null)
-        {
-            var mobi = MobiTopUpPattern.Match(raw.Trim());
-            if (mobi.Success)
-            {
-                var number = mobi.Groups[1].Value;
-                return $"mobile top-up {number[^4..]}";
-            }
-        }
-
-        return MerchantNameNormalizer.Normalize(raw);
-    }
-
-    private static readonly Regex MobiTopUpPattern =
-        new(@"^\*?\s*mobi\s+top-?up\s+(\d{4,})$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    /// <summary>Merchant key for recurring-service grouping.</summary>
+    public static string NormalizeForDetection(TxRow transaction) =>
+        MerchantNameNormalizer.NormalizeDetectionKey(transaction.MerchantName, transaction.Description);
 
     /// <summary>
     /// Splits a merchant's charges into amount clusters (adjacent sorted amounts within

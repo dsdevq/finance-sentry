@@ -1,6 +1,7 @@
 namespace FinanceSentry.Modules.BankSync.Application.Services;
 
 using FinanceSentry.Core.Domain;
+using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Core.Utils;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
 
@@ -8,6 +9,12 @@ using FinanceSentry.Modules.BankSync.Domain.Repositories;
 /// Monthly cash-flow statistics for a user (inflow / outflow / net per currency).
 /// Amounts are provided both in the source currency and normalized to USD so
 /// consumers can render a single cross-currency total per month.
+/// <para>
+/// <see cref="OutflowUsd"/> is partitioned into <see cref="CommittedOutflowUsd"/> and
+/// <see cref="DiscretionaryOutflowUsd"/>, which always sum back to it. Only the USD figures
+/// are split: the split exists to be aggregated across currencies, and a native
+/// committed total has no meaning once rows from a UAH and a EUR account sit side by side.
+/// </para>
 /// </summary>
 public record MonthlyFlow(
     string Month,       // "2026-03"
@@ -17,7 +24,9 @@ public record MonthlyFlow(
     decimal Net,
     decimal InflowUsd,
     decimal OutflowUsd,
-    decimal NetUsd);
+    decimal NetUsd,
+    decimal CommittedOutflowUsd,
+    decimal DiscretionaryOutflowUsd);
 
 /// <summary>
 /// Computes monthly money-flow statistics using an in-memory join of transactions and accounts.
@@ -33,6 +42,16 @@ public interface IMoneyFlowStatisticsService
     /// Pending transactions count — a card hold is real spending, and excluding it made the
     /// current month's outflow a fraction of reality. Settlement retires or flips the pending
     /// row in place, so it is never double-counted for long.
+    /// <para>
+    /// <b>Committed vs discretionary match rule.</b> An outflow is COMMITTED when the merchant
+    /// key derived from it by <see cref="MerchantNameNormalizer.NormalizeDetectionKey"/> is the
+    /// key of one of the user's detected commitments whose status is <c>active</c> — the same
+    /// key the detector grouped the charge under, so the two sides cannot drift apart. Every
+    /// other non-transfer outflow is DISCRETIONARY. Transfers are excluded from both, exactly
+    /// as they are from <c>Outflow</c>. Note that installment plans keyed synthetically by
+    /// <c>DetectInstallments</c> (<c>installment:{merchant}:{amount}</c>) can never match a
+    /// transaction key and therefore read as discretionary today.
+    /// </para>
     /// </summary>
     Task<IReadOnlyList<MonthlyFlow>> GetMonthlyFlowAsync(
         Guid userId, int months = 6, CancellationToken ct = default);
@@ -42,11 +61,13 @@ public interface IMoneyFlowStatisticsService
 public class MoneyFlowStatisticsService(
     ITransactionRepository transactions,
     IBankAccountRepository accounts,
-    ITransferDetectionService transferDetection) : IMoneyFlowStatisticsService
+    ITransferDetectionService transferDetection,
+    IActiveSubscriptionsReader activeSubscriptions) : IMoneyFlowStatisticsService
 {
     private readonly ITransactionRepository _transactions = transactions ?? throw new ArgumentNullException(nameof(transactions));
     private readonly IBankAccountRepository _accounts = accounts ?? throw new ArgumentNullException(nameof(accounts));
     private readonly ITransferDetectionService _transferDetection = transferDetection ?? throw new ArgumentNullException(nameof(transferDetection));
+    private readonly IActiveSubscriptionsReader _activeSubscriptions = activeSubscriptions ?? throw new ArgumentNullException(nameof(activeSubscriptions));
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<MonthlyFlow>> GetMonthlyFlowAsync(
@@ -71,7 +92,12 @@ public class MoneyFlowStatisticsService(
         // Currency map enables cross-currency pairing (e.g. Revolut EUR → Monobank UAH).
         var transferIds = _transferDetection.DetectTransferTransactionIds(txList.ToList(), accountCurrencies);
 
-        // 4. Group by (currency, year-month) and sum inflow/outflow (pending included —
+        // 4. Merchant keys of the user's active commitments — the committed/discretionary
+        // classifier. Read once for the whole window; the detector's status is point-in-time,
+        // so a subscription cancelled today reclassifies its past charges too.
+        var committedMerchantKeys = await _activeSubscriptions.GetActiveCommitmentMerchantKeysAsync(userId, ct);
+
+        // 5. Group by (currency, year-month) and sum inflow/outflow (pending included —
         // a hold is committed money; see interface doc)
         var result = txList
             .Where(t => t.IsActive && !transferIds.Contains(t.Id)
@@ -85,10 +111,21 @@ public class MoneyFlowStatisticsService(
             .GroupBy(x => new { x.Currency, Month = x.EffectiveDate.ToString("yyyy-MM") })
             .Select(g =>
             {
+                var debits = g.Where(x => x.Transaction.TransactionType == "debit").ToList();
                 var inflow = g.Where(x => x.Transaction.TransactionType == "credit").Sum(x => x.Transaction.Amount);
-                var outflow = g.Where(x => x.Transaction.TransactionType == "debit").Sum(x => x.Transaction.Amount);
+                var outflow = debits.Sum(x => x.Transaction.Amount);
+                var committed = debits
+                    .Where(x => committedMerchantKeys.Contains(
+                        MerchantNameNormalizer.NormalizeDetectionKey(
+                            x.Transaction.MerchantName, x.Transaction.Description)))
+                    .Sum(x => x.Transaction.Amount);
+
                 var inflowUsd = CurrencyConverter.ToUsd(inflow, g.Key.Currency);
                 var outflowUsd = CurrencyConverter.ToUsd(outflow, g.Key.Currency);
+                // Convert committed only, then subtract: converting both subsets independently
+                // lets rounding split them apart from OutflowUsd.
+                var committedUsd = CurrencyConverter.ToUsd(committed, g.Key.Currency);
+
                 return new MonthlyFlow(
                     g.Key.Month,
                     g.Key.Currency,
@@ -97,7 +134,9 @@ public class MoneyFlowStatisticsService(
                     inflow - outflow,
                     inflowUsd,
                     outflowUsd,
-                    inflowUsd - outflowUsd);
+                    inflowUsd - outflowUsd,
+                    committedUsd,
+                    outflowUsd - committedUsd);
             })
             .OrderByDescending(mf => mf.Month)
             .ToList();
