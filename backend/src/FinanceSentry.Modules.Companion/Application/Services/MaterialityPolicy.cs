@@ -23,6 +23,7 @@ public sealed class MaterialityPolicy : IMaterialityPolicy
         "ConsentExpiring" => CompanionEventKind.ConsentExpiring,
         "JobFailure" => CompanionEventKind.OperationalFailure,
         "RebalanceProposal" => CompanionEventKind.RebalanceProposal,
+        "CashSweepProposal" => CompanionEventKind.CashSweepProposal,
         _ => null,
     };
 

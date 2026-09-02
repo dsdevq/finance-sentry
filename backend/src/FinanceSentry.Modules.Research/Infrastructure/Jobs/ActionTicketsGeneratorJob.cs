@@ -5,17 +5,20 @@ using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Modules.Research.API.Responses;
 using FinanceSentry.Modules.Research.Application.Queries;
 using FinanceSentry.Modules.Research.Domain.Repositories;
+using FinanceSentry.Modules.Risk.Application.Queries;
 using Hangfire;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
 /// Daily Hangfire job (432) that reads IPS allocation drift for each user and emits a
-/// RebalanceProposal alert when bands are breached. Figures are always sourced from
-/// IBookFiguresService via GetAllocationDriftQueryHandler — no independently derived numbers.
+/// RebalanceProposal alert when bands are breached, and a CashSweepProposal alert when idle
+/// cash exceeds the configured buffer. Figures are always sourced from IBookFiguresService
+/// via GetAllocationDriftQueryHandler — no independently derived numbers.
 /// </summary>
 public sealed class ActionTicketsGeneratorJob(
     IIpsRepository ipsRepo,
     IQueryHandler<GetAllocationDriftQuery, AllocationDriftDto> driftQuery,
+    IQueryHandler<GetRiskRuleSetQuery, RiskRuleSetDto?> riskQuery,
     IAlertGeneratorService alerts,
     ILogger<ActionTicketsGeneratorJob> logger)
 {
@@ -47,20 +50,42 @@ public sealed class ActionTicketsGeneratorJob(
     {
         var drift = await driftQuery.Handle(new GetAllocationDriftQuery(userId), ct);
 
-        if (!drift.HasIps || !drift.NeedsRebalance)
+        if (drift.HasIps && drift.NeedsRebalance)
+        {
+            var orders = BuildOrderLines(drift);
+            if (orders.Count > 0)
+            {
+                var summary = BuildOrderSummary(orders, drift.TotalValueUsd);
+                logger.LogInformation(
+                    "ActionTicketsGenerator: rebalance proposal for user {UserId} — {OrderCount} order(s), book ${TotalValueUsd:N0}",
+                    userId, orders.Count, drift.TotalValueUsd);
+                await alerts.GenerateRebalanceProposalAlertAsync(userId, orders.Count, summary, ct);
+            }
+        }
+
+        await TryGenerateCashSweepAsync(userId, drift, ct);
+    }
+
+    private async Task TryGenerateCashSweepAsync(Guid userId, AllocationDriftDto drift, CancellationToken ct)
+    {
+        if (drift.TotalValueUsd <= 0)
             return;
 
-        var orders = BuildOrderLines(drift);
-        if (orders.Count == 0)
+        var rules = await riskQuery.Handle(new GetRiskRuleSetQuery(userId), ct);
+        if (rules?.MinCashBufferPct is not { } minPct || minPct <= 0)
             return;
 
-        var summary = BuildOrderSummary(orders, drift.TotalValueUsd);
+        var minBufferUsd = Math.Round(minPct / 100m * drift.TotalValueUsd, 2);
+        var excessUsd = Math.Round(drift.CashUsd - minBufferUsd, 2);
+
+        if (excessUsd <= 0)
+            return;
 
         logger.LogInformation(
-            "ActionTicketsGenerator: rebalance proposal for user {UserId} — {OrderCount} order(s), book ${TotalValueUsd:N0}",
-            userId, orders.Count, drift.TotalValueUsd);
+            "ActionTicketsGenerator: cash-sweep proposal for user {UserId} — idle ${CashUsd:N0} > buffer ${MinBufferUsd:N0}, excess ${ExcessUsd:N0}",
+            userId, drift.CashUsd, minBufferUsd, excessUsd);
 
-        await alerts.GenerateRebalanceProposalAlertAsync(userId, orders.Count, summary, ct);
+        await alerts.GenerateCashSweepProposalAlertAsync(userId, drift.CashUsd, minBufferUsd, excessUsd, ct);
     }
 
     private static List<OrderLine> BuildOrderLines(AllocationDriftDto drift)

@@ -26,18 +26,22 @@
 - `tests/.../ThesisMonitor/RunThesisMonitorHandlerTests.cs` — stub new method in `FakeAlertGeneratorService`
 - `tests/FinanceSentry.Tests.Unit/Research/ActionTicketsGeneratorJobTests.cs` — unit tests (create)
 
-## US2 surface (future slice)
+## US2 surface
 
-- New `GenerateCashSweepProposalAlertAsync` in IAlertGeneratorService + AlertGeneratorService
+- `IAlertGeneratorService.GenerateCashSweepProposalAlertAsync` + `AlertGeneratorService` implementation (24h silence, `CashSweepReferenceId` MD5 anchor)
 - `CashSweepProposal` AlertType + CompanionEventKind + MaterialityPolicy mapping
-- Extend `ActionTicketsGeneratorJob.ProcessUserAsync` with cash-sweep logic
-- Needs `GetRiskRuleSetQuery` injected (cross-module; existing pattern via port or direct query handler)
+- `ActionTicketsGeneratorJob.TryGenerateCashSweepAsync` — injects `IQueryHandler<GetRiskRuleSetQuery, RiskRuleSetDto?>` directly (Research → Risk project reference; no cycle; both only depend on Core)
+- `FinanceSentry.Modules.Research.csproj` → adds `<ProjectReference>` to Risk
+- `FinanceSentry.Modules.Research.Tests.csproj` → adds `<ProjectReference>` to Risk for mock setup
+- `tests/.../Jobs/ActionTicketsGeneratorJobTests.cs` — 6 new cash-sweep tests
 
-## US3 surface (future slice)
+## US3 surface
 
-- `AcknowledgeProposalCommand(Guid userId, Guid alertId, string choice)` in Alerts module
-- REST endpoint `PATCH /alerts/{id}/acknowledge` in AlertsController
-- Records Accept/Defer on the CompanionEvent (or marks Alert resolved if Accepted)
+- `Alert.AcknowledgementDecision` + `Alert.AcknowledgedAt` (nullable) + `AlertsDbContext` config + migration `M003_AddAcknowledgement`
+- `IAlertRepository.AcknowledgeAsync` (by alert row id) + `AcknowledgeByReferenceAsync` (by stable anchor — bot path)
+- `AcknowledgeProposalCommand` + `AcknowledgeProposalByReferenceCommand` + handlers in Alerts module
+- `PATCH /alerts/{id}/acknowledge` (frontend) + `PATCH /alerts/by-reference/{referenceId}/acknowledge` (Telegram bot)
+- `WebhookAgentWakeDispatcher.WakeAsync` — adds `requiresAcknowledgement: true` + `referenceId` to payload for `RebalanceProposal`/`CashSweepProposal` events; bot uses referenceId to call the by-reference endpoint
 
 ## US4 surface (future slice)
 

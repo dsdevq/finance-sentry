@@ -170,4 +170,16 @@ public interface IAlertGeneratorService
         int orderCount,
         string orderSummary,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Raises a Warning alert proposing deployment of idle cash that exceeds the configured buffer
+    /// (432 US2). <paramref name="excessUsd"/> is the dollar amount above the min-cash-buffer threshold.
+    /// Silenced 24 hours so the daily job doesn't re-propose while a prior one is open.
+    /// </summary>
+    Task GenerateCashSweepProposalAlertAsync(
+        Guid userId,
+        decimal idleCashUsd,
+        decimal minBufferUsd,
+        decimal excessUsd,
+        CancellationToken ct = default);
 }
