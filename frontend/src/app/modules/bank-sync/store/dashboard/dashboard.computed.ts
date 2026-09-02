@@ -283,19 +283,25 @@ export function dashboardComputed(store: StateSignals) {
     // Four-bucket breakdown: Spent / Supported family / Kept
     monthlySpentFormatted: computed(() => {
       const cur = monthToDate();
-      if (!cur) return '—';
+      if (!cur) {
+        return '—';
+      }
       return COMPACT_FORMATTER.format(Math.max(0, cur.outflow - cur.familySupportOutflow));
     }),
 
     monthlyFamilySupportFormatted: computed(() => {
       const cur = monthToDate();
-      if (!cur) return '—';
+      if (!cur) {
+        return '—';
+      }
       return COMPACT_FORMATTER.format(cur.familySupportOutflow);
     }),
 
     monthlyKeptFormatted: computed(() => {
       const cur = monthToDate();
-      if (!cur) return '—';
+      if (!cur) {
+        return '—';
+      }
       return COMPACT_FORMATTER.format(Math.max(0, cur.inflow - cur.outflow));
     }),
 

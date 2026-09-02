@@ -155,7 +155,9 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
           @if (store.hasFamilySupport()) {
             <div>
               <div class="mb-cmn-3">
-                <span class="text-cmn-sm font-medium text-text-secondary">Flow breakdown (MTD)</span>
+                <span class="text-cmn-sm font-medium text-text-secondary"
+                  >Flow breakdown (MTD)</span
+                >
               </div>
               <div class="grid grid-cols-1 gap-cmn-4 sm:grid-cols-3">
                 <cmn-stat-card
