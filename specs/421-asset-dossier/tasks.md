@@ -43,6 +43,17 @@ holdings page (click navigation), Playwright spec.
 - [x] T018 Write Playwright spec: click holding → dossier renders → back navigation
 - [x] T019 `ng lint` — zero errors; `npx playwright test` — 18/18 pass (7 new dossier tests)
 
+### US2 polish (increment 4)
+
+- [x] T025 Add `navigateToDossier` to `accounts-list.component.ts/.html` — brokerage and crypto position rows click through to `/assets/:symbol`
+- [x] T026 Bind `analysts.trends` in `asset-dossier.component.html` — recommendation trend table below recent actions
+- [x] T027 Add inline SVG sparkline to Radar Signals card in `asset-dossier.component.html` — computed from signal timestamps + severity, with latest-reading header; `radarSparklinePoints` and `latestSignal` computed signals on the component class
+- [x] T028 Unit tests: `dossier.state.spec.ts`, `dossier.methods.spec.ts`, `dossier.computed.spec.ts` — 198 total unit tests pass
+- [x] T029 Playwright: 4 new tests (accounts-list navigation, recommendation trend table, sparkline SVG, total 21/21)
+- [x] T030 Fix `patch-lifekit-ui.js` `.d.ts` pattern to support both 0.2.0 and 0.2.2 library layouts
+- [x] T031 `dotnet build FinanceSentry.sln` — 3 pre-existing warnings, 0 errors; `dotnet test --filter Category!=Integration` — all suites green
+- [x] T032 `ng test --configuration=ci` — 198/198 pass; `npx playwright test --reporter=json` — 21/21 pass
+
 ---
 
 ## Phase 3: US3 — Ledger's Read (P2) — Future session

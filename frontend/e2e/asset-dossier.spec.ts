@@ -1,6 +1,46 @@
 import {expect, type Page, test} from '@playwright/test';
 
 const API = '**/api/v1';
+const WEALTH_SUMMARY = {
+  totalNetWorth: 38500,
+  baseCurrency: 'USD',
+  appliedFilters: {category: null, provider: null},
+  categories: [
+    {
+      category: 'brokerage',
+      totalInBaseCurrency: 38500,
+      institutionCount: 1,
+      institutions: [
+        {
+          institutionId: 'ibkr-1',
+          provider: 'ibkr',
+          name: 'Interactive Brokers',
+          category: 'brokerage',
+          totalInBaseCurrency: 38500,
+          syncStatus: 'synced',
+          lastSyncTimestamp: '2026-09-01T10:00:00Z',
+          lastSuccessfulSyncTimestamp: '2026-09-01T10:00:00Z',
+          accounts: [
+            {
+              accountId: 'acc-aapl',
+              bankName: 'Interactive Brokers',
+              accountType: 'Stock',
+              accountNumberLast4: 'AAPL',
+              currency: 'USD',
+              provider: 'ibkr',
+              category: 'brokerage',
+              currentBalance: 17500,
+              balanceInBaseCurrency: 17500,
+              syncStatus: 'synced',
+              lastSyncTimestamp: '2026-09-01T10:00:00Z',
+            },
+          ],
+          cards: null,
+        },
+      ],
+    },
+  ],
+};
 
 const AUTH_RESPONSE = {
   user: {id: 'test-user-id', email: 'test@gmail.com'},
@@ -117,7 +157,18 @@ const DOSSIER_AAPL = {
         ingestedAt: '2026-08-20T15:00:00Z',
       },
     ],
-    trends: [],
+    trends: [
+      {
+        period: '0m',
+        strongBuy: 18,
+        buy: 12,
+        hold: 5,
+        sell: 1,
+        strongSell: 0,
+        source: 'yahoo_finance',
+        ingestedAt: '2026-09-01T00:00:00Z',
+      },
+    ],
     coverage: 'inUniverse',
   },
   recentNews: [
@@ -141,11 +192,25 @@ const DOSSIER_AAPL = {
   },
   radarSignals: [
     {
-      timestamp: '2026-08-28T09:00:00Z',
+      timestamp: '2026-08-15T09:00:00Z',
       scanner: 'momentum',
       signalType: 'RSI_OVERSOLD',
+      severity: 'low',
+      payload: {rsi: 35},
+    },
+    {
+      timestamp: '2026-08-22T09:00:00Z',
+      scanner: 'momentum',
+      signalType: 'MACD_CROSSOVER',
       severity: 'medium',
-      payload: {rsi: 28},
+      payload: {macd: 0.5},
+    },
+    {
+      timestamp: '2026-08-28T09:00:00Z',
+      scanner: 'radar',
+      signalType: 'VOLUME_SPIKE',
+      severity: 'high',
+      payload: {volume: 2500000},
     },
   ],
   generatedAt: '2026-09-01T10:30:00Z',
@@ -163,6 +228,9 @@ async function mockApis(page: Page): Promise<void> {
   );
   await page.route(`${API}/crypto/holdings`, route =>
     route.fulfill({status: 200, contentType: 'application/json', body: JSON.stringify(CRYPTO_HOLDINGS)})
+  );
+  await page.route(`${API}/wealth/summary`, route =>
+    route.fulfill({status: 200, contentType: 'application/json', body: JSON.stringify(WEALTH_SUMMARY)})
   );
   await page.route(`${API}/research/assets/AAPL/dossier`, route =>
     route.fulfill({status: 200, contentType: 'application/json', body: JSON.stringify(DOSSIER_AAPL)})
@@ -225,5 +293,32 @@ test.describe('Asset Dossier', () => {
     await page.getByRole('button', {name: /back to investments/i}).click();
 
     await expect(page).toHaveURL(/\/accounts\/investments/);
+  });
+
+  test('accounts list brokerage row navigates to dossier on click', async ({page}) => {
+    await page.goto('/accounts/list');
+    await expect(page.getByText('AAPL').first()).toBeVisible();
+
+    await page.getByText('AAPL').first().click();
+
+    await expect(page).toHaveURL(/\/assets\/AAPL/);
+  });
+
+  test('dossier page renders recommendation trend table', async ({page}) => {
+    await page.goto('/assets/AAPL');
+    await expect(page.getByText('Recommendation Trend')).toBeVisible();
+    await expect(page.getByText('Strong Buy')).toBeVisible();
+    // Verify a trend row is rendered
+    await expect(page.getByRole('cell', {name: '18'})).toBeVisible();
+  });
+
+  test('dossier page renders radar sparkline SVG for multiple signals', async ({page}) => {
+    await page.goto('/assets/AAPL');
+    await expect(page.getByText('Radar Signals')).toBeVisible();
+    // Sparkline SVG is rendered when there are >= 2 signals
+    const sparkline = page.locator('svg[aria-hidden="true"]');
+    await expect(sparkline).toBeVisible();
+    // Latest reading is shown in the header
+    await expect(page.getByText('Latest')).toBeVisible();
   });
 });

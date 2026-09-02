@@ -276,6 +276,50 @@
         } @else {
           <p class="mt-cmn-3 text-cmn-sm text-text-secondary">No recent analyst actions.</p>
         }
+
+        @if (analysts.trends.length > 0) {
+          <div class="mt-cmn-5 border-t border-border-default pt-cmn-4">
+            <p class="mb-cmn-3 text-cmn-sm font-medium text-text-primary">
+              Recommendation Trend
+            </p>
+            <div class="overflow-x-auto">
+              <table class="w-full text-cmn-xs" aria-label="Recommendation trends">
+                <thead>
+                  <tr class="text-text-secondary uppercase tracking-wide">
+                    <th class="pb-cmn-2 text-left font-normal">Period</th>
+                    <th class="pb-cmn-2 text-center font-normal">Strong Buy</th>
+                    <th class="pb-cmn-2 text-center font-normal">Buy</th>
+                    <th class="pb-cmn-2 text-center font-normal">Hold</th>
+                    <th class="pb-cmn-2 text-center font-normal">Sell</th>
+                    <th class="pb-cmn-2 text-center font-normal">Strong Sell</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (trend of analysts.trends; track trend.period) {
+                    <tr class="border-t border-border-default">
+                      <td class="py-cmn-2 font-mono text-text-secondary">{{ trend.period }}</td>
+                      <td class="py-cmn-2 text-center font-mono tabular-nums text-status-success">
+                        {{ trend.strongBuy }}
+                      </td>
+                      <td class="py-cmn-2 text-center font-mono tabular-nums text-status-success">
+                        {{ trend.buy }}
+                      </td>
+                      <td class="py-cmn-2 text-center font-mono tabular-nums text-text-secondary">
+                        {{ trend.hold }}
+                      </td>
+                      <td class="py-cmn-2 text-center font-mono tabular-nums text-status-error">
+                        {{ trend.sell }}
+                      </td>
+                      <td class="py-cmn-2 text-center font-mono tabular-nums text-status-error">
+                        {{ trend.strongSell }}
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
       </cmn-card>
     }
 
@@ -325,11 +369,54 @@
     <!-- Radar Signals -->
     @if (dossier.radarSignals.length > 0) {
       <cmn-card class="block">
-        <h2 class="font-headline text-cmn-lg font-semibold text-text-primary">Radar Signals</h2>
-        <p class="mt-cmn-1 text-cmn-xs text-text-secondary">
-          {{ dossier.radarSignals.length }} signal{{ dossier.radarSignals.length !== 1 ? 's' : '' }}
-          in the last 30 days
-        </p>
+        <div class="flex items-start justify-between gap-cmn-3">
+          <div>
+            <h2 class="font-headline text-cmn-lg font-semibold text-text-primary">Radar Signals</h2>
+            <p class="mt-cmn-1 text-cmn-xs text-text-secondary">
+              {{ dossier.radarSignals.length }} signal{{
+                dossier.radarSignals.length !== 1 ? 's' : ''
+              }}
+              in the last 30 days
+            </p>
+          </div>
+          @if (latestSignal(); as latest) {
+            <div class="text-right">
+              <p class="text-cmn-xs uppercase tracking-wide text-text-secondary">Latest</p>
+              <p class="mt-cmn-1 text-cmn-sm font-medium text-text-primary">
+                {{ latest.signalType }}
+              </p>
+              <p class="text-cmn-xs text-text-secondary">
+                {{ latest.timestamp | date: 'mediumDate' }}
+              </p>
+            </div>
+          }
+        </div>
+
+        @if (radarSparklinePoints(); as points) {
+          <div class="mt-cmn-4">
+            <svg
+              viewBox="0 0 100 30"
+              preserveAspectRatio="none"
+              class="h-10 w-full"
+              aria-hidden="true"
+            >
+              <polyline
+                [attr.points]="points"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                class="text-brand-primary"
+              />
+              <polyline
+                [attr.points]="points + sparklineFillClose"
+                fill="currentColor"
+                stroke="none"
+                class="text-brand-primary opacity-10"
+              />
+            </svg>
+          </div>
+        }
+
         <ul class="mt-cmn-4 space-y-cmn-2">
           @for (signal of dossier.radarSignals; track $index) {
             <li
