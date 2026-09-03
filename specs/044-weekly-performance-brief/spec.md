@@ -44,11 +44,31 @@ M1 — Ledger earns its keep. The weekly brief is the delivery end of the M1 loo
 - Job is already registered in the global `ConsecutiveFailureAlertFilter`; no per-job wiring needed
 - The `JobFailure` alert type (already mapped in MaterialityPolicy) delivers via OperationalFailure kind
 
+### [US4] Track-record delta and a single policy-judged action
+
+**As** Denys
+**I want** the brief to also tell me whether my own calls are beating SPY, and — when the book is
+outside policy — the one thing worth doing about it
+**So that** the digest closes the loop from "how did the book do" to "what should I do".
+
+Issue #414 names both ("track-record delta, at most one suggested action, judged against the IPS").
+The original spec deferred them; this story delivers them.
+
+**Acceptance criteria:**
+- One track-record line reports hit rate + average excess return vs SPY over the thesis book,
+  never blending terminal and active records (feature 020 R4), and carries the low-sample caveat
+- At most **one** action line, derived from the Notable portfolio-scanner signals that already
+  encode the IPS/risk boundary, in priority order: allocation drift (IPS bands) → cash-buffer
+  floor → single-position cap. No breach ⇒ no action line (stay silent)
+- The whole message (headline + body) stays ≤12 lines with both new lines present
+- Radar does not reference Research: the track record arrives through a cross-module port with its
+  adapter in `FinanceSentry.Integration` (the 039/043 precedent)
+
 ## Out of scope
 
-- IPS-driven action suggestions (a future Ledger reasoning step, not a Finance Sentry computation)
 - Trend charts or sparklines
 - Per-ticker breakdown
+- Free-form LLM-written commentary (the action line is a deterministic computation, not reasoning)
 
 ## Message format
 
@@ -60,7 +80,11 @@ Weekly brief: Outperform (+2.5% vs SPY)
 3M: Book +12.1% | SPY +9.4% (Δ +2.7%)
 1Y: Book +28.4% | SPY +22.1% (Δ +6.3%)
 
-Drift: Equity OverBand (+8.3% vs target)
+Calls: 58% of 12 closed beat SPY, avg Δ +3.2% (low sample)
+Drift: Equity OverBand (+8.3pp vs target)
+
+Action: Trim Equity by ~8.3pp (~$12.4k) to its 60% IPS target.
 ```
 
-Max 8 lines in the typical case (headline + blank + 4 periods + blank + 1 trend line); up to 12 if all 4 drift sleeves are Notable.
+Budget: the delivered message (headline + body) is ≤12 lines. The scoreboard and the action line
+are reserved first; drift trend lines fill whatever is left, up to 4.
