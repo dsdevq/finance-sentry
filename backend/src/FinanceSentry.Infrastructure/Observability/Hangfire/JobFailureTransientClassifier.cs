@@ -13,17 +13,27 @@ public static class JobFailureTransientClassifier
 {
     public static bool IsTransient(Exception? exception)
     {
-        for (var current = exception; current is not null; current = current.InnerException)
-        {
-            if (current is TimeoutException or TaskCanceledException or OperationCanceledException or SocketException)
-                return true;
+        if (exception is null)
+            return false;
 
-            if (current is HttpRequestException http
-                && http.StatusCode is { } status
-                && RetryPolicies.IsTransientHttpError(status))
-                return true;
+        // A fan-out job reports every failed unit of work in one AggregateException. Walking
+        // InnerException would only ever inspect InnerExceptions[0], so a total outage whose first
+        // failure happened to be a timeout was written off as self-healing and never reached the
+        // consecutive-failure streak. The run only self-heals if every failure in it does.
+        if (exception is AggregateException aggregate)
+        {
+            var inner = aggregate.Flatten().InnerExceptions;
+            return inner.Count > 0 && inner.All(IsTransient);
         }
 
-        return false;
+        if (exception is TimeoutException or TaskCanceledException or OperationCanceledException or SocketException)
+            return true;
+
+        if (exception is HttpRequestException http
+            && http.StatusCode is { } status
+            && RetryPolicies.IsTransientHttpError(status))
+            return true;
+
+        return IsTransient(exception.InnerException);
     }
 }

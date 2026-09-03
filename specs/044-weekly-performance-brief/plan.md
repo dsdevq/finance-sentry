@@ -69,3 +69,10 @@ Constraints found:
   has to actually fail for the filter to see anything: per-user isolation is kept, and the run
   throws only when **every** active user failed. A partial failure still delivers the briefs it can,
   which is the behaviour worth preserving over an all-or-nothing job.
+- US6 (files: `Infrastructure/Observability/Hangfire/JobFailureTransientClassifier.cs`,
+  `Tests.Unit/Observability/JobFailureTransientClassifierTests.cs`,
+  `Tests.Unit/Radar/BookPerformanceBriefJobTests.cs`). Constraint discovered: throwing an
+  `AggregateException` is only observable to the streak if the classifier judges the whole
+  aggregate. `Exception.InnerException` on an aggregate is just `InnerExceptions[0]`, so the
+  filter's verdict hung on the *ordering* of the per-user failures. The classifier now flattens
+  and requires every inner failure to be transient — one sticky failure makes the run sticky.

@@ -1,6 +1,7 @@
 namespace FinanceSentry.Tests.Unit.Radar;
 
 using FinanceSentry.Core.Interfaces;
+using FinanceSentry.Infrastructure.Observability.Hangfire;
 using FinanceSentry.Modules.Radar.Application.Services;
 using FinanceSentry.Modules.Radar.Domain;
 using FinanceSentry.Modules.Radar.Domain.Ports;
@@ -107,6 +108,21 @@ public sealed class BookPerformanceBriefJobTests
 
         var thrown = await act.Should().ThrowAsync<AggregateException>();
         thrown.Which.InnerExceptions.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task TotalFailureLedByATransientError_IsStillClassifiedAsAStickyFailure()
+    {
+        ActiveUsers(UserA, UserB);
+        PerformanceThrowsFor(UserA, new TimeoutException("price feed timed out"));
+        PerformanceThrowsFor(UserB, new InvalidOperationException("price history unavailable"));
+
+        var act = () => Job().ExecuteAsync();
+
+        var thrown = await act.Should().ThrowAsync<AggregateException>();
+        // The first user's failure being transient must not excuse the whole run: otherwise the
+        // streak never increments and the AC-required Telegram alert never fires.
+        JobFailureTransientClassifier.IsTransient(thrown.Which).Should().BeFalse();
     }
 
     [Fact]

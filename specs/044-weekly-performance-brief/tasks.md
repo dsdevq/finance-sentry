@@ -51,3 +51,11 @@
 - [x] Add `BookPerformanceBriefJobTests` (5 cases) covering partial failure, total failure, no users, and insufficient history
 - [x] `dotnet build FinanceSentry.sln -c Release` → 0 warnings, 0 errors
 - [x] `dotnet test --filter "Category!=Integration"` → 568 unit / 127 integration / 98 radar / 102 MCP all pass
+
+## [US6] Aggregate failures reach the consecutive-failure streak
+
+- [x] `JobFailureTransientClassifier`: flatten `AggregateException` and require **all** inner failures to be transient — walking `InnerException` only ever saw `InnerExceptions[0]`, so a total outage led by a timeout never incremented the streak and the AC-2 Telegram alert never fired
+- [x] Add `JobFailureTransientClassifierTests` (9 cases): chain walk, HTTP status set, all-transient / mixed / nested / empty aggregates
+- [x] Add `TotalFailureLedByATransientError_IsStillClassifiedAsAStickyFailure` to `BookPerformanceBriefJobTests` — pins the job's own thrown aggregate against the classifier
+- [x] `dotnet build FinanceSentry.sln -c Release` → 0 warnings, 0 errors
+- [x] `dotnet test --filter "Category!=Integration"` → 578 unit / 127 integration / 98 radar / 102 MCP all pass
