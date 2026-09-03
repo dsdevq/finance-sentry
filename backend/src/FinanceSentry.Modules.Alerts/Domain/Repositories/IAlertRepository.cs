@@ -27,4 +27,18 @@ public interface IAlertRepository
     Task DeleteByReferenceIdAsync(Guid referenceId, CancellationToken ct = default);
 
     Task AddAsync(Alert alert, CancellationToken ct = default);
+
+    /// <summary>
+    /// Records the user's one-tap decision ("Accept" or "Defer") against the alert. If the decision
+    /// is "Accept" the alert is also resolved so it no longer appears as open. Returns false when the
+    /// alert is not found or does not belong to the user.
+    /// </summary>
+    Task<bool> AcknowledgeAsync(Guid userId, Guid alertId, string decision, CancellationToken ct = default);
+
+    /// <summary>
+    /// Same as <see cref="AcknowledgeAsync"/> but looks up the active alert by <paramref name="referenceId"/>
+    /// instead of its row id. Used by the bot's inline-keyboard callback which only knows the stable
+    /// reference anchor from the wake payload.
+    /// </summary>
+    Task<bool> AcknowledgeByReferenceAsync(Guid userId, string alertType, Guid referenceId, string decision, CancellationToken ct = default);
 }

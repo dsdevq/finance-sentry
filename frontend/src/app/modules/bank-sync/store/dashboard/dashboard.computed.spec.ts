@@ -31,10 +31,22 @@ function flow(month: string, inflow: number, outflow: number): MonthlyFlow {
   };
 }
 
-function build(monthlyFlow: MonthlyFlow[]) {
+interface Fixture {
+  monthlyFlow: MonthlyFlow[];
+  totalNetWorthUsd?: number;
+  netWorthHistory?: NetWorthSnapshotDto[];
+  projectionReturnRate?: number;
+}
+
+function build({
+  monthlyFlow,
+  totalNetWorthUsd = 0,
+  netWorthHistory = [],
+  projectionReturnRate = 0,
+}: Fixture) {
   const data: DashboardData = {
     aggregatedBalance: {USD: 0},
-    totalNetWorthUsd: 0,
+    totalNetWorthUsd,
     accountCount: 1,
     accountsByType: {},
     monthlyFlow,
@@ -44,15 +56,42 @@ function build(monthlyFlow: MonthlyFlow[]) {
 
   return {
     data: signal<Nullable<DashboardData>>(data),
-    netWorthHistory: signal<NetWorthSnapshotDto[]>([]),
+    netWorthHistory: signal<NetWorthSnapshotDto[]>(netWorthHistory),
     historyLoading: signal(false),
     historyError: signal<string | null>(null),
+    projectionReturnRate: signal(projectionReturnRate),
   };
 }
 
 function computedFor(monthlyFlow: MonthlyFlow[]) {
-  return TestBed.runInInjectionContext(() => dashboardComputed(build(monthlyFlow)));
+  return TestBed.runInInjectionContext(() => dashboardComputed(build({monthlyFlow})));
 }
+
+function projectionFor(fixture: Fixture) {
+  return TestBed.runInInjectionContext(() => dashboardComputed(build(fixture)));
+}
+
+function snapshot(banking: number, brokerage: number, crypto: number): NetWorthSnapshotDto {
+  return {
+    snapshotDate: '2026-07-31',
+    bankingTotal: banking,
+    brokerageTotal: brokerage,
+    cryptoTotal: crypto,
+    totalNetWorth: banking + brokerage + crypto,
+    currency: 'USD',
+  };
+}
+
+/**
+ * Three closed months netting −200, +1000 and +5000, plus a partial August. The +5000 stands
+ * in for the June 2026 duplicate-salary artifact: median 1000, mean 1933.
+ */
+const SKEWED_MONTHS: MonthlyFlow[] = [
+  flow('2026-05', 1000, 1200),
+  flow('2026-06', 5000, 4000),
+  flow('2026-07', 6000, 1000),
+  flow('2026-08', 400, 300),
+];
 
 /** Three closed months at a steady 4000 in / 2000 out, plus a partial August. */
 function steadyHistory(augustInflow: number, augustOutflow: number): MonthlyFlow[] {
@@ -215,6 +254,183 @@ describe('dashboardComputed', () => {
       const c = computedFor([flow('2026-07', 4000, 2000)]);
 
       expect(c.savingsRateMonthToDateFormatted()).toBe('—');
+    });
+  });
+
+  describe('twelve-month projection from savings contributions', () => {
+    it('projects from the MEDIAN month, so one artifact month cannot drag the number', () => {
+      // Nets are −200 / +1000 / +5000. Median 1000 → +12,000 over the horizon.
+      // A mean (1933) would have produced $33,200 off the same months.
+      const c = projectionFor({monthlyFlow: SKEWED_MONTHS, totalNetWorthUsd: 10_000});
+
+      expect(c.medianMonthlySavingsFormatted()).toBe('$1,000');
+      expect(c.projectedNetWorthFormatted()).toBe('$22,000');
+    });
+
+    it('averages the two middle months when the sample is even', () => {
+      const c = projectionFor({
+        monthlyFlow: [
+          flow('2026-04', 1000, 900), // +100
+          flow('2026-05', 1000, 700), // +300
+          flow('2026-06', 1000, 500), // +500
+          flow('2026-07', 1000, 100), // +900
+        ],
+        totalNetWorthUsd: 0,
+      });
+
+      // Middle two are 300 and 500 → 400/mo → 4,800 over twelve months.
+      expect(c.medianMonthlySavingsFormatted()).toBe('$400');
+      expect(c.projectedNetWorthFormatted()).toBe('$4,800');
+    });
+
+    it('renders nothing below three complete months', () => {
+      const c = projectionFor({
+        monthlyFlow: [
+          flow('2026-06', 4000, 2000),
+          flow('2026-07', 4000, 2000),
+          flow('2026-08', 1, 1),
+        ],
+      });
+
+      expect(c.hasProjection()).toBe(false);
+    });
+
+    it('turns on at exactly three complete months and names the sample size', () => {
+      const c = projectionFor({monthlyFlow: SKEWED_MONTHS});
+
+      expect(c.hasProjection()).toBe(true);
+      expect(c.projectionBasisLabel()).toBe('Median saved per month, based on 3 complete months');
+    });
+
+    it('keeps the in-progress month out of the baseline', () => {
+      // August is wildly negative; if it leaked into the sample the median would move.
+      const withWildAugust = projectionFor({
+        monthlyFlow: [...SKEWED_MONTHS.slice(0, 3), flow('2026-08', 0, 90_000)],
+        totalNetWorthUsd: 10_000,
+      });
+
+      expect(withWildAugust.projectedNetWorthFormatted()).toBe('$22,000');
+      expect(withWildAugust.projectionBasisLabel()).toContain('3 complete months');
+    });
+
+    it('projects a shrinking net worth when the typical month is negative', () => {
+      const c = projectionFor({
+        monthlyFlow: [
+          flow('2026-05', 1000, 1200),
+          flow('2026-06', 1000, 1300),
+          flow('2026-07', 1000, 1100),
+        ],
+        totalNetWorthUsd: 10_000,
+      });
+
+      expect(c.medianMonthlySavingsFormatted()).toBe('-$200');
+      expect(c.projectedNetWorthFormatted()).toBe('$7,600');
+    });
+
+    it('compounds nothing at the 0% default, even with market-marked sleeves present', () => {
+      const c = projectionFor({
+        monthlyFlow: SKEWED_MONTHS,
+        totalNetWorthUsd: 10_000,
+        netWorthHistory: [snapshot(2000, 8000, 2000)],
+      });
+
+      expect(c.projectedNetWorthFormatted()).toBe('$22,000');
+      expect(c.projectionAssumptionLabel()).toBe(
+        'Assumes no market return — this is contributions only.'
+      );
+    });
+
+    it('compounds only brokerage and crypto at a non-zero rate, never banking cash', () => {
+      const c = projectionFor({
+        monthlyFlow: SKEWED_MONTHS,
+        totalNetWorthUsd: 10_000,
+        // Banking dwarfs the market sleeves; 5% of it would add 5,000, not 500.
+        netWorthHistory: [snapshot(100_000, 8000, 2000)],
+        projectionReturnRate: 0.05,
+      });
+
+      // 10,000 + 12,000 contributions + 5% of the 10,000 market-marked sleeves.
+      expect(c.projectedNetWorthFormatted()).toBe('$22,500');
+      expect(c.projectionAssumptionLabel()).toBe(
+        'Assumes 5%/yr on the $10K already in brokerage and crypto. ' +
+          'Cash and future contributions do not compound.'
+      );
+    });
+
+    it('reads the market-marked base from the latest snapshot, not the first', () => {
+      const c = projectionFor({
+        monthlyFlow: SKEWED_MONTHS,
+        totalNetWorthUsd: 10_000,
+        netWorthHistory: [snapshot(0, 1000, 0), snapshot(0, 8000, 2000)],
+        projectionReturnRate: 0.05,
+      });
+
+      expect(c.projectedNetWorthFormatted()).toBe('$22,500');
+    });
+
+    it('breaks the headline into addends that sum to it at the 0% default', () => {
+      const c = projectionFor({
+        monthlyFlow: SKEWED_MONTHS,
+        totalNetWorthUsd: 10_000,
+        netWorthHistory: [snapshot(100_000, 8000, 2000)],
+      });
+
+      // 10,000 + 12,000 + 0 = 22,000, the headline. A flat default reads "$0", not "+$0".
+      expect(c.projectionTodayFormatted()).toBe('$10,000');
+      expect(c.projectedContributionsFormatted()).toBe('+$12,000');
+      expect(c.projectedMarketReturnFormatted()).toBe('$0');
+      expect(c.projectedNetWorthFormatted()).toBe('$22,000');
+    });
+
+    it('moves only the market-return addend when a rate is selected', () => {
+      const flat = projectionFor({
+        monthlyFlow: SKEWED_MONTHS,
+        totalNetWorthUsd: 10_000,
+        netWorthHistory: [snapshot(100_000, 8000, 2000)],
+      });
+      const withReturn = projectionFor({
+        monthlyFlow: SKEWED_MONTHS,
+        totalNetWorthUsd: 10_000,
+        netWorthHistory: [snapshot(100_000, 8000, 2000)],
+        projectionReturnRate: 0.05,
+      });
+
+      // Behaviour is untouched by the assumption — that is the whole point of the split.
+      expect(withReturn.projectionTodayFormatted()).toBe(flat.projectionTodayFormatted());
+      expect(withReturn.projectedContributionsFormatted()).toBe(
+        flat.projectedContributionsFormatted()
+      );
+      // 5% of the 10,000 market-marked sleeves, and 10,000 + 12,000 + 500 = the headline.
+      expect(withReturn.projectedMarketReturnFormatted()).toBe('+$500');
+      expect(withReturn.projectedNetWorthFormatted()).toBe('$22,500');
+    });
+
+    it('signs a shrinking contributions line, so a withdrawal cannot read as a credit', () => {
+      const c = projectionFor({
+        monthlyFlow: [
+          flow('2026-05', 1000, 1200),
+          flow('2026-06', 1000, 1300),
+          flow('2026-07', 1000, 1100),
+        ],
+        totalNetWorthUsd: 10_000,
+      });
+
+      // −200/mo over twelve months. U+2212, matching netWorthChangeFormatted.
+      expect(c.projectedContributionsFormatted()).toBe('−$2,400');
+      expect(c.projectedNetWorthFormatted()).toBe('$7,600');
+    });
+
+    it('says a return assumption has no effect when no snapshot carries a market balance', () => {
+      const c = projectionFor({
+        monthlyFlow: SKEWED_MONTHS,
+        totalNetWorthUsd: 10_000,
+        projectionReturnRate: 0.07,
+      });
+
+      expect(c.projectedNetWorthFormatted()).toBe('$22,000');
+      expect(c.projectionAssumptionLabel()).toBe(
+        'The latest snapshot has no market-marked balance, so 7%/yr changes nothing.'
+      );
     });
   });
 });
