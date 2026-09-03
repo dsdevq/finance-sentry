@@ -4,7 +4,17 @@ import {ERROR_MESSAGES} from '@lifekit-hq/core';
 import {beforeEach, describe, expect, it} from 'vitest';
 
 import {ERROR_MESSAGES_REGISTRY} from '../../../core/errors/error-messages.registry';
-import {type AssetDossierDto, type AssetLedgerReadDto} from '../models/dossier/dossier.model';
+import {
+  type AssetDossierDto,
+  type AssetLedgerReadDto,
+  type DossierAnalystsSection,
+  type DossierPositionSection,
+  type DossierSignalItem,
+  type EarningsEventDto,
+  type NewsArticleDto,
+  type ThesisDto,
+  type ValuationSnapshotDto,
+} from '../models/dossier/dossier.model';
 import {dossierComputed} from './dossier.computed';
 import {type DossierState} from './dossier.state';
 
@@ -31,6 +41,101 @@ function ledgerRead(overrides: Partial<AssetLedgerReadDto> = {}): AssetLedgerRea
     ...overrides,
   };
 }
+
+function emptyDossier(overrides: Partial<AssetDossierDto> = {}): AssetDossierDto {
+  return {
+    symbol: 'ZZZZ',
+    position: null,
+    thesis: null,
+    valuation: null,
+    analysts: null,
+    recentNews: [],
+    nextEarnings: null,
+    radarSignals: [],
+    generatedAt: '2026-09-03T00:00:00Z',
+    ...overrides,
+  };
+}
+
+const POSITION: DossierPositionSection = {
+  provider: 'ibkr',
+  quantity: 1,
+  currentValueUsd: 100,
+  costBasisUsd: null,
+  unrealizedPnlUsd: null,
+  unrealizedPnlPercent: null,
+  taxLots: [],
+};
+
+const THESIS: ThesisDto = {
+  id: 't-1',
+  ticker: 'ZZZZ',
+  thesisText: 'A thesis.',
+  keyDataPoints: [],
+  catalysts: [],
+  invalidationTriggers: [],
+  createdAt: '2026-01-01T00:00:00Z',
+  updatedAt: '2026-01-01T00:00:00Z',
+  brokenAt: null,
+  brokenReason: null,
+  entryPrice: null,
+};
+
+const NO_METRIC = {
+  value: null,
+  fiveYearAvg: null,
+  historyWindowYears: null,
+  historyUnavailable: true,
+};
+
+function valuation(notApplicable: boolean): ValuationSnapshotDto {
+  return {
+    ticker: 'ZZZZ',
+    notApplicable,
+    price: null,
+    isStale: false,
+    metrics: {
+      trailingPe: NO_METRIC,
+      forwardPe: NO_METRIC,
+      evToEbitda: NO_METRIC,
+      dividendYield: NO_METRIC,
+    },
+    consensusTarget: null,
+    impliedUpsidePct: null,
+    peerSet: null,
+    sources: [],
+    retrievedAt: '2026-09-03T00:00:00Z',
+  };
+}
+
+const ANALYSTS: DossierAnalystsSection = {recentActions: [], trends: [], coverage: 'covered'};
+
+const EARNINGS: EarningsEventDto = {
+  ticker: 'ZZZZ',
+  eventType: 'earnings',
+  eventDate: '2026-10-01',
+  isEstimate: false,
+  source: 'test',
+};
+
+const NEWS: NewsArticleDto = {
+  id: 'n-1',
+  source: 'test',
+  title: 'Headline',
+  url: 'https://example.com',
+  summary: null,
+  tickers: ['ZZZZ'],
+  categories: [],
+  publishedAt: '2026-09-01T00:00:00Z',
+};
+
+const SIGNAL: DossierSignalItem = {
+  timestamp: '2026-09-01T00:00:00Z',
+  scanner: 'radar',
+  signalType: 'VOLUME_SPIKE',
+  severity: 'high',
+  payload: {},
+};
 
 describe('dossierComputed', () => {
   beforeEach(() => {
@@ -78,10 +183,55 @@ describe('dossierComputed', () => {
     });
   });
 
+  it('hasDossierSections is false before a dossier has loaded', () => {
+    const store = buildSignals();
+    TestBed.runInInjectionContext(() => {
+      expect(dossierComputed(store).hasDossierSections()).toBe(false);
+    });
+  });
+
+  it('hasDossierSections is false when every section is null or empty', () => {
+    const store = buildSignals({dossier: emptyDossier()});
+    TestBed.runInInjectionContext(() => {
+      expect(dossierComputed(store).hasDossierSections()).toBe(false);
+    });
+  });
+
+  it('hasDossierSections ignores a not-applicable valuation (crypto)', () => {
+    const store = buildSignals({dossier: emptyDossier({valuation: valuation(true)})});
+    TestBed.runInInjectionContext(() => {
+      expect(dossierComputed(store).hasDossierSections()).toBe(false);
+    });
+  });
+
+  it.each<[string, Partial<AssetDossierDto>]>([
+    ['position', {position: POSITION}],
+    ['thesis', {thesis: THESIS}],
+    ['valuation', {valuation: valuation(false)}],
+    ['analysts', {analysts: ANALYSTS}],
+    ['nextEarnings', {nextEarnings: EARNINGS}],
+    ['recentNews', {recentNews: [NEWS]}],
+    ['radarSignals', {radarSignals: [SIGNAL]}],
+  ])('hasDossierSections is true when only %s has data', (_name, overrides) => {
+    const store = buildSignals({dossier: emptyDossier(overrides)});
+    TestBed.runInInjectionContext(() => {
+      expect(dossierComputed(store).hasDossierSections()).toBe(true);
+    });
+  });
+
   it('ledgerReadNarrative is empty when nothing has been generated', () => {
     const store = buildSignals({ledgerRead: ledgerRead({narrative: null})});
     TestBed.runInInjectionContext(() => {
       expect(dossierComputed(store).ledgerReadNarrative()).toBe('');
+      expect(dossierComputed(store).isLedgerReadStale()).toBe(false);
+    });
+  });
+
+  it('an absent cached read is not flagged stale even though the API says so', () => {
+    const store = buildSignals({
+      ledgerRead: ledgerRead({narrative: null, generatedAt: null, isStale: true, cached: false}),
+    });
+    TestBed.runInInjectionContext(() => {
       expect(dossierComputed(store).isLedgerReadStale()).toBe(false);
     });
   });

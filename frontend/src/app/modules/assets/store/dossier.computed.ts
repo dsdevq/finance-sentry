@@ -27,9 +27,30 @@ export function dossierComputed(store: StateSignals) {
       }
       return errorMessages.resolve(store.dossierErrorCode()) ?? DEFAULT_DOSSIER_ERROR;
     }),
+    // Mirrors the render conditions in the template: a dossier whose every section is
+    // null/empty renders a "no data" state instead of a page of hidden cards.
+    hasDossierSections: computed(() => {
+      const dossier = store.dossier();
+      if (!dossier) {
+        return false;
+      }
+      return (
+        dossier.position !== null ||
+        dossier.thesis !== null ||
+        (dossier.valuation !== null && !dossier.valuation.notApplicable) ||
+        dossier.analysts !== null ||
+        dossier.nextEarnings !== null ||
+        dossier.recentNews.length > 0 ||
+        dossier.radarSignals.length > 0
+      );
+    }),
     isLedgerReadLoading: computed(() => store.ledgerReadStatus() === 'loading'),
     ledgerReadNarrative: computed(() => store.ledgerRead()?.narrative ?? ''),
-    isLedgerReadStale: computed(() => store.ledgerRead()?.isStale === true),
+    // The backend reports a missing cache as stale; only an actual narrative can be out of date.
+    isLedgerReadStale: computed(() => {
+      const read = store.ledgerRead();
+      return read?.isStale === true && !!read.narrative;
+    }),
     ledgerReadErrorMessage: computed(() => {
       if (store.ledgerReadStatus() !== 'error') {
         return '';

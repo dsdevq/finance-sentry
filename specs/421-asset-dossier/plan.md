@@ -153,3 +153,23 @@ Key design decisions:
   condition in the UI rather than a 500.
 - No new UI component was needed — the section composes existing `cmn-card` / `cmn-button` /
   `cmn-alert` / `cmn-tag`, so the library-first rule is satisfied without a lifekit-common PR.
+
+## Edge-case closure (increment 6) — frontend only
+
+Surface: `assets/store/dossier.computed.ts`, `pages/asset-dossier/*`, their specs, and
+`e2e/asset-dossier.spec.ts`. No backend change.
+
+- **"No data" is a page state, not a per-section one.** Every section already hid itself when its
+  source was empty, so a symbol with nothing on file rendered a bare header over whitespace — the
+  spec's "unknown ticker → page shows a no-data state" edge case was unmet. `hasDossierSections`
+  derives emptiness in the store and the page swaps to `cmn-empty-state` (library component, no
+  lifekit-common PR needed). It mirrors the template's render conditions exactly, including
+  treating a `notApplicable` valuation as absent — otherwise every crypto symbol would count as
+  "has data" on the strength of a section the UI never draws.
+- **The Ledger's-read card is hidden in the no-data state.** There are no facts to summarise, so
+  offering to run the agent would spend a model call to be told "nothing on file".
+- **`isStale` is a property of a narrative, not of the endpoint.** `GetAssetLedgerReadQuery`
+  returns `IsStale: true` when no cache row exists (contract-tested), which the UI was rendering
+  as an "out of date" tag next to a Generate button on every first visit. Fixed in
+  `isLedgerReadStale` — it now requires a narrative — rather than by changing the backend
+  contract, which no other consumer misreads.

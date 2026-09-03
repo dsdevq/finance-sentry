@@ -231,6 +231,19 @@ const DOSSIER_AAPL = {
   generatedAt: '2026-09-01T10:30:00Z',
 };
 
+// A symbol the backend knows nothing about: every section comes back null/empty.
+const DOSSIER_UNKNOWN = {
+  symbol: 'ZZZZ',
+  position: null,
+  thesis: null,
+  valuation: null,
+  analysts: null,
+  recentNews: [],
+  nextEarnings: null,
+  radarSignals: [],
+  generatedAt: '2026-09-01T10:30:00Z',
+};
+
 const EMPTY_LEDGER_READ = {
   symbol: 'AAPL',
   narrative: null,
@@ -283,6 +296,13 @@ async function mockApis(page: Page): Promise<void> {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify(DOSSIER_AAPL),
+    })
+  );
+  await page.route(`${API}/research/assets/ZZZZ/dossier`, route =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(DOSSIER_UNKNOWN),
     })
   );
   // Default: nothing generated yet. Individual tests re-route to cover the cached/stale/error paths.
@@ -379,6 +399,20 @@ test.describe('Asset Dossier', () => {
     // Latest reading is shown in the header
     await expect(page.getByText('Latest')).toBeVisible();
   });
+
+  test('a symbol with no data on file renders a no-data state, not empty sections', async ({
+    page,
+  }) => {
+    await page.goto('/assets/ZZZZ');
+
+    await expect(page.getByRole('heading', {name: 'ZZZZ', level: 1})).toBeVisible();
+    await expect(page.getByTestId('dossier-no-data')).toContainText('Nothing on file for ZZZZ');
+    // No section card is rendered at all — not even a hollow one.
+    await expect(page.getByText('Position', {exact: true})).toHaveCount(0);
+    await expect(page.getByText('Investment Thesis')).toHaveCount(0);
+    await expect(page.getByText('Radar Signals')).toHaveCount(0);
+    await expect(page.getByTestId('ledger-read-card')).toHaveCount(0);
+  });
 });
 
 test.describe("Ledger's read", () => {
@@ -393,6 +427,8 @@ test.describe("Ledger's read", () => {
     await expect(page.getByTestId('ledger-read-empty')).toBeVisible();
     await expect(page.getByTestId('ledger-read-generate')).toBeVisible();
     await expect(page.getByTestId('ledger-read-narrative')).toHaveCount(0);
+    // The API reports a missing cache as stale — nothing was ever generated, so no flag.
+    await expect(page.getByTestId('ledger-read-stale')).toHaveCount(0);
   });
 
   test('generate button posts to the agent and renders the returned read', async ({page}) => {

@@ -1,7 +1,13 @@
 import {DatePipe, DecimalPipe} from '@angular/common';
 import {ChangeDetectionStrategy, Component, computed, inject} from '@angular/core';
 import {Router} from '@angular/router';
-import {AlertComponent, ButtonComponent, CardComponent, TagComponent} from '@lifekit-hq/ui';
+import {
+  AlertComponent,
+  ButtonComponent,
+  CardComponent,
+  EmptyStateComponent,
+  TagComponent,
+} from '@lifekit-hq/ui';
 
 import {AppRoute} from '../../../../shared/enums/app-route/app-route.enum';
 import {type DossierSignalItem} from '../../models/dossier/dossier.model';
@@ -17,7 +23,15 @@ const SPARKLINE_MIN_POINTS = 2;
 
 @Component({
   selector: 'fns-asset-dossier',
-  imports: [AlertComponent, ButtonComponent, CardComponent, DatePipe, DecimalPipe, TagComponent],
+  imports: [
+    AlertComponent,
+    ButtonComponent,
+    CardComponent,
+    DatePipe,
+    DecimalPipe,
+    EmptyStateComponent,
+    TagComponent,
+  ],
   templateUrl: './asset-dossier.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [DossierStore],

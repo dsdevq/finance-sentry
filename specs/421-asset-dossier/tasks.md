@@ -82,6 +82,24 @@ error registry · contract, unit and Playwright tests.
 
 ---
 
+### Edge-case closure (increment 6)
+
+**Surface area**: `assets/store/dossier.computed.ts` · `pages/asset-dossier/*.html|.ts` ·
+`dossier.computed.spec.ts` · `e2e/asset-dossier.spec.ts`. Frontend only — no backend change.
+
+- [x] T035 `hasDossierSections` computed + `cmn-empty-state` "no data" state for a symbol whose
+      every section is null/empty (spec Edge Cases: unknown ticker) — previously the page rendered
+      a lone header with nothing under it
+- [x] T036 `isLedgerReadStale` requires an actual narrative — the API reports a *missing* cache as
+      stale, which flagged a never-generated read "out of date" on every first visit
+- [x] T037 Unit tests: 10 new `dossier.computed.spec.ts` cases (per-section truth table,
+      crypto not-applicable valuation, absent-read staleness) — 231/231 pass
+- [x] T038 Playwright: no-data state for an unknown ticker; no stale tag before first generation
+- [x] T039 `ng lint`, `prettier --check`, `ng test --configuration ci`, `ng build --production`,
+      `playwright test` — all green; `dotnet build -c Release` 0 warnings, `dotnet test -m:1` green
+
+---
+
 ## Dependencies & Execution Order
 
 - **US1 (Phase 1)**: No external dependencies — all backend data already exists. Done.

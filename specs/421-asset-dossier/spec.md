@@ -4,7 +4,7 @@
 
 **Created**: 2026-09-02
 
-**Status**: In Progress (US1 implementing)
+**Status**: Complete — US1, US2 and US3 landed; edge cases closed (increment 6)
 
 **Input**: Issue #421 — Asset Dossier — per-holding page rendering everything Ledger sees
 
