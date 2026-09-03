@@ -36,21 +36,36 @@ public sealed class BookPerformanceBriefJob(
     public async Task ExecuteAsync(CancellationToken ct = default)
     {
         var userIds = await bankingTotals.GetActiveUserIdsAsync(ct);
+        var failures = new List<Exception>();
 
         foreach (var userId in userIds)
         {
-            await RunForUserAsync(userId, ct);
+            var error = await RunForUserAsync(userId, ct);
+            if (error is not null)
+            {
+                failures.Add(error);
+            }
+        }
+
+        // One user's brief failing must not cost the others theirs, but a run where every user failed
+        // produced nothing at all — surface it as a job failure so ConsecutiveFailureAlertFilter can
+        // see the streak and alert (US2). Swallowing here made total outage indistinguishable from a
+        // quiet week, which is the exact gap the filter exists to close.
+        if (failures.Count > 0 && failures.Count == userIds.Count)
+        {
+            throw new AggregateException(
+                $"Performance brief failed for all {failures.Count} active user(s).", failures);
         }
     }
 
-    private async Task RunForUserAsync(Guid userId, CancellationToken ct)
+    private async Task<Exception?> RunForUserAsync(Guid userId, CancellationToken ct)
     {
         try
         {
             var result = await performance.GetAsync(userId, DefaultPeriods, ct);
             if (result.Periods.Count == 0)
             {
-                return;
+                return null;
             }
 
             // Every Notable portfolio signal, not just drift: the suggested action also weighs the
@@ -67,10 +82,12 @@ public sealed class BookPerformanceBriefJob(
 
             var brief = PerformanceBriefComposer.Compose(result, portfolioSignals, delta);
             await alerts.GeneratePerformanceBriefAlertAsync(userId, brief.Headline, brief.Body, ct);
+            return null;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogWarning(ex, "Performance brief failed for user {UserId}", userId);
+            return ex;
         }
     }
 }

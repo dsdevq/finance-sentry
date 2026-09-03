@@ -64,6 +64,21 @@ The original spec deferred them; this story delivers them.
 - Radar does not reference Research: the track record arrives through a cross-module port with its
   adapter in `FinanceSentry.Integration` (the 039/043 precedent)
 
+### [US5] The action line fires only on a real breach, and a dead brief is loud
+
+**As** Denys
+**I want** the suggested action to reflect an actual policy breach, and a week where no brief could
+be produced at all to reach me as a failure alert
+**So that** the digest keeps its "stay silent unless it matters" promise in both directions.
+
+**Acceptance criteria:**
+- Risk-rule limits reach the portfolio scanner in the unit `PortfolioScanData` declares
+  (percentage points), so the cash floor and single-position cap fire on breaches and only on
+  breaches — satisfying US4's "No breach ⇒ no action line"
+- A run in which every active user's brief failed leaves Hangfire in a failed state so
+  `ConsecutiveFailureAlertFilter` can accumulate the streak (US2); a run where only some users
+  failed still delivers the rest
+
 ## Out of scope
 
 - Trend charts or sparklines

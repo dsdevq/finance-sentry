@@ -41,3 +41,13 @@
 - [x] Add `ResearchTrackRecordSourceTests` (3 cases) under `Tests.Integration/CrossModulePorts`
 - [x] `dotnet build FinanceSentry.sln -c Release` → 0 warnings, 0 errors
 - [x] `dotnet test --filter "Category!=Integration"` → 563 unit / 123 integration / 102 MCP all pass
+
+## [US5] Unit-consistent policy limits + observable total failure
+
+- [x] Convert `MaxPositionWeightPct` / `MinCashBufferPct` from the stored fraction to percentage points in `PortfolioScanDataReader` — the single seam where the risk rule set meets `PortfolioScanData`
+- [x] Add `PortfolioScanDataReaderTests` (4 cases) under `Tests.Integration/CrossModulePorts` pinning the conversion and the null-limit paths
+- [x] Pin the payload units in `PortfolioScannerTests` (`limitPct`/`weightPct`, `cashPct`/`minCashBufferPct`) + add the at-the-floor boundary case
+- [x] `BookPerformanceBriefJob`: collect per-user failures and throw an `AggregateException` when every active user failed, so `ConsecutiveFailureAlertFilter` sees the streak
+- [x] Add `BookPerformanceBriefJobTests` (5 cases) covering partial failure, total failure, no users, and insufficient history
+- [x] `dotnet build FinanceSentry.sln -c Release` → 0 warnings, 0 errors
+- [x] `dotnet test --filter "Category!=Integration"` → 568 unit / 127 integration / 98 radar / 102 MCP all pass

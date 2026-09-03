@@ -33,6 +33,26 @@ Constraints found:
 - Only one signal query is issued: all Notable `portfolio_scanner` signals for the user, then
   partitioned by type in the composer.
 
+### Slice 3 (this session) — US5: unit-consistent policy limits + observable total failure
+
+Touches:
+- `FinanceSentry.Integration/PortfolioScanDataReader.cs` — convert `MaxPositionWeightPct` /
+  `MinCashBufferPct` from the stored fraction to percentage points at the port boundary
+- `FinanceSentry.Modules.Radar/Infrastructure/Jobs/BookPerformanceBriefJob.cs` — collect per-user
+  failures and throw when every active user failed
+- `FinanceSentry.Tests.Integration/CrossModulePorts/PortfolioScanDataReaderTests.cs` (new)
+- `FinanceSentry.Tests.Unit/Radar/BookPerformanceBriefJobTests.cs` (new — the name freed when
+  slice 2 moved composition into `PerformanceBriefComposerTests`)
+- `FinanceSentry.Modules.Radar.Tests/Portfolio/PortfolioScannerTests.cs` — pin the payload units
+
+Constraints found:
+- `RiskRuleSet.MaxPositionWeightPct` / `MinCashBufferPct` are **fractions in (0,1]** despite the
+  `Pct` suffix (`SaveRiskRuleSetCommand.ValidateFractionalRange`, `numeric(9,6)`), while
+  `PortfolioScanData` is contractually percentage points. `IPositionCapSource` documents the
+  fraction and its consumer compares fractions, so the conversion belongs in the scan adapter only.
+- `ConsecutiveFailureAlertFilter` is an `IApplyStateFilter` — it only ever sees job-level terminal
+  states, so a job that catches everything internally can never accumulate a streak.
+
 ## Constraints / decisions
 
 - Action-line priority is `allocation_drift` (the IPS bands proper) → `cash_buffer` → 
@@ -45,4 +65,7 @@ Constraints found:
 - Brief is the `Alert.Title` (headline) + `Alert.Message` (body). The Companion dispatch sends both. Body must be ≤ ~12 lines.
 - Signal query: `IRadarSignalRepository.ListAsync(new SignalFilter(Since: 30-day lookback, Scanner: "portfolio_scanner", SignalType: "allocation_drift", UserId: userId, Severity: "notable"))`. Take up to 4 lines sorted by `driftPct` descending.
 - `DispositionFor` default policy (quiet→suppress, digest→hold) is correct for PerformanceBrief — no special override needed.
-- US2 (cron failure alerting) is satisfied by the existing global `ConsecutiveFailureAlertFilter` — no new code.
+- US2 (cron failure alerting) rides the existing global `ConsecutiveFailureAlertFilter`, but the job
+  has to actually fail for the filter to see anything: per-user isolation is kept, and the run
+  throws only when **every** active user failed. A partial failure still delivers the briefs it can,
+  which is the behaviour worth preserving over an all-or-nothing job.
