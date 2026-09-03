@@ -18,7 +18,10 @@ import {AppCurrencyPipe} from '../../../../core/pipes/app-currency.pipe';
 import {AppDecimalPipe} from '../../../../core/pipes/app-decimal.pipe';
 import {AppRoute} from '../../../../shared/enums/app-route/app-route.enum';
 import {MerchantCategoryPipe} from '../../../../shared/pipes/merchant-category.pipe';
-import {HISTORY_RANGE_LABELS} from '../../constants/dashboard/dashboard.constants';
+import {
+  HISTORY_RANGE_LABELS,
+  PROJECTION_RETURN_RATES,
+} from '../../constants/dashboard/dashboard.constants';
 import {type CategoryStat, type HistoryRange} from '../../models/dashboard/dashboard.model';
 import {DashboardStore} from '../../store/dashboard/dashboard.store';
 
@@ -152,18 +155,115 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
             </div>
           </div>
 
+          <!--
+            Projected from contributions, never from the net-worth line: most of the book is
+            market-marked, so a trend fitted to that line would forecast the market and call it
+            a savings forecast. Market return is a separate assumption the reader chooses and
+            the tile spells out. Hidden below three complete months by hasProjection().
+          -->
+          @if (store.hasProjection()) {
+            <div>
+              <div class="mb-cmn-3 flex flex-wrap items-baseline justify-between gap-cmn-2">
+                <span class="text-cmn-sm font-medium text-text-secondary">
+                  Where this is heading
+                </span>
+                <div class="flex items-center gap-cmn-2">
+                  <span class="text-cmn-xs text-text-disabled">Assumed market return</span>
+                  <div class="flex gap-cmn-1">
+                    @for (rate of returnRates; track rate.value) {
+                      <cmn-button
+                        [variant]="
+                          store.projectionReturnRate() === rate.value ? 'primary' : 'secondary'
+                        "
+                        (clicked)="store.setProjectionReturnRate(rate.value)"
+                        size="sm"
+                        >{{ rate.label }}</cmn-button
+                      >
+                    }
+                  </div>
+                </div>
+              </div>
+              <cmn-card>
+                <div class="grid grid-cols-1 gap-cmn-4 sm:grid-cols-2">
+                  <div class="space-y-cmn-1">
+                    <p class="text-cmn-xs text-text-secondary">Projected net worth in 12 months</p>
+                    <p class="font-headline text-2xl font-bold text-text-primary">
+                      {{ store.projectedNetWorthFormatted() }}
+                    </p>
+                    <p class="text-cmn-xs text-text-disabled">
+                      {{ store.projectionAssumptionLabel() }}
+                    </p>
+                  </div>
+                  <div class="space-y-cmn-1">
+                    <p class="text-cmn-xs text-text-secondary">Median monthly savings</p>
+                    <p class="font-headline text-2xl font-bold text-text-primary">
+                      {{ store.medianMonthlySavingsFormatted() }}
+                    </p>
+                    <p class="text-cmn-xs text-text-disabled">
+                      {{ store.projectionBasisLabel() }}
+                    </p>
+                  </div>
+                </div>
+
+                <!--
+                  The headline split into the addends that make it. Only the market-return
+                  line moves with the rate toggle, so "held separate" is something the reader
+                  can check against the number rather than a claim in the prose above.
+                -->
+                <dl
+                  class="mt-cmn-4 grid grid-cols-3 gap-cmn-2 border-t border-border-default pt-cmn-3 text-cmn-xs"
+                >
+                  <div>
+                    <dt class="text-text-secondary">Today</dt>
+                    <dd class="font-medium text-text-primary">
+                      {{ store.projectionTodayFormatted() }}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt class="text-text-secondary">Contributions</dt>
+                    <dd class="font-medium text-text-primary">
+                      {{ store.projectedContributionsFormatted() }}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt class="text-text-secondary">Market return</dt>
+                    <dd class="font-medium text-text-primary">
+                      {{ store.projectedMarketReturnFormatted() }}
+                    </dd>
+                  </div>
+                </dl>
+              </cmn-card>
+            </div>
+          }
+
           <div>
             <div class="mb-cmn-3 flex items-center justify-between">
               <span class="text-cmn-sm font-medium text-text-secondary">Net Worth Over Time</span>
-              <div class="flex gap-cmn-1">
-                @for (r of ranges; track r.value) {
+              <div class="flex items-center gap-cmn-3">
+                <div class="flex gap-cmn-1">
                   <cmn-button
-                    [variant]="store.historyRange() === r.value ? 'primary' : 'secondary'"
-                    (clicked)="store.setHistoryRange(r.value)"
+                    [variant]="store.netWorthStacked() ? 'primary' : 'secondary'"
+                    (clicked)="store.setNetWorthStacked(true)"
                     size="sm"
-                    >{{ r.label }}</cmn-button
+                    >Stacked</cmn-button
                   >
-                }
+                  <cmn-button
+                    [variant]="store.netWorthStacked() ? 'secondary' : 'primary'"
+                    (clicked)="store.setNetWorthStacked(false)"
+                    size="sm"
+                    >Lines</cmn-button
+                  >
+                </div>
+                <div class="flex gap-cmn-1">
+                  @for (r of ranges; track r.value) {
+                    <cmn-button
+                      [variant]="store.historyRange() === r.value ? 'primary' : 'secondary'"
+                      (clicked)="store.setHistoryRange(r.value)"
+                      size="sm"
+                      >{{ r.label }}</cmn-button
+                    >
+                  }
+                </div>
               </div>
             </div>
 
@@ -176,6 +276,7 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
             } @else {
               <cmn-area-chart
                 [series]="store.netWorthAreaSeries()"
+                [stacked]="store.netWorthStacked()"
                 label="Net worth by sleeve"
                 currency="USD"
               />
@@ -247,6 +348,7 @@ export class DashboardComponent {
 
   public readonly store = inject(DashboardStore);
   public readonly ranges = HISTORY_RANGES;
+  public readonly returnRates = PROJECTION_RETURN_RATES;
   public readonly showEmptyState = computed(
     () => !this.store.isLoading() && (this.store.data()?.accountCount ?? 0) === 0
   );

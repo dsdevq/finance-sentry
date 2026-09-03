@@ -7,6 +7,9 @@ public static class RadarScanners
 
     /// <summary>Feature 021 — daily macro regime read (VIX + yield curve).</summary>
     public const string MarketRegime = "market_regime";
+
+    /// <summary>Feature 043 — daily portfolio-state signals (drift, concentration, cash, sync).</summary>
+    public const string Portfolio = "portfolio_scanner";
 }
 
 public static class RadarSignalTypes
@@ -21,6 +24,12 @@ public static class RadarSignalTypes
     public const string RegimeVolatility = "regime_volatility";
     public const string RegimeRates = "regime_rates";
     public const string RegimeChange = "regime_change";
+
+    // Feature 043 portfolio signals (scanner portfolio_scanner).
+    public const string AllocationDrift = "allocation_drift";
+    public const string ConcentrationWeight = "concentration_weight";
+    public const string CashBuffer = "cash_buffer";
+    public const string SyncHealth = "sync_health";
 }
 
 public static class RadarSubjectTypes
@@ -28,4 +37,8 @@ public static class RadarSubjectTypes
     public const string Ticker = "Ticker";
     public const string Sector = "Sector";
     public const string Universe = "Universe";
+
+    // Feature 043 portfolio scanner subject types.
+    public const string AssetClass = "AssetClass";
+    public const string Portfolio = "Portfolio";
 }

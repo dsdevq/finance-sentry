@@ -14,7 +14,8 @@
     "format:check": "prettier --check \"src/**/*.{ts,html,scss}\"",
     "e2e": "playwright test",
     "e2e:live": "playwright test --config playwright.live.config.ts",
-    "prepare": "git -C .. config core.hooksPath .husky || true"
+    "prepare": "git -C .. config core.hooksPath .husky || true",
+    "postinstall": "node scripts/patch-lifekit-ui.js"
   },
   "lint-staged": {
     "src/**/*.ts": [

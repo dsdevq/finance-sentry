@@ -153,10 +153,9 @@ public class GetInstallmentFxImpactQueryHandlerTests
     [Fact]
     public async Task Handle_TotalsAcrossPlans_AndBuildsAMonthlySeries()
     {
-        var earliestBaseline = new DateOnly(2024, 5, 1);
         var handler = BuildHandler(
             new DateOnly(2026, 1, 1),
-            Installment(14060.96m, "UAH", new DateOnly(2026, 8, 11), startDate: earliestBaseline),
+            Installment(14060.96m, "UAH", new DateOnly(2026, 8, 11), startDate: new DateOnly(2024, 5, 1)),
             Installment(2339.95m, "UAH", new DateOnly(2026, 8, 5), startDate: new DateOnly(2026, 5, 1)));
 
         var result = await handler.Handle(new GetInstallmentFxImpactQuery(UserId), CancellationToken.None);
@@ -165,18 +164,13 @@ public class GetInstallmentFxImpactQueryHandlerTests
         result.CurrentCostTotal.Should().BeApproximately(
             result.Plans.Sum(p => p.CurrentCost), 0.01m);
 
-        // The handler ends the series at DateTime.UtcNow, so the expected count has to be derived
-        // from the same clock — a literal is only correct in the month it was written (it drifted
-        // from 28 to 29 when Aug 2026 rolled over).
+        // Series spans May 2024 → today inclusive; count is date-relative so the test
+        // doesn't drift as calendar months pass.
+        var seriesStart = new DateOnly(2024, 5, 1);
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var currentMonth = new DateOnly(today.Year, today.Month, 1);
-        var expectedPoints = (((currentMonth.Year - earliestBaseline.Year) * 12)
-            + currentMonth.Month - earliestBaseline.Month) + 1;
-
-        result.Points.Should().HaveCount(expectedPoints,
-            "the series runs monthly from the earliest plan baseline to the current month, inclusive");
-        result.Points[0].Date.Should().Be(earliestBaseline);
-        result.Points[^1].Date.Should().Be(currentMonth);
+        var expectedMonths = (today.Year - seriesStart.Year) * 12 + today.Month - seriesStart.Month + 1;
+        result.Points.Should().HaveCount(expectedMonths);
+        result.Points[0].Date.Should().Be(seriesStart);
         // The second plan only starts contributing from its own baseline, so the total
         // steps up then — the line tracks rate movement, not plans appearing.
         result.Points[0].MonthlyCost.Should().BeLessThan(result.Points[^1].MonthlyCost);

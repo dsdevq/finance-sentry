@@ -1114,6 +1114,44 @@ public sealed class ToolParityTests
         result.Should().ContainSingle(s => s.Subject == "NVDA" && s.SignalType == "unusual_move");
     }
 
+    // Feature 043 US2: portfolio scanner signals must be queryable through the existing
+    // list_signals MCP tool using scanner="portfolio_scanner".
+    [Fact]
+    public async Task ListSignals_ReturnsPortfolioScannerSignal_WhenSeeded()
+    {
+        var userId = Guid.NewGuid();
+        await using var sp = BuildProvider(Guid.NewGuid().ToString("N"));
+        await using var scope = sp.CreateAsyncScope();
+        var svc = scope.ServiceProvider;
+
+        var db = svc.GetRequiredService<RadarDbContext>();
+        db.RadarSignals.Add(new RadarSignal
+        {
+            Id = Guid.NewGuid(),
+            Timestamp = DateTimeOffset.UtcNow,
+            Scanner = FinanceSentry.Modules.Radar.Domain.RadarScanners.Portfolio,
+            SignalType = FinanceSentry.Modules.Radar.Domain.RadarSignalTypes.AllocationDrift,
+            Severity = FinanceSentry.Core.Interfaces.SignalSeverity.Notable,
+            SubjectType = FinanceSentry.Modules.Radar.Domain.RadarSubjectTypes.AssetClass,
+            Subject = "Equity",
+            UserId = userId,
+            DedupKey = $"portfolio_scanner:allocation_drift:{userId:N}:Equity:{DateOnly.FromDateTime(DateTime.UtcNow):yyyy-MM-dd}",
+            Payload = new Dictionary<string, object> { ["driftPct"] = 10m },
+            PayloadVersion = 1,
+        });
+        await db.SaveChangesAsync();
+
+        var tool = svc.GetRequiredService<ListSignalsTool>();
+        var result = await tool.ExecuteAsync(
+            scanner: FinanceSentry.Modules.Radar.Domain.RadarScanners.Portfolio,
+            userId: userId);
+
+        result.Should().NotBeNull();
+        result.Should().ContainSingle(s =>
+            s.SignalType == FinanceSentry.Modules.Radar.Domain.RadarSignalTypes.AllocationDrift
+            && s.Subject == "Equity");
+    }
+
     [Fact]
     public async Task GetRadarSummary_ReturnsSnapshot_WhenBarsSeeded()
     {

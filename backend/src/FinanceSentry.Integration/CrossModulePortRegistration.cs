@@ -23,6 +23,12 @@ public static class CrossModulePortRegistration
 
         // 412: portfolio value source for book-vs-benchmark TWR; bridges Wealth snapshots → Radar.
         services.AddScoped<IPortfolioValueSource, RadarPortfolioValueSource>();
+
+        // 413: portfolio scan data — bridges Research IPS + Risk rules → Radar portfolio scanner.
+        services.AddScoped<IPortfolioScanDataReader, PortfolioScanDataReader>();
+
+        // 414: thesis track record — bridges Research → Radar's weekly performance brief.
+        services.AddScoped<ITrackRecordSource, ResearchTrackRecordSource>();
         return services;
     }
 }
