@@ -2,6 +2,7 @@ namespace FinanceSentry.Tests.Integration.Research;
 
 using FinanceSentry.Modules.Research.Domain;
 using FinanceSentry.Modules.Research.Infrastructure.Persistence;
+using FinanceSentry.Tests.Integration.Shared;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Testcontainers.PostgreSql;
@@ -14,10 +15,12 @@ using Xunit;
 /// provider cannot catch a misconfigured max-length because it does not enforce storage-layer
 /// constraints.
 ///
-/// Requires Docker. Tagged [Category=Integration] so that the tests are excluded by the
-/// --filter Category!=Integration CI shortcut when Docker is unavailable.
+/// Requires Docker: <see cref="DockerRequiredFactAttribute"/> reports these as skipped, not
+/// failed, where no daemon is reachable. The infrastructure-free half of the same guarantee
+/// lives in <c>FinanceSentry.Modules.Research.Tests.Unit.ThesisTextLengthModelTests</c>, so the #443
+/// regression stays covered even on a host that skips these.
 /// To run locally: ensure Docker is running, then execute
-///   dotnet test --filter "Category=Integration&amp;FullyQualifiedName~ThesisTextColumn"
+///   dotnet test --filter "FullyQualifiedName~ThesisTextColumn"
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class ThesisTextColumnLimitTests : IAsyncLifetime
@@ -43,7 +46,7 @@ public sealed class ThesisTextColumnLimitTests : IAsyncLifetime
             .UseNpgsql(_postgres!.GetConnectionString())
             .Options);
 
-    [Fact]
+    [DockerRequiredFact]
     public async Task ThesisText_At4000CharLimit_RoundTripsWithoutTruncation()
     {
         await using var ctx = CreateContext();
@@ -71,7 +74,7 @@ public sealed class ThesisTextColumnLimitTests : IAsyncLifetime
         loaded.ThesisText.Length.Should().Be(4000);
     }
 
-    [Fact]
+    [DockerRequiredFact]
     public async Task ThesisText_LongNarrative3900Chars_RoundTripsWithoutTruncation()
     {
         await using var ctx = CreateContext();
