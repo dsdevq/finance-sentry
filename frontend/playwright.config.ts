@@ -11,9 +11,12 @@ export default defineConfig({
   // eslint-disable-next-line @typescript-eslint/no-magic-numbers
   retries: process.env['CI'] ? 2 : 0,
   workers: 1,
+  // The html reporter wipes its output folder on write, so it must not share a directory
+  // with the json report — otherwise results.json is deleted at the end of every run and
+  // the machine-readable artifact CI reads is silently absent.
   reporter: [
     ['json', {outputFile: 'playwright-report/results.json'}],
-    ['html', {open: 'never'}],
+    ['html', {open: 'never', outputFolder: 'playwright-report/html'}],
   ],
   use: {
     baseURL: `http://localhost:${SPA_PORT}`,

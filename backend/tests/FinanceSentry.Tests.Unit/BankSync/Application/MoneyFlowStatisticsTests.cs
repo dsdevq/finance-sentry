@@ -65,10 +65,10 @@ public class MoneyFlowStatisticsTests
         accountRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
                        .ReturnsAsync([account]);
 
-        var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService(), new NoOpCounterpartyClassificationService());
+        var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService());
 
         // Act
-        var result = await sut.GetMonthlyFlowAsync(UserId, 6);
+        var result = await sut.GetMonthlyFlowAsync(UserId, CounterpartyResults.None, 6);
 
         // Assert: 6 months, each with 1000 inflow, 600 outflow, 400 net
         result.Should().HaveCount(6);
@@ -110,10 +110,10 @@ public class MoneyFlowStatisticsTests
         accountRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
                        .ReturnsAsync([account]);
 
-        var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService(), new NoOpCounterpartyClassificationService());
+        var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService());
 
         // Act
-        var result = await sut.GetMonthlyFlowAsync(UserId, 6);
+        var result = await sut.GetMonthlyFlowAsync(UserId, CounterpartyResults.None, 6);
 
         // Assert: the pending debit counts → outflow = 100 + 40
         result.Should().HaveCount(1);
@@ -148,10 +148,10 @@ public class MoneyFlowStatisticsTests
         accountRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
                        .ReturnsAsync([eurAccount, usdAccount]);
 
-        var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService(), new NoOpCounterpartyClassificationService());
+        var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService());
 
         // Act
-        var result = await sut.GetMonthlyFlowAsync(UserId, 6);
+        var result = await sut.GetMonthlyFlowAsync(UserId, CounterpartyResults.None, 6);
 
         // Assert: 2 rows — one for EUR, one for USD (same month)
         result.Should().HaveCount(2);
@@ -197,9 +197,9 @@ public class MoneyFlowStatisticsTests
         accountRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
                        .ReturnsAsync([accountA, accountB]);
 
-        var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService(), new NoOpCounterpartyClassificationService());
+        var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService());
 
-        var result = await sut.GetMonthlyFlowAsync(UserId, 6);
+        var result = await sut.GetMonthlyFlowAsync(UserId, CounterpartyResults.None, 6);
 
         result.Should().HaveCount(1);
         result[0].Inflow.Should().Be(300m);   // transfer credit excluded
@@ -232,22 +232,94 @@ public class MoneyFlowStatisticsTests
         accountRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
                        .ReturnsAsync([account]);
 
-        // Stub returns a 50 USD family-support expense for May 2026.
-        var cpFlow = new CounterpartyMonthlyFlow("2026-05", "Mom", "family_support", 0m, 50m);
-        var cpStub = new Mock<ICounterpartyClassificationService>();
-        cpStub.Setup(s => s.ClassifyAsync(UserId, It.IsAny<IReadOnlyList<Transaction>>(), It.IsAny<IReadOnlyDictionary<Guid, string>>(), It.IsAny<CancellationToken>()))
-              .ReturnsAsync(new CounterpartyClassificationResult([], [cpFlow]));
+        // A 50 USD family-support expense for May 2026.
+        var classification = CounterpartyResults.WithFlows(
+            new CounterpartyMonthlyFlow("2026-05", "Mom", FlowRoles.FamilySupport, 0m, 50m));
 
-        var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService(), cpStub.Object);
+        var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService());
 
         // Act
-        var result = await sut.GetMonthlyFlowAsync(UserId, 6);
+        var result = await sut.GetMonthlyFlowAsync(UserId, classification, 6);
 
         // Assert: the single monthly row must carry the 50 USD family-support breakdown.
         result.Should().HaveCount(1);
         result[0].FamilySupportOutflowUsd.Should().Be(50m);
         // OutflowUsd includes family support (total is honest); normal spend = 400 - 50 = 350.
         result[0].OutflowUsd.Should().Be(400m + 50m);
+    }
+
+    // ── T044 Test: investment routing is carved out of "kept", never out of spend ──
+
+    [Fact]
+    public async Task GetMonthlyFlow_WithInvestmentRouting_ReportsInvestedWithoutInflatingOutflow()
+    {
+        // Arrange: 1000 in, 400 spent. On top of that the user routed 300 to a brokerage.
+        // That 300 is not spending — it must not touch OutflowUsd (and so must not move the
+        // savings rate), it must only surface as InvestedOutflowUsd.
+        var (account, accountId) = MakeAccount("USD");
+        var date = new DateTime(2026, 5, 10, 0, 0, 0, DateTimeKind.Utc);
+
+        var transactions = new List<Transaction>
+        {
+            MakeTx(accountId, 1000m, "credit", date),
+            MakeTx(accountId, 400m,  "debit",  date),
+        };
+
+        var txRepoMock = new Mock<ITransactionRepository>();
+        txRepoMock.Setup(r => r.GetByUserIdSinceAsync(UserId, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+                  .ReturnsAsync(transactions);
+
+        var accountRepoMock = new Mock<IBankAccountRepository>();
+        accountRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
+                       .ReturnsAsync([account]);
+
+        var classification = CounterpartyResults.WithFlows(
+            new CounterpartyMonthlyFlow("2026-05", "Investment routing", FlowRoles.Investment, 0m, 300m),
+            new CounterpartyMonthlyFlow("2026-05", "Mom", FlowRoles.FamilySupport, 0m, 50m));
+
+        var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService());
+
+        // Act
+        var result = await sut.GetMonthlyFlowAsync(UserId, classification, 6);
+
+        // Assert
+        result.Should().HaveCount(1);
+        result[0].InvestedOutflowUsd.Should().Be(300m);
+        result[0].FamilySupportOutflowUsd.Should().Be(50m);
+        // Only the family-support net joins outflow; the invested 300 stays out of it.
+        result[0].OutflowUsd.Should().Be(400m + 50m);
+        result[0].NetUsd.Should().Be(1000m - 450m);
+    }
+
+    [Fact]
+    public async Task GetMonthlyFlow_InvestmentCreditsAreNotIncome()
+    {
+        // Arrange: no bank transactions at all in the window, only a net INBOUND investment
+        // movement (a withdrawal back from the venue). Money coming out of an investment
+        // sleeve is not earnings — it must not inflate inflow and thus the savings rate.
+        var (account, _) = MakeAccount("USD");
+
+        var txRepoMock = new Mock<ITransactionRepository>();
+        txRepoMock.Setup(r => r.GetByUserIdSinceAsync(UserId, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+                  .ReturnsAsync([]);
+
+        var accountRepoMock = new Mock<IBankAccountRepository>();
+        accountRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
+                       .ReturnsAsync([account]);
+
+        var classification = CounterpartyResults.WithFlows(
+            new CounterpartyMonthlyFlow("2026-05", "Investment routing", FlowRoles.Investment, 700m, 0m));
+
+        var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService());
+
+        // Act
+        var result = await sut.GetMonthlyFlowAsync(UserId, classification, 6);
+
+        // Assert
+        result.Should().HaveCount(1);
+        result[0].InflowUsd.Should().Be(0m);
+        result[0].OutflowUsd.Should().Be(0m);
+        result[0].InvestedOutflowUsd.Should().Be(0m);
     }
 
     // ── T413 Test 4: Debit/credit classification ──────────────────────────────
@@ -274,10 +346,10 @@ public class MoneyFlowStatisticsTests
         accountRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
                        .ReturnsAsync([account]);
 
-        var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService(), new NoOpCounterpartyClassificationService());
+        var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService());
 
         // Act
-        var result = await sut.GetMonthlyFlowAsync(UserId, 6);
+        var result = await sut.GetMonthlyFlowAsync(UserId, CounterpartyResults.None, 6);
 
         // Assert
         result.Should().HaveCount(1);

@@ -63,9 +63,56 @@
 
 ---
 
-## [US3] Slice 2 — Dashboard four-bucket split (this PR)
+## [US3] Slice 2 — Dashboard split: Spent / Supported family / Kept
 
 - [x] Update `MonthlyFlow` record + `MoneyFlowStatisticsService` to return `FamilySupportOutflowUsd`
-- [x] Update dashboard Angular component with four-bucket breakdown (`@if hasFamilySupport`)
-- [x] Update `DashboardStore` computed signals: `monthlySpentFormatted`, `monthlyFamilySupportFormatted`, `monthlyKeptFormatted`, `hasFamilySupport`
-- [x] Playwright test: four buckets visible; "supported family" matches backend mock ($800)
+- [x] Update dashboard Angular component with the breakdown section
+- [x] Update `DashboardStore` computed signals: `monthlySpentFormatted`, `monthlyFamilySupportFormatted`, `monthlyKeptFormatted`
+- [x] Playwright test: buckets visible; "supported family" matches backend mock ($800)
+
+---
+
+## [US3] Slice 3 — Invested bucket + one shared classification (this PR)
+
+### Flow roles
+
+- [x] Create `BankSync/Domain/FlowRoles.cs` (`family_support`, `investment`)
+- [x] `MoneyFlowStatisticsService`: only `family_support` net joins Outflow; `investment` net
+      is reported as `InvestedOutflowUsd` and stays out of spend
+- [x] `MerchantCategoryStatisticsService`: only `family_support` net becomes FAMILY_SUPPORT spend
+- [x] Migration `20260903000000_M012_InvestmentRoutingCounterparty.cs` — seed the
+      `investment`-role system counterparty (Binance, Interactive Brokers)
+- [x] Fix M011: hand-written migrations need inline `[DbContext]` + `[Migration]`, without which
+      EF never discovers them
+
+### One classification, passed through (FR-006 / FR-010)
+
+- [x] Add `ICounterpartyClassificationService.ClassifyForWindowAsync(userId, months, ct)`
+- [x] `GetMonthlyFlowAsync` / `GetTopCategoriesAsync` take the result as a required parameter
+      and no longer inject the classification service
+- [x] `DashboardQueryService` classifies once and hands the same result to both readers
+- [x] `GetMoneyFlowStatisticsQueryHandler` / `GetTopCategoriesQueryHandler` classify once each
+
+### Frontend
+
+- [x] `MonthlyFlow` model + `MonthTotals`: `investedOutflowUsd`
+- [x] `dashboard.computed.ts`: `monthlyInvestedFormatted`, `monthlyKeptFormatted` =
+      `inflow − outflow − invested` (clamped), `hasFlowBreakdown`
+- [x] `dashboard.component.ts`: fourth "Invested" tile
+
+### Tests
+
+- [x] Backend: investment routing does not inflate outflow; investment credits are not income;
+      categories count family support but not investment routing; dashboard classifies once and
+      shares the result; flow role rides through matching; window path resolves currencies
+- [x] Vitest: four-bucket arithmetic, investing-only month, hidden when empty, no negative Kept
+- [x] Playwright: all four tiles visible with the mocked figures (2100 / 800 / 600 / 1300)
+- [x] Fix `playwright.config.ts`: html reporter was wiping the json report's `results.json`
+
+### Quality gates
+
+- [x] `dotnet build FinanceSentry.sln -c Release` → zero warnings
+- [x] `dotnet test FinanceSentry.sln --filter "Category!=Integration"` → 560 unit tests, 0 failed
+- [x] `npm run lint` / `npm run format:check` → clean
+- [x] `npm run test:ci` → 189 Vitest tests, 0 failed
+- [x] `ng build --configuration=production` + `npx playwright test` → 12 passed, 0 unexpected

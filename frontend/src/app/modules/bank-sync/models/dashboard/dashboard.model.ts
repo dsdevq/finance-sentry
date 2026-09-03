@@ -28,6 +28,12 @@ export interface MonthlyFlow {
   netUsd: number;
   /** Net family-support expense folded into outflowUsd; zero when no counterparty expense. */
   familySupportOutflowUsd?: number;
+  /**
+   * Net movement routed to an investment venue. Deliberately NOT part of outflowUsd —
+   * investing is not spending — so it is carved out of what would otherwise read as
+   * cash simply kept.
+   */
+  investedOutflowUsd?: number;
 }
 
 export interface CategoryStat {

@@ -63,8 +63,11 @@ const DASHBOARD_DATA = {
       inflowUsd: 4800,
       outflowUsd: 2900,
       netUsd: 1900,
-      // $800 of the $2900 outflow is family-support; "Spent" = 2900 - 800 = 2100, "Kept" = 4800 - 2900 = 1900.
+      // $800 of the $2900 outflow is family-support, so "Spent" = 2900 - 800 = 2100.
       familySupportOutflowUsd: 800,
+      // $600 was routed to an investment venue. It is NOT part of outflow (investing is not
+      // spending), so it is carved out of the surplus: "Kept" = 4800 - 2900 - 600 = 1300.
+      investedOutflowUsd: 600,
     },
   ],
   topCategories: [
@@ -329,24 +332,26 @@ test.describe('Dashboard drill-downs', () => {
     await expect(page).toHaveURL(/\/transactions.*type=debit/);
   });
 
-  test('flow breakdown shows Supported family separated from Spent when counterparty expense exists', async ({
+  test('flow breakdown splits the month into spent / supported family / invested / kept', async ({
     page,
   }) => {
-    // Mock has familySupportOutflowUsd: 800 for the current month.
-    // Spent = 2900 - 800 = 2100; Kept = 4800 - 2900 = 1900.
+    // Mock current month: 4800 in, 2900 out (800 of it family support), 600 invested.
+    // Spent = 2900 - 800 = 2100; Kept = 4800 - 2900 - 600 = 1300.
     await page.goto('/dashboard');
     await expect(page.getByRole('heading', {name: 'Dashboard'})).toBeVisible();
 
     // Flow breakdown section must be visible.
     await expect(page.getByText('Flow breakdown (MTD)')).toBeVisible();
 
-    // All three bucket tiles must be present.
+    // All four bucket tiles must be present.
     const spentCard = page.locator('cmn-stat-card').filter({hasText: 'Spent'});
     const familySupportCard = page.locator('cmn-stat-card').filter({hasText: 'Supported family'});
+    const investedCard = page.locator('cmn-stat-card').filter({hasText: 'Invested'});
     const keptCard = page.locator('cmn-stat-card').filter({hasText: 'Kept'});
 
     await expect(spentCard).toBeVisible();
     await expect(familySupportCard).toBeVisible();
+    await expect(investedCard).toBeVisible();
     await expect(keptCard).toBeVisible();
 
     // Supported family must show the backend-reported net expense ($800), not $0 or merged into Spent.
@@ -356,6 +361,14 @@ test.describe('Dashboard drill-downs', () => {
     // Spent must reflect outflow minus family support ($2100), not the full $2900 outflow.
     const spentAmount = extractAmount((await spentCard.innerText()).trim());
     expect(spentAmount).toBeCloseTo(2100, 0);
+
+    // Invested is reported on its own and must not have been folded into spending.
+    const investedAmount = extractAmount((await investedCard.innerText()).trim());
+    expect(investedAmount).toBeCloseTo(600, 0);
+
+    // Kept is the surplus that was neither spent nor put to work.
+    const keptAmount = extractAmount((await keptCard.innerText()).trim());
+    expect(keptAmount).toBeCloseTo(1300, 0);
   });
 });
 

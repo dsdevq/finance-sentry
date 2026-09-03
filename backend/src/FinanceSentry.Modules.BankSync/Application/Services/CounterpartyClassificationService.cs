@@ -34,6 +34,17 @@ public record CounterpartyClassificationResult(
 public interface ICounterpartyClassificationService
 {
     /// <summary>
+    /// Classifies the user's whole statistics window in one pass. This is the single
+    /// entry point every consumer of the classification (money flow, savings rate,
+    /// top categories) shares: the result is computed once per request and handed to
+    /// each of them, so they can never disagree about what a counterparty movement was.
+    /// </summary>
+    Task<CounterpartyClassificationResult> ClassifyForWindowAsync(
+        Guid userId,
+        int months,
+        CancellationToken ct = default);
+
+    /// <summary>
     /// Identifies which transactions belong to a known counterparty and returns:
     /// <list type="bullet">
     ///   <item>The union of matched transaction IDs (to exclude from normal flow).</item>
@@ -61,10 +72,34 @@ internal static class MatchTypes
 // ── Implementation ─────────────────────────────────────────────────────────────
 
 /// <inheritdoc />
-public class CounterpartyClassificationService(ICounterpartyRepository counterparties) : ICounterpartyClassificationService
+public class CounterpartyClassificationService(
+    ICounterpartyRepository counterparties,
+    ITransactionRepository transactions,
+    IBankAccountRepository accounts) : ICounterpartyClassificationService
 {
     private readonly ICounterpartyRepository _counterparties =
         counterparties ?? throw new ArgumentNullException(nameof(counterparties));
+    private readonly ITransactionRepository _transactions =
+        transactions ?? throw new ArgumentNullException(nameof(transactions));
+    private readonly IBankAccountRepository _accounts =
+        accounts ?? throw new ArgumentNullException(nameof(accounts));
+
+    /// <inheritdoc />
+    public async Task<CounterpartyClassificationResult> ClassifyForWindowAsync(
+        Guid userId,
+        int months,
+        CancellationToken ct = default)
+    {
+        var accountList = await _accounts.GetByUserIdAsync(userId, ct);
+        var accountCurrencies = accountList
+            .Where(a => a.IsActive)
+            .ToDictionary(a => a.Id, a => a.Currency);
+
+        var txList = (await _transactions.GetByUserIdSinceAsync(
+            userId, MonthWindow.StartOfMonthsAgo(months), ct)).ToList();
+
+        return await ClassifyAsync(userId, txList, accountCurrencies, ct);
+    }
 
     /// <inheritdoc />
     public async Task<CounterpartyClassificationResult> ClassifyAsync(

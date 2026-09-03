@@ -22,38 +22,47 @@ public interface IMerchantCategoryStatisticsService
     /// money-flow convention (a hold is real spending).
     /// Counterparty net expense is surfaced as the FAMILY_SUPPORT bucket so that
     /// family support is visible in the category breakdown without mixing it into
-    /// regular spend categories.
+    /// regular spend categories. The <paramref name="classification"/> is the same
+    /// once-per-request result the money-flow reader uses, so a movement can never be
+    /// spend here and a transfer there.
     /// </summary>
     Task<IReadOnlyList<CategoryStat>> GetTopCategoriesAsync(
-        Guid userId, int limit = 10, int months = 6, CancellationToken ct = default);
+        Guid userId,
+        CounterpartyClassificationResult classification,
+        int limit = 10,
+        int months = 6,
+        CancellationToken ct = default);
 }
 
 /// <inheritdoc />
 public class MerchantCategoryStatisticsService(
     ITransactionRepository transactions,
     IBankAccountRepository accounts,
-    ITransferDetectionService transferDetection,
-    ICounterpartyClassificationService counterpartyClassification) : IMerchantCategoryStatisticsService
+    ITransferDetectionService transferDetection) : IMerchantCategoryStatisticsService
 {
     private readonly ITransactionRepository _transactions = transactions ?? throw new ArgumentNullException(nameof(transactions));
     private readonly IBankAccountRepository _accounts = accounts ?? throw new ArgumentNullException(nameof(accounts));
     private readonly ITransferDetectionService _transferDetection = transferDetection ?? throw new ArgumentNullException(nameof(transferDetection));
-    private readonly ICounterpartyClassificationService _counterpartyClassification = counterpartyClassification ?? throw new ArgumentNullException(nameof(counterpartyClassification));
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<CategoryStat>> GetTopCategoriesAsync(
-          Guid userId, int limit = 10, int months = 6, CancellationToken ct = default)
+          Guid userId,
+          CounterpartyClassificationResult classification,
+          int limit = 10,
+          int months = 6,
+          CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(classification);
+
         var since = MonthWindow.StartOfMonthsAgo(months);
         var txList = await _transactions.GetByUserIdSinceAsync(userId, since, ct);
 
         var accountList = await _accounts.GetByUserIdAsync(userId, ct);
         var currencyByAccount = accountList.ToDictionary(a => a.Id, a => a.Currency);
 
-        // Counterparty classification: matched transactions are excluded from normal
-        // category stats and their net expense appears as FAMILY_SUPPORT.
-        var cpResult = await _counterpartyClassification.ClassifyAsync(userId, txList.ToList(), currencyByAccount, ct);
-        var matchedIds = cpResult.MatchedTransactionIds;
+        // Counterparty classification (computed once upstream): matched transactions are
+        // excluded from normal category stats and their net expense appears as FAMILY_SUPPORT.
+        var matchedIds = classification.MatchedTransactionIds;
 
         var nonCounterpartyTx = txList.Where(t => !matchedIds.Contains(t.Id)).ToList();
         var transferIds = _transferDetection.DetectTransferTransactionIds(nonCounterpartyTx, currencyByAccount);
@@ -67,8 +76,11 @@ public class MerchantCategoryStatisticsService(
                         && !CategoryKeys.IsTransfer(t.MerchantCategory))
             .ToList();
 
-        // Aggregate counterparty net expense across all months in the window.
-        var familySupportUsd = cpResult.MonthlyFlows.Sum(f => f.NetExpenseUsd);
+        // Aggregate counterparty net expense across all months in the window. Only the
+        // family-support role is spend; investment routing left the bank but not the user.
+        var familySupportUsd = classification.MonthlyFlows
+            .Where(f => f.FlowRole == FlowRoles.FamilySupport)
+            .Sum(f => f.NetExpenseUsd);
 
         var totalSpend = debits.Sum(ToUsd) + familySupportUsd;
 

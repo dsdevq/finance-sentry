@@ -101,6 +101,11 @@ and the "supported family" bucket matches the backend's FAMILY_SUPPORT total.
    **When** the dashboard loads,
    **Then** "Supported family" shows 0 / is hidden.
 
+3. **Given** a month with money routed to an investment venue,
+   **When** the dashboard loads,
+   **Then** "Invested" shows that amount, "Spent" does not include it, and "Kept" is the
+   surplus that remains after it (`inflow − outflow − invested`).
+
 ---
 
 ### Edge Cases
@@ -125,10 +130,17 @@ and the "supported family" bucket matches the backend's FAMILY_SUPPORT total.
 - **FR-007**: FAMILY_SUPPORT MUST appear as a distinct category in top-categories output when net expense > 0.
 - **FR-008**: Counterparty-matched transactions MUST be excluded from the normal transfer-detection pass to avoid double-exclusion.
 - **FR-009**: Classification output MUST be deterministic for a fixed input set.
+- **FR-010**: The classification MUST be computed ONCE per request and passed to the money-flow
+  and top-categories readers; neither may derive its own.
+- **FR-011**: A counterparty's FlowRole MUST decide where its netted movement lands.
+  `family_support` net expense counts as outflow (and so lowers the savings rate);
+  `investment` net expense MUST NOT count as outflow or as spend — it is reported separately
+  and deducted from the kept surplus.
 
 ### Key Entities
 
-- **Counterparty**: display name, UserId (Guid.Empty = system default), FlowRole ("family_support").
+- **Counterparty**: display name, UserId (Guid.Empty = system default), FlowRole
+  ("family_support" | "investment").
 - **CounterpartyRule**: foreign key to Counterparty, MatchType ("description_contains" | "merchant_name_contains"), Pattern string.
 
 ---
@@ -145,6 +157,8 @@ and the "supported family" bucket matches the backend's FAMILY_SUPPORT total.
 ## Assumptions
 
 - This is a single-user system; system-default counterparties (UserId = Guid.Empty) apply to all users.
-- Dashboard four-bucket split (US3) is delivered in a follow-on slice; this slice ships the backend engine only.
+- Dashboard four-bucket split (US3) is delivered in follow-on slices; the first slice ships the backend engine only.
+- Investment routing is recognised by the same counterparty engine (an `investment`-role system
+  counterparty), not by a second detection mechanism.
 - No management API for counterparties in this slice — seeded via data migration.
 - The white-card 3840 transactions arrive from Monobank as type "credit" / "debit" with counterparty name or description text.

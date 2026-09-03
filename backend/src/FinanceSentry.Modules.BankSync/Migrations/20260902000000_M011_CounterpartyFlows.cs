@@ -1,10 +1,17 @@
+using FinanceSentry.Modules.BankSync.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace FinanceSentry.Modules.BankSync.Migrations
 {
-    /// <inheritdoc />
+    // Hand-written (no dotnet-ef in this repo's toolchain), so the attributes the designer
+    // file would normally carry live here. Without [Migration] the migrator does not
+    // discover this migration at all and the counterparty tables are never created.
+    [DbContext(typeof(BankSyncDbContext))]
+    [Migration("20260902000000_M011_CounterpartyFlows")]
     public partial class M011_CounterpartyFlows : Migration
     {
         // Well-known GUIDs for default counterparties (UserId = Guid.Empty = system defaults).

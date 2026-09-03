@@ -44,7 +44,7 @@ public class MerchantCategoryStatisticsTests
         acctRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
                     .ReturnsAsync(accounts.ToList());
 
-        return new MerchantCategoryStatisticsService(txRepoMock.Object, acctRepoMock.Object, new TransferDetectionService(), new NoOpCounterpartyClassificationService());
+        return new MerchantCategoryStatisticsService(txRepoMock.Object, acctRepoMock.Object, new TransferDetectionService());
     }
 
     [Fact]
@@ -69,12 +69,37 @@ public class MerchantCategoryStatisticsTests
 
         var sut = BuildSut(transactions, [accountA, accountB]);
 
-        var result = await sut.GetTopCategoriesAsync(UserId, 10);
+        var result = await sut.GetTopCategoriesAsync(UserId, CounterpartyResults.None, 10);
 
         result.Should().NotContain(c => c.Category == "Transfer");
         result.Sum(c => c.TotalSpend).Should().Be(200m);
         var food = result.First(c => c.Category == "Food");
         food.TotalSpend.Should().Be(100m);
+    }
+
+    [Fact]
+    public async Task GetTopCategories_CountsFamilySupportAsSpendButNotInvestmentRouting()
+    {
+        // Both roles come out of the SAME classification the money-flow reader consumes.
+        // Only family support is spend; investment routing must never reach the breakdown,
+        // or the donut would claim the user spent the money it actually invested.
+        var (account, accountId) = MakeAccount();
+        var date = new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc);
+
+        var transactions = new List<Transaction> { MakeTx(accountId, 100m, "debit", date, category: "Food") };
+
+        var classification = CounterpartyResults.WithFlows(
+            new CounterpartyMonthlyFlow("2026-03", "Mom", FlowRoles.FamilySupport, 0m, 300m),
+            new CounterpartyMonthlyFlow("2026-03", "Investment routing", FlowRoles.Investment, 0m, 900m));
+
+        var sut = BuildSut(transactions, [account]);
+
+        var result = await sut.GetTopCategoriesAsync(UserId, classification, 10);
+
+        result.Should().ContainSingle(c => c.Category == CategoryKeys.FamilySupport)
+              .Which.TotalSpend.Should().Be(300m);
+        // Total spend is food + family support only — the 900 invested is nowhere in it.
+        result.Sum(c => c.TotalSpend).Should().Be(400m);
     }
 
     [Fact]
@@ -93,7 +118,7 @@ public class MerchantCategoryStatisticsTests
 
         var sut = BuildSut(transactions, [account]);
 
-        var result = await sut.GetTopCategoriesAsync(UserId, 10);
+        var result = await sut.GetTopCategoriesAsync(UserId, CounterpartyResults.None, 10);
 
         result.Should().NotContain(c => c.Category == CategoryKeys.TransferOut);
         result.Sum(c => c.TotalSpend).Should().Be(40m);
@@ -116,7 +141,7 @@ public class MerchantCategoryStatisticsTests
 
         var sut = BuildSut(transactions, [usd, uah]);
 
-        var result = await sut.GetTopCategoriesAsync(UserId, 10);
+        var result = await sut.GetTopCategoriesAsync(UserId, CounterpartyResults.None, 10);
 
         // 100 + (10000 × 0.024) = 340, not 10100
         result.Single(c => c.Category == "Food").TotalSpend.Should().Be(340m);
@@ -146,9 +171,9 @@ public class MerchantCategoryStatisticsTests
                     .ReturnsAsync([account]);
 
         var sut = new MerchantCategoryStatisticsService(
-            txRepoMock.Object, acctRepoMock.Object, new TransferDetectionService(), new NoOpCounterpartyClassificationService());
+            txRepoMock.Object, acctRepoMock.Object, new TransferDetectionService());
 
-        await sut.GetTopCategoriesAsync(UserId, limit: 10, months: 3);
+        await sut.GetTopCategoriesAsync(UserId, CounterpartyResults.None, limit: 10, months: 3);
 
         capturedSince.Should().NotBeNull();
         capturedSince!.Value.Should().Be(MonthWindow.StartOfMonthsAgo(3));

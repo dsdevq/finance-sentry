@@ -152,14 +152,14 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
             </div>
           </div>
 
-          @if (store.hasFamilySupport()) {
+          @if (store.hasFlowBreakdown()) {
             <div>
               <div class="mb-cmn-3">
                 <span class="text-cmn-sm font-medium text-text-secondary"
                   >Flow breakdown (MTD)</span
                 >
               </div>
-              <div class="grid grid-cols-1 gap-cmn-4 sm:grid-cols-3">
+              <div class="grid grid-cols-1 gap-cmn-4 sm:grid-cols-2 lg:grid-cols-4">
                 <cmn-stat-card
                   [value]="store.monthlySpentFormatted()"
                   [loading]="store.isLoading()"
@@ -171,6 +171,12 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
                   [loading]="store.isLoading()"
                   label="Supported family"
                   icon="Heart"
+                />
+                <cmn-stat-card
+                  [value]="store.monthlyInvestedFormatted()"
+                  [loading]="store.isLoading()"
+                  label="Invested"
+                  icon="TrendingUp"
                 />
                 <cmn-stat-card
                   [value]="store.monthlyKeptFormatted()"

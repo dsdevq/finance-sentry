@@ -1,18 +1,18 @@
 namespace FinanceSentry.Tests.Unit.BankSync.Application;
 
 using FinanceSentry.Modules.BankSync.Application.Services;
-using FinanceSentry.Modules.BankSync.Domain;
 
 /// <summary>
-/// No-op stub: returns an empty classification result (no counterparty matches).
-/// Used to keep existing statistics-service tests free of counterparty logic.
+/// Classification results the statistics-service tests feed in directly. The readers take
+/// the result as a parameter (it is computed once per request upstream), so the tests hand
+/// over a value rather than stubbing a service.
 /// </summary>
-internal sealed class NoOpCounterpartyClassificationService : ICounterpartyClassificationService
+internal static class CounterpartyResults
 {
-    public Task<CounterpartyClassificationResult> ClassifyAsync(
-        Guid userId,
-        IReadOnlyList<Transaction> transactions,
-        IReadOnlyDictionary<Guid, string> accountCurrencies,
-        CancellationToken ct = default)
-        => Task.FromResult(new CounterpartyClassificationResult([], []));
+    /// <summary>No counterparty matched anything — keeps a test free of counterparty logic.</summary>
+    internal static CounterpartyClassificationResult None => new([], []);
+
+    /// <summary>A result carrying the given monthly flows and no matched transaction ids.</summary>
+    internal static CounterpartyClassificationResult WithFlows(params CounterpartyMonthlyFlow[] flows)
+        => new([], flows);
 }

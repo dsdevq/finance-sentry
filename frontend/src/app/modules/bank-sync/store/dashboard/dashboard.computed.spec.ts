@@ -217,4 +217,53 @@ describe('dashboardComputed', () => {
       expect(c.savingsRateMonthToDateFormatted()).toBe('—');
     });
   });
+
+  describe('four-bucket flow breakdown', () => {
+    /** August: 4000 in, 2000 out (of which 500 family support), 900 routed to investments. */
+    function augustWithBuckets(): MonthlyFlow[] {
+      return [
+        ...steadyHistory(4000, 2000).slice(0, -1),
+        {...flow('2026-08', 4000, 2000), familySupportOutflowUsd: 500, investedOutflowUsd: 900},
+      ];
+    }
+
+    it('splits the month into spent / supported family / invested / kept', () => {
+      const c = computedFor(augustWithBuckets());
+
+      // Spent = outflow - family support; Invested is carved out of the surplus, not out
+      // of spend; Kept = what neither went out nor was put to work.
+      expect(c.monthlySpentFormatted()).toBe('$1.5K');
+      expect(c.monthlyFamilySupportFormatted()).toBe('$500');
+      expect(c.monthlyInvestedFormatted()).toBe('$900');
+      expect(c.monthlyKeptFormatted()).toBe('$1.1K');
+      expect(c.hasFlowBreakdown()).toBe(true);
+    });
+
+    it('shows the breakdown for an investing month with no family support', () => {
+      const c = computedFor([
+        ...steadyHistory(4000, 2000).slice(0, -1),
+        {...flow('2026-08', 4000, 2000), investedOutflowUsd: 1200},
+      ]);
+
+      expect(c.hasFlowBreakdown()).toBe(true);
+      expect(c.monthlyFamilySupportFormatted()).toBe('$0');
+      expect(c.monthlyInvestedFormatted()).toBe('$1.2K');
+      expect(c.monthlyKeptFormatted()).toBe('$800');
+    });
+
+    it('hides the breakdown when neither bucket carries anything', () => {
+      const c = computedFor(steadyHistory(4000, 2000));
+
+      expect(c.hasFlowBreakdown()).toBe(false);
+    });
+
+    it('never reports a negative Kept when investing outran the surplus', () => {
+      const c = computedFor([
+        ...steadyHistory(4000, 2000).slice(0, -1),
+        {...flow('2026-08', 4000, 2000), investedOutflowUsd: 3000},
+      ]);
+
+      expect(c.monthlyKeptFormatted()).toBe('$0');
+    });
+  });
 });

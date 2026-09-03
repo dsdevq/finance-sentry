@@ -24,10 +24,11 @@ public class CounterpartyClassificationTests
         string description,
         string? merchantName = null,
         DateTime? date = null,
-        bool isPending = false)
+        bool isPending = false,
+        Guid? accountId = null)
     {
         var d = date ?? new DateTime(2026, 8, 15, 0, 0, 0, DateTimeKind.Utc);
-        var tx = new Transaction(AccountId, UserId, amount, d, description, Guid.NewGuid().ToString("N"), isPending)
+        var tx = new Transaction(accountId ?? AccountId, UserId, amount, d, description, Guid.NewGuid().ToString("N"), isPending)
         {
             TransactionType = type,
             MerchantName = merchantName,
@@ -38,19 +39,40 @@ public class CounterpartyClassificationTests
     }
 
     private static Counterparty MakeCounterparty(string name, params (string matchType, string pattern)[] rules)
+        => MakeCounterparty(name, FlowRoles.FamilySupport, rules);
+
+    private static Counterparty MakeCounterparty(
+        string name, string flowRole, params (string matchType, string pattern)[] rules)
     {
-        var cp = new Counterparty { UserId = Guid.Empty, Name = name, FlowRole = "family_support" };
+        var cp = new Counterparty { UserId = Guid.Empty, Name = name, FlowRole = flowRole };
         foreach (var (mt, pat) in rules)
             cp.Rules.Add(new CounterpartyRule { CounterpartyId = cp.Id, MatchType = mt, Pattern = pat });
         return cp;
     }
 
+    private static BankAccount MakeAccount(string currency)
+        => new(UserId, $"item_{Guid.NewGuid():N}", "Bank", "checking", "1234", "Owner", currency, UserId, "truelayer");
+
     private static ICounterpartyClassificationService BuildSut(params Counterparty[] counterparties)
+        => BuildSutForWindow([], MakeAccount("USD"), counterparties);
+
+    /// <summary>SUT whose repositories also serve the window path (<c>ClassifyForWindowAsync</c>).</summary>
+    private static ICounterpartyClassificationService BuildSutForWindow(
+        IReadOnlyList<Transaction> windowTransactions, BankAccount account, params Counterparty[] counterparties)
     {
         var repoMock = new Mock<ICounterpartyRepository>();
         repoMock.Setup(r => r.GetForUserAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(counterparties.ToList());
-        return new CounterpartyClassificationService(repoMock.Object);
+
+        var txMock = new Mock<ITransactionRepository>();
+        txMock.Setup(r => r.GetByUserIdSinceAsync(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+              .ReturnsAsync(windowTransactions.ToList());
+
+        var acctMock = new Mock<IBankAccountRepository>();
+        acctMock.Setup(r => r.GetByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync([account]);
+
+        return new CounterpartyClassificationService(repoMock.Object, txMock.Object, acctMock.Object);
     }
 
     private static readonly Dictionary<Guid, string> UahAccount = new() { [AccountId] = "UAH" };
@@ -276,5 +298,46 @@ public class CounterpartyClassificationTests
 
         result.MatchedTransactionIds.Should().BeEmpty();
         result.MonthlyFlows.Should().BeEmpty();
+    }
+
+    // ── T044-13: Flow role rides through to the monthly flow ──────────────────
+
+    [Fact]
+    public async Task Classify_InvestmentCounterparty_CarriesInvestmentFlowRole()
+    {
+        var cp = MakeCounterparty("Investment routing", FlowRoles.Investment, ("merchant_name_contains", "Binance"));
+        var sut = BuildSut(cp);
+
+        var tx = MakeTx(500m, "debit", "Card payment", merchantName: "BINANCE");
+
+        var result = await sut.ClassifyAsync(UserId, [tx], UsdAccount);
+
+        result.MonthlyFlows.Should().ContainSingle()
+              .Which.Should().BeEquivalentTo(new
+              {
+                  FlowRole = FlowRoles.Investment,
+                  NetExpenseUsd = 500m,
+                  NetIncomeUsd = 0m,
+              });
+    }
+
+    // ── T044-14: Window path loads its own transactions and currencies ────────
+
+    [Fact]
+    public async Task ClassifyForWindow_LoadsTransactionsAndAccountCurrencies()
+    {
+        // The single entry point every consumer shares: it must resolve the account currency
+        // itself, or a UAH statement would be netted as if it were dollars.
+        var account = MakeAccount("UAH");
+        var cp = MakeCounterparty("Мама", ("description_contains", "мама"));
+
+        var rent = MakeTx(18000m, "credit", "від мама", accountId: account.Id);
+        var sut = BuildSutForWindow([rent], account, cp);
+
+        var result = await sut.ClassifyForWindowAsync(UserId, months: 6);
+
+        result.MatchedTransactionIds.Should().ContainSingle();
+        result.MonthlyFlows.Should().ContainSingle()
+              .Which.NetIncomeUsd.Should().Be(CurrencyConverter.ToUsd(18000m, "UAH"));
     }
 }
