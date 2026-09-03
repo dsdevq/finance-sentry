@@ -153,9 +153,10 @@ cp /usr/lib/aarch64-linux-gnu/libXfixes.so.3 /tmp/
 # Then run Playwright with LD_LIBRARY_PATH=/tmp:$LD_LIBRARY_PATH
 ```
 
-The `--no-verify` flag is required on commits because the husky pre-commit hook runs `npm ci` which
-fails with 401 on `@lifekit-hq/*` (GitHub Packages requires NODE_AUTH_TOKEN). CI enforces the full
-frontend gate instead.
+The `--no-verify` flag is required only when **frontend** files are staged: the husky pre-commit
+hook then runs the frontend gate (`npm ci`), which fails with 401 on `@lifekit-hq/*` (GitHub
+Packages requires NODE_AUTH_TOKEN), and enforces the version bump described below. CI enforces the
+full frontend gate instead. Backend-only commits pass the hook unchanged — do not bypass it.
 
 ## Frontend pre-commit version-bump gate
 
