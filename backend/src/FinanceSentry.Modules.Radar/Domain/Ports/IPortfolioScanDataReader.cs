@@ -22,17 +22,17 @@ public interface IPortfolioScanDataReader
 
 /// <summary>
 /// Combined portfolio snapshot consumed by the portfolio scanner. All percentages are 0–100.
+/// DriftRows is populated only when the user has an IPS; empty list when HasIps = false.
+/// TopPositions is sorted descending by USD value.
+/// MaxPositionWeightPct / MinCashBufferPct come from the user's risk rule set; null when absent.
 /// </summary>
 public sealed record PortfolioScanData(
     decimal TotalUsd,
     decimal CashUsd,
     bool IsStale,
     IReadOnlyList<string> StaleSources,
-    /// <summary>Populated only when the user has an IPS; empty list when HasIps = false.</summary>
     IReadOnlyList<ScanSleeveDrift> DriftRows,
-    /// <summary>Positions sorted descending by USD value.</summary>
     IReadOnlyList<ScanPosition> TopPositions,
-    /// <summary>From the user's current risk rule set; null when no rule set exists.</summary>
     decimal? MaxPositionWeightPct,
     decimal? MinCashBufferPct)
 {

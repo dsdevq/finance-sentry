@@ -18,6 +18,7 @@ public enum CompanionEventKind
     AnalystAction,
     ConsentExpiring,
     OperationalFailure,
+    PerformanceBrief,
     RebalanceProposal,
     CashSweepProposal,
 }
