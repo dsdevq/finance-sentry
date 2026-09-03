@@ -221,4 +221,36 @@ public class AlertGeneratorServiceTests
 
         _repo.Verify(r => r.ResolveAsync(It.IsAny<Guid>(), default), Times.Never);
     }
+
+    [Fact]
+    public async Task GeneratePerformanceBrief_NoRecent_AddsInfoAlert()
+    {
+        _repo.Setup(r => r.HasRecentAsync(
+                _userId, AlertType.PerformanceBrief, null, "weekly", It.IsAny<DateTimeOffset>(), default))
+            .ReturnsAsync(false);
+
+        await _service.GeneratePerformanceBriefAlertAsync(
+            _userId, "Weekly brief: Outperform +2.00% vs SPY", "1W: book +3.00% SPY +1.00%");
+
+        _repo.Verify(r => r.AddAsync(It.Is<Alert>(a =>
+            a.Type == AlertType.PerformanceBrief &&
+            a.Severity == AlertSeverity.Info &&
+            a.UserId == _userId &&
+            a.ReferenceId == null &&
+            a.ReferenceLabel == "weekly" &&
+            a.Title.Contains("Outperform")), default), Times.Once);
+    }
+
+    [Fact]
+    public async Task GeneratePerformanceBrief_WithinSixDaySuppressWindow_SkipsCreation()
+    {
+        _repo.Setup(r => r.HasRecentAsync(
+                _userId, AlertType.PerformanceBrief, null, "weekly", It.IsAny<DateTimeOffset>(), default))
+            .ReturnsAsync(true);
+
+        await _service.GeneratePerformanceBriefAlertAsync(
+            _userId, "Weekly brief: Outperform +2.00% vs SPY", "1W: book +3.00% SPY +1.00%");
+
+        _repo.Verify(r => r.AddAsync(It.IsAny<Alert>(), default), Times.Never);
+    }
 }

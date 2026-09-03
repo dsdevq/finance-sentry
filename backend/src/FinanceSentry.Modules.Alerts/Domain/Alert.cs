@@ -16,4 +16,7 @@ public class Alert
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? ResolvedAt { get; set; }
+    /// <summary>"Accept" or "Defer" — null until the user taps the one-tap acknowledgement (432 US3).</summary>
+    public string? AcknowledgementDecision { get; set; }
+    public DateTimeOffset? AcknowledgedAt { get; set; }
 }

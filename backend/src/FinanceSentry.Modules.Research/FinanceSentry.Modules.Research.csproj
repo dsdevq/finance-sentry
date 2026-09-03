@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\FinanceSentry.Core\FinanceSentry.Core.csproj" />
     <ProjectReference Include="..\FinanceSentry.Infrastructure\FinanceSentry.Infrastructure.csproj" />
+    <ProjectReference Include="..\FinanceSentry.Modules.Risk\FinanceSentry.Modules.Risk.csproj" />
   </ItemGroup>
 
 </Project>

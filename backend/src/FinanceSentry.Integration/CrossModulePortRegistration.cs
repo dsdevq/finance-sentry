@@ -30,6 +30,8 @@ public static class CrossModulePortRegistration
         // 421: asset dossier — bridges BrokerageSync tax lots and Radar signals → Research dossier query.
         services.AddScoped<IHoldingTaxLotsReader, HoldingTaxLotsAdapter>();
         services.AddScoped<IAssetSignalReader, AssetSignalAdapter>();
+        // 414: thesis track record — bridges Research → Radar's weekly performance brief.
+        services.AddScoped<ITrackRecordSource, ResearchTrackRecordSource>();
         return services;
     }
 }

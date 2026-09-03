@@ -82,6 +82,12 @@ public static class ResearchModule
                 "research-retrieval-indexing",
                 job => job.ExecuteAsync(CancellationToken.None),
                 "15,45 * * * *");
+
+            // Rebalance proposals (feature 432): after PortfolioScanner (02:00) and Research macro (03:00).
+            mgr.AddOrUpdate<ActionTicketsGeneratorJob>(
+                "action-tickets-generator",
+                job => job.ExecuteAsync(CancellationToken.None),
+                Cron.Daily(4));
         }
     }
 
@@ -285,6 +291,7 @@ public static class ResearchModule
         services.AddScoped<CandidateExpiryJob>();
         services.AddScoped<OpportunityScanJob>();
         services.AddScoped<ResearchIndexingJob>();
+        services.AddScoped<ActionTicketsGeneratorJob>();
 
         services.AddSingleton<IJobRegistrar, JobRegistrar>();
 
