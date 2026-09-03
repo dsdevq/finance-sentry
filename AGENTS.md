@@ -46,8 +46,9 @@ cd /tmp/lifekit-common/projects/config && npm pack --pack-destination /tmp/
 cd /workspace/frontend
 NODE_OPTIONS="--max-old-space-size=2048" npm install \
   /tmp/lifekit-hq-tokens-*.tgz /tmp/lifekit-hq-core-*.tgz \
-  /tmp/lifekit-hq-charts-core-*.tgz /tmp/lifekit-hq-ui-*-local.tgz \
+  /tmp/lifekit-hq-charts-core-*.tgz /tmp/lifekit-hq-ui-*.tgz \
   /tmp/lifekit-hq-config-*.tgz --legacy-peer-deps --prefer-offline
+node scripts/patch-lifekit-ui.js   # npm install does not reliably fire the postinstall
 
 # Build the Angular app, then run Playwright
 NODE_OPTIONS="--max-old-space-size=2048" npx ng build --configuration=production
@@ -153,9 +154,10 @@ cp /usr/lib/aarch64-linux-gnu/libXfixes.so.3 /tmp/
 # Then run Playwright with LD_LIBRARY_PATH=/tmp:$LD_LIBRARY_PATH
 ```
 
-The `--no-verify` flag is required on commits because the husky pre-commit hook runs `npm ci` which
-fails with 401 on `@lifekit-hq/*` (GitHub Packages requires NODE_AUTH_TOKEN). CI enforces the full
-frontend gate instead.
+The husky pre-commit hook runs lint-staged + `npm run lint` + `npm run format:check` — it does
+**not** run `npm ci`, so it passes without `--no-verify` once `frontend/node_modules` exists. It
+fails with `eslint … ENOENT` (not a lint error) when frontend files are staged and
+`frontend/node_modules` is absent.
 
 ## Frontend pre-commit version-bump gate
 
