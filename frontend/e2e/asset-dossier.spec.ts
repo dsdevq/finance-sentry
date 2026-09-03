@@ -130,10 +130,25 @@ const DOSSIER_AAPL = {
     price: 175.0,
     isStale: false,
     metrics: {
-      trailingPe: {value: 28.5, fiveYearAvg: 25.3, historyWindowYears: 5, historyUnavailable: false},
+      trailingPe: {
+        value: 28.5,
+        fiveYearAvg: 25.3,
+        historyWindowYears: 5,
+        historyUnavailable: false,
+      },
       forwardPe: {value: 26.2, fiveYearAvg: 23.1, historyWindowYears: 5, historyUnavailable: false},
-      evToEbitda: {value: null, fiveYearAvg: null, historyWindowYears: null, historyUnavailable: true},
-      dividendYield: {value: 0.5, fiveYearAvg: 0.6, historyWindowYears: 5, historyUnavailable: false},
+      evToEbitda: {
+        value: null,
+        fiveYearAvg: null,
+        historyWindowYears: null,
+        historyUnavailable: true,
+      },
+      dividendYield: {
+        value: 0.5,
+        fiveYearAvg: 0.6,
+        historyWindowYears: 5,
+        historyUnavailable: false,
+      },
     },
     consensusTarget: 210.0,
     impliedUpsidePct: 20.0,
@@ -216,24 +231,67 @@ const DOSSIER_AAPL = {
   generatedAt: '2026-09-01T10:30:00Z',
 };
 
+const EMPTY_LEDGER_READ = {
+  symbol: 'AAPL',
+  narrative: null,
+  generatedAt: null,
+  isStale: true,
+  cached: false,
+};
+
+const LEDGER_READ_NARRATIVE =
+  'You hold 50 AAPL at a 25% unrealised gain; the services thesis is intact.';
+
 async function mockApis(page: Page): Promise<void> {
   await page.route(`${API}/auth/me`, route =>
-    route.fulfill({status: 200, contentType: 'application/json', body: JSON.stringify(AUTH_RESPONSE)})
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(AUTH_RESPONSE),
+    })
   );
   await page.route(`${API}/auth/refresh`, route =>
-    route.fulfill({status: 200, contentType: 'application/json', body: JSON.stringify(AUTH_RESPONSE)})
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(AUTH_RESPONSE),
+    })
   );
   await page.route(`${API}/brokerage/holdings`, route =>
-    route.fulfill({status: 200, contentType: 'application/json', body: JSON.stringify(BROKERAGE_HOLDINGS)})
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(BROKERAGE_HOLDINGS),
+    })
   );
   await page.route(`${API}/crypto/holdings`, route =>
-    route.fulfill({status: 200, contentType: 'application/json', body: JSON.stringify(CRYPTO_HOLDINGS)})
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(CRYPTO_HOLDINGS),
+    })
   );
   await page.route(`${API}/wealth/summary`, route =>
-    route.fulfill({status: 200, contentType: 'application/json', body: JSON.stringify(WEALTH_SUMMARY)})
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(WEALTH_SUMMARY),
+    })
   );
   await page.route(`${API}/research/assets/AAPL/dossier`, route =>
-    route.fulfill({status: 200, contentType: 'application/json', body: JSON.stringify(DOSSIER_AAPL)})
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(DOSSIER_AAPL),
+    })
+  );
+  // Default: nothing generated yet. Individual tests re-route to cover the cached/stale/error paths.
+  await page.route(`${API}/research/assets/AAPL/ledger-read**`, route =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(EMPTY_LEDGER_READ),
+    })
   );
 }
 
@@ -320,5 +378,128 @@ test.describe('Asset Dossier', () => {
     await expect(sparkline).toBeVisible();
     // Latest reading is shown in the header
     await expect(page.getByText('Latest')).toBeVisible();
+  });
+});
+
+test.describe("Ledger's read", () => {
+  test.beforeEach(async ({page}) => {
+    await mockApis(page);
+  });
+
+  test('offers to generate when nothing is cached', async ({page}) => {
+    await page.goto('/assets/AAPL');
+
+    await expect(page.getByTestId('ledger-read-card')).toBeVisible();
+    await expect(page.getByTestId('ledger-read-empty')).toBeVisible();
+    await expect(page.getByTestId('ledger-read-generate')).toBeVisible();
+    await expect(page.getByTestId('ledger-read-narrative')).toHaveCount(0);
+  });
+
+  test('generate button posts to the agent and renders the returned read', async ({page}) => {
+    let postCount = 0;
+    await page.route(`${API}/research/assets/AAPL/ledger-read**`, route => {
+      if (route.request().method() === 'POST') {
+        postCount += 1;
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            symbol: 'AAPL',
+            narrative: LEDGER_READ_NARRATIVE,
+            generatedAt: '2026-09-03T09:00:00Z',
+            isStale: false,
+            cached: false,
+          }),
+        });
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(EMPTY_LEDGER_READ),
+      });
+    });
+
+    await page.goto('/assets/AAPL');
+    await page.getByTestId('ledger-read-generate').click();
+
+    await expect(page.getByTestId('ledger-read-narrative')).toContainText(LEDGER_READ_NARRATIVE);
+    await expect(page.getByTestId('ledger-read-regenerate')).toBeVisible();
+    expect(postCount).toBe(1);
+  });
+
+  test('a cached read renders on load without regenerating', async ({page}) => {
+    let postCount = 0;
+    await page.route(`${API}/research/assets/AAPL/ledger-read**`, route => {
+      if (route.request().method() === 'POST') {
+        postCount += 1;
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          symbol: 'AAPL',
+          narrative: LEDGER_READ_NARRATIVE,
+          generatedAt: '2026-09-03T09:00:00Z',
+          isStale: false,
+          cached: true,
+        }),
+      });
+    });
+
+    await page.goto('/assets/AAPL');
+
+    await expect(page.getByTestId('ledger-read-narrative')).toContainText(LEDGER_READ_NARRATIVE);
+    await expect(page.getByTestId('ledger-read-generated')).toBeVisible();
+    await expect(page.getByTestId('ledger-read-stale')).toHaveCount(0);
+    expect(postCount).toBe(0);
+  });
+
+  test('a stale cached read still renders, flagged out of date', async ({page}) => {
+    await page.route(`${API}/research/assets/AAPL/ledger-read**`, route =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          symbol: 'AAPL',
+          narrative: LEDGER_READ_NARRATIVE,
+          generatedAt: '2026-08-01T09:00:00Z',
+          isStale: true,
+          cached: true,
+        }),
+      })
+    );
+
+    await page.goto('/assets/AAPL');
+
+    await expect(page.getByTestId('ledger-read-narrative')).toContainText(LEDGER_READ_NARRATIVE);
+    await expect(page.getByTestId('ledger-read-stale')).toBeVisible();
+    await expect(page.getByTestId('ledger-read-regenerate')).toBeVisible();
+  });
+
+  test('surfaces a friendly message when the agent is unavailable', async ({page}) => {
+    await page.route(`${API}/research/assets/AAPL/ledger-read**`, route => {
+      if (route.request().method() === 'POST') {
+        return route.fulfill({
+          status: 503,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            error: 'Ledger could not produce a read right now. Try again shortly.',
+            errorCode: 'LEDGER_READ_UNAVAILABLE',
+          }),
+        });
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(EMPTY_LEDGER_READ),
+      });
+    });
+
+    await page.goto('/assets/AAPL');
+    await page.getByTestId('ledger-read-generate').click();
+
+    await expect(page.getByTestId('ledger-read-error')).toContainText(
+      'Ledger could not produce a read right now.'
+    );
   });
 });

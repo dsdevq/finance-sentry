@@ -13,7 +13,9 @@ export default defineConfig({
   workers: 1,
   reporter: [
     ['json', {outputFile: 'playwright-report/results.json'}],
-    ['html', {open: 'never'}],
+    // The HTML reporter wipes its output folder on every run, so it must not share a directory
+    // with results.json — otherwise the JSON artifact CI reads is deleted before it is consumed.
+    ['html', {open: 'never', outputFolder: 'playwright-report/html'}],
   ],
   use: {
     baseURL: `http://localhost:${SPA_PORT}`,

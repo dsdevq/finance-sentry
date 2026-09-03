@@ -161,3 +161,16 @@ export interface AssetDossierDto {
   radarSignals: DossierSignalItem[];
   generatedAt: string;
 }
+
+/**
+ * "Ledger's read" for a ticker (feature 421, US3). `narrative` is null until one is generated.
+ * `isStale` = older than a day or the dossier facts moved since; the copy still renders, flagged.
+ * `cached` = served from the server-side cache rather than freshly generated.
+ */
+export interface AssetLedgerReadDto {
+  symbol: string;
+  narrative: Nullable<string>;
+  generatedAt: Nullable<string>;
+  isStale: boolean;
+  cached: boolean;
+}

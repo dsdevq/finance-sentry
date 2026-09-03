@@ -114,7 +114,42 @@ app.routes.ts, holdings component (add click navigation).
 
 Playwright spec: click holding → dossier renders; navigate back.
 
-### US3 — Ledger's Read (future session)
+### US3 — Ledger's Read
 
-Separate PR. Design TBD; likely: POST /research/assets/{symbol}/ledgers-read →
-triggers agent, persists to new `asset_ledger_reads` table, GET returns cached.
+Files touched: Research/Domain (`AssetLedgerRead` entity, `IAssetLedgerReadRepository`,
+`ILedgerNarrator` port), Research/Application (`LedgerReadComposer`, `LedgerReadStaleness`,
+`GetAssetLedgerReadQuery`, `GenerateAssetLedgerReadCommand`), Research/API
+(`AssetLedgerReadResult`, two routes on `AssetDossierController`), Research/Infrastructure
+(repository + `ResearchDbContext` + migration M014 + model snapshot), `FinanceSentry.API`
+(`Adapters/LedgerNarratorAdapter`, one registration in `Program.cs`), plus the frontend `assets`
+module (model/service/store/page section), the error registry, and the Playwright spec.
+
+Key design decisions:
+
+- **API shape**: `GET /research/assets/{symbol}/ledger-read` returns the cached read and never
+  invokes the agent; `POST` (optional `?force=true`) generates. Two verbs on one route rather than
+  a `/generate` sub-path — GET is the page-load path, POST is the mutation.
+- **Agent access via a port**, not a project reference: `ILedgerNarrator` in Research's
+  `Domain/Ports`, implemented by `LedgerNarratorAdapter`. The adapter lives in
+  `FinanceSentry.API` rather than `FinanceSentry.Integration` (where the other 039-pattern
+  adapters sit) because `Mcp → Integration` and `Agent → Mcp` already exist, so an
+  `Integration → Agent` edge is circular. Program.cs already describes the host as the home for
+  cross-module adapters.
+- **Cache**: one row per (user, symbol) in `research.asset_ledger_reads`, overwritten in place.
+  Storing history was rejected — nothing reads a superseded narrative.
+- **Invalidation is two-part** (`LedgerReadStaleness`): older than 24h, or the
+  `SourceFingerprint` no longer matches the current dossier. The fingerprint is a SHA-256 over the
+  dossier's material facts only — it deliberately excludes `AssetDossierResult.GeneratedAt`, which
+  moves on every request and would otherwise make every read instantly stale.
+- **Staleness is computed on GET**, which means GET runs the dossier fan-out to recompute the
+  fingerprint. That is the same fan-out the page's dossier request already performs and each
+  branch is individually fault-tolerant; if it throws, the cached narrative is still served and
+  staleness degrades to age-only. The alternative — folding the read into `AssetDossierResult` —
+  was rejected because it churns the US1 contract.
+- **A stale read is rendered, not hidden**, flagged with an "out of date" tag plus a Regenerate
+  button. Blanking the section on staleness would trade a slightly-old answer for no answer.
+- **No narrative → 503** `LEDGER_READ_UNAVAILABLE` (`ApiException` subclass, picked up by the
+  existing `ErrorHandlingMiddleware`), so an unconfigured or failing agent is a retryable
+  condition in the UI rather than a 500.
+- No new UI component was needed — the section composes existing `cmn-card` / `cmn-button` /
+  `cmn-alert` / `cmn-tag`, so the library-first rule is satisfied without a lifekit-common PR.

@@ -1,6 +1,6 @@
 import {patchState, type WritableStateSource} from '@ngrx/signals';
 
-import {type AssetDossierDto} from '../models/dossier/dossier.model';
+import {type AssetDossierDto, type AssetLedgerReadDto} from '../models/dossier/dossier.model';
 import {type DossierState} from './dossier.state';
 
 export function dossierMethods(store: WritableStateSource<DossierState>) {
@@ -13,6 +13,15 @@ export function dossierMethods(store: WritableStateSource<DossierState>) {
     },
     setDossierError(errorCode: Nullable<string>): void {
       patchState(store, {dossierStatus: 'error', dossierErrorCode: errorCode});
+    },
+    setLedgerReadLoading(): void {
+      patchState(store, {ledgerReadStatus: 'loading', ledgerReadErrorCode: null});
+    },
+    setLedgerRead(ledgerRead: AssetLedgerReadDto): void {
+      patchState(store, {ledgerRead, ledgerReadStatus: 'idle', ledgerReadErrorCode: null});
+    },
+    setLedgerReadError(errorCode: Nullable<string>): void {
+      patchState(store, {ledgerReadStatus: 'error', ledgerReadErrorCode: errorCode});
     },
   };
 }

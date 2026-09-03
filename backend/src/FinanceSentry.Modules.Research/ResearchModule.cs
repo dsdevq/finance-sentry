@@ -111,6 +111,7 @@ public static class ResearchModule
         services.AddScoped<IRecommendationTrendRepository, RecommendationTrendRepository>();
         services.AddScoped<IResearchDocumentRepository, ResearchDocumentRepository>();
         services.AddScoped<IResearchRetrievalRepository, ResearchRetrievalRepository>();
+        services.AddScoped<IAssetLedgerReadRepository, AssetLedgerReadRepository>();
         services.Configure<OpportunityOptions>(config.GetSection(OpportunityOptions.SectionName));
         services.Configure<ResearchRetrievalOptions>(config.GetSection(ResearchRetrievalOptions.SectionName));
         services.Configure<AnalystSourcesOptions>(config.GetSection(AnalystSourcesOptions.SectionName));

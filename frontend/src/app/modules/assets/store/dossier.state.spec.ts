@@ -14,4 +14,10 @@ describe('initialDossierState', () => {
   it('starts with no error code', () => {
     expect(initialDossierState.dossierErrorCode).toBeNull();
   });
+
+  it("starts with no Ledger's read loaded", () => {
+    expect(initialDossierState.ledgerRead).toBeNull();
+    expect(initialDossierState.ledgerReadStatus).toBe('idle');
+    expect(initialDossierState.ledgerReadErrorCode).toBeNull();
+  });
 });

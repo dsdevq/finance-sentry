@@ -77,4 +77,54 @@ describe('dossierMethods', () => {
     expect(state.dossierStatus()).toBe('loading');
     expect(state.dossier()).not.toBeNull();
   });
+
+  it('setLedgerRead stores the read and resets status to idle', () => {
+    const state = signalState({...initialDossierState, ledgerReadStatus: 'loading' as const});
+    const methods = dossierMethods(state);
+    const read = {
+      symbol: 'AAPL',
+      narrative: 'A read.',
+      generatedAt: '2026-09-03T00:00:00Z',
+      isStale: false,
+      cached: true,
+    };
+
+    methods.setLedgerRead(read);
+
+    expect(state.ledgerRead()).toEqual(read);
+    expect(state.ledgerReadStatus()).toBe('idle');
+    expect(state.ledgerReadErrorCode()).toBeNull();
+  });
+
+  it('setLedgerReadLoading clears a previous error but keeps the cached read visible', () => {
+    const state = signalState({
+      ...initialDossierState,
+      ledgerReadStatus: 'error' as const,
+      ledgerReadErrorCode: 'LEDGER_READ_UNAVAILABLE',
+    });
+    const methods = dossierMethods(state);
+    methods.setLedgerRead({
+      symbol: 'AAPL',
+      narrative: 'Stays put.',
+      generatedAt: null,
+      isStale: true,
+      cached: true,
+    });
+
+    methods.setLedgerReadLoading();
+
+    expect(state.ledgerReadStatus()).toBe('loading');
+    expect(state.ledgerReadErrorCode()).toBeNull();
+    expect(state.ledgerRead()?.narrative).toBe('Stays put.');
+  });
+
+  it('setLedgerReadError stores the error code and sets error status', () => {
+    const state = signalState(initialDossierState);
+    const methods = dossierMethods(state);
+
+    methods.setLedgerReadError('LEDGER_READ_UNAVAILABLE');
+
+    expect(state.ledgerReadStatus()).toBe('error');
+    expect(state.ledgerReadErrorCode()).toBe('LEDGER_READ_UNAVAILABLE');
+  });
 });

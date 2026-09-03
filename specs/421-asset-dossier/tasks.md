@@ -56,20 +56,37 @@ holdings page (click navigation), Playwright spec.
 
 ---
 
-## Phase 3: US3 — Ledger's Read (P2) — Future session
+## Phase 3: US3 — Ledger's Read (P2) 🎯 This session
 
 **Goal**: On-demand AI summary generated via 040 agent loop, cached server-side.
 
-- [ ] T020 Design cache schema and API shape (plan update)
-- [ ] T021 Backend: POST endpoint triggers agent, persists result
-- [ ] T022 Backend: GET returns cached read + staleness flag
-- [ ] T023 Frontend: "Generate" button + cached-read section in dossier page
-- [ ] T024 Contract test for generate + cache endpoints
+**Surface area**: Research Domain (entity, repository, `ILedgerNarrator` port) · Research
+Application (composer, staleness rule, query + command) · Research API (result DTO, two routes) ·
+Research Infrastructure (repository, DbContext, migration M014, model snapshot) ·
+`FinanceSentry.API/Adapters` + one Program.cs registration · frontend `assets` module +
+error registry · contract, unit and Playwright tests.
+
+- [x] T020 Design cache schema and API shape (plan.md "US3 — Ledger's Read")
+- [x] T021 Backend: POST endpoint triggers agent, persists result — `GenerateAssetLedgerReadCommand`
+      + `LedgerNarratorAdapter` over `IAgentConversationService`; `research.asset_ledger_reads` (M014)
+- [x] T022 Backend: GET returns cached read + staleness flag — `GetAssetLedgerReadQuery`
+      + `LedgerReadStaleness` (24h age OR dossier-fingerprint mismatch)
+- [x] T023 Frontend: "Generate" button + cached-read section in dossier page — store slice
+      (state/computed/methods/effects), `AssetLedgerReadDto`, `LEDGER_READ_UNAVAILABLE` message
+- [x] T024 Contract test for generate + cache endpoints — `AssetLedgerReadContractTests` (7 tests)
+      + `LedgerReadComposerTests`/`LedgerReadStalenessTests` (9 unit tests)
+- [x] T033 `dotnet build FinanceSentry.sln -c Release` — 0 warnings, 0 errors;
+      `dotnet test FinanceSentry.sln -m:1` — full backend suite green
+- [x] T034 Frontend: `ng lint`, `ng test --configuration ci`, `ng build`,
+      `playwright test --reporter=json` — all green (5 new dossier e2e tests)
 
 ---
 
 ## Dependencies & Execution Order
 
-- **US1 (Phase 1)**: No external dependencies — all backend data already exists. This session.
-- **US2 (Phase 2)**: Depends on US1 (needs the API endpoint). Next session.
-- **US3 (Phase 3)**: Depends on US2. Future session.
+- **US1 (Phase 1)**: No external dependencies — all backend data already exists. Done.
+- **US2 (Phase 2)**: Depends on US1 (needs the API endpoint). Done.
+- **US3 (Phase 3)**: Depends on US2. Done.
+
+All three story-slices have landed; feature 421 is complete. The bank/connection dossier is
+explicitly out of v1 — file it separately.

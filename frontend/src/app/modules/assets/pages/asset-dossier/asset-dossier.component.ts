@@ -1,7 +1,7 @@
 import {DatePipe, DecimalPipe} from '@angular/common';
 import {ChangeDetectionStrategy, Component, computed, inject} from '@angular/core';
 import {Router} from '@angular/router';
-import {AlertComponent, CardComponent, TagComponent} from '@lifekit-hq/ui';
+import {AlertComponent, ButtonComponent, CardComponent, TagComponent} from '@lifekit-hq/ui';
 
 import {AppRoute} from '../../../../shared/enums/app-route/app-route.enum';
 import {type DossierSignalItem} from '../../models/dossier/dossier.model';
@@ -17,7 +17,7 @@ const SPARKLINE_MIN_POINTS = 2;
 
 @Component({
   selector: 'fns-asset-dossier',
-  imports: [AlertComponent, CardComponent, DatePipe, DecimalPipe, TagComponent],
+  imports: [AlertComponent, ButtonComponent, CardComponent, DatePipe, DecimalPipe, TagComponent],
   templateUrl: './asset-dossier.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [DossierStore],
@@ -62,6 +62,10 @@ export class AssetDossierComponent {
       (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
     )[0];
   });
+
+  public generateLedgerRead(symbol: string, force: boolean): void {
+    this.store.generateLedgerRead({symbol, force});
+  }
 
   public goBack(): void {
     void this.router.navigate([AppRoute.AccountsInvestments]);

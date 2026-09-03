@@ -125,6 +125,44 @@ namespace FinanceSentry.Modules.Research.Migrations
                     b.ToTable("analyst_universe_members", "research");
                 });
 
+            modelBuilder.Entity("FinanceSentry.Modules.Research.Domain.AssetLedgerRead", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<DateTimeOffset>("GeneratedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("Narrative")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("SourceFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Symbol")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "Symbol")
+                        .IsUnique()
+                        .HasDatabaseName("idx_asset_ledger_reads_user_symbol");
+
+                    b.ToTable("asset_ledger_reads", "research");
+                });
+
             modelBuilder.Entity("FinanceSentry.Modules.Research.Domain.CandidateScore", b =>
                 {
                     b.Property<Guid>("Id")
