@@ -7,16 +7,17 @@ using FinanceSentry.Modules.BankSync.Domain.Repositories;
 // ── Public result types ────────────────────────────────────────────────────────
 
 /// <summary>
-/// Net income and expense (in USD) produced by one counterparty in a given month,
-/// after netting credits against debits. Offsetting gross movement stays TRANSFER
-/// and does not appear here.
+/// Gross inbound and outbound movement (in USD) between the user and one counterparty
+/// in a given month. Each direction is reported whole: a rent credit and a support debit
+/// in the same month with the same counterparty are two separate facts, never one net
+/// figure. See <see cref="ICounterpartyClassificationService"/> for why.
 /// </summary>
 public record CounterpartyMonthlyFlow(
     string Month,
     string CounterpartyName,
     string FlowRole,
-    decimal NetIncomeUsd,
-    decimal NetExpenseUsd);
+    decimal InflowUsd,
+    decimal OutflowUsd);
 
 /// <summary>
 /// Result of counterparty classification over a transaction batch.
@@ -28,8 +29,15 @@ public record CounterpartyClassificationResult(
 // ── Interface ──────────────────────────────────────────────────────────────────
 
 /// <summary>
-/// Matches transactions against known counterparties and computes monthly
-/// net income / expense from the matched traffic.
+/// Matches transactions against known counterparties and reports the monthly gross
+/// movement in each direction.
+/// <para>
+/// Classification is per DIRECTION, with no per-counterparty netting: every rent credit
+/// is income and every family-support debit is an expense, even when both involve the same
+/// counterparty in the same month. Netting the two hid the pair — a month where ₴18k of rent
+/// arrived and ₴13k of support went back out reported ₴5k of income and no spending at all,
+/// which is the same transfer-blind savings rate this feature exists to fix.
+/// </para>
 /// </summary>
 public interface ICounterpartyClassificationService
 {
@@ -48,11 +56,8 @@ public interface ICounterpartyClassificationService
     /// Identifies which transactions belong to a known counterparty and returns:
     /// <list type="bullet">
     ///   <item>The union of matched transaction IDs (to exclude from normal flow).</item>
-    ///   <item>Per-counterparty, per-month net income / expense in USD.</item>
+    ///   <item>Per-counterparty, per-month gross inflow / outflow in USD.</item>
     /// </list>
-    /// Netting rule: for each (counterparty, month) group —
-    /// netIncome = max(0, totalCredits − totalDebits);
-    /// netExpense = max(0, totalDebits − totalCredits).
     /// </summary>
     Task<CounterpartyClassificationResult> ClassifyAsync(
         Guid userId,
@@ -114,8 +119,8 @@ public class CounterpartyClassificationService(
             return new CounterpartyClassificationResult([], []);
 
         var matchedIds = new HashSet<Guid>();
-        // Key: (counterpartyName, month) → (totalCreditsUsd, totalDebitsUsd)
-        var buckets = new Dictionary<(string Name, string FlowRole, string Month), (decimal Credits, decimal Debits)>();
+        // Key: (counterpartyName, flowRole, month) → (grossInflowUsd, grossOutflowUsd)
+        var buckets = new Dictionary<(string Name, string FlowRole, string Month), (decimal Inflow, decimal Outflow)>();
 
         foreach (var tx in transactions)
         {
@@ -136,9 +141,9 @@ public class CounterpartyClassificationService(
             buckets.TryGetValue(key, out var existing);
 
             if (tx.TransactionType == "credit")
-                buckets[key] = (existing.Credits + amountUsd, existing.Debits);
+                buckets[key] = (existing.Inflow + amountUsd, existing.Outflow);
             else
-                buckets[key] = (existing.Credits, existing.Debits + amountUsd);
+                buckets[key] = (existing.Inflow, existing.Outflow + amountUsd);
         }
 
         var monthlyFlows = buckets
@@ -146,8 +151,10 @@ public class CounterpartyClassificationService(
                 kv.Key.Month,
                 kv.Key.Name,
                 kv.Key.FlowRole,
-                Math.Max(0m, kv.Value.Credits - kv.Value.Debits),
-                Math.Max(0m, kv.Value.Debits - kv.Value.Credits)))
+                kv.Value.Inflow,
+                kv.Value.Outflow))
+            .OrderBy(f => f.Month, StringComparer.Ordinal)
+            .ThenBy(f => f.CounterpartyName, StringComparer.Ordinal)
             .ToList();
 
         return new CounterpartyClassificationResult(matchedIds, monthlyFlows);

@@ -36,8 +36,9 @@ public interface IMoneyFlowStatisticsService
     /// Pending transactions count — a card hold is real spending, and excluding it made the
     /// current month's outflow a fraction of reality. Settlement retires or flips the pending
     /// row in place, so it is never double-counted for long.
-    /// Counterparty transactions (e.g. family rent / support) are netted separately and
-    /// folded into each month's inflow/outflow so the savings rate is honest. The
+    /// Counterparty transactions (e.g. family rent / support) are classified per direction —
+    /// gross, never netted against each other — and folded into each month's inflow/outflow so
+    /// the savings rate is honest. The
     /// <paramref name="classification"/> is computed once per request by
     /// <see cref="ICounterpartyClassificationService.ClassifyForWindowAsync"/> and shared with
     /// the top-categories reader, so both tell the same story about the same movements.
@@ -116,21 +117,28 @@ public class MoneyFlowStatisticsService(
         // 6. Fold the counterparty flows into the USD-denominated totals, one combined entry
         //    per month (the netting is already currency-normalised).
         //
-        //    The flow ROLE decides where the movement lands:
-        //      family_support — real spending, so net expense joins Outflow;
-        //      investment     — the money is still the user's, it only changed sleeve, so it
-        //                       stays OUT of Outflow and is reported separately. Folding it
-        //                       into spend would understate the savings rate by exactly the
-        //                       amount that was saved.
+        //    Each direction lands on its own, ungrossed: rent arriving from a counterparty is
+        //    income for its full amount even in a month when support went back out to the same
+        //    counterparty, and that support is spending for its full amount. Netting the pair
+        //    reported neither, which is exactly the transfer-blind savings rate this reads
+        //    against.
+        //
+        //    The flow ROLE decides where each direction lands:
+        //      family_support — real spending, so outbound joins Outflow, inbound joins Inflow;
+        //      investment     — the money is still the user's, it only changed sleeve. Outbound
+        //                       stays OUT of Outflow and is reported separately; inbound is
+        //                       capital coming back, not income, so it is not Inflow either.
+        //                       Folding either into spend/income would misstate the savings rate
+        //                       by exactly the amount that was saved.
         var cpByMonth = classification.MonthlyFlows
             .GroupBy(f => f.Month)
             .ToDictionary(
                 g => g.Key,
                 g => (
-                    IncomeUsd: g.Where(f => f.FlowRole != FlowRoles.Investment).Sum(f => f.NetIncomeUsd),
-                    ExpenseUsd: g.Where(f => f.FlowRole != FlowRoles.Investment).Sum(f => f.NetExpenseUsd),
-                    FamilySupportUsd: g.Where(f => f.FlowRole == FlowRoles.FamilySupport).Sum(f => f.NetExpenseUsd),
-                    InvestedUsd: g.Where(f => f.FlowRole == FlowRoles.Investment).Sum(f => f.NetExpenseUsd)));
+                    IncomeUsd: g.Where(f => f.FlowRole != FlowRoles.Investment).Sum(f => f.InflowUsd),
+                    ExpenseUsd: g.Where(f => f.FlowRole != FlowRoles.Investment).Sum(f => f.OutflowUsd),
+                    FamilySupportUsd: g.Where(f => f.FlowRole == FlowRoles.FamilySupport).Sum(f => f.OutflowUsd),
+                    InvestedUsd: g.Where(f => f.FlowRole == FlowRoles.Investment).Sum(f => f.OutflowUsd)));
 
         var result = new List<MonthlyFlow>();
 

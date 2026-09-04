@@ -91,9 +91,9 @@ public class CounterpartyClassificationTests
 
         result.MatchedTransactionIds.Should().Contain(credit.Id);
         result.MonthlyFlows.Should().HaveCount(1);
-        result.MonthlyFlows[0].NetIncomeUsd.Should().BeApproximately(
+        result.MonthlyFlows[0].InflowUsd.Should().BeApproximately(
             CurrencyConverter.ToUsd(18000m, "UAH"), 0.01m);
-        result.MonthlyFlows[0].NetExpenseUsd.Should().Be(0m);
+        result.MonthlyFlows[0].OutflowUsd.Should().Be(0m);
     }
 
     // ── T044-02: Match by merchant_name_contains ──────────────────────────────
@@ -108,8 +108,8 @@ public class CounterpartyClassificationTests
         var result = await sut.ClassifyAsync(UserId, [debit], UsdAccount);
 
         result.MatchedTransactionIds.Should().Contain(debit.Id);
-        result.MonthlyFlows[0].NetExpenseUsd.Should().Be(5000m);
-        result.MonthlyFlows[0].NetIncomeUsd.Should().Be(0m);
+        result.MonthlyFlows[0].OutflowUsd.Should().Be(5000m);
+        result.MonthlyFlows[0].InflowUsd.Should().Be(0m);
     }
 
     // ── T044-03: No match returns empty result ────────────────────────────────
@@ -127,12 +127,14 @@ public class CounterpartyClassificationTests
         result.MonthlyFlows.Should().BeEmpty();
     }
 
-    // ── T044-04: Netting — credits dominate → income, zero expense ───────────
+    // ── T044-04: Rent in AND support out in the same month — both reported gross ──
 
     [Fact]
-    public async Task Classify_CreditsDominateMonth_NetIncomePositiveExpenseZero()
+    public async Task Classify_CreditsAndDebitsSameMonth_ReportsBothDirectionsGross()
     {
-        // ₴18k credit rent - ₴13k debit support = ₴5k net income
+        // The real white-card month: ₴18k rent arrives, ₴13k of support goes back out.
+        // Both are facts. Netting them to ₴5k of income hid the ₴13k of spending, which is
+        // the transfer-blind savings rate this feature exists to fix.
         var cp = MakeCounterparty("Мама", ("description_contains", "мама"));
         var sut = BuildSut(cp);
 
@@ -145,17 +147,15 @@ public class CounterpartyClassificationTests
 
         result.MatchedTransactionIds.Should().BeEquivalentTo([credit.Id, debit1.Id, debit2.Id]);
         var flow = result.MonthlyFlows.Should().ContainSingle().Subject;
-        var expectedIncomeUsd = CurrencyConverter.ToUsd(18000m - 13000m, "UAH");
-        flow.NetIncomeUsd.Should().BeApproximately(expectedIncomeUsd, 0.01m);
-        flow.NetExpenseUsd.Should().Be(0m);
+        flow.InflowUsd.Should().BeApproximately(CurrencyConverter.ToUsd(18000m, "UAH"), 0.01m);
+        flow.OutflowUsd.Should().BeApproximately(CurrencyConverter.ToUsd(13000m, "UAH"), 0.01m);
     }
 
-    // ── T044-05: Netting — debits dominate → expense, zero income ────────────
+    // ── T044-05: Debits dominate — the credit is still income ────────────────
 
     [Fact]
-    public async Task Classify_DebitsDominateMonth_NetExpensePositiveIncomeZero()
+    public async Task Classify_DebitsDominateMonth_SmallerCreditStillCountsAsInflow()
     {
-        // ₴2k credit, ₴12k debits = ₴10k net expense
         var cp = MakeCounterparty("Мама", ("description_contains", "мама"));
         var sut = BuildSut(cp);
 
@@ -166,14 +166,14 @@ public class CounterpartyClassificationTests
         var result = await sut.ClassifyAsync(UserId, [credit, debit], UahAccount);
 
         var flow = result.MonthlyFlows.Should().ContainSingle().Subject;
-        flow.NetExpenseUsd.Should().BeApproximately(CurrencyConverter.ToUsd(10000m, "UAH"), 0.01m);
-        flow.NetIncomeUsd.Should().Be(0m);
+        flow.OutflowUsd.Should().BeApproximately(CurrencyConverter.ToUsd(12000m, "UAH"), 0.01m);
+        flow.InflowUsd.Should().BeApproximately(CurrencyConverter.ToUsd(2000m, "UAH"), 0.01m);
     }
 
-    // ── T044-06: Equal credits and debits → both zero ─────────────────────────
+    // ── T044-06: Equal credits and debits do NOT cancel each other ────────────
 
     [Fact]
-    public async Task Classify_EqualCreditsAndDebits_BothNetToZero()
+    public async Task Classify_EqualCreditsAndDebits_NeitherDirectionIsCancelled()
     {
         var cp = MakeCounterparty("Мама", ("description_contains", "мама"));
         var sut = BuildSut(cp);
@@ -185,14 +185,15 @@ public class CounterpartyClassificationTests
         var result = await sut.ClassifyAsync(UserId, [credit, debit], UahAccount);
 
         var flow = result.MonthlyFlows.Should().ContainSingle().Subject;
-        flow.NetIncomeUsd.Should().Be(0m);
-        flow.NetExpenseUsd.Should().Be(0m);
+        var expectedUsd = CurrencyConverter.ToUsd(10000m, "UAH");
+        flow.InflowUsd.Should().BeApproximately(expectedUsd, 0.01m);
+        flow.OutflowUsd.Should().BeApproximately(expectedUsd, 0.01m);
     }
 
     // ── T044-07: Multi-counterparty in the same month ─────────────────────────
 
     [Fact]
-    public async Task Classify_MultipleCounterpartiesSameMonth_EachNetsSeparately()
+    public async Task Classify_MultipleCounterpartiesSameMonth_EachBucketsSeparately()
     {
         var mama = MakeCounterparty("Мама", ("description_contains", "мама"));
         var liza = MakeCounterparty("Ліза", ("description_contains", "Ліза"));
@@ -206,8 +207,8 @@ public class CounterpartyClassificationTests
 
         result.MatchedTransactionIds.Should().BeEquivalentTo([mamaCredit.Id, lizaDebit.Id]);
         result.MonthlyFlows.Should().HaveCount(2);
-        result.MonthlyFlows.Should().ContainSingle(f => f.CounterpartyName == "Мама" && f.NetIncomeUsd == 5000m);
-        result.MonthlyFlows.Should().ContainSingle(f => f.CounterpartyName == "Ліза" && f.NetExpenseUsd == 3000m);
+        result.MonthlyFlows.Should().ContainSingle(f => f.CounterpartyName == "Мама" && f.InflowUsd == 5000m);
+        result.MonthlyFlows.Should().ContainSingle(f => f.CounterpartyName == "Ліза" && f.OutflowUsd == 3000m);
     }
 
     // ── T044-08: Multi-month window produces per-month results ────────────────
@@ -228,12 +229,12 @@ public class CounterpartyClassificationTests
 
         result.MonthlyFlows.Should().HaveCount(2);
         var july = result.MonthlyFlows.Single(f => f.Month == "2026-07");
-        july.NetExpenseUsd.Should().Be(8000m);
-        july.NetIncomeUsd.Should().Be(0m);
+        july.OutflowUsd.Should().Be(8000m);
+        july.InflowUsd.Should().Be(0m);
 
         var august = result.MonthlyFlows.Single(f => f.Month == "2026-08");
-        august.NetIncomeUsd.Should().Be(18000m);
-        august.NetExpenseUsd.Should().Be(0m);
+        august.InflowUsd.Should().Be(18000m);
+        august.OutflowUsd.Should().Be(0m);
     }
 
     // ── T044-09: First-match wins when multiple counterparties could match ─────
@@ -316,18 +317,43 @@ public class CounterpartyClassificationTests
               .Which.Should().BeEquivalentTo(new
               {
                   FlowRole = FlowRoles.Investment,
-                  NetExpenseUsd = 500m,
-                  NetIncomeUsd = 0m,
+                  OutflowUsd = 500m,
+                  InflowUsd = 0m,
               });
     }
 
-    // ── T044-14: Window path loads its own transactions and currencies ────────
+    // ── T044-14: Re-running over the same input produces the same buckets ─────
+
+    [Fact]
+    public async Task Classify_RerunOverSameInput_ProducesIdenticalOrderedFlows()
+    {
+        var mama = MakeCounterparty("Мама", ("description_contains", "мама"));
+        var liza = MakeCounterparty("Ліза", ("description_contains", "Ліза"));
+        var sut = BuildSut(mama, liza);
+
+        var july = new DateTime(2026, 7, 15, 0, 0, 0, DateTimeKind.Utc);
+        var august = new DateTime(2026, 8, 15, 0, 0, 0, DateTimeKind.Utc);
+        var batch = new List<Transaction>
+        {
+            MakeTx(3000m, "debit", "Ліза допомога", date: august),
+            MakeTx(18000m, "credit", "від мама", date: august),
+            MakeTx(8000m, "debit", "мама липень", date: july),
+        };
+
+        var first = await sut.ClassifyAsync(UserId, batch, UsdAccount);
+        var second = await sut.ClassifyAsync(UserId, batch, UsdAccount);
+
+        second.MonthlyFlows.Should().Equal(first.MonthlyFlows);
+        second.MatchedTransactionIds.Should().BeEquivalentTo(first.MatchedTransactionIds);
+    }
+
+    // ── T044-15: Window path loads its own transactions and currencies ────────
 
     [Fact]
     public async Task ClassifyForWindow_LoadsTransactionsAndAccountCurrencies()
     {
         // The single entry point every consumer shares: it must resolve the account currency
-        // itself, or a UAH statement would be netted as if it were dollars.
+        // itself, or a UAH statement would be counted as if it were dollars.
         var account = MakeAccount("UAH");
         var cp = MakeCounterparty("Мама", ("description_contains", "мама"));
 
@@ -338,6 +364,6 @@ public class CounterpartyClassificationTests
 
         result.MatchedTransactionIds.Should().ContainSingle();
         result.MonthlyFlows.Should().ContainSingle()
-              .Which.NetIncomeUsd.Should().Be(CurrencyConverter.ToUsd(18000m, "UAH"));
+              .Which.InflowUsd.Should().Be(CurrencyConverter.ToUsd(18000m, "UAH"));
     }
 }

@@ -20,7 +20,7 @@ public interface IMerchantCategoryStatisticsService
     /// <paramref name="months"/> calendar months, sorted by TotalSpend DESC.
     /// Active debit transactions are included, pending ones too — matching the
     /// money-flow convention (a hold is real spending).
-    /// Counterparty net expense is surfaced as the FAMILY_SUPPORT bucket so that
+    /// Outbound counterparty movement is surfaced as the FAMILY_SUPPORT bucket so that
     /// family support is visible in the category breakdown without mixing it into
     /// regular spend categories. The <paramref name="classification"/> is the same
     /// once-per-request result the money-flow reader uses, so a movement can never be
@@ -61,7 +61,7 @@ public class MerchantCategoryStatisticsService(
         var currencyByAccount = accountList.ToDictionary(a => a.Id, a => a.Currency);
 
         // Counterparty classification (computed once upstream): matched transactions are
-        // excluded from normal category stats and their net expense appears as FAMILY_SUPPORT.
+        // excluded from normal category stats and their outbound side appears as FAMILY_SUPPORT.
         var matchedIds = classification.MatchedTransactionIds;
 
         var nonCounterpartyTx = txList.Where(t => !matchedIds.Contains(t.Id)).ToList();
@@ -76,11 +76,13 @@ public class MerchantCategoryStatisticsService(
                         && !CategoryKeys.IsTransfer(t.MerchantCategory))
             .ToList();
 
-        // Aggregate counterparty net expense across all months in the window. Only the
-        // family-support role is spend; investment routing left the bank but not the user.
+        // Aggregate outbound counterparty movement across all months in the window. It is the
+        // gross amount sent — rent received back from the same person does not cancel it, since
+        // that was income, not a refund. Only the family-support role is spend; investment
+        // routing left the bank but not the user.
         var familySupportUsd = classification.MonthlyFlows
             .Where(f => f.FlowRole == FlowRoles.FamilySupport)
-            .Sum(f => f.NetExpenseUsd);
+            .Sum(f => f.OutflowUsd);
 
         var totalSpend = debits.Sum(ToUsd) + familySupportUsd;
 

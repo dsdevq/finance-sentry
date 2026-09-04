@@ -248,6 +248,46 @@ public class MoneyFlowStatisticsTests
         result[0].OutflowUsd.Should().Be(400m + 50m);
     }
 
+    // ── T044 Test: rent in and support out in the same month both land ────────
+
+    [Fact]
+    public async Task GetMonthlyFlow_CounterpartyRentAndSupportSameMonth_BothDirectionsLandGross()
+    {
+        // The white-card month: ₴18k-equivalent rent arrives from Mom and $500 of support
+        // goes back to her. Both sides count in full — netting them to $220 of income would
+        // report a month with no family spending at all, which is the savings-rate lie.
+        var (account, accountId) = MakeAccount("USD");
+        var date = new DateTime(2026, 5, 10, 0, 0, 0, DateTimeKind.Utc);
+
+        var transactions = new List<Transaction>
+        {
+            MakeTx(accountId, 1000m, "credit", date),
+            MakeTx(accountId, 400m,  "debit",  date),
+        };
+
+        var txRepoMock = new Mock<ITransactionRepository>();
+        txRepoMock.Setup(r => r.GetByUserIdSinceAsync(UserId, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+                  .ReturnsAsync(transactions);
+
+        var accountRepoMock = new Mock<IBankAccountRepository>();
+        accountRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
+                       .ReturnsAsync([account]);
+
+        var classification = CounterpartyResults.WithFlows(
+            new CounterpartyMonthlyFlow("2026-05", "Mom", FlowRoles.FamilySupport, 720m, 500m));
+
+        var sut = new MoneyFlowStatisticsService(txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService());
+
+        var result = await sut.GetMonthlyFlowAsync(UserId, classification, 6);
+
+        result.Should().HaveCount(1);
+        result[0].InflowUsd.Should().Be(1000m + 720m);
+        result[0].OutflowUsd.Should().Be(400m + 500m);
+        result[0].FamilySupportOutflowUsd.Should().Be(500m);
+        // Savings rate reads off these two: 820/1720 ≈ 48%, not the 1320/1500 = 88% netting gave.
+        result[0].NetUsd.Should().Be(1720m - 900m);
+    }
+
     // ── T044 Test: investment routing is carved out of "kept", never out of spend ──
 
     [Fact]

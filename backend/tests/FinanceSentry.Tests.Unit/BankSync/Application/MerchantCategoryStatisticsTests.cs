@@ -103,6 +103,27 @@ public class MerchantCategoryStatisticsTests
     }
 
     [Fact]
+    public async Task GetTopCategories_FamilySupportSpendIsNotReducedByRentReceived()
+    {
+        // Rent arriving from the same counterparty is income, not a refund of the support
+        // sent — so the FAMILY_SUPPORT bucket is the gross outbound amount, untouched by it.
+        var (account, accountId) = MakeAccount();
+        var date = new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc);
+
+        var transactions = new List<Transaction> { MakeTx(accountId, 100m, "debit", date, category: "Food") };
+
+        var classification = CounterpartyResults.WithFlows(
+            new CounterpartyMonthlyFlow("2026-03", "Mom", FlowRoles.FamilySupport, 700m, 300m));
+
+        var sut = BuildSut(transactions, [account]);
+
+        var result = await sut.GetTopCategoriesAsync(UserId, classification, 10);
+
+        result.Should().ContainSingle(c => c.Category == CategoryKeys.FamilySupport)
+              .Which.TotalSpend.Should().Be(300m);
+    }
+
+    [Fact]
     public async Task GetTopCategories_ExcludesSingleSidedTransferCategory()
     {
         // A savings-jar top-up categorized TRANSFER_OUT has no synced counterpart, so the

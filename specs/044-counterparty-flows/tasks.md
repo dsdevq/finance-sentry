@@ -49,9 +49,9 @@
   - Match by description_contains
   - Match by merchant_name_contains
   - No match returns empty set
-  - Netting: credits dominate → income, zero expense
-  - Netting: debits dominate → expense, zero income
-  - Netting: equal credits and debits → both zero
+  - Both directions in one month, credits larger
+  - Both directions in one month, debits larger
+  - Equal credits and debits — neither cancels the other
   - Multi-counterparty in same month
   - Multi-month window produces per-month results
   - First-match wins when multiple rules could match
@@ -72,7 +72,7 @@
 
 ---
 
-## [US3] Slice 3 — Invested bucket + one shared classification (this PR)
+## [US3] Slice 3 — Invested bucket + one shared classification
 
 ### Flow roles
 
@@ -116,3 +116,47 @@
 - [x] `npm run lint` / `npm run format:check` → clean
 - [x] `npm run test:ci` → 189 Vitest tests, 0 failed
 - [x] `ng build --configuration=production` + `npx playwright test` → 12 passed, 0 unexpected
+
+---
+
+## [US2] Slice 4 — Directional classification, no netting (this PR)
+
+Owner ruling (2026-09-03): classify per DIRECTION with **no** per-counterparty netting.
+Every rent credit is INCOME and every family-support debit is a FAMILY_SUPPORT expense,
+even when both involve the same counterparty in the same month.
+
+### Classification engine
+
+- [x] `CounterpartyMonthlyFlow`: `NetIncomeUsd` / `NetExpenseUsd` → `InflowUsd` / `OutflowUsd`
+- [x] Drop the `Math.Max(0, credits − debits)` netting — each direction is summed gross
+- [x] Order the emitted flows by (month, counterparty name) so FR-009 reproducibility does
+      not rest on dictionary enumeration order
+- [x] `FlowRoles` docs state what each role means per DIRECTION
+
+### Readers (role-gated, unchanged contract)
+
+- [x] `MoneyFlowStatisticsService`: family_support inbound → Inflow, outbound → Outflow +
+      `FamilySupportOutflowUsd`; investment outbound → `InvestedOutflowUsd`, investment
+      inbound → neither (capital returning is not income)
+- [x] `MerchantCategoryStatisticsService`: FAMILY_SUPPORT is gross outbound, not reduced by
+      rent received from the same counterparty
+
+### Tests
+
+- [x] Rewrite the three netting tests as directional ones (credits larger / debits larger /
+      equal — none of them cancelling)
+- [x] New: re-running over the same batch produces identical ordered flows (FR-009)
+- [x] New: money flow — rent in and support out in the same month both land gross
+- [x] New: categories — family-support spend is not reduced by rent received
+
+### Docs
+
+- [x] `docs/money-semantics.md` §5.1 — counterparty flows: matching, gross direction rule,
+      role table, ordering
+
+### Quality gates
+
+- [x] `dotnet build FinanceSentry.sln -c Release` → 0 errors, 3 pre-existing CS1587 warnings
+      in `Modules.Radar` (untouched by this slice)
+- [x] `dotnet test FinanceSentry.sln --filter "Category!=Integration"` → 563 unit tests,
+      1256 total, 0 failed

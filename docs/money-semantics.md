@@ -116,6 +116,31 @@ keeps the raw positive value ("you owe X"), matching how banks present credit ca
 - **Not cached** — recomputed per `/dashboard/aggregated` request. The dashboard polls
   every 5 minutes; the transaction-ledger stat card fetches once at page load.
 
+### 5.1 Counterparty flows (family clearing house, investment routing)
+
+`CounterpartyClassificationService` runs **once per request** and its result is handed to
+both the money-flow and the top-categories reader, so a movement can never be spending in
+one and a transfer in the other.
+
+- A transaction belongs to a counterparty when a seeded rule matches its description or
+  merchant name (case-insensitive substring). First counterparty whose rule matches wins.
+- Matched transactions leave the normal pass entirely: they are excluded before
+  transfer pair-matching, so they cannot be double-excluded or double-counted.
+- **Classification is per DIRECTION, gross — there is no netting between the two
+  directions of the same counterparty.** Every credit from a counterparty is inbound and
+  every debit to it is outbound, in full, even in the same month. Netting the pair was the
+  original bug in a new costume: a month with ₴18k of rent in and ₴13k of support out
+  reported ₴5k of income and *no spending at all*.
+- The counterparty's **flow role** decides where each direction lands:
+
+  | Role | Outbound | Inbound |
+  |---|---|---|
+  | `family_support` | `OutflowUsd` + the `FAMILY_SUPPORT` category (real spending) | `InflowUsd` (rent is income) |
+  | `investment` | `InvestedOutflowUsd` only — never outflow or spend | neither: capital coming back is not earnings |
+
+- Output is ordered by (month, counterparty name) so re-running over a fixed window
+  reproduces the same buckets in the same order.
+
 ## 6. Top spending categories
 
 `MerchantCategoryStatisticsService`: same filters as monthly flow (active, pending
