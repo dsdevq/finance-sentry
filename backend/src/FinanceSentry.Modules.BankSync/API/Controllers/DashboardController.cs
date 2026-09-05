@@ -12,9 +12,11 @@ public class DashboardController(
     IDashboardQueryService dashboard,
     ITransactionRepository transactions,
     IBankAccountRepository accounts,
-    ITransferDetectionService transferDetection) : ControllerBase
+    ITransferDetectionService transferDetection,
+    IFlowBreakdownService flowBreakdown) : ControllerBase
 {
     private readonly IDashboardQueryService _dashboard = dashboard ?? throw new ArgumentNullException(nameof(dashboard));
+    private readonly IFlowBreakdownService _flowBreakdown = flowBreakdown ?? throw new ArgumentNullException(nameof(flowBreakdown));
     private readonly ITransactionRepository _transactions = transactions ?? throw new ArgumentNullException(nameof(transactions));
     private readonly IBankAccountRepository _accounts = accounts ?? throw new ArgumentNullException(nameof(accounts));
     private readonly ITransferDetectionService _transferDetection = transferDetection ?? throw new ArgumentNullException(nameof(transferDetection));
@@ -25,6 +27,31 @@ public class DashboardController(
     public async Task<IActionResult> GetAggregated([FromQuery] int months = 6, CancellationToken ct = default)
     {
         var data = await _dashboard.GetDashboardDataAsync(User.RequireUserId(), months, ct);
+        return Ok(data);
+    }
+
+    // ── GET /api/dashboard/flow-breakdown ─────────────────────────────────────
+
+    /// <summary>
+    /// Every credit/debit of one month labelled with the bucket the flow statistics put it
+    /// in — the audit view behind the dashboard tiles. <paramref name="months"/> must be the
+    /// window the dashboard was rendered with so pair detection sees the same neighbours.
+    /// </summary>
+    [HttpGet("flow-breakdown")]
+    public async Task<IActionResult> GetFlowBreakdown(
+        [FromQuery] string month,
+        [FromQuery] int months = 6,
+        CancellationToken ct = default)
+    {
+        if (!DateTime.TryParseExact(
+                month, "yyyy-MM",
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None, out _))
+        {
+            return BadRequest(new { errorCode = "INVALID_MONTH", message = "month must be yyyy-MM" });
+        }
+
+        var data = await _flowBreakdown.GetBreakdownAsync(User.RequireUserId(), month, months, ct);
         return Ok(data);
     }
 

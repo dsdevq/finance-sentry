@@ -20,11 +20,22 @@ public record CounterpartyMonthlyFlow(
     decimal OutflowUsd);
 
 /// <summary>
+/// The counterparty a single transaction matched — who it was and what role the movement
+/// plays. Carried per transaction so drill-downs can show WHY a row was classified the way
+/// it was, not just the aggregate it landed in.
+/// </summary>
+public record CounterpartyMatch(string Name, string FlowRole);
+
+/// <summary>
 /// Result of counterparty classification over a transaction batch.
+/// <see cref="Matches"/> maps each matched transaction id to its counterparty; it is null
+/// only in hand-built test fixtures that predate it — production classification always
+/// fills it, and consumers that need it should treat null as empty.
 /// </summary>
 public record CounterpartyClassificationResult(
     HashSet<Guid> MatchedTransactionIds,
-    IReadOnlyList<CounterpartyMonthlyFlow> MonthlyFlows);
+    IReadOnlyList<CounterpartyMonthlyFlow> MonthlyFlows,
+    IReadOnlyDictionary<Guid, CounterpartyMatch>? Matches = null);
 
 // ── Interface ──────────────────────────────────────────────────────────────────
 
@@ -130,9 +141,10 @@ public class CounterpartyClassificationService(
         var knownCounterparties = await _counterparties.GetForUserAsync(userId, ct);
 
         if (knownCounterparties.Count == 0 || transactions.Count == 0)
-            return new CounterpartyClassificationResult([], []);
+            return new CounterpartyClassificationResult([], [], new Dictionary<Guid, CounterpartyMatch>());
 
         var matchedIds = new HashSet<Guid>();
+        var matchesById = new Dictionary<Guid, CounterpartyMatch>();
         // Key: (counterpartyName, flowRole, month) → (grossInflowUsd, grossOutflowUsd)
         var buckets = new Dictionary<(string Name, string FlowRole, string Month), (decimal Inflow, decimal Outflow)>();
 
@@ -154,6 +166,7 @@ public class CounterpartyClassificationService(
                 continue;
 
             matchedIds.Add(tx.Id);
+            matchesById[tx.Id] = new CounterpartyMatch(matched.Name, matched.FlowRole);
 
             var currency = accountCurrencies.TryGetValue(tx.AccountId, out var cur) ? cur : "USD";
             var amountUsd = CurrencyConverter.ToUsd(tx.Amount, currency);
@@ -178,7 +191,7 @@ public class CounterpartyClassificationService(
             .ThenBy(f => f.CounterpartyName, StringComparer.Ordinal)
             .ToList();
 
-        return new CounterpartyClassificationResult(matchedIds, monthlyFlows);
+        return new CounterpartyClassificationResult(matchedIds, monthlyFlows, matchesById);
     }
 
     // Returns the first counterparty whose any rule matches the transaction.

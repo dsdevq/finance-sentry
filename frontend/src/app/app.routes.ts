@@ -31,6 +31,13 @@ export const APP_ROUTES: Routes = [
     canActivate: [authGuard],
     children: [
       {
+        path: AppRoute.FlowBreakdown.slice(1),
+        loadComponent: () =>
+          import('./modules/bank-sync/pages/flow-breakdown/flow-breakdown.component').then(
+            m => m.FlowBreakdownComponent
+          ),
+      },
+      {
         path: AppRoute.Dashboard.slice(1),
         loadComponent: () =>
           import('./modules/bank-sync/pages/dashboard/dashboard.component').then(

@@ -1,0 +1,176 @@
+<div class="mx-auto flex h-full w-full max-w-[1200px] flex-col overflow-auto p-cmn-8">
+  <div class="mb-cmn-6 flex flex-wrap items-end justify-between gap-cmn-4">
+    <div>
+      <h1 class="font-headline text-cmn-2xl font-bold text-text-primary">Month breakdown</h1>
+      <p class="mt-cmn-1 text-cmn-sm text-text-secondary">
+        Every transaction of the month and the bucket the savings math put it in
+      </p>
+    </div>
+    <div class="flex items-center gap-cmn-2">
+      <cmn-button
+        (clicked)="goToPreviousMonth()"
+        variant="secondary"
+        size="sm"
+        aria-label="Previous month"
+      >
+        <cmn-icon name="ChevronLeft" size="sm" />
+      </cmn-button>
+      <span class="min-w-[10rem] text-center text-cmn-base font-semibold text-text-primary">
+        {{ store.month() + '-01' | date: 'MMMM y' }}
+      </span>
+      <cmn-button
+        [disabled]="isCurrentMonth()"
+        (clicked)="goToNextMonth()"
+        variant="secondary"
+        size="sm"
+        aria-label="Next month"
+      >
+        <cmn-icon name="ChevronRight" size="sm" />
+      </cmn-button>
+    </div>
+  </div>
+
+  <div class="mb-cmn-6 grid grid-cols-2 gap-cmn-4 lg:grid-cols-4">
+    <cmn-stat-card
+      [value]="store.incomeFormatted()"
+      [loading]="store.isLoading()"
+      label="Income"
+      icon="TrendingUp"
+    />
+    <cmn-stat-card
+      [value]="store.spendingFormatted()"
+      [loading]="store.isLoading()"
+      label="Spending"
+      icon="TrendingDown"
+    />
+    <cmn-stat-card
+      [value]="store.investedFormatted()"
+      [loading]="store.isLoading()"
+      label="Invested"
+      icon="LineChart"
+    />
+    <cmn-stat-card
+      [value]="store.savedFormatted()"
+      [loading]="store.isLoading()"
+      label="Saved (income − spending)"
+      icon="PiggyBank"
+    />
+  </div>
+
+  @if (store.accountChips().length > 1) {
+    <div class="mb-cmn-6 flex flex-wrap items-center gap-cmn-2">
+      <span class="text-cmn-xs font-semibold uppercase tracking-widest text-text-secondary"
+        >Account</span
+      >
+      @for (chip of store.accountChips(); track chip.accountId) {
+        <button
+          [class]="
+            store.accountFilter() === chip.accountId
+              ? 'border-accent-default bg-accent-subtle text-accent-default'
+              : 'border-border-default text-text-secondary hover:bg-surface-bg'
+          "
+          (click)="toggleAccount(chip.accountId)"
+          type="button"
+          class="inline-flex items-center gap-cmn-1 rounded-full border px-cmn-3 py-1 text-cmn-xs font-medium transition-colors"
+        >
+          {{ chip.label }}
+          @if (store.accountFilter() === chip.accountId) {
+            <cmn-icon name="X" size="sm" />
+          }
+        </button>
+      }
+    </div>
+  }
+
+  @if (store.errorMessage()) {
+    <cmn-alert variant="error" class="mb-cmn-6 block">
+      {{ store.errorMessage() }}
+    </cmn-alert>
+  }
+
+  @if (store.isLoading()) {
+    <cmn-card>
+      <div class="space-y-cmn-3 p-cmn-4">
+        @for (_ of skeletonRows; track $index) {
+          <div class="flex gap-cmn-4">
+            <cmn-skeleton height="1rem" width="15%" />
+            <cmn-skeleton height="1rem" width="35%" />
+            <cmn-skeleton height="1rem" width="20%" />
+            <cmn-skeleton height="1rem" width="15%" />
+            <cmn-skeleton height="1rem" width="15%" />
+          </div>
+        }
+      </div>
+    </cmn-card>
+  } @else if (store.isEmpty()) {
+    <div class="flex flex-1 items-center justify-center">
+      <cmn-empty-state
+        message="No transactions in this month"
+        subMessage="Pick another month or sync your accounts."
+      />
+    </div>
+  } @else {
+    <div class="space-y-cmn-6">
+      @for (group of store.groups(); track group.bucket) {
+        <cmn-card padding="none">
+          <div
+            class="flex flex-wrap items-baseline justify-between gap-cmn-2 border-b border-border-default px-cmn-4 py-cmn-3"
+          >
+            <div class="flex items-center gap-cmn-2">
+              <span class="text-cmn-base font-semibold text-text-primary">{{ group.label }}</span>
+              @if (group.counted) {
+                <cmn-tag variant="success">counted</cmn-tag>
+              } @else {
+                <cmn-tag variant="neutral">excluded</cmn-tag>
+              }
+              <span class="text-cmn-xs text-text-secondary">{{ group.note }}</span>
+            </div>
+            <span class="font-mono text-cmn-sm font-semibold tabular-nums text-text-primary">
+              ${{ group.totalUsd | number: '1.0-0' }}
+            </span>
+          </div>
+          <div class="overflow-x-auto">
+            <table [attr.aria-label]="group.label + ' transactions'" class="w-full text-cmn-sm">
+              <tbody>
+                @for (i of group.items; track i.transactionId) {
+                  <tr class="border-b border-border-default last:border-0">
+                    <td class="whitespace-nowrap px-cmn-4 py-cmn-3 text-text-secondary">
+                      {{ i.date | date: 'MMM d' }}
+                    </td>
+                    <td class="max-w-[320px] truncate px-cmn-4 py-cmn-3 text-text-primary">
+                      {{ i.description }}
+                    </td>
+                    <td class="whitespace-nowrap px-cmn-4 py-cmn-3 text-text-secondary">
+                      {{ i.bankName }} ••{{ i.accountLast4 }}
+                    </td>
+                    <td class="px-cmn-4 py-cmn-3">
+                      @if (i.counterpartyName) {
+                        <cmn-tag variant="info">{{ i.counterpartyName }}</cmn-tag>
+                      } @else if (i.category) {
+                        <cmn-tag variant="neutral">{{ i.category | merchantCategory }}</cmn-tag>
+                      } @else {
+                        <span class="text-cmn-xs text-text-secondary">—</span>
+                      }
+                    </td>
+                    <td
+                      [class]="i.direction === 'in' ? 'text-positive-default' : 'text-text-primary'"
+                      class="whitespace-nowrap px-cmn-4 py-cmn-3 text-right font-mono tabular-nums"
+                    >
+                      {{ i.direction === 'in' ? '+' : '−' }}{{ i.amount | number: '1.2-2' }}
+                      {{ i.currency }}
+                    </td>
+                    <td
+                      class="whitespace-nowrap px-cmn-4 py-cmn-3 text-right font-mono tabular-nums text-text-secondary"
+                    >
+                      ${{ i.amountUsd | number: '1.0-0' }}
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </cmn-card>
+      }
+    </div>
+  }
+</div>

@@ -11,6 +11,7 @@ import {
   type HistoryRange,
   type NetWorthHistoryResponse,
 } from '../models/dashboard/dashboard.model';
+import {type FlowBreakdown} from '../models/flow-breakdown/flow-breakdown.model';
 import {SyncStatusResponse, TriggerSyncResponse} from '../models/sync/sync.model';
 import {
   type GetAllTransactionsParams,
@@ -99,6 +100,14 @@ export class BankSyncService extends ApiService {
   public getDashboardData(months?: number): Observable<DashboardData> {
     const options = months === undefined ? {} : {params: {months}};
     return this.http.get<DashboardData>(`${environment.apiBaseUrl}/dashboard/aggregated`, options);
+  }
+
+  public getFlowBreakdown(month: string, months?: number): Observable<FlowBreakdown> {
+    const params: Record<string, string | number> =
+      months === undefined ? {month} : {month, months};
+    return this.http.get<FlowBreakdown>(`${environment.apiBaseUrl}/dashboard/flow-breakdown`, {
+      params,
+    });
   }
 
   public getNetWorthHistory(range: HistoryRange): Observable<NetWorthHistoryResponse> {
