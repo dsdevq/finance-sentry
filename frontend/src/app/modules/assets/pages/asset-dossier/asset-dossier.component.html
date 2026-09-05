@@ -18,12 +18,9 @@
             Generated {{ dossier.generatedAt | date: 'medium' }}
           </p>
         </div>
-        <button
-          (click)="goBack()"
-          class="text-cmn-sm text-text-secondary underline-offset-2 hover:text-text-primary hover:underline transition-colors"
-        >
+        <cmn-button (clicked)="goBack()" variant="secondary" size="sm">
           ← Back to investments
-        </button>
+        </cmn-button>
       </div>
     </cmn-card>
 
