@@ -83,7 +83,7 @@ Not auto-loaded — follow these links when the task touches them:
 | Thing | Convention | Example |
 |---|---|---|
 | Branch | `<type>/<issue#>-<slug>` — type is a conventional-commit type; create via `gh issue develop <n> -b` so the branch links to the issue | `feat/411-canonical-book-figures` |
-| Commit / PR title | Conventional commits, scope = module or spec number (release-please parses these) | `feat(mcp): …`, `fix(040): …` |
+| Commit / PR title | Conventional commits, scope = module or spec number (release-please parses these). **Squash rule**: a PR's title must carry the *highest-ranked* type among its commits (`feat` > `fix` > `perf`/`refactor` > `docs` > `chore`) — squash makes the title main's only commit message, so a multi-increment branch titled after its last commit misfiles the whole PR in the changelog and can skip the version bump (PR #550: a `feat` branch merged under a `docs` title). Retitle before merging if needed. | `feat(mcp): …`, `fix(040): …` |
 | Issue title | Imperative sentence, **no priority prefix** — priority lives in the `P1`/`P2` label and the Project field | `Asset Dossier — per-holding page …` |
 | Issue body | Traceability first (destination / source — why this exists), then acceptance criteria (**P1 issues only**; P2/P3 stay one-liners until promoted), then shape in PR count | see #411 |
 | Issue metadata | Type (Feature/Bug/Task) + milestone + `P1`/`P2` label + Project "Finance Sentry" Priority/Size fields. Size only on P1 (S=1 PR, M=2–3, L=4+) — never size the fog | — |
