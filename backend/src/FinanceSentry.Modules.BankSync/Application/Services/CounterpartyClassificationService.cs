@@ -161,14 +161,14 @@ public class CounterpartyClassificationService(
             if (!isCredit && !isDebit)
                 continue;
 
-            var matched = FindCounterparty(tx, knownCounterparties);
+            var currency = accountCurrencies.TryGetValue(tx.AccountId, out var cur) ? cur : "USD";
+
+            var matched = FindCounterparty(tx, currency, knownCounterparties);
             if (matched is null)
                 continue;
 
             matchedIds.Add(tx.Id);
             matchesById[tx.Id] = new CounterpartyMatch(matched.Name, matched.FlowRole);
-
-            var currency = accountCurrencies.TryGetValue(tx.AccountId, out var cur) ? cur : "USD";
             var amountUsd = CurrencyConverter.ToUsd(tx.Amount, currency);
             var month = (tx.PostedDate ?? tx.TransactionDate).ToString("yyyy-MM");
             var key = (matched.Name, matched.FlowRole, month);
@@ -194,22 +194,37 @@ public class CounterpartyClassificationService(
         return new CounterpartyClassificationResult(matchedIds, monthlyFlows, matchesById);
     }
 
-    // Returns the first counterparty whose any rule matches the transaction.
-    private static Counterparty? FindCounterparty(Transaction tx, IReadOnlyList<Counterparty> counterparties)
+    // A currency-scoped rule is more specific than a generic one, so it wins regardless of
+    // counterparty ordering: «Від: Людмила Сичова» on a EUR account matches the EUR-scoped
+    // self-routing counterparty even though the generic family rule matches the text too.
+    // Within a specificity tier, the first counterparty whose any rule matches wins.
+    private static Counterparty? FindCounterparty(
+        Transaction tx, string currency, IReadOnlyList<Counterparty> counterparties)
     {
+        Counterparty? generic = null;
         foreach (var cp in counterparties)
         {
             foreach (var rule in cp.Rules)
             {
-                if (Matches(tx, rule))
+                if (!Matches(tx, currency, rule))
+                    continue;
+                if (rule.Currency is not null)
                     return cp;
+                generic ??= cp;
             }
         }
-        return null;
+        return generic;
     }
 
-    private static bool Matches(Transaction tx, CounterpartyRule rule) =>
-        rule.MatchType switch
+    private static bool Matches(Transaction tx, string currency, CounterpartyRule rule)
+    {
+        if (rule.Currency is not null &&
+            !string.Equals(rule.Currency, currency, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return rule.MatchType switch
         {
             MatchTypes.DescriptionContains =>
                 tx.Description.Contains(rule.Pattern, StringComparison.OrdinalIgnoreCase),
@@ -218,4 +233,5 @@ public class CounterpartyClassificationService(
                 tx.MerchantName.Contains(rule.Pattern, StringComparison.OrdinalIgnoreCase),
             _ => false
         };
+    }
 }

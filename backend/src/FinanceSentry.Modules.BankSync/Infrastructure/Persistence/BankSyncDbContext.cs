@@ -130,6 +130,7 @@ public class BankSyncDbContext(DbContextOptions<BankSyncDbContext> options) : Db
         crb.Property(r => r.CounterpartyId).IsRequired();
         crb.Property(r => r.MatchType).IsRequired().HasMaxLength(50);
         crb.Property(r => r.Pattern).IsRequired().HasMaxLength(255);
+        crb.Property(r => r.Currency).HasMaxLength(3);
         crb.HasIndex(r => r.CounterpartyId).HasDatabaseName("idx_counterparty_rule_counterparty_id");
 
         var sjb = modelBuilder.Entity<SyncJob>();

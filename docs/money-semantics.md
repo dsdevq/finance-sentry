@@ -138,6 +138,11 @@ one and a transfer in the other.
   | `family_support` | `OutflowUsd` + the `FAMILY_SUPPORT` category (real spending) | `InflowUsd` (rent is income) |
   | `investment` | `InvestedOutflowUsd` only — never outflow or spend | neither: capital coming back is not earnings |
   | `household` | `OutflowUsd` (a bill paid as a transfer, e.g. the mortgage) — but **not** `FamilySupportOutflowUsd` and not the `FAMILY_SUPPORT` category | `InflowUsd` (a refund of a bill is money back) |
+  | `self_routing` | nothing — the user's own money mid-hop (e.g. Revolut → mom → Monobank, whose legs share no statement words so pair detection can't see them) | nothing |
+
+  Rules can carry an optional account-currency filter, and a currency-scoped match beats a
+  generic one — «Від: Людмила Сичова» in UAH is rent (`family_support` income), in EUR it is
+  the same wording on a routing hop (`self_routing`, excluded).
 
   Known gap: `household` outbound joins outflow but no spending *category* — top-categories
   only emits a synthetic row for `family_support` — and it always lands as discretionary,

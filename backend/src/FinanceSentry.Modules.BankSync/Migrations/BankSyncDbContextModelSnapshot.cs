@@ -248,6 +248,10 @@ namespace FinanceSentry.Modules.BankSync.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("Currency")
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
                     b.Property<string>("MatchType")
                         .IsRequired()
                         .HasMaxLength(50)

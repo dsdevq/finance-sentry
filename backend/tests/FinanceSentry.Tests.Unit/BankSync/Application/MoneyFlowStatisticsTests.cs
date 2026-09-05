@@ -422,6 +422,45 @@ public class MoneyFlowStatisticsTests
     }
 
     [Fact]
+    public async Task GetMonthlyFlow_SelfRoutingFlows_TouchNothing()
+    {
+        // 1000 in, 400 out normally; on top, 1200 routed out and 1200 routed back via a
+        // self-routing counterparty. Neither direction may reach income, outflow, family
+        // support, or invested — the money never left or entered the user's estate.
+        var (account, accountId) = MakeAccount("USD");
+        var date = new DateTime(2026, 5, 10, 0, 0, 0, DateTimeKind.Utc);
+
+        var transactions = new List<Transaction>
+        {
+            MakeTx(accountId, 1000m, "credit", date),
+            MakeTx(accountId, 400m,  "debit",  date),
+        };
+
+        var txRepoMock = new Mock<ITransactionRepository>();
+        txRepoMock.Setup(r => r.GetByUserIdSinceAsync(UserId, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+                  .ReturnsAsync(transactions);
+
+        var accountRepoMock = new Mock<IBankAccountRepository>();
+        accountRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
+                       .ReturnsAsync([account]);
+
+        var classification = CounterpartyResults.WithFlows(
+            new CounterpartyMonthlyFlow("2026-05", "Routing via mom (EUR)", FlowRoles.SelfRouting, 1200m, 1200m));
+
+        var sut = new MoneyFlowStatisticsService(
+            txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService(), CommitmentsReader());
+
+        // Act
+        var result = await sut.GetMonthlyFlowAsync(UserId, classification, 6);
+
+        // Assert: the synthetic row exists but carries zeroes everywhere that counts.
+        result.Sum(r => r.InflowUsd).Should().Be(1000m);
+        result.Sum(r => r.OutflowUsd).Should().Be(400m);
+        result.Sum(r => r.FamilySupportOutflowUsd).Should().Be(0m);
+        result.Sum(r => r.InvestedOutflowUsd).Should().Be(0m);
+    }
+
+    [Fact]
     public async Task GetMonthlyFlow_InvestmentCreditsAreNotIncome()
     {
         // Arrange: no bank transactions at all in the window, only a net INBOUND investment

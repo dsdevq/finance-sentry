@@ -201,8 +201,12 @@ public class MoneyFlowStatisticsService(
             .GroupBy(f => f.Month)
             .Select(g =>
             {
-                var incomeUsd = g.Where(f => f.FlowRole != FlowRoles.Investment).Sum(f => f.InflowUsd);
-                var expenseUsd = g.Where(f => f.FlowRole != FlowRoles.Investment).Sum(f => f.OutflowUsd);
+                // self_routing is the user's own money mid-hop: like investment it stays out
+                // of income and spending, but unlike investment it is reported nowhere at all.
+                var realFlows = g.Where(f =>
+                    f.FlowRole != FlowRoles.Investment && f.FlowRole != FlowRoles.SelfRouting).ToList();
+                var incomeUsd = realFlows.Sum(f => f.InflowUsd);
+                var expenseUsd = realFlows.Sum(f => f.OutflowUsd);
                 var familySupportUsd = g.Where(f => f.FlowRole == FlowRoles.FamilySupport).Sum(f => f.OutflowUsd);
                 var investedUsd = g.Where(f => f.FlowRole == FlowRoles.Investment).Sum(f => f.OutflowUsd);
 

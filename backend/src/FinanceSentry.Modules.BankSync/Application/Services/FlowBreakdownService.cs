@@ -29,6 +29,9 @@ public static class FlowBuckets
     /// <summary>One leg of a detected debit↔credit pair between the user's own accounts.</summary>
     public const string ExcludedPair = "excluded-pair";
 
+    /// <summary>A self-routing counterparty leg: the user's own money mid-hop, both directions excluded.</summary>
+    public const string ExcludedRouting = "excluded-routing";
+
     /// <summary>Carries a TRANSFER_IN/TRANSFER_OUT category and matched nothing else.</summary>
     public const string ExcludedTransfer = "excluded-transfer";
 }
@@ -156,9 +159,12 @@ public class FlowBreakdownService(
     {
         if (matches.TryGetValue(t.Id, out var counterparty))
         {
-            var bucket = counterparty.FlowRole == FlowRoles.Investment
-                ? (isCredit ? FlowBuckets.InvestmentReturn : FlowBuckets.Invested)
-                : (isCredit ? FlowBuckets.Income : FlowBuckets.Spending);
+            var bucket = counterparty.FlowRole switch
+            {
+                FlowRoles.Investment => isCredit ? FlowBuckets.InvestmentReturn : FlowBuckets.Invested,
+                FlowRoles.SelfRouting => FlowBuckets.ExcludedRouting,
+                _ => isCredit ? FlowBuckets.Income : FlowBuckets.Spending,
+            };
             return (bucket, counterparty);
         }
 

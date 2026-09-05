@@ -3,7 +3,13 @@
  * labels behind the dashboard tiles. Mirrors `FlowBuckets` on the backend.
  */
 export type FlowBucket =
-  'income' | 'spending' | 'invested' | 'investment-return' | 'excluded-pair' | 'excluded-transfer';
+  | 'income'
+  | 'spending'
+  | 'invested'
+  | 'investment-return'
+  | 'excluded-pair'
+  | 'excluded-routing'
+  | 'excluded-transfer';
 
 export interface FlowBreakdownItem {
   transactionId: string;

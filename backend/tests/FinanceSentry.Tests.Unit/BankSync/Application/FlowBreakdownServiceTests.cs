@@ -113,6 +113,25 @@ public class FlowBreakdownServiceTests
     }
 
     [Fact]
+    public async Task SelfRoutingLegs_LandInExcludedRouting_BothDirections()
+    {
+        var (account, accountId) = MakeAccount("EUR");
+        var outLeg = MakeTx(accountId, 1200m, "debit", InMonth, "Liudmyla Sychova");
+        var backLeg = MakeTx(accountId, 1200m, "credit", InMonth, "Від: Людмила Сичова");
+
+        var classification = WithMatches(
+            (outLeg.Id, "Routing via mom (EUR)", FlowRoles.SelfRouting),
+            (backLeg.Id, "Routing via mom (EUR)", FlowRoles.SelfRouting));
+
+        var result = await Sut([outLeg, backLeg], account, classification)
+            .GetBreakdownAsync(UserId, Month);
+
+        result.Items.Should().HaveCount(2);
+        result.Items.Should().OnlyContain(i => i.Bucket == FlowBuckets.ExcludedRouting);
+        result.Items.Should().OnlyContain(i => i.CounterpartyName == "Routing via mom (EUR)");
+    }
+
+    [Fact]
     public async Task TransferCategory_IsExcluded_UnlessACounterpartyClaimedIt()
     {
         var (account, accountId) = MakeAccount("USD");

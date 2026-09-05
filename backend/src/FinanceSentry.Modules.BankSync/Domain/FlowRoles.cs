@@ -27,4 +27,12 @@ public static class FlowRoles
     /// not support, so it stays out of the family-support figure.
     /// </summary>
     public const string Household = "household";
+
+    /// <summary>
+    /// The user's own money hopping between their accounts through a third party (e.g.
+    /// Revolut → mom → Monobank, where pair detection cannot see the legs as a pair because
+    /// the statements share no words). Neither direction is income or spending — both are
+    /// fully excluded from every flow figure, like an ordinary internal transfer.
+    /// </summary>
+    public const string SelfRouting = "self_routing";
 }
