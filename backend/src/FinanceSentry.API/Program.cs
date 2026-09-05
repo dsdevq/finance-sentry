@@ -1,4 +1,5 @@
 using Serilog;
+using FinanceSentry.API.Adapters;
 using FinanceSentry.API.Commands;
 using FinanceSentry.API.Conventions;
 using FinanceSentry.Integration;
@@ -11,6 +12,7 @@ using FinanceSentry.Infrastructure.Observability;
 using FinanceSentry.Infrastructure.Observability.HealthChecks;
 using FinanceSentry.Modules.BankSync.API.Middleware;
 using FinanceSentry.Modules.BankSync.Infrastructure.Jobs;
+using FinanceSentry.Modules.Research.Domain.Ports;
 using Hangfire;
 using Hangfire.Dashboard;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -63,6 +65,10 @@ builder.Services.AddAllModules(builder.Configuration);
 
 // 039: cross-module read ports (adapters live in the host — neither module references the other).
 builder.Services.AddCrossModulePorts();
+
+// 421/US3: Research → Agent narration port. Registered here rather than in AddCrossModulePorts
+// because Mcp→Integration and Agent→Mcp make an Integration→Agent reference circular.
+builder.Services.AddScoped<ILedgerNarrator, LedgerNarratorAdapter>();
 
 builder.Services.AddExchangeRates(builder.Configuration);
 

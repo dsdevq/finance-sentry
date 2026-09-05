@@ -27,6 +27,9 @@ public static class CrossModulePortRegistration
         // 413: portfolio scan data — bridges Research IPS + Risk rules → Radar portfolio scanner.
         services.AddScoped<IPortfolioScanDataReader, PortfolioScanDataReader>();
 
+        // 421: asset dossier — bridges BrokerageSync tax lots and Radar signals → Research dossier query.
+        services.AddScoped<IHoldingTaxLotsReader, HoldingTaxLotsAdapter>();
+        services.AddScoped<IAssetSignalReader, AssetSignalAdapter>();
         // 414: thesis track record — bridges Research → Radar's weekly performance brief.
         services.AddScoped<ITrackRecordSource, ResearchTrackRecordSource>();
         return services;

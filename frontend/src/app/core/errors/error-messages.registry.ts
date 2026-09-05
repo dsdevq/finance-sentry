@@ -28,6 +28,7 @@ export const ERROR_MESSAGES_REGISTRY: ErrorMessagesMap = {
   BUDGET_INVALID_LIMIT: 'Budget limit must be greater than zero.',
   BUDGET_INVALID_PERIOD: 'Invalid budget period.',
   SUBSCRIPTION_NOT_FOUND: 'Subscription not found.',
+  LEDGER_READ_UNAVAILABLE: 'Ledger could not produce a read right now. Try again shortly.',
   // Feature 040 agent error codes are lowercase snake_case by contract (chat-endpoint.md).
   /* eslint-disable @typescript-eslint/naming-convention */
   agent_not_configured:
