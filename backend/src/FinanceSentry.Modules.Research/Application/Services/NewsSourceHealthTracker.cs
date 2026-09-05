@@ -24,6 +24,19 @@ public static class NewsSourceHealthTracker
     }
 
     /// <summary>
+    /// Voids a source's failure history without claiming a success — for when the *cause* of the
+    /// failures has been removed (a bad URL repaired, a source deliberately re-registered). Without
+    /// it a row sitting above <see cref="DisableThreshold"/> is re-retired by its very first
+    /// subsequent failure, so it never gets a real chance to recover (issue #318).
+    /// </summary>
+    public static void ClearFailures(NewsSource source)
+    {
+        source.Enabled = true;
+        source.ConsecutiveFailures = 0;
+        source.LastFailureReason = null;
+    }
+
+    /// <summary>
     /// Records a failure and reports what follow-up action the caller should take. <see cref="NewsSourceFailureOutcome.Alert"/>
     /// fires exactly once (at the threshold) so a stuck source does not re-alert every run;
     /// <see cref="NewsSourceFailureOutcome.Disable"/> flips <see cref="NewsSource.Enabled"/> off so the

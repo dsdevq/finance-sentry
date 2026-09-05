@@ -26,6 +26,8 @@ public class AlertGeneratorService(IAlertRepository alerts) : IAlertGeneratorSer
     private static readonly TimeSpan PerformanceBriefSilenceWindow = TimeSpan.FromDays(6);
     // Active-alert dedup is the primary guard; 24h HasRecent prevents re-alert on the same day after manual resolve.
     private static readonly TimeSpan CashShortfallSilenceWindow = TimeSpan.FromHours(24);
+    // One proposal per user per day; mirrors LowBalance/ThesisBroken cadence.
+    private static readonly TimeSpan RebalanceProposalSilenceWindow = TimeSpan.FromHours(24);
 
     private readonly IAlertRepository _alerts = alerts;
 
@@ -358,10 +360,76 @@ public class AlertGeneratorService(IAlertRepository alerts) : IAlertGeneratorSer
         await _alerts.ResolveAsync(existing.Id, ct);
     }
 
+    public async Task GenerateRebalanceProposalAlertAsync(
+        Guid userId, int orderCount, string orderSummary, CancellationToken ct = default)
+    {
+        // Stable per-user anchor — no natural entity reference for a portfolio-wide proposal.
+        var referenceId = RebalancePortfolioReferenceId(userId);
+
+        var existing = await _alerts.FindActiveAsync(userId, AlertType.RebalanceProposal, referenceId, ct);
+        if (existing is not null) return;
+
+        var quietSince = DateTimeOffset.UtcNow - RebalanceProposalSilenceWindow;
+        if (await _alerts.HasRecentAsync(userId, AlertType.RebalanceProposal, referenceId, "portfolio", quietSince, ct))
+            return;
+
+        await _alerts.AddAsync(new Alert
+        {
+            UserId = userId,
+            Type = AlertType.RebalanceProposal,
+            Severity = AlertSeverity.Warning,
+            Title = $"Rebalance proposal: {orderCount} order(s)",
+            Message = orderSummary,
+            ReferenceId = referenceId,
+            ReferenceLabel = "portfolio",
+        }, ct);
+    }
+
     /// <summary>Deterministic pseudo-GUID from (ruleKey, subject) so find/resolve are stable across runs.</summary>
     private static Guid ViolationReferenceId(string ruleKey, string subject)
     {
         var bytes = MD5.HashData(Encoding.UTF8.GetBytes($"{ruleKey}:{subject.ToUpperInvariant()}"));
+        return new Guid(bytes);
+    }
+
+    // Active-alert dedup is the primary guard; 24h HasRecent prevents re-alert on same day after manual resolve.
+    private static readonly TimeSpan CashSweepProposalSilenceWindow = TimeSpan.FromHours(24);
+
+    public async Task GenerateCashSweepProposalAlertAsync(
+        Guid userId, decimal idleCashUsd, decimal minBufferUsd, decimal excessUsd, CancellationToken ct = default)
+    {
+        var referenceId = CashSweepReferenceId(userId);
+
+        var existing = await _alerts.FindActiveAsync(userId, AlertType.CashSweepProposal, referenceId, ct);
+        if (existing is not null) return;
+
+        var quietSince = DateTimeOffset.UtcNow - CashSweepProposalSilenceWindow;
+        if (await _alerts.HasRecentAsync(userId, AlertType.CashSweepProposal, referenceId, "cash", quietSince, ct))
+            return;
+
+        await _alerts.AddAsync(new Alert
+        {
+            UserId = userId,
+            Type = AlertType.CashSweepProposal,
+            Severity = AlertSeverity.Warning,
+            Title = $"Idle cash exceeds buffer: deploy ≈ ${excessUsd:N0}",
+            Message = $"Idle cash ${idleCashUsd:N0} exceeds your minimum buffer ${minBufferUsd:N0}. Consider deploying the ≈ ${excessUsd:N0} excess into your IPS sleeves.",
+            ReferenceId = referenceId,
+            ReferenceLabel = "cash",
+        }, ct);
+    }
+
+    /// <summary>Stable per-user synthetic GUID for portfolio rebalance dedup (no natural entity reference).</summary>
+    private static Guid RebalancePortfolioReferenceId(Guid userId)
+    {
+        var bytes = MD5.HashData(Encoding.UTF8.GetBytes($"rebalance:portfolio:{userId}"));
+        return new Guid(bytes);
+    }
+
+    /// <summary>Stable per-user synthetic GUID for cash-sweep dedup.</summary>
+    private static Guid CashSweepReferenceId(Guid userId)
+    {
+        var bytes = MD5.HashData(Encoding.UTF8.GetBytes($"cash:sweep:{userId}"));
         return new Guid(bytes);
     }
 }

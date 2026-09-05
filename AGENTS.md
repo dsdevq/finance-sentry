@@ -7,8 +7,9 @@
 cd backend && dotnet restore FinanceSentry.sln
 dotnet build FinanceSentry.sln --no-restore -c Release
 
-# Run tests (excludes DB-dependent integration tests that need a live Postgres)
-dotnet test FinanceSentry.sln --no-build -c Release --filter "Category!=Integration"
+# Run tests — no filter. CI runs the full solution too (509); container-backed tests
+# report themselves as Skipped where no Docker daemon is reachable.
+dotnet test FinanceSentry.sln --no-build -c Release
 ```
 
 ### Frontend Playwright e2e (required when touching app-surface UI)
@@ -33,7 +34,8 @@ cp /usr/lib/aarch64-linux-gnu/libXfixes.so.3 /tmp/
 # Build @lifekit-hq/* from source and install as tarballs (no GitHub Packages auth needed)
 cd /tmp && git clone --depth 1 https://github.com/lifekit-hq/lifekit-common.git
 cd /tmp/lifekit-common && NODE_OPTIONS="--max-old-space-size=2048" npm install --no-fund --no-audit
-npx ng build @lifekit-hq/charts-core @lifekit-hq/core @lifekit-hq/ui
+# One project per invocation — the multi-project form errors with "Unknown arguments".
+for p in charts-core core ui; do npx ng build @lifekit-hq/$p; done
 # Pack each dist and the source-only packages
 cd dist/lifekit-hq/charts-core && npm pack --pack-destination /tmp/
 cd /tmp/lifekit-common/dist/lifekit-hq/core && npm pack --pack-destination /tmp/
@@ -41,13 +43,29 @@ cd /tmp/lifekit-common/dist/lifekit-hq/ui && npm pack --pack-destination /tmp/
 cd /tmp/lifekit-common/projects/tokens && npm pack --pack-destination /tmp/
 cd /tmp/lifekit-common/projects/config && npm pack --pack-destination /tmp/
 
-# Strip @lifekit-hq/charts-core dep from UI package.json (it's inlined in the bundle)
-# then install all tarballs in finance-sentry frontend
+# Install all tarballs in finance-sentry frontend. Restore package.json + package-lock.json
+# from git afterwards — these local refs must never be committed.
 cd /workspace/frontend
 NODE_OPTIONS="--max-old-space-size=2048" npm install \
   /tmp/lifekit-hq-tokens-*.tgz /tmp/lifekit-hq-core-*.tgz \
-  /tmp/lifekit-hq-charts-core-*.tgz /tmp/lifekit-hq-ui-*-local.tgz \
+  /tmp/lifekit-hq-charts-core-*.tgz /tmp/lifekit-hq-ui-*.tgz \
   /tmp/lifekit-hq-config-*.tgz --legacy-peer-deps --prefer-offline
+
+# The source-built @lifekit-hq/ui lacks AreaChartComponent's `stacked` input in BOTH the FESM
+# and the .d.ts (the published package has it, so CI is unaffected). scripts/patch-lifekit-ui.js
+# targets the 0.2.0 shape, so it prints success while replacing nothing. Patch node_modules by
+# hand or `ng build` fails type-check on [stacked]:
+#   - types/lifekit-hq-ui.d.ts — add `readonly stacked: _angular_core.InputSignal<boolean>;` to
+#     AreaChartComponent plus a "stacked" entry in its ɵcmp inputs
+#   - fesm2022/lifekit-hq-ui.mjs — add `this.stacked = input(true, ...)` to its constructor plus
+#     a `stacked: { classPropertyName: "stacked", ... }` entry in its ɵcmp inputs (needed at
+#     runtime too, or Playwright hits an unknown-property write)
+
+# Unit tests need the `ci` configuration — the default launches a HEADED browser and dies
+# with "Missing X server or $DISPLAY".
+NODE_OPTIONS="--max-old-space-size=2048" \
+PLAYWRIGHT_BROWSERS_PATH=/home/agent/.cache/ms-playwright \
+LD_LIBRARY_PATH=/tmp:$LD_LIBRARY_PATH npx ng test finance-sentry --configuration ci
 
 # Build the Angular app, then run Playwright
 NODE_OPTIONS="--max-old-space-size=2048" npx ng build --configuration=production
@@ -85,10 +103,12 @@ backend/
 ## Test strategy
 
 - **Unit tests** (`FinanceSentry.Tests.Unit`): pure, no DB. Always fast.
-- **Contract/integration tests** (`FinanceSentry.Tests.Integration`): use `WebApplicationFactory<Program>`, mock all external I/O (repos via Moq, DB contexts replaced with `UseInMemoryDatabase`). DB-heavy tests are tagged `[Trait("Category","Integration")]` and skipped with `--filter Category!=Integration`.
+- **Contract/integration tests** (`FinanceSentry.Tests.Integration`): use `WebApplicationFactory<Program>`, mock all external I/O (repos via Moq, DB contexts replaced with `UseInMemoryDatabase`). DB-heavy tests are tagged `[Trait("Category","Integration")]`; tests that need a container carry `[DockerRequiredFact]` (`Shared/DockerRequiredFactAttribute.cs`), which skips them at discovery time when no Docker daemon is reachable.
 - **MCP tests** (`FinanceSentry.Mcp.Tests`): contract + schema tests for MCP tools; all 43 run in <5 s with no DB.
 
-The mandatory filter for CI without a live Postgres: `--filter "Category!=Integration"`.
+CI (`backend-ci.yml`) runs the solution **unfiltered** against a `postgres:14-alpine` service
+container, so `--filter "Category!=Integration"` is a local convenience, not a gate requirement —
+never rely on it to keep a failing test out of CI.
 
 ## Key patterns
 
@@ -122,13 +142,25 @@ Deduplication:MasterKeyBase64 = "<base64-key>"
 
 ## MCP Verification
 
-Verified 2026-06-27 via `dotnet test FinanceSentry.sln --filter 'Category!=Integration' -c Release`.
+Verified 2026-09-03 via `dotnet test FinanceSentry.sln --no-build -c Release -m:1` (no filter;
+`-m:1` keeps the run inside a 2-CPU / 4 GB sandbox — the default parallel run gets OOM-killed).
 
-| Project | Passed | Failed |
-|---|---|---|
-| FinanceSentry.Tests.Unit | 223 | 0 |
-| FinanceSentry.Mcp.Tests | 43 | 0 |
-| FinanceSentry.Tests.Integration (Category!=Integration, 4 skipped) | 128 | 0 |
+| Project | Passed | Skipped | Failed |
+|---|---|---|---|
+| FinanceSentry.Tests.Unit | 541 | 0 | 0 |
+| FinanceSentry.Tests.Integration | 120 | 6 | 0 |
+| FinanceSentry.Mcp.Tests | 103 | 0 | 0 |
+| FinanceSentry.Modules.Research.Tests | 204 | 2 | 0 |
+| FinanceSentry.Modules.Radar.Tests | 80 | 0 | 0 |
+| FinanceSentry.Modules.Risk.Tests | 37 | 0 | 0 |
+| FinanceSentry.Modules.Retention.Tests | 37 | 0 | 0 |
+| FinanceSentry.Modules.Agent.Tests | 35 | 0 | 0 |
+| FinanceSentry.Modules.Analytics.Tests | 35 | 0 | 0 |
+| FinanceSentry.Modules.Companion.Tests | 24 | 0 | 0 |
+| FinanceSentry.Gateway.Tests | 6 | 0 | 0 |
+
+Skips are dependency-gated, not disabled tests: 2 Docker-gated (`[DockerRequiredFact]`) and 6
+needing a live Postgres or a live external page.
 
 ### Registered MCP tools (58 total)
 
@@ -153,9 +185,10 @@ cp /usr/lib/aarch64-linux-gnu/libXfixes.so.3 /tmp/
 # Then run Playwright with LD_LIBRARY_PATH=/tmp:$LD_LIBRARY_PATH
 ```
 
-The `--no-verify` flag is required on commits because the husky pre-commit hook runs `npm ci` which
-fails with 401 on `@lifekit-hq/*` (GitHub Packages requires NODE_AUTH_TOKEN). CI enforces the full
-frontend gate instead.
+The `--no-verify` flag is required only when **frontend** files are staged: the husky pre-commit
+hook then runs the frontend gate (`npm ci`), which fails with 401 on `@lifekit-hq/*` (GitHub
+Packages requires NODE_AUTH_TOKEN), and enforces the version bump described below. CI enforces the
+full frontend gate instead. Backend-only commits pass the hook unchanged — do not bypass it.
 
 ## Frontend pre-commit version-bump gate
 

@@ -34,6 +34,8 @@ public sealed class TrendForcePageSource(
 
     // TrendForce article permalinks: /presscenter/news/<8-digit-date>-<id>.html. Category/index links
     // (e.g. /presscenter/news/Semiconductors) do not match, so this cleanly isolates real articles.
+    // It gates BOTH discovery paths (issue #318): a card's own anchors can point at /presscenter/chart/,
+    // /presscenter/video/ or off-site promos, which were being ingested as thesis news.
     private static readonly Regex ArticleHrefPattern =
         new(@"/presscenter/news/\d{6,}-\d+\.html$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
@@ -77,7 +79,7 @@ public sealed class TrendForcePageSource(
 
         foreach (var node in nodes)
         {
-            var anchor = node.QuerySelector("a.title-link[href], h3 a[href], a[href]");
+            var anchor = FindArticleAnchor(node);
             if (anchor is null)
             {
                 continue;
@@ -103,8 +105,23 @@ public sealed class TrendForcePageSource(
                 ExtractSummary(node)));
         }
 
+        if (articles.Count == 0)
+        {
+            throw new NewsSourceParseException(
+                "TrendForce press-center cards carried no article permalinks — page markup may have changed.");
+        }
+
         return articles;
     }
+
+    /// <summary>
+    /// The card's press-release anchor, or null when it has none. Selecting by permalink rather than by
+    /// position keeps promo cards (charts, videos, off-site links) out of the feed and makes both
+    /// discovery paths agree on what counts as an article.
+    /// </summary>
+    private static IElement? FindArticleAnchor(IElement node) =>
+        node.QuerySelectorAll("a[href]")
+            .FirstOrDefault(a => ArticleHrefPattern.IsMatch(a.GetAttribute("href") ?? string.Empty));
 
     private static IReadOnlyList<IElement> FindArticleNodes(IDocument doc)
     {

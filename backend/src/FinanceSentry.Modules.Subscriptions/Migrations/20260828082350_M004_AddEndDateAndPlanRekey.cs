@@ -32,7 +32,7 @@ namespace FinanceSentry.Modules.Subscriptions.Migrations
             // Per-plan identity: installment keys now embed the rounded monthly amount
             // ("installment:тов алло" → "installment:тов алло:2340") so two concurrent
             // plans at the same shop stay separate rows. round() is half-away-from-zero,
-            // matching SubscriptionDetectionJob.RoundPlanAmount.
+            // matching InstallmentPlanRecognizer.RoundPlanAmount.
             migrationBuilder.Sql(
                 """
                 UPDATE public.detected_subscriptions

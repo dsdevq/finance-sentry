@@ -1,6 +1,5 @@
 namespace FinanceSentry.Modules.BankSync.Infrastructure.Jobs;
 
-using System.Text.RegularExpressions;
 using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Core.Utils;
 using FinanceSentry.Modules.BankSync.Application.Services;
@@ -40,35 +39,6 @@ public sealed class SubscriptionDetectionJob(
         "cash",
     ];
 
-    // Installment (розстрочка) repayments look exactly like a monthly subscription
-    // — fixed amount, monthly, repeated — but they are a fixed-term repayment, not a
-    // recurring service. Monobank labels them distinctively (verified against live
-    // data): "Погашення наступного платежу RozetkaPay", "Щомісячний платіж telemart
-    // - monomarket", "Платіж Pandora", "Повне погашення RozetkaPay", etc.
-    private const int InstallmentMcc = 4829;
-
-    private static readonly string[] InstallmentDescriptionMarkers =
-    [
-        "погашення наступного платежу",   // "repayment of the next payment"
-        "повне погашення",                // "full early payoff" — a finished-signal
-        "щомісячний платіж",              // "monthly payment"
-        "monomarket",                     // Monobank installment marketplace tag
-        "розстроч",                       // розстрочка / у розстрочку
-        "оплата частинами",
-        "покупка частинами",
-        "частинами",
-        "installment",
-    ];
-
-    // Prefixes stripped to recover the merchant from an installment description.
-    private static readonly string[] InstallmentMerchantPrefixes =
-    [
-        "погашення наступного платежу",
-        "повне погашення",
-        "щомісячний платіж",
-        "платіж",
-    ];
-
     public async Task ExecuteAsync(CancellationToken ct = default)
     {
         await ProcessAccountsAsync(ct);
@@ -102,8 +72,8 @@ public sealed class SubscriptionDetectionJob(
             try
             {
                 var txs = userGroup.ToList();
-                var installmentTxs = txs.Where(t => IsInstallmentTransaction(t.Description, t.Mcc)).ToList();
-                var regularTxs = txs.Where(t => !IsInstallmentTransaction(t.Description, t.Mcc)).ToList();
+                var installmentTxs = txs.Where(t => InstallmentPlanRecognizer.IsInstallmentTransaction(t.Description, t.Mcc)).ToList();
+                var regularTxs = txs.Where(t => !InstallmentPlanRecognizer.IsInstallmentTransaction(t.Description, t.Mcc)).ToList();
 
                 var results = new List<DetectedSubscriptionData>();
                 results.AddRange(DetectSubscriptions(regularTxs));
@@ -197,30 +167,9 @@ public sealed class SubscriptionDetectionJob(
         return results;
     }
 
-    /// <summary>
-    /// Merchant key for recurring-service grouping. Mobile top-ups carry the phone number
-    /// in the description ("*MOBI TOP-UP 0857860057"), which both fragments the merchant
-    /// key and trips the generic top-up blocklist — collapse them to a stable per-number
-    /// key instead so a monthly top-up is tracked like any other recurring cost.
-    /// </summary>
-    public static string NormalizeForDetection(TxRow transaction)
-    {
-        var raw = transaction.MerchantName ?? transaction.Description;
-        if (raw is not null)
-        {
-            var mobi = MobiTopUpPattern.Match(raw.Trim());
-            if (mobi.Success)
-            {
-                var number = mobi.Groups[1].Value;
-                return $"mobile top-up {number[^4..]}";
-            }
-        }
-
-        return MerchantNameNormalizer.Normalize(raw);
-    }
-
-    private static readonly Regex MobiTopUpPattern =
-        new(@"^\*?\s*mobi\s+top-?up\s+(\d{4,})$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    /// <summary>Merchant key for recurring-service grouping.</summary>
+    public static string NormalizeForDetection(TxRow transaction) =>
+        MerchantNameNormalizer.NormalizeDetectionKey(transaction.MerchantName, transaction.Description);
 
     /// <summary>
     /// Splits a merchant's charges into amount clusters (adjacent sorted amounts within
@@ -258,15 +207,15 @@ public sealed class SubscriptionDetectionJob(
         var results = new List<DetectedSubscriptionData>();
 
         var payoffDatesByMerchant = transactions
-            .Where(t => IsInstallmentPayoff(t.Description))
-            .GroupBy(t => ExtractInstallmentMerchant(t.Description ?? string.Empty))
+            .Where(t => InstallmentPlanRecognizer.IsInstallmentPayoff(t.Description))
+            .GroupBy(t => InstallmentPlanRecognizer.ExtractMerchant(t.Description ?? string.Empty))
             .ToDictionary(g => g.Key, g => g.Max(t => t.TransactionDate));
 
         var byPlan = transactions
-            .Where(t => !IsInstallmentPayoff(t.Description))
+            .Where(t => !InstallmentPlanRecognizer.IsInstallmentPayoff(t.Description))
             .GroupBy(t => (
-                Merchant: ExtractInstallmentMerchant(t.Description ?? string.Empty),
-                Amount: RoundPlanAmount(t.Amount)));
+                Merchant: InstallmentPlanRecognizer.ExtractMerchant(t.Description ?? string.Empty),
+                Amount: InstallmentPlanRecognizer.RoundPlanAmount(t.Amount)));
 
         foreach (var group in byPlan)
         {
@@ -283,7 +232,7 @@ public sealed class SubscriptionDetectionJob(
             var lastChargeDate = DateOnly.FromDateTime(lastPaymentDate);
 
             results.Add(new DetectedSubscriptionData(
-                MerchantNameNormalized: $"installment:{merchant.ToLowerInvariant()}:{roundedAmount}",
+                MerchantNameNormalized: InstallmentPlanRecognizer.PlanKey(merchant, roundedAmount),
                 MerchantNameDisplay: merchant,
                 Cadence: "monthly",
                 AverageAmount: Math.Round(payments.Average(t => t.Amount), 2),
@@ -299,71 +248,6 @@ public sealed class SubscriptionDetectionJob(
         }
 
         return results;
-    }
-
-    /// <summary>
-    /// Plan-identity amount: rounded to the whole unit, half away from zero, so cent-level
-    /// jitter (telemart bills ₴6,499.84 and ₴6,499.85) stays one plan. Must round the same
-    /// way as the M004 data migration's SQL <c>round()</c>.
-    /// </summary>
-    public static int RoundPlanAmount(decimal amount) =>
-        (int)Math.Round(amount, MidpointRounding.AwayFromZero);
-
-    public static bool IsInstallmentDescription(string? description)
-    {
-        if (string.IsNullOrWhiteSpace(description)) return false;
-
-        var lowered = description.ToLowerInvariant();
-        foreach (var marker in InstallmentDescriptionMarkers)
-        {
-            if (lowered.Contains(marker, StringComparison.Ordinal)) return true;
-        }
-        return false;
-    }
-
-    /// <summary>
-    /// True for a Monobank installment repayment: a strong description marker, or a
-    /// "Платіж &lt;merchant&gt;" on the internal-transfer MCC (catches merchant payoffs
-    /// like "Платіж Pandora" that carry no розстрочка keyword).
-    /// </summary>
-    public static bool IsInstallmentTransaction(string? description, int? mcc)
-    {
-        if (IsInstallmentDescription(description)) return true;
-        if (mcc == InstallmentMcc && description is not null &&
-            description.Trim().StartsWith("Платіж ", StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-        return false;
-    }
-
-    public static bool IsInstallmentPayoff(string? description) =>
-        description is not null &&
-        description.Contains("повне погашення", StringComparison.OrdinalIgnoreCase);
-
-    /// <summary>
-    /// Recovers the merchant from an installment description by stripping Monobank's
-    /// leading phrase ("Погашення наступного платежу", "Щомісячний платіж", "Платіж", …)
-    /// and the trailing "- monomarket" marketplace tag.
-    /// </summary>
-    public static string ExtractInstallmentMerchant(string description)
-    {
-        var text = description.Trim();
-
-        foreach (var prefix in InstallmentMerchantPrefixes)
-        {
-            if (text.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-            {
-                text = text[prefix.Length..].Trim();
-                break;
-            }
-        }
-
-        var tagIdx = text.IndexOf("monomarket", StringComparison.OrdinalIgnoreCase);
-        if (tagIdx >= 0)
-            text = text[..tagIdx];
-
-        return text.Trim(' ', '-', '\t');
     }
 
     public static bool IsUnidentifiableMerchant(string normalized)
