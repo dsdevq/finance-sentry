@@ -18,6 +18,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The API host references every deployable module, so this one reference keeps the
+         Architecture tests (MigrationDiscoveryTests) scanning all module assemblies —
+         including ones this project doesn't reference directly and future ones. -->
+    <ProjectReference Include="..\..\src\FinanceSentry.API\FinanceSentry.API.csproj" />
     <ProjectReference Include="..\..\src\FinanceSentry.Core\FinanceSentry.Core.csproj" />
     <ProjectReference Include="..\..\src\FinanceSentry.Infrastructure\FinanceSentry.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\FinanceSentry.Modules.BankSync\FinanceSentry.Modules.BankSync.csproj" />

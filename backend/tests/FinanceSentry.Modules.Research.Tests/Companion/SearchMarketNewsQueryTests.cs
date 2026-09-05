@@ -52,27 +52,4 @@ public sealed class SearchMarketNewsQueryTests
         public Task<int> InsertNewAsync(IReadOnlyCollection<NewsArticle> articles, CancellationToken ct = default)
             => Task.FromResult(articles.Count);
     }
-
-    private sealed class FakeNewsSourceRepository : INewsSourceRepository
-    {
-        public List<NewsSource> Sources { get; } = [];
-
-        public Task<IReadOnlyList<NewsSource>> ListEnabledAsync(CancellationToken ct = default)
-            => Task.FromResult<IReadOnlyList<NewsSource>>(Sources.Where(s => s.Enabled).ToList());
-
-        public Task<IReadOnlyList<NewsSource>> ListAllAsync(CancellationToken ct = default)
-            => Task.FromResult<IReadOnlyList<NewsSource>>(Sources.ToList());
-
-        public Task<NewsSource?> GetByUrlAsync(string url, CancellationToken ct = default)
-            => Task.FromResult(Sources.FirstOrDefault(s => s.Url == url));
-
-        public Task<Guid> AddAsync(NewsSource source, CancellationToken ct = default)
-        {
-            Sources.Add(source);
-            return Task.FromResult(source.Id);
-        }
-
-        public Task UpdateAsync(NewsSource source, CancellationToken ct = default)
-            => Task.CompletedTask;
-    }
 }

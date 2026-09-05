@@ -188,6 +188,8 @@ internal sealed class FakeOpportunityAlertGenerator : IAlertGeneratorService
     public Task GenerateDuplicateChargeAlertAsync(Guid userId, Guid accountId, string merchantName, decimal chargeAmount, string currency, int chargeCount, CancellationToken ct = default) => Task.CompletedTask;
     public Task GenerateCategorySpikeAlertAsync(Guid userId, string category, decimal currentMonthSpend, decimal baselineSpend, CancellationToken ct = default) => Task.CompletedTask;
     public Task GenerateFxSpreadAlertAsync(Guid userId, string fromCurrency, string toCurrency, decimal impliedRate, decimal marketRate, CancellationToken ct = default) => Task.CompletedTask;
+    public Task GenerateRebalanceProposalAlertAsync(Guid userId, int orderCount, string orderSummary, CancellationToken ct = default) => Task.CompletedTask;
+    public Task GenerateCashSweepProposalAlertAsync(Guid userId, decimal idleCashUsd, decimal minBufferUsd, decimal excessUsd, CancellationToken ct = default) => Task.CompletedTask;
 }
 
 internal sealed class FakeRiskPolicyGate(RiskGateVerdict verdict) : IRiskPolicyGate

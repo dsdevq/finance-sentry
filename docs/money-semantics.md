@@ -116,6 +116,42 @@ keeps the raw positive value ("you owe X"), matching how banks present credit ca
 - **Not cached** — recomputed per `/dashboard/aggregated` request. The dashboard polls
   every 5 minutes; the transaction-ledger stat card fetches once at page load.
 
+### 5a. Committed vs discretionary outflow
+
+`OutflowUsd` is partitioned into `CommittedOutflowUsd` + `DiscretionaryOutflowUsd`; the two
+always sum back to it, and no figure is committed unless it is already in `Outflow` (so
+transfers are in none of the three).
+
+- **Committed** = the key derived from the transaction by
+  `CommitmentKeyResolver.Resolve(MerchantName, Description, Amount, Mcc)` is the key of one of
+  the user's `DetectedSubscription` rows whose status is `active`, read through
+  `IActiveSubscriptionsReader.GetActiveCommitmentMerchantKeysAsync`. Both kinds count, and each
+  is keyed the way the detector keys it: recurring services by
+  `MerchantNameNormalizer.NormalizeDetectionKey`, installment (розстрочка) plans by
+  `InstallmentPlanRecognizer.PlanKey` (`installment:{merchant}:{roundedAmount}`). The resolver
+  mirrors `SubscriptionDetectionJob`'s own routing between the two detectors — that is what
+  keeps the stored key and the matched key from drifting apart. A plan's identity includes its
+  rounded monthly amount, so concurrent plans at one shop stay distinct and only the plan the
+  user actually holds is claimed.
+- **Discretionary** = every other non-transfer outflow. Derived as
+  `OutflowUsd − CommittedOutflowUsd` so the partition is exact; converting the two subsets
+  independently would let rounding pull them off the total.
+- **Currency**: the committed native sum is per (month, currency) bucket and is converted
+  with `CurrencyConverter.ToUsd` at the same reader boundary as `OutflowUsd`. Commitments
+  are billed in UAH, EUR and USD, so only the `…Usd` fields may be added across rows.
+- **Status is point-in-time**: cancelling a subscription today reclassifies its past charges
+  as discretionary. The split describes today's commitments, not history.
+- **Known under-count**: a full early payoff ("Повне погашення") is not keyed as a plan — the
+  detector uses payoffs only to mark a plan completed, and a completed plan is no longer
+  `active` — so a payoff reads as discretionary. Recurring repayments to a masked card number
+  (mortgage, loan) are classified as transfers and are outside `Outflow` entirely, so they are
+  in neither bucket and in no denominator. Ordinary spend — groceries, fuel, restaurants —
+  has no recurring signature and never becomes a `DetectedSubscription` by construction.
+  Committed coverage was measured at ~22% of outflow on production data before installment
+  plans were matchable (issue #538, 2026-08-31) — below the 40% bar that ticket set for
+  rendering the split on the dashboard, so the figures are exposed on the API but not charted
+  pending a re-measurement. See `specs/045-committed-vs-discretionary/`.
+
 ## 6. Top spending categories
 
 `MerchantCategoryStatisticsService`: same filters as monthly flow (active, pending

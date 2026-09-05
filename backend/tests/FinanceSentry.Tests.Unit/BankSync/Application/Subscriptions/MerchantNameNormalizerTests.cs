@@ -59,4 +59,32 @@ public class MerchantNameNormalizerTests
         var names = new string?[] { null, null };
         MerchantNameNormalizer.GetDisplayName(names).Should().Be("unknown");
     }
+
+    [Fact]
+    public void NormalizeDetectionKey_PrefersMerchantNameOverDescription()
+    {
+        MerchantNameNormalizer.NormalizeDetectionKey("Netflix.com", "CARD PAYMENT 4471")
+            .Should().Be("netflix");
+    }
+
+    [Fact]
+    public void NormalizeDetectionKey_FallsBackToDescription_WhenMerchantNameMissing()
+    {
+        MerchantNameNormalizer.NormalizeDetectionKey(null, "NY   TIMES")
+            .Should().Be("ny times");
+    }
+
+    [Fact]
+    public void NormalizeDetectionKey_MobileTopUp_CollapsesToPerNumberKey()
+    {
+        // The phone number would otherwise fragment the key and trip the top-up blocklist.
+        MerchantNameNormalizer.NormalizeDetectionKey(null, "*MOBI TOP-UP 0857860057")
+            .Should().Be("mobile top-up 0057");
+    }
+
+    [Fact]
+    public void NormalizeDetectionKey_BothMissing_ReturnsUnknown()
+    {
+        MerchantNameNormalizer.NormalizeDetectionKey(null, null).Should().Be("unknown");
+    }
 }

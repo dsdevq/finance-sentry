@@ -17,4 +17,6 @@ public static class AlertType
     public const string DuplicateCharge = "DuplicateCharge";
     public const string CategorySpike = "CategorySpike";
     public const string FxSpread = "FxSpread";
+    public const string RebalanceProposal = "RebalanceProposal";
+    public const string CashSweepProposal = "CashSweepProposal";
 }

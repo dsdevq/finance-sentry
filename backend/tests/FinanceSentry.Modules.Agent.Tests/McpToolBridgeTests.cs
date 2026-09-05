@@ -104,6 +104,18 @@ public sealed class McpToolBridgeTests
         }
     }
 
+    [Fact]
+    public void RealBridge_SaveThesis_AllowsNarrativeLengthThesisText()
+    {
+        var bridge = new McpToolBridge(Options.Create(new AgentOptions()), NullLogger<McpToolBridge>.Instance);
+
+        var saveThesis = bridge.GetTools().Single(t => t.Name == "save_thesis");
+        var properties = saveThesis.InputSchema.AsObject()["properties"]!.AsObject();
+        var thesisText = properties["thesisText"]!.AsObject();
+
+        thesisText.Should().NotContainKey("maxLength", "thesisText is persisted as varchar(4000), not a tool-call-sized label");
+    }
+
     private static ServiceProvider BuildScope(Guid callerId) =>
         new ServiceCollection()
             .AddScoped<IFakeIdentity>(_ => new FakeIdentity(callerId))

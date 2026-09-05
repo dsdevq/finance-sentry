@@ -22,4 +22,7 @@ public enum CompanionEventKind
     DuplicateCharge,
     CategorySpike,
     FxSpread,
+    PerformanceBrief,
+    RebalanceProposal,
+    CashSweepProposal,
 }

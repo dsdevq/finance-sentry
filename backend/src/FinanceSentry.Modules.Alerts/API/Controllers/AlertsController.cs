@@ -15,7 +15,9 @@ public class AlertsController(
     IQueryHandler<GetUnreadCountQuery, UnreadCountResponse> getUnreadCount,
     ICommandHandler<MarkAlertReadCommand, bool> markRead,
     ICommandHandler<MarkAllAlertsReadCommand, Unit> markAllRead,
-    ICommandHandler<DismissAlertCommand, bool> dismiss) : ControllerBase
+    ICommandHandler<DismissAlertCommand, bool> dismiss,
+    ICommandHandler<AcknowledgeProposalCommand, bool> acknowledge,
+    ICommandHandler<AcknowledgeProposalByReferenceCommand, bool> acknowledgeByReference) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> Get(
@@ -58,4 +60,31 @@ public class AlertsController(
         if (!ok) throw new AlertNotFoundException();
         return NoContent();
     }
+
+    /// <summary>One-tap acknowledgement by alert row id — used by the app frontend.</summary>
+    [HttpPatch("{id:guid}/acknowledge")]
+    public async Task<IActionResult> Acknowledge(Guid id, [FromBody] AcknowledgeRequest body, CancellationToken ct)
+    {
+        var ok = await acknowledge.Handle(new AcknowledgeProposalCommand(User.RequireUserId(), id, body.Decision), ct);
+        if (!ok) throw new AlertNotFoundException();
+        return NoContent();
+    }
+
+    /// <summary>
+    /// One-tap acknowledgement by stable reference id — used by the Telegram bot's inline-keyboard
+    /// callback, which only knows the <c>referenceId</c> from the wake payload.
+    /// </summary>
+    [HttpPatch("by-reference/{referenceId:guid}/acknowledge")]
+    public async Task<IActionResult> AcknowledgeByReference(
+        Guid referenceId, [FromBody] AcknowledgeByReferenceRequest body, CancellationToken ct)
+    {
+        var ok = await acknowledgeByReference.Handle(
+            new AcknowledgeProposalByReferenceCommand(User.RequireUserId(), body.AlertType, referenceId, body.Decision), ct);
+        if (!ok) throw new AlertNotFoundException();
+        return NoContent();
+    }
 }
+
+public record AcknowledgeRequest(string Decision);
+
+public record AcknowledgeByReferenceRequest(string AlertType, string Decision);

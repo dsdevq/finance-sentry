@@ -53,3 +53,18 @@ A new top-level `frontend` directory appeared, following two prior unresolved D3
 
 ---
 
+## [2026-09-02T16:16:12+00:00] D2 — drift
+
+All 4 unreferenced files are the routine artifacts of one in-flight speckit feature (specs/045-committed-vs-discretionary/{spec,plan,tasks}.md plus .specify/feature.json), each touched twice — consistent with normal spec→clarify→plan→tasks iteration, not an undocumented hotspot. AGENTS.md is a machine-maintained onboarding doc and isn't expected to enumerate individual in-flight spec files under specs/.
+
+**Evidence:**
+- `specs/045-committed-vs-discretionary/spec.md`
+- `specs/045-committed-vs-discretionary/plan.md`
+- `specs/045-committed-vs-discretionary/tasks.md`
+- `.specify/feature.json`
+- `git log --name-only 9590ec8268a0cb5b425fa8f46c8afcaed3c70871..HEAD`
+
+**Proposed action:** _(none — pattern noted, no action recommended)_
+
+---
+

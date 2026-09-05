@@ -26,6 +26,9 @@ public sealed class MaterialityPolicy : IMaterialityPolicy
         "DuplicateCharge" => CompanionEventKind.DuplicateCharge,
         "CategorySpike" => CompanionEventKind.CategorySpike,
         "FxSpread" => CompanionEventKind.FxSpread,
+        "PerformanceBrief" => CompanionEventKind.PerformanceBrief,
+        "RebalanceProposal" => CompanionEventKind.RebalanceProposal,
+        "CashSweepProposal" => CompanionEventKind.CashSweepProposal,
         _ => null,
     };
 

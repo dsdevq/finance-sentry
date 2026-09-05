@@ -1,17 +1,34 @@
 namespace FinanceSentry.Modules.Research.Tests.Companion;
 
+using System.Text.RegularExpressions;
 using FinanceSentry.Modules.Research.Infrastructure.Sources;
 using FluentAssertions;
 using Xunit;
 
 /// <summary>
 /// External-contract test (constitution-mandated) for the TrendForce press-center article-list
-/// structure (feature 030, T038). Fixture-based; a live smoke test is provided but skipped by default.
-/// Structural drift MUST throw <see cref="NewsSourceParseException"/>.
+/// structure (feature 030, T038). Structural drift MUST throw <see cref="NewsSourceParseException"/>.
+/// <para>
+/// Two kinds of fixture live here. The <c>Companion/Fixtures/*.html</c> files are verbatim live
+/// captures — the evidence trail for issue #318, where the source had failed 17 times running because
+/// feature 030 seeded it at <c>/presscenter/</c> (the marketing hub) instead of <c>/presscenter/news</c>,
+/// and the hand-written fixtures below never noticed because they were invented rather than captured.
+/// The inline consts stay for synthetic drift cases: they document shapes we want to survive, not
+/// shapes the site currently serves.
+/// </para>
 /// </summary>
 public sealed class TrendForcePageContractTests
 {
     private const string PageUrl = "https://www.trendforce.com/presscenter/news";
+
+    private const string HubUrl = "https://www.trendforce.com/presscenter/";
+
+    /// <summary>The permalink shape every emitted article URL must have: no charts, videos or promos.</summary>
+    private static readonly Regex Permalink =
+        new(@"^https://www\.trendforce\.com/presscenter/news/\d{6,}-\d+\.html$", RegexOptions.IgnoreCase);
+
+    private static Task<string> LoadFixtureAsync(string name)
+        => File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "Companion", "Fixtures", name));
 
     private const string Fixture = """
     <html><body>
@@ -139,6 +156,64 @@ public sealed class TrendForcePageContractTests
         articles[0].Url.Should().Be("https://www.trendforce.com/presscenter/news/20260709-13140.html");
         articles[0].PublishedAt.Should().Be(DateTimeOffset.Parse("9 July 2026"));
         articles[0].Summary.Should().Contain("memory pricing");
+    }
+
+    [Fact]
+    public async Task Live_capture_of_the_news_list_parses_to_dated_articles()
+    {
+        var html = await LoadFixtureAsync("trendforce-presscenter-news-2026-09-02.html");
+
+        var articles = await TrendForcePageSource.ParseAsync(html, PageUrl);
+
+        articles.Should().NotBeEmpty("the canonical press list is what the source is seeded to read");
+        articles.Should().OnlyContain(a => !string.IsNullOrWhiteSpace(a.Title));
+        articles.Should().OnlyContain(a => Permalink.IsMatch(a.Url));
+        articles.Should().OnlyContain(a => a.PublishedAt.Year >= 2026, "the list carries only recent releases");
+        articles.Select(a => a.Url).Should().OnlyHaveUniqueItems();
+        articles.Should().Contain(
+            a => a.Url == "https://www.trendforce.com/presscenter/news/20260825-13198.html" &&
+                 a.Title.Contains("DRAM and NAND Flash") &&
+                 a.PublishedAt == new DateTimeOffset(2026, 8, 25, 0, 0, 0, TimeSpan.Zero),
+            "a DRAM release from the capture must survive title/url/date extraction intact");
+    }
+
+    [Fact]
+    public async Task Live_capture_of_the_hub_yields_only_press_release_permalinks()
+    {
+        var html = await LoadFixtureAsync("trendforce-presscenter-hub-2026-09-02.html");
+
+        var articles = await TrendForcePageSource.ParseAsync(html, HubUrl);
+
+        articles.Should().NotBeEmpty();
+        // Before issue #318 this page contributed a dramexchange.com spot-price promo, a 2023
+        // /presscenter/chart/ entry and two 2019-2020 /presscenter/video/ teasers to the DRAM feed.
+        articles.Should().OnlyContain(a => Permalink.IsMatch(a.Url));
+        articles.Should().NotContain(a => a.Url.Contains("dramexchange.com"));
+        articles.Should().NotContain(a => a.Url.Contains("/presscenter/video/"));
+        articles.Should().NotContain(a => a.Url.Contains("/presscenter/chart/"));
+    }
+
+    [Fact]
+    public async Task Parse_throws_when_cards_exist_but_carry_no_article_permalinks()
+    {
+        // A page of cards that are all promos: recognisable as cards, none an article. Returning an
+        // empty list here would turn a drift signal into a silent coverage gap — the #318 failure mode.
+        const string promosOnly = """
+        <html><body>
+          <div class="advs-box niche-box-post">
+            <h2><a href="/presscenter/video/20200214-38.html">Top 10 Trends</a></h2>
+            <p class="bd-month">14 February 2020</p>
+          </div>
+          <div class="advs-box niche-box-post">
+            <h2><a href="http://www.dramexchange.com/market/daily.aspx">Daily Express Spot Market</a></h2>
+            <p class="bd-month">2 September 2026</p>
+          </div>
+        </body></html>
+        """;
+
+        var act = async () => await TrendForcePageSource.ParseAsync(promosOnly, PageUrl);
+
+        await act.Should().ThrowAsync<NewsSourceParseException>();
     }
 
     [Fact(Skip = "Live network smoke test — run manually to confirm TrendForce markup still parses.")]

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Modules.Radar.Application.Commands;
 using FinanceSentry.Modules.Radar.Application.Services;
@@ -60,6 +61,15 @@ public sealed class PortfolioScannerTests
     private static async Task<IReadOnlyList<RadarSignal>> AllSignalsAsync(RadarDbContext db)
         => await new RadarSignalRepository(db).ListAsync(
             new SignalFilter(Scanner: RadarScanners.Portfolio));
+
+    /// <summary>Payload numbers round-trip through jsonb as <see cref="JsonElement"/>.</summary>
+    private static decimal PayloadDecimal(RadarSignal signal, string key)
+        => signal.Payload[key] switch
+        {
+            JsonElement el => el.GetDecimal(),
+            decimal d => d,
+            _ => throw new InvalidOperationException($"Payload key '{key}' is not numeric."),
+        };
 
     // ── empty book ───────────────────────────────────────────────────────────
 
@@ -157,6 +167,12 @@ public sealed class PortfolioScannerTests
             .Single(s => s.SignalType == RadarSignalTypes.ConcentrationWeight);
         signal.Severity.Should().Be(SignalSeverity.Notable);
         signal.Subject.Should().Be("NVDA");
+
+        // The cap reaches the payload — and the brief's action line — as percentage points, the
+        // same unit as weightPct. PortfolioScanDataReader converts the stored fraction; if it ever
+        // passes 0.25 through again, a 30% position beats the "cap" by two orders of magnitude.
+        PayloadDecimal(signal, "limitPct").Should().Be(25m);
+        PayloadDecimal(signal, "weightPct").Should().Be(30m);
     }
 
     [Fact]
@@ -188,6 +204,8 @@ public sealed class PortfolioScannerTests
     }
 
     // ── cash buffer ──────────────────────────────────────────────────────────
+    // minCashBufferPct arrives as percentage points (5 = a 5% floor), converted from the fraction
+    // the risk rule set stores by PortfolioScanDataReader. CashPct is on the same scale.
 
     [Fact]
     public async Task CashBuffer_Notable_WhenBelowMinimum()
@@ -200,6 +218,8 @@ public sealed class PortfolioScannerTests
         var signal = (await AllSignalsAsync(db))
             .Single(s => s.SignalType == RadarSignalTypes.CashBuffer);
         signal.Severity.Should().Be(SignalSeverity.Notable);
+        PayloadDecimal(signal, "cashPct").Should().Be(2m);
+        PayloadDecimal(signal, "minCashBufferPct").Should().Be(5m);
     }
 
     [Fact]
@@ -207,6 +227,19 @@ public sealed class PortfolioScannerTests
     {
         await using var db = TestSupport.NewContext();
         var data = MakeData(totalUsd: 100_000m, cashUsd: 7_000m, minCashBufferPct: 5m);
+
+        await Handler(db, data).Handle(new ComputePortfolioSignalsCommand(), default);
+
+        var signal = (await AllSignalsAsync(db))
+            .Single(s => s.SignalType == RadarSignalTypes.CashBuffer);
+        signal.Severity.Should().Be(SignalSeverity.Info);
+    }
+
+    [Fact]
+    public async Task CashBuffer_Info_WhenExactlyAtTheFloor()
+    {
+        await using var db = TestSupport.NewContext();
+        var data = MakeData(totalUsd: 100_000m, cashUsd: 5_000m, minCashBufferPct: 5m);
 
         await Handler(db, data).Handle(new ComputePortfolioSignalsCommand(), default);
 

@@ -210,4 +210,28 @@ public interface IAlertGeneratorService
         decimal impliedRate,
         decimal marketRate,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Raises a Warning alert proposing a concrete rebalance order list when IPS bands are breached
+    /// (432). <paramref name="orderCount"/> is the number of order lines; <paramref name="orderSummary"/>
+    /// is the human-readable formatted list. Silenced 24 hours so the daily job doesn't re-propose
+    /// while a prior one is still open or was recently dismissed.
+    /// </summary>
+    Task GenerateRebalanceProposalAlertAsync(
+        Guid userId,
+        int orderCount,
+        string orderSummary,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Raises a Warning alert proposing deployment of idle cash that exceeds the configured buffer
+    /// (432 US2). <paramref name="excessUsd"/> is the dollar amount above the min-cash-buffer threshold.
+    /// Silenced 24 hours so the daily job doesn't re-propose while a prior one is open.
+    /// </summary>
+    Task GenerateCashSweepProposalAlertAsync(
+        Guid userId,
+        decimal idleCashUsd,
+        decimal minBufferUsd,
+        decimal excessUsd,
+        CancellationToken ct = default);
 }

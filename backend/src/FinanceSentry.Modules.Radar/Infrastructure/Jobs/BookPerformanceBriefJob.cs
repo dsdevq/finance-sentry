@@ -3,18 +3,22 @@ namespace FinanceSentry.Modules.Radar.Infrastructure.Jobs;
 using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Modules.Radar.Application.Services;
 using FinanceSentry.Modules.Radar.Domain;
+using FinanceSentry.Modules.Radar.Domain.Ports;
+using FinanceSentry.Modules.Radar.Domain.Repositories;
 using Hangfire;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
-/// Weekly cron (Monday 08:00 UTC, feature 412) that computes the book-vs-SPY TWR scoreboard
-/// for every active user and stores a verdict-first PerformanceBrief alert. The Companion
-/// dispatch pipeline picks up the alert and delivers it to Telegram.
+/// Weekly cron (Monday 08:00 UTC, feature 414) that composes a verdict-first brief of book vs SPY
+/// for every active user and stores a PerformanceBrief alert. The Companion dispatch pipeline picks
+/// up the alert and delivers it to Telegram via list_active_alerts.
 /// </summary>
 [DisableConcurrentExecution(timeoutInSeconds: 300)]
 public sealed class BookPerformanceBriefJob(
     IBankingTotalsReader bankingTotals,
     IBookPerformanceService performance,
+    IRadarSignalRepository signals,
+    ITrackRecordSource trackRecord,
     IAlertGeneratorService alerts,
     ILogger<BookPerformanceBriefJob> logger)
 {
@@ -26,69 +30,64 @@ public sealed class BookPerformanceBriefJob(
         BookPerformancePeriod.OneYear,
     ];
 
+    private static readonly TimeSpan SignalLookback = TimeSpan.FromDays(30);
+
     [AutomaticRetry(Attempts = 1)]
     public async Task ExecuteAsync(CancellationToken ct = default)
     {
         var userIds = await bankingTotals.GetActiveUserIdsAsync(ct);
+        var failures = new List<Exception>();
 
         foreach (var userId in userIds)
         {
-            await RunForUserAsync(userId, ct);
+            var error = await RunForUserAsync(userId, ct);
+            if (error is not null)
+            {
+                failures.Add(error);
+            }
+        }
+
+        // One user's brief failing must not cost the others theirs, but a run where every user failed
+        // produced nothing at all — surface it as a job failure so ConsecutiveFailureAlertFilter can
+        // see the streak and alert (US2). Swallowing here made total outage indistinguishable from a
+        // quiet week, which is the exact gap the filter exists to close.
+        if (failures.Count > 0 && failures.Count == userIds.Count)
+        {
+            throw new AggregateException(
+                $"Performance brief failed for all {failures.Count} active user(s).", failures);
         }
     }
 
-    private async Task RunForUserAsync(Guid userId, CancellationToken ct)
+    private async Task<Exception?> RunForUserAsync(Guid userId, CancellationToken ct)
     {
         try
         {
             var result = await performance.GetAsync(userId, DefaultPeriods, ct);
             if (result.Periods.Count == 0)
             {
-                return;
+                return null;
             }
 
-            var (headline, body) = BuildMessage(result);
-            await alerts.GeneratePerformanceBriefAlertAsync(userId, headline, body, ct);
+            // Every Notable portfolio signal, not just drift: the suggested action also weighs the
+            // cash floor and the position cap, and the composer partitions by signal type.
+            var portfolioSignals = await signals.ListAsync(
+                new SignalFilter(
+                    Since: DateTimeOffset.UtcNow - SignalLookback,
+                    Scanner: RadarScanners.Portfolio,
+                    UserId: userId,
+                    Severity: nameof(SignalSeverity.Notable)),
+                ct);
+
+            var delta = await trackRecord.GetDeltaAsync(userId, ct);
+
+            var brief = PerformanceBriefComposer.Compose(result, portfolioSignals, delta);
+            await alerts.GeneratePerformanceBriefAlertAsync(userId, brief.Headline, brief.Body, ct);
+            return null;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogWarning(ex, "Performance brief failed for user {UserId}", userId);
+            return ex;
         }
     }
-
-    private static (string Headline, string Body) BuildMessage(BookPerformanceResult result)
-    {
-        // Lead with the 1-week verdict for the headline.
-        var weekly = result.Periods.FirstOrDefault(p => p.Period == BookPerformancePeriod.OneWeek);
-        var verdict = weekly?.Verdict ?? result.Periods[0].Verdict ?? "N/A";
-        var delta = weekly?.Delta;
-
-        var headline = delta.HasValue
-            ? $"Weekly brief: {CapitalizeFirst(verdict)} ({delta.Value:+0.##%;-0.##%;0%} vs SPY)"
-            : $"Weekly brief: {CapitalizeFirst(verdict)}";
-
-        var lines = result.Periods.Select(p =>
-        {
-            var label = p.Period switch
-            {
-                BookPerformancePeriod.OneWeek => "1W",
-                BookPerformancePeriod.OneMonth => "1M",
-                BookPerformancePeriod.ThreeMonths => "3M",
-                BookPerformancePeriod.OneYear => "1Y",
-                _ => p.Period.ToString(),
-            };
-
-            var book = p.BookTwr.HasValue ? $"{p.BookTwr.Value:+0.##%;-0.##%;0%}" : "N/A";
-            var spy = p.SpyTwr.HasValue ? $"{p.SpyTwr.Value:+0.##%;-0.##%;0%}" : "N/A";
-            var diff = p.Delta.HasValue ? $" (Δ {p.Delta.Value:+0.##%;-0.##%;0%})" : string.Empty;
-
-            return $"{label}: Book {book} | SPY {spy}{diff}";
-        });
-
-        var body = string.Join("\n", lines);
-        return (headline, body);
-    }
-
-    private static string CapitalizeFirst(string? s)
-        => s is null or "" ? string.Empty : char.ToUpperInvariant(s[0]) + s[1..];
 }

@@ -2,6 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/lifekit-hq/devclaw/main/docs/reference/devclaw-manifest.schema.json",
   "schemaVersion": 1,
   "boilerplateRevision": 1,
+  "strictnessDefault": "strict",
   "surface": "app",
   "stack": ["dotnet", "angular"],
   "verifyCmd": "cd frontend && npm ci && npm run lint && npm run format:check && NODE_OPTIONS=--max-old-space-size=2048 npm run build && npx playwright install chromium && npm run test:ci && npx playwright test --reporter=json"
