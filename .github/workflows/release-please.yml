@@ -18,5 +18,11 @@ jobs:
     steps:
       - uses: googleapis/release-please-action@v5
         with:
+          # A PAT (RELEASE_PLEASE_TOKEN, fine-grained: this repo, Contents + Pull requests
+          # read/write) so pushes to the release branch trigger the CI workflows — GITHUB_TOKEN
+          # pushes fire none, which leaves the release PR permanently blocked now that
+          # build-and-test / lint-build-test / build-backend-image are required checks on main.
+          # Falls back to GITHUB_TOKEN (old behavior) until the secret is set.
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.GITHUB_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
