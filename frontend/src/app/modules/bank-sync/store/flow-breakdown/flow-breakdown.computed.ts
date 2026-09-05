@@ -57,6 +57,12 @@ const BUCKET_META: {bucket: FlowBucket; label: string; counted: boolean; note: s
     note: 'Matched a debit↔credit pair between your own accounts',
   },
   {
+    bucket: 'excluded-routing',
+    label: 'Own money routed',
+    counted: false,
+    note: 'Your own money hopping between accounts via a family member — neither income nor spending',
+  },
+  {
     bucket: 'excluded-transfer',
     label: 'Excluded as transfers',
     counted: false,

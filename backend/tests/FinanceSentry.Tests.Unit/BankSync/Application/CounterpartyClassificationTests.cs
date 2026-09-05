@@ -444,4 +444,57 @@ public class CounterpartyClassificationTests
         result.MonthlyFlows.Should().ContainSingle()
               .Which.OutflowUsd.Should().Be(CurrencyConverter.ToUsd(850m, "UAH"));
     }
+
+    // ── #580: currency-scoped rules and the self-routing role ─────────────────
+
+    [Fact]
+    public async Task Classify_CurrencyScopedRule_BeatsGenericRuleForTheSameText()
+    {
+        // «Від: Людмила Сичова» on a EUR account is the user's own money mid-route; the same
+        // wording on a UAH account is rent. The EUR-scoped self-routing rule must win on the
+        // EUR account even though the generic family rule matches the text too.
+        var family = MakeCounterparty("Мама", ("description_contains", "Людмила Сичова"));
+        var routing = MakeCounterparty("Routing via mom (EUR)", FlowRoles.SelfRouting);
+        routing.Rules.Add(new CounterpartyRule
+        {
+            CounterpartyId = routing.Id,
+            MatchType = "description_contains",
+            Pattern = "Від: Людмила Сичова",
+            Currency = "EUR",
+        });
+
+        // Family listed FIRST — ordering must not decide; specificity must.
+        var sut = BuildSut(family, routing);
+        var eurCredit = MakeTx(1200m, "credit", "Від: Людмила Сичова");
+        var eurAccount = new Dictionary<Guid, string> { [AccountId] = "EUR" };
+
+        var result = await sut.ClassifyAsync(UserId, [eurCredit], eurAccount);
+
+        result.Matches![eurCredit.Id].Name.Should().Be("Routing via mom (EUR)");
+        result.Matches[eurCredit.Id].FlowRole.Should().Be(FlowRoles.SelfRouting);
+    }
+
+    [Fact]
+    public async Task Classify_CurrencyScopedRule_DoesNotMatchOtherCurrencies()
+    {
+        // The UAH rent keeps matching the generic family rule when the EUR-scoped routing
+        // rule exists — the scope must never leak across currencies.
+        var family = MakeCounterparty("Мама", ("description_contains", "Людмила Сичова"));
+        var routing = MakeCounterparty("Routing via mom (EUR)", FlowRoles.SelfRouting);
+        routing.Rules.Add(new CounterpartyRule
+        {
+            CounterpartyId = routing.Id,
+            MatchType = "description_contains",
+            Pattern = "Від: Людмила Сичова",
+            Currency = "EUR",
+        });
+
+        var sut = BuildSut(routing, family);
+        var uahRent = MakeTx(18000m, "credit", "Від: Людмила Сичова");
+
+        var result = await sut.ClassifyAsync(UserId, [uahRent], UahAccount);
+
+        result.Matches![uahRent.Id].Name.Should().Be("Мама");
+        result.Matches[uahRent.Id].FlowRole.Should().Be(FlowRoles.FamilySupport);
+    }
 }
