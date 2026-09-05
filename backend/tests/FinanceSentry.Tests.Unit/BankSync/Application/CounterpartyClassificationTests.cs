@@ -366,4 +366,82 @@ public class CounterpartyClassificationTests
         result.MonthlyFlows.Should().ContainSingle()
               .Which.InflowUsd.Should().Be(CurrencyConverter.ToUsd(18000m, "UAH"));
     }
+
+    // ── PR #547 review: only explicit credit/debit is classified ──────────────
+
+    [Fact]
+    public async Task Classify_NullTransactionType_IsIgnored()
+    {
+        // Direction can't be guessed: a null (or unknown) TransactionType used to fall into
+        // the else-branch and count as OUTFLOW. It must be skipped entirely — the same
+        // "credit"/"debit" convention MoneyFlowStatisticsService sums by.
+        var cp = MakeCounterparty("Мама", ("description_contains", "мама"));
+        var sut = BuildSut(cp);
+
+        var typed = MakeTx(1000m, "credit", "від мама");
+        var untyped = MakeTx(5000m, "credit", "переказ мама");
+        untyped.TransactionType = null;
+
+        var result = await sut.ClassifyAsync(UserId, [typed, untyped], UahAccount);
+
+        result.MatchedTransactionIds.Should().BeEquivalentTo([typed.Id]);
+        var flow = result.MonthlyFlows.Should().ContainSingle().Subject;
+        flow.InflowUsd.Should().Be(CurrencyConverter.ToUsd(1000m, "UAH"));
+        flow.OutflowUsd.Should().Be(0m);
+    }
+
+    // ── PR #547 review: window classification runs once per request scope ─────
+
+    [Fact]
+    public async Task ClassifyForWindow_SecondCallInSameScope_ReturnsMemoizedResultWithoutReclassifying()
+    {
+        // FR-006/FR-010: one classification per request, shared by every consumer. The
+        // standalone money-flow and top-categories handlers each call this entry point, so
+        // the scoped service must hand the second caller the first call's result.
+        var account = MakeAccount("UAH");
+        var cp = MakeCounterparty("Мама", ("description_contains", "мама"));
+
+        var repoMock = new Mock<ICounterpartyRepository>();
+        repoMock.Setup(r => r.GetForUserAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync([cp]);
+        var txMock = new Mock<ITransactionRepository>();
+        txMock.Setup(r => r.GetByUserIdSinceAsync(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+              .ReturnsAsync([MakeTx(18000m, "credit", "від мама", accountId: account.Id)]);
+        var acctMock = new Mock<IBankAccountRepository>();
+        acctMock.Setup(r => r.GetByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync([account]);
+
+        var sut = new CounterpartyClassificationService(repoMock.Object, txMock.Object, acctMock.Object);
+
+        var first = await sut.ClassifyForWindowAsync(UserId, months: 6);
+        var second = await sut.ClassifyForWindowAsync(UserId, months: 6);
+
+        second.Should().BeSameAs(first);
+        txMock.Verify(r => r.GetByUserIdSinceAsync(It.IsAny<Guid>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()), Times.Once);
+        repoMock.Verify(r => r.GetForUserAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    // ── PR #547 review: the seeded "мама" pattern overmatches — documented ────
+
+    [Fact]
+    public async Task Classify_GenericMamaPatternInUnrelatedDescription_IsStillMatched_KnownOvermatchRisk()
+    {
+        // REGRESSION-DOCUMENTING TEST, not an endorsement. M011 seeds a description_contains
+        // rule for the bare word "мама", and matching is case-insensitive substring — so a
+        // card payment at a business whose name merely CONTAINS the word (here a restaurant)
+        // is classified as family support. That is the deployed semantics today; if this
+        // test ever fails, the matching behavior changed and the seed rules must be re-audited
+        // (a tighter pattern or a word-boundary match would be the fix).
+        var cp = MakeCounterparty("Мама", ("description_contains", "мама"));
+        var sut = BuildSut(cp);
+
+        var restaurant = MakeTx(850m, "debit", "Ресторан Мама Манана, Київ");
+
+        var result = await sut.ClassifyAsync(UserId, [restaurant], UahAccount);
+
+        result.MatchedTransactionIds.Should().Contain(restaurant.Id,
+            "the seeded substring rule cannot tell the family member from a business name containing the word");
+        result.MonthlyFlows.Should().ContainSingle()
+              .Which.OutflowUsd.Should().Be(CurrencyConverter.ToUsd(850m, "UAH"));
+    }
 }

@@ -15,9 +15,12 @@ public class CounterpartyRepository(BankSyncDbContext context) : ICounterpartyRe
     public async Task<IReadOnlyList<Counterparty>> GetForUserAsync(
         Guid userId, CancellationToken cancellationToken = default)
     {
+        // Deterministic order (FR-009): classification is first-match-wins, so an unordered
+        // read would let the database decide which counterparty claims an ambiguous match.
         return await _context.Counterparties
             .Include(c => c.Rules)
             .Where(c => c.UserId == userId || c.UserId == Guid.Empty)
+            .OrderBy(c => c.Id)
             .ToListAsync(cancellationToken);
     }
 }

@@ -26,7 +26,8 @@ export interface MonthlyFlow {
   inflowUsd: number;
   outflowUsd: number;
   netUsd: number;
-  /** Net family-support expense folded into outflowUsd; zero when no counterparty expense. */
+  /** Gross family-support expense (per direction, never netted against family income),
+   * included in outflowUsd; zero when no counterparty expense. */
   familySupportOutflowUsd?: number;
   /**
    * Net movement routed to an investment venue. Deliberately NOT part of outflowUsd —

@@ -29,7 +29,8 @@ public static class CategoryKeys
     public const string Uncategorized = "UNCATEGORIZED";
 
     /// <summary>
-    /// Net outbound payments to family counterparties (monthly netting result).
+    /// Gross outbound payments to family counterparties (per direction — support sent is
+    /// never netted against rent received).
     /// Produced by <c>CounterpartyClassificationService</c>; never stored on a
     /// transaction row — it is a computed bucket that appears in top-categories output.
     /// </summary>

@@ -46,6 +46,8 @@ public interface ICounterpartyClassificationService
     /// entry point every consumer of the classification (money flow, savings rate,
     /// top categories) shares: the result is computed once per request and handed to
     /// each of them, so they can never disagree about what a counterparty movement was.
+    /// The implementation memoizes per (user, window) within the request scope, so a
+    /// second consumer calling this directly gets the first call's result back.
     /// </summary>
     Task<CounterpartyClassificationResult> ClassifyForWindowAsync(
         Guid userId,
@@ -89,12 +91,22 @@ public class CounterpartyClassificationService(
     private readonly IBankAccountRepository _accounts =
         accounts ?? throw new ArgumentNullException(nameof(accounts));
 
+    // Per-request memo (the service is scoped): FR-006/FR-010 demand classification runs ONCE
+    // per request and every consumer reads the same result. DashboardQueryService shares the
+    // result explicitly; the standalone money-flow and top-categories query handlers each call
+    // this entry point, so within one scope the second call must return the first call's
+    // result rather than re-classifying — two passes invite two answers for one month.
+    private readonly Dictionary<(Guid UserId, int Months), CounterpartyClassificationResult> _windowMemo = [];
+
     /// <inheritdoc />
     public async Task<CounterpartyClassificationResult> ClassifyForWindowAsync(
         Guid userId,
         int months,
         CancellationToken ct = default)
     {
+        if (_windowMemo.TryGetValue((userId, months), out var memoized))
+            return memoized;
+
         var accountList = await _accounts.GetByUserIdAsync(userId, ct);
         var accountCurrencies = accountList
             .Where(a => a.IsActive)
@@ -103,7 +115,9 @@ public class CounterpartyClassificationService(
         var txList = (await _transactions.GetByUserIdSinceAsync(
             userId, MonthWindow.StartOfMonthsAgo(months), ct)).ToList();
 
-        return await ClassifyAsync(userId, txList, accountCurrencies, ct);
+        var result = await ClassifyAsync(userId, txList, accountCurrencies, ct);
+        _windowMemo[(userId, months)] = result;
+        return result;
     }
 
     /// <inheritdoc />
@@ -127,6 +141,14 @@ public class CounterpartyClassificationService(
             if (!tx.IsActive)
                 continue;
 
+            // Only an explicit direction can be classified — the same "credit"/"debit"
+            // convention MoneyFlowStatisticsService sums by. A null or unknown type is
+            // skipped entirely rather than guessed into outflow.
+            var isCredit = tx.TransactionType == "credit";
+            var isDebit = tx.TransactionType == "debit";
+            if (!isCredit && !isDebit)
+                continue;
+
             var matched = FindCounterparty(tx, knownCounterparties);
             if (matched is null)
                 continue;
@@ -140,10 +162,9 @@ public class CounterpartyClassificationService(
 
             buckets.TryGetValue(key, out var existing);
 
-            if (tx.TransactionType == "credit")
-                buckets[key] = (existing.Inflow + amountUsd, existing.Outflow);
-            else
-                buckets[key] = (existing.Inflow, existing.Outflow + amountUsd);
+            buckets[key] = isCredit
+                ? (existing.Inflow + amountUsd, existing.Outflow)
+                : (existing.Inflow, existing.Outflow + amountUsd);
         }
 
         var monthlyFlows = buckets

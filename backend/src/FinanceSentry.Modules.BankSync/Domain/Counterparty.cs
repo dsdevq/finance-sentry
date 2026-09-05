@@ -18,8 +18,8 @@ public class Counterparty : Entity
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Semantic role used as the category label in top-categories output.
-    /// Currently always "family_support"; reserved for future roles.
+    /// Semantic role deciding where each direction of the movement lands — one of
+    /// <see cref="FlowRoles"/> ("family_support" seeded by M011, "investment" by M012).
     /// </summary>
     public string FlowRole { get; set; } = string.Empty;
 
