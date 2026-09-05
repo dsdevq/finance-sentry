@@ -80,11 +80,14 @@ namespace FinanceSentry.Modules.BankSync.Migrations
                 table: "counterparty_rules",
                 column: "CounterpartyId");
 
-            // Seed FAMILY_SUPPORT into the categories reference table.
+            // Seed FAMILY_SUPPORT into the categories reference table. The table is not
+            // mapped by BankSyncDbContext, so column types must be explicit — without them
+            // EF cannot generate the SQL and the whole migration fails at apply time.
             migrationBuilder.InsertData(
                 schema: "bank_sync",
                 table: "categories",
                 columns: ["Key", "Label", "SortOrder"],
+                columnTypes: ["character varying", "character varying", "integer"],
                 values: new object[] { "FAMILY_SUPPORT", "Family Support", 135 });
 
             // Seed system-default counterparties (UserId = Guid.Empty applies to all users).
@@ -92,6 +95,7 @@ namespace FinanceSentry.Modules.BankSync.Migrations
                 schema: "bank_sync",
                 table: "counterparties",
                 columns: ["Id", "UserId", "Name", "FlowRole", "CreatedAt"],
+                columnTypes: ["uuid", "uuid", "character varying(255)", "character varying(50)", "timestamp with time zone"],
                 values: new object[,]
                 {
                     {
@@ -115,6 +119,7 @@ namespace FinanceSentry.Modules.BankSync.Migrations
                 schema: "bank_sync",
                 table: "counterparty_rules",
                 columns: ["Id", "CounterpartyId", "MatchType", "Pattern", "CreatedAt"],
+                columnTypes: ["uuid", "uuid", "character varying(50)", "character varying(255)", "timestamp with time zone"],
                 values: new object[,]
                 {
                     // Людмила Сичова — matches description "Людмила Сичова" or "мама"
@@ -157,6 +162,7 @@ namespace FinanceSentry.Modules.BankSync.Migrations
                 schema: "bank_sync",
                 table: "categories",
                 keyColumn: "Key",
+                keyColumnType: "character varying",
                 keyValue: "FAMILY_SUPPORT");
 
             migrationBuilder.DropTable(

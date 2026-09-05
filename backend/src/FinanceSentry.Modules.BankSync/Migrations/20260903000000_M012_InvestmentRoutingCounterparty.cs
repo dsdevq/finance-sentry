@@ -27,12 +27,14 @@ namespace FinanceSentry.Modules.BankSync.Migrations
                 schema: "bank_sync",
                 table: "counterparties",
                 columns: ["Id", "UserId", "Name", "FlowRole", "CreatedAt"],
+                columnTypes: ["uuid", "uuid", "character varying(255)", "character varying(50)", "timestamp with time zone"],
                 values: new object[] { InvestmentRoutingId, Guid.Empty, "Investment routing", "investment", SeededAt });
 
             migrationBuilder.InsertData(
                 schema: "bank_sync",
                 table: "counterparty_rules",
                 columns: ["Id", "CounterpartyId", "MatchType", "Pattern", "CreatedAt"],
+                columnTypes: ["uuid", "uuid", "character varying(50)", "character varying(255)", "timestamp with time zone"],
                 values: new object[,]
                 {
                     // The venues this user actually routes to (Binance + IBKR), matched on the
@@ -84,6 +86,7 @@ namespace FinanceSentry.Modules.BankSync.Migrations
                     schema: "bank_sync",
                     table: "counterparty_rules",
                     keyColumn: "Id",
+                    keyColumnType: "uuid",
                     keyValue: ruleId);
             }
 
@@ -91,6 +94,7 @@ namespace FinanceSentry.Modules.BankSync.Migrations
                 schema: "bank_sync",
                 table: "counterparties",
                 keyColumn: "Id",
+                keyColumnType: "uuid",
                 keyValue: InvestmentRoutingId);
         }
     }
