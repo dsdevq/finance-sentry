@@ -7,11 +7,10 @@ on:
       - 'backend/**'
       - 'docker/Dockerfile'
       - '.github/workflows/docker-build.yml'
+  # No paths filter on PRs — build-backend-image is a required status check on main
+  # (see backend-ci.yml for the rationale).
   pull_request:
     branches: [ main ]
-    paths:
-      - 'backend/**'
-      - 'docker/Dockerfile'
 
 jobs:
   build-backend-image:
