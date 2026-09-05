@@ -198,3 +198,64 @@ internal sealed class FakeRecommendationTrendRepository : IRecommendationTrendRe
             .ToList());
     }
 }
+
+/// <summary>
+/// In-memory <see cref="INewsSourceRepository"/>. Reads hand back a *copy*, mirroring the real
+/// repository's <c>AsNoTracking()</c> queries: a caller that mutates what it read and forgets to call
+/// <see cref="UpdateAsync"/> persists nothing here either, so tests exercise the same contract the
+/// database enforces.
+/// </summary>
+internal sealed class FakeNewsSourceRepository : INewsSourceRepository
+{
+    public List<NewsSource> Sources { get; } = [];
+
+    public Task<IReadOnlyList<NewsSource>> ListEnabledAsync(CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<NewsSource>>(Sources.Where(s => s.Enabled).Select(Copy).ToList());
+
+    public Task<IReadOnlyList<NewsSource>> ListAllAsync(CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<NewsSource>>(Sources.Select(Copy).ToList());
+
+    public Task<NewsSource?> GetByUrlAsync(string url, CancellationToken ct = default)
+    {
+        var match = Sources.FirstOrDefault(s => s.Url == url);
+        return Task.FromResult(match is null ? null : Copy(match));
+    }
+
+    public Task<Guid> AddAsync(NewsSource source, CancellationToken ct = default)
+    {
+        Sources.Add(Copy(source));
+        return Task.FromResult(source.Id);
+    }
+
+    public Task UpdateAsync(NewsSource source, CancellationToken ct = default)
+    {
+        var index = Sources.FindIndex(s => s.Id == source.Id);
+        if (index >= 0)
+        {
+            Sources[index] = Copy(source);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task RemoveAsync(NewsSource source, CancellationToken ct = default)
+    {
+        Sources.RemoveAll(s => s.Id == source.Id);
+        return Task.CompletedTask;
+    }
+
+    private static NewsSource Copy(NewsSource s) => new()
+    {
+        Id = s.Id,
+        Name = s.Name,
+        Kind = s.Kind,
+        Url = s.Url,
+        Keywords = [.. s.Keywords],
+        ThesisId = s.ThesisId,
+        Enabled = s.Enabled,
+        ConsecutiveFailures = s.ConsecutiveFailures,
+        LastSuccessAt = s.LastSuccessAt,
+        LastFailureReason = s.LastFailureReason,
+        CreatedAt = s.CreatedAt,
+    };
+}

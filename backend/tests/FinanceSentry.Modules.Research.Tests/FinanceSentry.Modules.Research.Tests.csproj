@@ -19,6 +19,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Verbatim live captures backing the TrendForce external-contract tests (issue #318). -->
+    <Content Include="Companion\Fixtures\*.html" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\FinanceSentry.Core\FinanceSentry.Core.csproj" />
     <ProjectReference Include="..\..\src\FinanceSentry.Modules.Research\FinanceSentry.Modules.Research.csproj" />
     <ProjectReference Include="..\..\src\FinanceSentry.Modules.Risk\FinanceSentry.Modules.Risk.csproj" />
