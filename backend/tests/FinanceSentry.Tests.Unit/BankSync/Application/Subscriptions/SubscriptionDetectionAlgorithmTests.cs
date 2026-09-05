@@ -39,7 +39,7 @@ public class SubscriptionDetectionAlgorithmTests
     [InlineData("Installment payment 3/6")]
     public void InstallmentDescription_IsDetected(string description)
     {
-        SubscriptionDetectionJob.IsInstallmentDescription(description).Should().BeTrue();
+        InstallmentPlanRecognizer.IsInstallmentDescription(description).Should().BeTrue();
     }
 
     [Theory]
@@ -50,7 +50,7 @@ public class SubscriptionDetectionAlgorithmTests
     [InlineData("")]
     public void NonInstallmentDescription_IsNotDetected(string? description)
     {
-        SubscriptionDetectionJob.IsInstallmentDescription(description).Should().BeFalse();
+        InstallmentPlanRecognizer.IsInstallmentDescription(description).Should().BeFalse();
     }
 
     [Fact]
@@ -83,7 +83,7 @@ public class SubscriptionDetectionAlgorithmTests
     [InlineData("Spotify", 5815, false)]
     public void IsInstallmentTransaction_ClassifiesByDescriptionAndMcc(string desc, int? mcc, bool expected)
     {
-        SubscriptionDetectionJob.IsInstallmentTransaction(desc, mcc).Should().Be(expected);
+        InstallmentPlanRecognizer.IsInstallmentTransaction(desc, mcc).Should().Be(expected);
     }
 
     [Theory]
@@ -95,7 +95,7 @@ public class SubscriptionDetectionAlgorithmTests
     [InlineData("Повне погашення RozetkaPay", "RozetkaPay")]
     public void ExtractInstallmentMerchant_RecoversMerchant(string desc, string expected)
     {
-        SubscriptionDetectionJob.ExtractInstallmentMerchant(desc).Should().Be(expected);
+        InstallmentPlanRecognizer.ExtractMerchant(desc).Should().Be(expected);
     }
 
     [Theory]
@@ -103,7 +103,7 @@ public class SubscriptionDetectionAlgorithmTests
     [InlineData("Погашення наступного платежу RozetkaPay", false)]
     public void IsInstallmentPayoff_DetectsFullPayoff(string desc, bool expected)
     {
-        SubscriptionDetectionJob.IsInstallmentPayoff(desc).Should().Be(expected);
+        InstallmentPlanRecognizer.IsInstallmentPayoff(desc).Should().Be(expected);
     }
 
     [Fact]

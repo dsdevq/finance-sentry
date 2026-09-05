@@ -22,4 +22,14 @@ public class ActiveSubscriptionsReader(IDetectedSubscriptionRepository repositor
                 s.NextExpectedDate))
             .ToList();
     }
+
+    public async Task<IReadOnlySet<string>> GetActiveCommitmentMerchantKeysAsync(
+        Guid userId, CancellationToken ct = default)
+    {
+        var subscriptions = await _repository.GetActiveByUserIdAsync(userId.ToString(), ct);
+
+        return subscriptions
+            .Select(s => s.MerchantNameNormalized)
+            .ToHashSet(StringComparer.Ordinal);
+    }
 }
