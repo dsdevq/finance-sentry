@@ -5,6 +5,10 @@ import {type AreaSeries, type BarSeries, type DonutSegment} from '@lifekit-hq/ui
 import {CategoryStore} from '../../../../shared/store/categories/categories.store';
 import {MerchantCategoryUtils} from '../../../../shared/utils/merchant-category.utils';
 import {
+  MIN_PROJECTION_MONTHS,
+  PROJECTION_HORIZON_MONTHS,
+} from '../../constants/dashboard/dashboard.constants';
+import {
   type DashboardData,
   type MonthlyFlow,
   type NetWorthSnapshotDto,
@@ -15,6 +19,7 @@ interface StateSignals {
   netWorthHistory: Signal<NetWorthSnapshotDto[]>;
   historyLoading: Signal<boolean>;
   historyError: Signal<string | null>;
+  projectionReturnRate: Signal<number>;
 }
 
 const COMPACT_FORMATTER = new Intl.NumberFormat('en-US', {
@@ -59,6 +64,46 @@ const INCOME_LANDED_FRACTION = 0.5;
 
 // Need at least a start and end snapshot to state a change over the window.
 const MIN_POINTS_FOR_DELTA = 2;
+
+const MONTHS_PER_YEAR = 12;
+// An even-length sample has two middle values; the median is their average.
+const MEDIAN_HALVES = 2;
+
+/**
+ * Median of a non-empty sample. The projection uses this rather than a mean because the
+ * complete-month window is only a handful of months deep and one artifact month — June 2026
+ * carries a duplicated salary (#400 audit) — moves a mean by hundreds of dollars a month
+ * while leaving a median where the typical month actually sits.
+ */
+function median(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / MEDIAN_HALVES);
+  return sorted.length % MEDIAN_HALVES === 0
+    ? (sorted[mid - 1] + sorted[mid]) / MEDIAN_HALVES
+    : sorted[mid];
+}
+
+// Cents on a twelve-month forecast are noise, and the projection's addends have to share the
+// headline's formatter or the column will not visibly sum.
+const WHOLE_DOLLARS = '1.0-0';
+
+function wholeUsd(value: number, currency: CurrencyPipe): string {
+  return currency.transform(value, 'USD', 'symbol', WHOLE_DOLLARS) ?? '';
+}
+
+/**
+ * Money as a signed addend, following the U+2212 / ASCII-plus convention
+ * `netWorthChangeFormatted` already sets in this file. Exact zero drops the sign: "+$0" reads
+ * as a rounding artifact, while "$0" reads as the deliberate flat default the 0% option exists
+ * to express.
+ */
+function signedUsd(value: number, currency: CurrencyPipe): string {
+  const magnitude = wholeUsd(Math.abs(value), currency);
+  if (value === 0) {
+    return magnitude;
+  }
+  return `${value > 0 ? '+' : '−'}${magnitude}`;
+}
 
 function currentMonthKey(): string {
   const now = new Date();
@@ -236,6 +281,35 @@ export function dashboardComputed(store: StateSignals) {
   const spendingChip = computed(() => paceChip(outflowPace(), false, 'over pace', 'under pace'));
   const savingsChip = computed(() => savingsRateChip(savingsRateMonthToDate(), completeMonths()));
 
+  // Forecasting the net-worth line itself would be forecasting the market — most of the book
+  // is market-marked and its daily swings dwarf a month of savings. So the projection is built
+  // from what the user actually controls (contributions) and any market return is a separate,
+  // user-selected, explicitly worded assumption.
+  const completeMonthCount = computed(() => completeMonths().length);
+  const hasProjection = computed(() => completeMonthCount() >= MIN_PROJECTION_MONTHS);
+
+  const medianMonthlySavings = computed(() => {
+    const months = completeMonths();
+    return months.length === 0 ? 0 : median(months.map(([, v]) => v.inflow - v.outflow));
+  });
+
+  // Only the sleeves that are actually marked to market can earn a market return. Banking cash
+  // cannot, and neither can the projected contributions — the app has no idea whether next
+  // month's savings land in a brokerage or sit in a current account.
+  const marketMarkedBalance = computed(() => {
+    const latest = validHistory().at(-1);
+    return latest ? latest.brokerageTotal + latest.cryptoTotal : 0;
+  });
+
+  // Named once and reused by both the headline and its breakdown line, so the addends the
+  // reader is invited to sum can never drift from the total they are shown against.
+  const projectedContributions = computed(() => medianMonthlySavings() * PROJECTION_HORIZON_MONTHS);
+
+  const marketGrowth = computed(() => {
+    const horizonYears = PROJECTION_HORIZON_MONTHS / MONTHS_PER_YEAR;
+    return marketMarkedBalance() * ((1 + store.projectionReturnRate()) ** horizonYears - 1);
+  });
+
   const snapshotLabeller = computed((): ((s: NetWorthSnapshotDto) => string) => {
     const history = validHistory();
     if (history.length === 0) {
@@ -360,6 +434,50 @@ export function dashboardComputed(store: StateSignals) {
         .filter(([, v]) => v.inflow > 0)
         .map(([key, v]) => ({label: formatMonthKey(key), value: savingsRateOf(v)}));
       return points.length > 0 ? [{label: 'Savings rate', color: SAVINGS_COLOR, points}] : [];
+    }),
+
+    // Below three complete months the tile does not render at all — a projection off one or
+    // two months is noise wearing a number's clothes.
+    hasProjection,
+
+    projectedNetWorthFormatted: computed(() =>
+      wholeUsd(
+        (store.data()?.totalNetWorthUsd ?? 0) + projectedContributions() + marketGrowth(),
+        currency
+      )
+    ),
+
+    // The headline broken into the addends that produce it. Blending saving (behaviour the
+    // reader controls) with an assumed return (a guess they picked off a toggle) into one
+    // figure hides the very distinction this tile exists to draw, so the parts are shown and
+    // the reader can check that they sum.
+    projectionTodayFormatted: computed(() =>
+      wholeUsd(store.data()?.totalNetWorthUsd ?? 0, currency)
+    ),
+    projectedContributionsFormatted: computed(() => signedUsd(projectedContributions(), currency)),
+    projectedMarketReturnFormatted: computed(() => signedUsd(marketGrowth(), currency)),
+
+    medianMonthlySavingsFormatted: computed(() => wholeUsd(medianMonthlySavings(), currency)),
+
+    // Always plural: the tile is gated at three months, so the singular can never surface.
+    projectionBasisLabel: computed(
+      () => `Median saved per month, based on ${completeMonthCount()} complete months`
+    ),
+
+    // The assumption is spelled out in words next to the number, because the whole point of
+    // splitting return out of the projection is that the reader can see which part is their
+    // own behaviour and which part is a guess about the market.
+    projectionAssumptionLabel: computed(() => {
+      const percent = Math.round(store.projectionReturnRate() * PERCENT);
+      if (percent === 0) {
+        return 'Assumes no market return — this is contributions only.';
+      }
+      const marketBalance = marketMarkedBalance();
+      if (marketBalance <= 0) {
+        return `The latest snapshot has no market-marked balance, so ${percent}%/yr changes nothing.`;
+      }
+      const base = COMPACT_FORMATTER.format(marketBalance);
+      return `Assumes ${percent}%/yr on the ${base} already in brokerage and crypto. Cash and future contributions do not compound.`;
     }),
 
     // Gated on the same complete-month window the charts plot: a user whose only data is

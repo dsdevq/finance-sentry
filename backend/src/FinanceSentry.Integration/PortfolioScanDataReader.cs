@@ -20,6 +20,13 @@ public sealed class PortfolioScanDataReader(
     IRiskRuleSetRepository riskRules,
     IIpsRepository ipsRepo) : IPortfolioScanDataReader
 {
+    /// <summary>
+    /// Risk rule limits are stored as fractions in (0,1] (<c>SaveRiskRuleSetCommand.ValidateFractionalRange</c>)
+    /// despite the <c>Pct</c> suffix, while <see cref="PortfolioScanData"/> is contractually percentage
+    /// points (0–100). This adapter is the single place the two units meet, so it converts here.
+    /// </summary>
+    private const decimal FractionToPercentagePoints = 100m;
+
     public async Task<IReadOnlyList<Guid>> GetScanUserIdsAsync(CancellationToken ct = default)
     {
         var withRules = await riskRules.GetUserIdsWithRuleSetsAsync(ct);
@@ -67,7 +74,10 @@ public sealed class PortfolioScanDataReader(
             book.StaleSources,
             driftRows,
             topPositions,
-            rules?.MaxPositionWeightPct,
-            rules?.MinCashBufferPct);
+            ToPercentagePoints(rules?.MaxPositionWeightPct),
+            ToPercentagePoints(rules?.MinCashBufferPct));
     }
+
+    private static decimal? ToPercentagePoints(decimal? fraction)
+        => fraction * FractionToPercentagePoints;
 }

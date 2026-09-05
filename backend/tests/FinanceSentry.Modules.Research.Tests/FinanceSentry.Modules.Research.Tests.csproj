@@ -15,6 +15,12 @@
     <PackageReference Include="coverlet.collector" PrivateAssets="all" />
     <PackageReference Include="FluentAssertions" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Verbatim live captures backing the TrendForce external-contract tests (issue #318). -->
+    <Content Include="Companion\Fixtures\*.html" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

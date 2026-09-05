@@ -12,6 +12,8 @@ export interface DashboardState {
   historyLoading: boolean;
   historyError: string | null;
   netWorthStacked: boolean;
+  /** Annual market return assumed by the projection tile, as a fraction (0.05 = 5%/yr). */
+  projectionReturnRate: number;
 }
 
 export const initialDashboardState: DashboardState = {
@@ -22,4 +24,5 @@ export const initialDashboardState: DashboardState = {
   historyLoading: false,
   historyError: null,
   netWorthStacked: true,
+  projectionReturnRate: 0,
 };
