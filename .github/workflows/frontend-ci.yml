@@ -6,10 +6,10 @@ on:
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend-ci.yml'
+  # No paths filter on PRs — lint-build-test is a required status check on main
+  # (see backend-ci.yml for the rationale).
   pull_request:
     branches: [ main ]
-    paths:
-      - 'frontend/**'
 
 jobs:
   lint-build-test:

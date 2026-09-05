@@ -6,10 +6,11 @@ on:
     paths:
       - 'backend/**'
       - '.github/workflows/backend-ci.yml'
+  # No paths filter on PRs: build-and-test is a required status check on main, and a
+  # path-filtered workflow that skips never reports, which would block the merge.
+  # Running on every PR also guarantees CI covered the exact head commit being merged.
   pull_request:
     branches: [ main ]
-    paths:
-      - 'backend/**'
 
 jobs:
   build-and-test:

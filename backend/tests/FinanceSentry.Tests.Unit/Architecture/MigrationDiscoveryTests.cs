@@ -54,6 +54,22 @@ public class MigrationDiscoveryTests
     }
 
     [Fact]
+    public void Scan_reaches_module_assemblies_beyond_this_projects_direct_references()
+    {
+        // Regression canary for PR #546: this project historically referenced only some
+        // modules, so migrations in the others (Research among them) were never scanned
+        // and the guard passed vacuously. The API-host reference closes that hole; this
+        // assertion fails loudly if the transitive copy ever stops working.
+        var scannedAssemblies = MigrationTypes()
+            .Select(t => t.Assembly.GetName().Name)
+            .Distinct()
+            .ToList();
+
+        scannedAssemblies.Should().Contain("FinanceSentry.Modules.Research",
+            "the Research module ships migrations but is only reachable through the FinanceSentry.API reference");
+    }
+
+    [Fact]
     public void Every_migration_class_carries_the_attributes_EF_needs_to_discover_it()
     {
         var migrations = MigrationTypes().ToList();
