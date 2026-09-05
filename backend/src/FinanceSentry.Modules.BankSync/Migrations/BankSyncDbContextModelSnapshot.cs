@@ -23,76 +23,6 @@ namespace FinanceSentry.Modules.BankSync.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("FinanceSentry.Modules.BankSync.Domain.Counterparty", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("FlowRole")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("idx_counterparty_user_id");
-
-                    b.ToTable("counterparties", "bank_sync");
-                });
-
-            modelBuilder.Entity("FinanceSentry.Modules.BankSync.Domain.CounterpartyRule", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("CounterpartyId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("MatchType")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("Pattern")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CounterpartyId")
-                        .HasDatabaseName("idx_counterparty_rule_counterparty_id");
-
-                    b.ToTable("counterparty_rules", "bank_sync");
-                });
-
             modelBuilder.Entity("FinanceSentry.Modules.BankSync.Domain.AuditLog", b =>
                 {
                     b.Property<Guid>("AuditId")
@@ -271,6 +201,72 @@ namespace FinanceSentry.Modules.BankSync.Migrations
                     b.HasKey("Key");
 
                     b.ToTable("categories", "bank_sync");
+                });
+
+            modelBuilder.Entity("FinanceSentry.Modules.BankSync.Domain.Counterparty", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FlowRole")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("idx_counterparty_user_id");
+
+                    b.ToTable("counterparties", "bank_sync");
+                });
+
+            modelBuilder.Entity("FinanceSentry.Modules.BankSync.Domain.CounterpartyRule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CounterpartyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("MatchType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Pattern")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CounterpartyId")
+                        .HasDatabaseName("idx_counterparty_rule_counterparty_id");
+
+                    b.ToTable("counterparty_rules", "bank_sync");
                 });
 
             modelBuilder.Entity("FinanceSentry.Modules.BankSync.Domain.MccCategory", b =>
@@ -627,22 +623,6 @@ namespace FinanceSentry.Modules.BankSync.Migrations
                     b.ToTable("TrueLayerConnections", "bank_sync");
                 });
 
-            modelBuilder.Entity("FinanceSentry.Modules.BankSync.Domain.CounterpartyRule", b =>
-                {
-                    b.HasOne("FinanceSentry.Modules.BankSync.Domain.Counterparty", "Counterparty")
-                        .WithMany("Rules")
-                        .HasForeignKey("CounterpartyId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Counterparty");
-                });
-
-            modelBuilder.Entity("FinanceSentry.Modules.BankSync.Domain.Counterparty", b =>
-                {
-                    b.Navigation("Rules");
-                });
-
             modelBuilder.Entity("FinanceSentry.Modules.BankSync.Domain.BankAccount", b =>
                 {
                     b.HasOne("FinanceSentry.Modules.BankSync.Domain.MonobankCredential", "MonobankCredential")
@@ -658,6 +638,17 @@ namespace FinanceSentry.Modules.BankSync.Migrations
                     b.Navigation("MonobankCredential");
 
                     b.Navigation("TrueLayerConnection");
+                });
+
+            modelBuilder.Entity("FinanceSentry.Modules.BankSync.Domain.CounterpartyRule", b =>
+                {
+                    b.HasOne("FinanceSentry.Modules.BankSync.Domain.Counterparty", "Counterparty")
+                        .WithMany("Rules")
+                        .HasForeignKey("CounterpartyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Counterparty");
                 });
 
             modelBuilder.Entity("FinanceSentry.Modules.BankSync.Domain.MccCategory", b =>
@@ -705,6 +696,11 @@ namespace FinanceSentry.Modules.BankSync.Migrations
                     b.Navigation("SyncJobs");
 
                     b.Navigation("Transactions");
+                });
+
+            modelBuilder.Entity("FinanceSentry.Modules.BankSync.Domain.Counterparty", b =>
+                {
+                    b.Navigation("Rules");
                 });
 
             modelBuilder.Entity("FinanceSentry.Modules.BankSync.Domain.MonobankCredential", b =>
