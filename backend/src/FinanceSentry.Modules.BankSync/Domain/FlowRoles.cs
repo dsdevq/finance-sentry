@@ -19,4 +19,12 @@ public static class FlowRoles
     /// coming back, not income, so it stays out of inflow too.
     /// </summary>
     public const string Investment = "investment";
+
+    /// <summary>
+    /// A recurring household obligation paid as a bank transfer (e.g. the mortgage, paid
+    /// card-to-card so its category lands as a transfer at ingest). Outbound is real spending
+    /// and counts against the savings rate, exactly like family support — but it is a bill,
+    /// not support, so it stays out of the family-support figure.
+    /// </summary>
+    public const string Household = "household";
 }

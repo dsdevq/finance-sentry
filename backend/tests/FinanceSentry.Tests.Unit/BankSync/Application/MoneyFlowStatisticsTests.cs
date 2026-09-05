@@ -380,6 +380,48 @@ public class MoneyFlowStatisticsTests
     }
 
     [Fact]
+    public async Task GetMonthlyFlow_HouseholdOutflow_CountsAsSpendingButNotAsFamilySupport()
+    {
+        // Arrange: 1000 in, 400 spent normally, plus a 315 mortgage payment that leaves as a
+        // card-to-card transfer (household counterparty). It is real spending — it must join
+        // OutflowUsd and pull the savings rate down — but it is a bill, not support, so it
+        // must not surface under FamilySupportOutflowUsd (nor as InvestedOutflowUsd).
+        var (account, accountId) = MakeAccount("USD");
+        var date = new DateTime(2026, 5, 10, 0, 0, 0, DateTimeKind.Utc);
+
+        var transactions = new List<Transaction>
+        {
+            MakeTx(accountId, 1000m, "credit", date),
+            MakeTx(accountId, 400m,  "debit",  date),
+        };
+
+        var txRepoMock = new Mock<ITransactionRepository>();
+        txRepoMock.Setup(r => r.GetByUserIdSinceAsync(UserId, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+                  .ReturnsAsync(transactions);
+
+        var accountRepoMock = new Mock<IBankAccountRepository>();
+        accountRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
+                       .ReturnsAsync([account]);
+
+        var classification = CounterpartyResults.WithFlows(
+            new CounterpartyMonthlyFlow("2026-05", "Mortgage", FlowRoles.Household, 0m, 315m));
+
+        var sut = new MoneyFlowStatisticsService(
+            txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService(), CommitmentsReader());
+
+        // Act
+        var result = await sut.GetMonthlyFlowAsync(UserId, classification, 6);
+
+        // Assert
+        result.Should().HaveCount(2);
+        var synthetic = result.Single(r => r.Currency == "USD" && r.Inflow == 0m && r.OutflowUsd == 315m);
+        synthetic.FamilySupportOutflowUsd.Should().Be(0m);
+        synthetic.InvestedOutflowUsd.Should().Be(0m);
+        result.Sum(r => r.OutflowUsd).Should().Be(400m + 315m);
+        result.Sum(r => r.NetUsd).Should().Be(1000m - 715m);
+    }
+
+    [Fact]
     public async Task GetMonthlyFlow_InvestmentCreditsAreNotIncome()
     {
         // Arrange: no bank transactions at all in the window, only a net INBOUND investment
