@@ -325,26 +325,37 @@ if (!fs.existsSync(TYPES)) {
 
 let types = fs.readFileSync(TYPES, 'utf8');
 
-// Add stacked field declaration.
-types = types.replace(
-  `    readonly currency: _angular_core.InputSignal<string>;
+// Add stacked field declaration — try both 0.2.0 layout (with buildDatasets) and 0.2.2 layout.
+const TYPES_SEARCH_V020 = `    readonly currency: _angular_core.InputSignal<string>;
     constructor();
     ngAfterViewInit(): void;
     ngOnDestroy(): void;
     private buildDatasets;
     private buildChart;
     static ɵfac: _angular_core.ɵɵFactoryDeclaration<AreaChartComponent, never>;
-    static ɵcmp: _angular_core.ɵɵComponentDeclaration<AreaChartComponent, "cmn-area-chart", never, { "series": { "alias": "series"; "required": false; "isSignal": true; }; "label": { "alias": "label"; "required": false; "isSignal": true; }; "currency": { "alias": "currency"; "required": false; "isSignal": true; }; }, {}, never, never, true, never>;`,
-  `    readonly currency: _angular_core.InputSignal<string>;
+    static ɵcmp: _angular_core.ɵɵComponentDeclaration<AreaChartComponent, "cmn-area-chart", never, { "series": { "alias": "series"; "required": false; "isSignal": true; }; "label": { "alias": "label"; "required": false; "isSignal": true; }; "currency": { "alias": "currency"; "required": false; "isSignal": true; }; }, {}, never, never, true, never>;`;
+const TYPES_SEARCH_V022 = `    readonly currency: _angular_core.InputSignal<string>;
+    constructor();
+    ngAfterViewInit(): void;
+    ngOnDestroy(): void;
+    private buildChart;
+    static ɵfac: _angular_core.ɵɵFactoryDeclaration<AreaChartComponent, never>;
+    static ɵcmp: _angular_core.ɵɵComponentDeclaration<AreaChartComponent, "cmn-area-chart", never, { "series": { "alias": "series"; "required": false; "isSignal": true; }; "label": { "alias": "label"; "required": false; "isSignal": true; }; "currency": { "alias": "currency"; "required": false; "isSignal": true; }; }, {}, never, never, true, never>;`;
+
+const TYPES_REPLACE_BASE = `    readonly currency: _angular_core.InputSignal<string>;
     readonly stacked: _angular_core.InputSignal<boolean>;
     constructor();
     ngAfterViewInit(): void;
-    ngOnDestroy(): void;
-    private buildDatasets;
-    private buildChart;
+    ngOnDestroy(): void;`;
+const TYPES_REPLACE_SUFFIX = `
     static ɵfac: _angular_core.ɵɵFactoryDeclaration<AreaChartComponent, never>;
-    static ɵcmp: _angular_core.ɵɵComponentDeclaration<AreaChartComponent, "cmn-area-chart", never, { "series": { "alias": "series"; "required": false; "isSignal": true; }; "label": { "alias": "label"; "required": false; "isSignal": true; }; "currency": { "alias": "currency"; "required": false; "isSignal": true; }; "stacked": { "alias": "stacked"; "required": false; "isSignal": true; }; }, {}, never, never, true, never>;`
-);
+    static ɵcmp: _angular_core.ɵɵComponentDeclaration<AreaChartComponent, "cmn-area-chart", never, { "series": { "alias": "series"; "required": false; "isSignal": true; }; "label": { "alias": "label"; "required": false; "isSignal": true; }; "currency": { "alias": "currency"; "required": false; "isSignal": true; }; "stacked": { "alias": "stacked"; "required": false; "isSignal": true; }; }, {}, never, never, true, never>;`;
+
+if (types.includes(TYPES_SEARCH_V020)) {
+  types = types.replace(TYPES_SEARCH_V020, TYPES_REPLACE_BASE + '\n    private buildDatasets;\n    private buildChart;' + TYPES_REPLACE_SUFFIX);
+} else if (types.includes(TYPES_SEARCH_V022)) {
+  types = types.replace(TYPES_SEARCH_V022, TYPES_REPLACE_BASE + '\n    private buildChart;' + TYPES_REPLACE_SUFFIX);
+}
 
 fs.writeFileSync(TYPES, types);
 

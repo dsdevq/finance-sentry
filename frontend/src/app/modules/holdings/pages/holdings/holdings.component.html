@@ -71,14 +71,17 @@
         <cmn-data-table [rows]="group.rows">
           <cmn-column key="symbol" header="Symbol">
             <ng-template let-row cmnCell>
-              <span class="inline-flex items-center gap-cmn-2">
+              <button
+                (click)="navigateToDossier(row.symbol)"
+                class="inline-flex cursor-pointer items-center gap-cmn-2 transition-colors hover:text-brand-primary"
+              >
                 <cmn-institution-avatar
                   [name]="row.symbol"
                   [logoUrl]="row.symbol | assetLogo: row.provider"
                   size="sm"
                 />
                 <span class="font-semibold text-text-primary">{{ row.symbol }}</span>
-              </span>
+              </button>
             </ng-template>
           </cmn-column>
           <cmn-column key="provider" header="Provider">

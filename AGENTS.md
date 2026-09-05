@@ -34,8 +34,7 @@ cp /usr/lib/aarch64-linux-gnu/libXfixes.so.3 /tmp/
 # Build @lifekit-hq/* from source and install as tarballs (no GitHub Packages auth needed)
 cd /tmp && git clone --depth 1 https://github.com/lifekit-hq/lifekit-common.git
 cd /tmp/lifekit-common && NODE_OPTIONS="--max-old-space-size=2048" npm install --no-fund --no-audit
-# One project per invocation — the multi-project form errors with "Unknown arguments".
-for p in charts-core core ui; do npx ng build @lifekit-hq/$p; done
+npx ng build @lifekit-hq/charts-core @lifekit-hq/core @lifekit-hq/ui
 # Pack each dist and the source-only packages
 cd dist/lifekit-hq/charts-core && npm pack --pack-destination /tmp/
 cd /tmp/lifekit-common/dist/lifekit-hq/core && npm pack --pack-destination /tmp/
@@ -43,29 +42,14 @@ cd /tmp/lifekit-common/dist/lifekit-hq/ui && npm pack --pack-destination /tmp/
 cd /tmp/lifekit-common/projects/tokens && npm pack --pack-destination /tmp/
 cd /tmp/lifekit-common/projects/config && npm pack --pack-destination /tmp/
 
-# Install all tarballs in finance-sentry frontend. Restore package.json + package-lock.json
-# from git afterwards — these local refs must never be committed.
+# Strip @lifekit-hq/charts-core dep from UI package.json (it's inlined in the bundle)
+# then install all tarballs in finance-sentry frontend
 cd /workspace/frontend
 NODE_OPTIONS="--max-old-space-size=2048" npm install \
   /tmp/lifekit-hq-tokens-*.tgz /tmp/lifekit-hq-core-*.tgz \
   /tmp/lifekit-hq-charts-core-*.tgz /tmp/lifekit-hq-ui-*.tgz \
   /tmp/lifekit-hq-config-*.tgz --legacy-peer-deps --prefer-offline
-
-# The source-built @lifekit-hq/ui lacks AreaChartComponent's `stacked` input in BOTH the FESM
-# and the .d.ts (the published package has it, so CI is unaffected). scripts/patch-lifekit-ui.js
-# targets the 0.2.0 shape, so it prints success while replacing nothing. Patch node_modules by
-# hand or `ng build` fails type-check on [stacked]:
-#   - types/lifekit-hq-ui.d.ts — add `readonly stacked: _angular_core.InputSignal<boolean>;` to
-#     AreaChartComponent plus a "stacked" entry in its ɵcmp inputs
-#   - fesm2022/lifekit-hq-ui.mjs — add `this.stacked = input(true, ...)` to its constructor plus
-#     a `stacked: { classPropertyName: "stacked", ... }` entry in its ɵcmp inputs (needed at
-#     runtime too, or Playwright hits an unknown-property write)
-
-# Unit tests need the `ci` configuration — the default launches a HEADED browser and dies
-# with "Missing X server or $DISPLAY".
-NODE_OPTIONS="--max-old-space-size=2048" \
-PLAYWRIGHT_BROWSERS_PATH=/home/agent/.cache/ms-playwright \
-LD_LIBRARY_PATH=/tmp:$LD_LIBRARY_PATH npx ng test finance-sentry --configuration ci
+node scripts/patch-lifekit-ui.js   # npm install does not reliably fire the postinstall
 
 # Build the Angular app, then run Playwright
 NODE_OPTIONS="--max-old-space-size=2048" npx ng build --configuration=production
@@ -185,10 +169,10 @@ cp /usr/lib/aarch64-linux-gnu/libXfixes.so.3 /tmp/
 # Then run Playwright with LD_LIBRARY_PATH=/tmp:$LD_LIBRARY_PATH
 ```
 
-The `--no-verify` flag is required only when **frontend** files are staged: the husky pre-commit
-hook then runs the frontend gate (`npm ci`), which fails with 401 on `@lifekit-hq/*` (GitHub
-Packages requires NODE_AUTH_TOKEN), and enforces the version bump described below. CI enforces the
-full frontend gate instead. Backend-only commits pass the hook unchanged — do not bypass it.
+The husky pre-commit hook runs lint-staged + `npm run lint` + `npm run format:check` — it does
+**not** run `npm ci`, so it passes without `--no-verify` once `frontend/node_modules` exists. It
+fails with `eslint … ENOENT` (not a lint error) when frontend files are staged and
+`frontend/node_modules` is absent.
 
 ## Frontend pre-commit version-bump gate
 

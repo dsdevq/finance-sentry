@@ -3,7 +3,7 @@ import {Router, type Routes} from '@angular/router';
 
 import {authGuard} from './modules/auth/guards/auth.guard';
 import {guestGuard} from './modules/auth/guards/guest.guard';
-import {AppRoute} from './shared/enums/app-route/app-route.enum';
+import {AppRoute, ASSET_DOSSIER_SYMBOL_PARAM} from './shared/enums/app-route/app-route.enum';
 
 export const APP_ROUTES: Routes = [
   {
@@ -92,6 +92,13 @@ export const APP_ROUTES: Routes = [
         loadComponent: () =>
           import('./modules/settings/pages/settings/settings.component').then(
             m => m.SettingsComponent
+          ),
+      },
+      {
+        path: `${AppRoute.AssetDossier.slice(1)}/:${ASSET_DOSSIER_SYMBOL_PARAM}`,
+        loadComponent: () =>
+          import('./modules/assets/pages/asset-dossier/asset-dossier.component').then(
+            m => m.AssetDossierComponent
           ),
       },
       {path: '', redirectTo: AppRoute.Dashboard, pathMatch: 'full'},

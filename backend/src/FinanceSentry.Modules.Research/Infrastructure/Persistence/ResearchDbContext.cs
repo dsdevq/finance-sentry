@@ -42,6 +42,8 @@ public class ResearchDbContext(DbContextOptions<ResearchDbContext> options) : Db
 
     public DbSet<ResearchEmbedding> ResearchEmbeddings { get; set; } = null!;
 
+    public DbSet<AssetLedgerRead> AssetLedgerReads { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema("research");
@@ -395,6 +397,18 @@ public class ResearchDbContext(DbContextOptions<ResearchDbContext> options) : Db
             .OnDelete(DeleteBehavior.Cascade);
         reb.HasIndex(x => new { x.ChunkId, x.Provider, x.Model, x.EmbeddingVersion })
             .IsUnique().HasDatabaseName("idx_research_embeddings_chunk_provider_model_version");
+
+        var alr = modelBuilder.Entity<AssetLedgerRead>();
+        alr.ToTable("asset_ledger_reads");
+        alr.HasKey(x => x.Id);
+        alr.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
+        alr.Property(x => x.UserId).IsRequired();
+        alr.Property(x => x.Symbol).IsRequired().HasMaxLength(20);
+        alr.Property(x => x.Narrative).IsRequired();
+        alr.Property(x => x.SourceFingerprint).IsRequired().HasMaxLength(64);
+        alr.Property(x => x.GeneratedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+        alr.HasIndex(x => new { x.UserId, x.Symbol })
+            .IsUnique().HasDatabaseName("idx_asset_ledger_reads_user_symbol");
     }
 
     private static readonly ValueComparer<List<string>> StringListComparer = new(
