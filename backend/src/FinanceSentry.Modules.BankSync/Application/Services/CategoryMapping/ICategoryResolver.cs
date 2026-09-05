@@ -26,6 +26,14 @@ public interface ICategoryResolver
     /// </summary>
     string ResolveDescription(string? description);
 
+    /// <summary>
+    /// The keyword half of <see cref="ResolveDescription"/> alone: resolves via the
+    /// runtime-editable <c>merchant_keywords</c> table (longest keyword wins) and returns
+    /// null when nothing matches — so callers with their own fallback chain (e.g. the
+    /// Monobank transfer-prefix → MCC ladder) can splice the keyword bridge in at the front.
+    /// </summary>
+    string? TryResolveKeyword(string? description);
+
     /// <summary>Drops the in-memory cache so the next resolve reloads from the database.</summary>
     void Refresh();
 }

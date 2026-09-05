@@ -155,6 +155,55 @@ public class MonobankAdapterTests
     }
 
     [Fact]
+    public async Task SyncTransactionsAsync_KeywordBeatsTransferPrefixAndMcc()
+    {
+        // «Погашення …» installment charges carry the wire-transfer MCC 4829; the keyword
+        // bridge must win over both the transfer-prefix classifier and the MCC map (#581) —
+        // while a jar top-up with no keyword still resolves through the transfer prefix.
+        const string body = """
+            [
+              {
+                "id": "tx-installment-1",
+                "time": 1554466347,
+                "description": "Погашення наступного платежу ТОВ Алло",
+                "mcc": 4829,
+                "hold": false,
+                "amount": -299995,
+                "currencyCode": 980,
+                "operationAmount": -299995,
+                "operationCurrencyCode": 980,
+                "commissionRate": 0,
+                "cashbackAmount": 0,
+                "balance": 1230317
+              },
+              {
+                "id": "tx-jar-1",
+                "time": 1554466400,
+                "description": "Поповнення «Банка»",
+                "mcc": 8398,
+                "hold": false,
+                "amount": -100000,
+                "currencyCode": 980,
+                "operationAmount": -100000,
+                "operationCurrencyCode": 980,
+                "commissionRate": 0,
+                "cashbackAmount": 0,
+                "balance": 1130317
+              }
+            ]
+            """;
+        var handler = new MonobankStubHttpHandler().Enqueue(HttpStatusCode.OK, body);
+
+        var (candidates, _) = await CreateSut(handler).SyncTransactionsAsync(
+            Token, ExternalAccountId, AccountId, UserId, DateTime.UtcNow.AddDays(-7), default);
+
+        candidates.Single(c => c.Description.StartsWith("Погашення", StringComparison.Ordinal))
+            .MerchantCategory.Should().Be("LOAN_PAYMENTS");
+        candidates.Single(c => c.Description.StartsWith("Поповнення", StringComparison.Ordinal))
+            .MerchantCategory.Should().Be("TRANSFER_OUT");
+    }
+
+    [Fact]
     public async Task SyncTransactionsAsync_RecentCursor_RefetchesTrailingOverlap()
     {
         // A settled hold keeps its original timestamp, so a pure watermark fetch never

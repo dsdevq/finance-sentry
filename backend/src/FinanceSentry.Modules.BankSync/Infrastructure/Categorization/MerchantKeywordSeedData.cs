@@ -200,5 +200,16 @@ public static class MerchantKeywordSeedData
         ("lego", CategoryKeys.GeneralMerchandise),
         ("makeup", CategoryKeys.PersonalCare),
         ("clubwise", CategoryKeys.Medical),
+
+        // --- Monobank installment / fee wordings (#581) ---
+        // These charges carry the wire-transfer MCC 4829 (or the misleading card-service
+        // wording), so without a keyword they land in TRANSFER_OUT and vanish from spending.
+        // Present on the VPS as runtime rows since the August audit; seeded here so fresh
+        // databases classify them the same way.
+        ("погашення", CategoryKeys.LoanPayments),
+        ("щомісячний платіж", CategoryKeys.LoanPayments),
+        ("monomarket", CategoryKeys.LoanPayments),
+        ("платіж pandora", CategoryKeys.LoanPayments),
+        ("платинової картки", CategoryKeys.BankFees),
     ];
 }

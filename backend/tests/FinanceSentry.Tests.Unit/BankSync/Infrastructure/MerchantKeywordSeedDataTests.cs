@@ -33,6 +33,11 @@ public class MerchantKeywordSeedDataTests
     [InlineData("Sq *olives Room Cafe 1", CategoryKeys.FoodAndDrink)]
     [InlineData("*MOBI TOP-UP 0857860057", CategoryKeys.RentAndUtilities)]
     [InlineData("Klarna*mstore.ie", CategoryKeys.GeneralMerchandise)]
+    // Monobank installment / fee wordings (#581) — real spending behind the wire MCC 4829
+    [InlineData("Погашення наступного платежу ТОВ Алло - monomarket", CategoryKeys.LoanPayments)]
+    [InlineData("Повне погашення Pandora", CategoryKeys.LoanPayments)]
+    [InlineData("Платіж RozetkaPay щомісячний платіж", CategoryKeys.LoanPayments)]
+    [InlineData("Обслуговування платинової картки за серпень", CategoryKeys.BankFees)]
     // TrueLayer no-MCC merchants (observed uncategorized in prod)
     [InlineData("Popeyes", CategoryKeys.FoodAndDrink)]
     [InlineData("Cineworld", CategoryKeys.Entertainment)]
