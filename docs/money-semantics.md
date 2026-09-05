@@ -137,6 +137,11 @@ one and a transfer in the other.
   |---|---|---|
   | `family_support` | `OutflowUsd` + the `FAMILY_SUPPORT` category (real spending) | `InflowUsd` (rent is income) |
   | `investment` | `InvestedOutflowUsd` only — never outflow or spend | neither: capital coming back is not earnings |
+  | `household` | `OutflowUsd` (a bill paid as a transfer, e.g. the mortgage) — but **not** `FamilySupportOutflowUsd` and not the `FAMILY_SUPPORT` category | `InflowUsd` (a refund of a bill is money back) |
+
+  Known gap: `household` outbound joins outflow but no spending *category* — top-categories
+  only emits a synthetic row for `family_support` — and it always lands as discretionary,
+  never committed (#560 owns commitment matching for manual obligations).
 
 - Output is ordered by (month, counterparty name) so re-running over a fixed window
   reproduces the same buckets in the same order.
