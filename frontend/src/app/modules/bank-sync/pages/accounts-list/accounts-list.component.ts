@@ -14,6 +14,7 @@ import {
 } from '@lifekit-hq/ui';
 import {take} from 'rxjs';
 
+import {AppRoute} from '../../../../shared/enums/app-route/app-route.enum';
 import {type Institution} from '../../../../shared/models/wealth/wealth.model';
 import {AssetLogoPipe} from '../../../../shared/pipes/asset-logo.pipe';
 import {InstitutionLogoPipe} from '../../../../shared/pipes/institution-logo.pipe';
@@ -126,6 +127,10 @@ export class AccountsListComponent implements OnInit {
         }
         this.store.disconnectAccount(account.accountId);
       });
+  }
+
+  public navigateToDossier(symbol: string): void {
+    void this.router.navigate([AppRoute.AssetDossier, symbol]);
   }
 
   public disconnectInstitution(institution: Institution): void {

@@ -307,7 +307,10 @@
                     account of inst.accounts;
                     track account.accountId + account.accountNumberLast4
                   ) {
-                    <tr class="border-t border-border-default">
+                    <tr
+                      (click)="navigateToDossier(account.accountNumberLast4)"
+                      class="border-t border-border-default cursor-pointer hover:bg-surface-bg transition-colors"
+                    >
                       <td class="py-cmn-3 pl-cmn-16 pr-cmn-4 w-full text-text-primary">
                         <span class="inline-flex items-center gap-cmn-2">
                           <cmn-institution-avatar
@@ -415,7 +418,10 @@
                     account of inst.accounts;
                     track account.accountId + account.accountNumberLast4
                   ) {
-                    <tr class="border-t border-border-default">
+                    <tr
+                      (click)="navigateToDossier(account.accountNumberLast4)"
+                      class="border-t border-border-default cursor-pointer hover:bg-surface-bg transition-colors"
+                    >
                       <td class="py-cmn-3 pl-cmn-16 pr-cmn-4 w-full text-text-primary">
                         <span class="inline-flex items-center gap-cmn-2">
                           <cmn-institution-avatar

@@ -99,7 +99,7 @@ public class MoneyFlowStatisticsTests
             txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService(), CommitmentsReader());
 
         // Act
-        var result = await sut.GetMonthlyFlowAsync(UserId, 6);
+        var result = await sut.GetMonthlyFlowAsync(UserId, CounterpartyResults.None, 6);
 
         // Assert: 6 months, each with 1000 inflow, 600 outflow, 400 net
         result.Should().HaveCount(6);
@@ -145,7 +145,7 @@ public class MoneyFlowStatisticsTests
             txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService(), CommitmentsReader());
 
         // Act
-        var result = await sut.GetMonthlyFlowAsync(UserId, 6);
+        var result = await sut.GetMonthlyFlowAsync(UserId, CounterpartyResults.None, 6);
 
         // Assert: the pending debit counts → outflow = 100 + 40
         result.Should().HaveCount(1);
@@ -184,7 +184,7 @@ public class MoneyFlowStatisticsTests
             txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService(), CommitmentsReader());
 
         // Act
-        var result = await sut.GetMonthlyFlowAsync(UserId, 6);
+        var result = await sut.GetMonthlyFlowAsync(UserId, CounterpartyResults.None, 6);
 
         // Assert: 2 rows — one for EUR, one for USD (same month)
         result.Should().HaveCount(2);
@@ -233,12 +233,247 @@ public class MoneyFlowStatisticsTests
         var sut = new MoneyFlowStatisticsService(
             txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService(), CommitmentsReader());
 
-        var result = await sut.GetMonthlyFlowAsync(UserId, 6);
+        var result = await sut.GetMonthlyFlowAsync(UserId, CounterpartyResults.None, 6);
 
         result.Should().HaveCount(1);
         result[0].Inflow.Should().Be(300m);   // transfer credit excluded
         result[0].Outflow.Should().Be(100m);  // transfer debit  excluded
         result[0].Net.Should().Be(200m);
+    }
+
+    // ── T044 Test: FamilySupportOutflowUsd populated from counterparty expense ──
+
+    [Fact]
+    public async Task GetMonthlyFlow_WithCounterpartyExpense_FamilySupportOutflowUsdPopulated()
+    {
+        // Arrange: one credit and one debit in a single month; the counterparty stub
+        // reports a net expense of 50 USD for that month so the family-support split
+        // can be verified independently from the normal outflow.
+        var (account, accountId) = MakeAccount("USD");
+        var date = new DateTime(2026, 5, 10, 0, 0, 0, DateTimeKind.Utc);
+
+        var transactions = new List<Transaction>
+        {
+            MakeTx(accountId, 1000m, "credit", date),
+            MakeTx(accountId, 400m,  "debit",  date),
+        };
+
+        var txRepoMock = new Mock<ITransactionRepository>();
+        txRepoMock.Setup(r => r.GetByUserIdSinceAsync(UserId, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+                  .ReturnsAsync(transactions);
+
+        var accountRepoMock = new Mock<IBankAccountRepository>();
+        accountRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
+                       .ReturnsAsync([account]);
+
+        // A 50 USD family-support expense for May 2026.
+        var classification = CounterpartyResults.WithFlows(
+            new CounterpartyMonthlyFlow("2026-05", "Mom", FlowRoles.FamilySupport, 0m, 50m));
+
+        var sut = new MoneyFlowStatisticsService(
+            txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService(), CommitmentsReader());
+
+        // Act
+        var result = await sut.GetMonthlyFlowAsync(UserId, classification, 6);
+
+        // Assert: the counterparty adjustment lands on its OWN synthetic USD row; the normal
+        // row's figures are untouched. Month totals stay honest: 400 + 50 of outflow.
+        result.Should().HaveCount(2);
+        var normal = result.Single(r => r.FamilySupportOutflowUsd == 0m);
+        normal.Outflow.Should().Be(400m);
+        normal.OutflowUsd.Should().Be(400m);
+
+        var synthetic = result.Single(r => r.FamilySupportOutflowUsd == 50m);
+        synthetic.Currency.Should().Be("USD");
+        synthetic.OutflowUsd.Should().Be(50m);
+        result.Sum(r => r.OutflowUsd).Should().Be(400m + 50m);
+    }
+
+    // ── T044 Test: rent in and support out in the same month both land ────────
+
+    [Fact]
+    public async Task GetMonthlyFlow_CounterpartyRentAndSupportSameMonth_BothDirectionsLandGross()
+    {
+        // The white-card month: ₴18k-equivalent rent arrives from Mom and $500 of support
+        // goes back to her. Both sides count in full — netting them to $220 of income would
+        // report a month with no family spending at all, which is the savings-rate lie.
+        var (account, accountId) = MakeAccount("USD");
+        var date = new DateTime(2026, 5, 10, 0, 0, 0, DateTimeKind.Utc);
+
+        var transactions = new List<Transaction>
+        {
+            MakeTx(accountId, 1000m, "credit", date),
+            MakeTx(accountId, 400m,  "debit",  date),
+        };
+
+        var txRepoMock = new Mock<ITransactionRepository>();
+        txRepoMock.Setup(r => r.GetByUserIdSinceAsync(UserId, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+                  .ReturnsAsync(transactions);
+
+        var accountRepoMock = new Mock<IBankAccountRepository>();
+        accountRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
+                       .ReturnsAsync([account]);
+
+        var classification = CounterpartyResults.WithFlows(
+            new CounterpartyMonthlyFlow("2026-05", "Mom", FlowRoles.FamilySupport, 720m, 500m));
+
+        var sut = new MoneyFlowStatisticsService(
+            txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService(), CommitmentsReader());
+
+        var result = await sut.GetMonthlyFlowAsync(UserId, classification, 6);
+
+        // Both directions land gross on the month's synthetic USD row; the totals a consumer
+        // sums per month carry the full picture.
+        result.Should().HaveCount(2);
+        var synthetic = result.Single(r => r.FamilySupportOutflowUsd == 500m);
+        synthetic.InflowUsd.Should().Be(720m);
+        synthetic.OutflowUsd.Should().Be(500m);
+        result.Sum(r => r.InflowUsd).Should().Be(1000m + 720m);
+        result.Sum(r => r.OutflowUsd).Should().Be(400m + 500m);
+        // Savings rate reads off these two: 820/1720 ≈ 48%, not the 1320/1500 = 88% netting gave.
+        result.Sum(r => r.NetUsd).Should().Be(1720m - 900m);
+    }
+
+    // ── T044 Test: investment routing is carved out of "kept", never out of spend ──
+
+    [Fact]
+    public async Task GetMonthlyFlow_WithInvestmentRouting_ReportsInvestedWithoutInflatingOutflow()
+    {
+        // Arrange: 1000 in, 400 spent. On top of that the user routed 300 to a brokerage.
+        // That 300 is not spending — it must not touch OutflowUsd (and so must not move the
+        // savings rate), it must only surface as InvestedOutflowUsd.
+        var (account, accountId) = MakeAccount("USD");
+        var date = new DateTime(2026, 5, 10, 0, 0, 0, DateTimeKind.Utc);
+
+        var transactions = new List<Transaction>
+        {
+            MakeTx(accountId, 1000m, "credit", date),
+            MakeTx(accountId, 400m,  "debit",  date),
+        };
+
+        var txRepoMock = new Mock<ITransactionRepository>();
+        txRepoMock.Setup(r => r.GetByUserIdSinceAsync(UserId, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+                  .ReturnsAsync(transactions);
+
+        var accountRepoMock = new Mock<IBankAccountRepository>();
+        accountRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
+                       .ReturnsAsync([account]);
+
+        var classification = CounterpartyResults.WithFlows(
+            new CounterpartyMonthlyFlow("2026-05", "Investment routing", FlowRoles.Investment, 0m, 300m),
+            new CounterpartyMonthlyFlow("2026-05", "Mom", FlowRoles.FamilySupport, 0m, 50m));
+
+        var sut = new MoneyFlowStatisticsService(
+            txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService(), CommitmentsReader());
+
+        // Act
+        var result = await sut.GetMonthlyFlowAsync(UserId, classification, 6);
+
+        // Assert: the invested 300 surfaces only on the synthetic USD row and never joins
+        // outflow; the family-support 50 joins outflow on that same row.
+        result.Should().HaveCount(2);
+        var synthetic = result.Single(r => r.InvestedOutflowUsd == 300m);
+        synthetic.FamilySupportOutflowUsd.Should().Be(50m);
+        synthetic.OutflowUsd.Should().Be(50m);
+        result.Sum(r => r.OutflowUsd).Should().Be(400m + 50m);
+        result.Sum(r => r.NetUsd).Should().Be(1000m - 450m);
+    }
+
+    [Fact]
+    public async Task GetMonthlyFlow_InvestmentCreditsAreNotIncome()
+    {
+        // Arrange: no bank transactions at all in the window, only a net INBOUND investment
+        // movement (a withdrawal back from the venue). Money coming out of an investment
+        // sleeve is not earnings — it must not inflate inflow and thus the savings rate.
+        var (account, _) = MakeAccount("USD");
+
+        var txRepoMock = new Mock<ITransactionRepository>();
+        txRepoMock.Setup(r => r.GetByUserIdSinceAsync(UserId, It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+                  .ReturnsAsync([]);
+
+        var accountRepoMock = new Mock<IBankAccountRepository>();
+        accountRepoMock.Setup(r => r.GetByUserIdAsync(UserId, It.IsAny<CancellationToken>()))
+                       .ReturnsAsync([account]);
+
+        var classification = CounterpartyResults.WithFlows(
+            new CounterpartyMonthlyFlow("2026-05", "Investment routing", FlowRoles.Investment, 700m, 0m));
+
+        var sut = new MoneyFlowStatisticsService(
+            txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService(), CommitmentsReader());
+
+        // Act
+        var result = await sut.GetMonthlyFlowAsync(UserId, classification, 6);
+
+        // Assert
+        result.Should().HaveCount(1);
+        result[0].InflowUsd.Should().Be(0m);
+        result[0].OutflowUsd.Should().Be(0m);
+        result[0].InvestedOutflowUsd.Should().Be(0m);
+    }
+
+    // ── PR #547 review: the adjustment always gets its own USD row ────────────
+
+    [Fact]
+    public async Task GetMonthlyFlow_MultiCurrencyMonthWithCounterpartyFlow_AdjustmentSitsInItsOwnUsdRow()
+    {
+        // A month with UAH and EUR buckets plus counterparty traffic. Which bucket happens to
+        // be "first" is dictionary-iteration order — folding the USD adjustment into it made
+        // that row's native and USD columns tell different stories. The adjustment must land
+        // on its own synthetic USD row and leave every native figure untouched.
+        var (uahAccount, uahAccountId) = MakeAccount("UAH");
+        var (eurAccount, eurAccountId) = MakeAccount("EUR");
+        var date = new DateTime(2026, 5, 10, 0, 0, 0, DateTimeKind.Utc);
+
+        var transactions = new List<Transaction>
+        {
+            MakeTx(uahAccountId, 20000m, "credit", date),
+            MakeTx(uahAccountId, 8000m,  "debit",  date),
+            MakeTx(eurAccountId, 1000m,  "credit", date),
+            MakeTx(eurAccountId, 400m,   "debit",  date),
+        };
+
+        var classification = CounterpartyResults.WithFlows(
+            new CounterpartyMonthlyFlow("2026-05", "Mom", FlowRoles.FamilySupport, 100m, 50m));
+
+        var sut = new MoneyFlowStatisticsService(
+            TxRepo(transactions).Object, AccountRepo(uahAccount, eurAccount).Object,
+            new TransferDetectionService(), CommitmentsReader());
+
+        var result = await sut.GetMonthlyFlowAsync(UserId, classification, 6);
+
+        result.Should().HaveCount(3);
+
+        // Native amounts of the currency rows are untouched by the adjustment.
+        var uah = result.Single(r => r.Currency == "UAH");
+        uah.Inflow.Should().Be(20000m);
+        uah.Outflow.Should().Be(8000m);
+        uah.InflowUsd.Should().Be(CurrencyConverter.ToUsd(20000m, "UAH"));
+        uah.OutflowUsd.Should().Be(CurrencyConverter.ToUsd(8000m, "UAH"));
+        uah.FamilySupportOutflowUsd.Should().Be(0m);
+
+        var eur = result.Single(r => r.Currency == "EUR");
+        eur.Inflow.Should().Be(1000m);
+        eur.Outflow.Should().Be(400m);
+        eur.InflowUsd.Should().Be(CurrencyConverter.ToUsd(1000m, "EUR"));
+        eur.OutflowUsd.Should().Be(CurrencyConverter.ToUsd(400m, "EUR"));
+        eur.FamilySupportOutflowUsd.Should().Be(0m);
+
+        // The adjustment is its own USD row with zero native amounts.
+        var synthetic = result.Single(r => r.FamilySupportOutflowUsd == 50m);
+        synthetic.Currency.Should().Be("USD");
+        synthetic.Month.Should().Be("2026-05");
+        synthetic.Inflow.Should().Be(0m);
+        synthetic.Outflow.Should().Be(0m);
+        synthetic.InflowUsd.Should().Be(100m);
+        synthetic.OutflowUsd.Should().Be(50m);
+        // The committed/discretionary partition stays exact on the synthetic row too.
+        (synthetic.CommittedOutflowUsd + synthetic.DiscretionaryOutflowUsd).Should().Be(synthetic.OutflowUsd);
+
+        // Month totals a consumer sums are correct.
+        result.Sum(r => r.InflowUsd).Should().Be(
+            CurrencyConverter.ToUsd(20000m, "UAH") + CurrencyConverter.ToUsd(1000m, "EUR") + 100m);
+        result.Sum(r => r.OutflowUsd).Should().Be(
+            CurrencyConverter.ToUsd(8000m, "UAH") + CurrencyConverter.ToUsd(400m, "EUR") + 50m);
     }
 
     // ── T413 Test 4: Debit/credit classification ──────────────────────────────
@@ -269,7 +504,7 @@ public class MoneyFlowStatisticsTests
             txRepoMock.Object, accountRepoMock.Object, new TransferDetectionService(), CommitmentsReader());
 
         // Act
-        var result = await sut.GetMonthlyFlowAsync(UserId, 6);
+        var result = await sut.GetMonthlyFlowAsync(UserId, CounterpartyResults.None, 6);
 
         // Assert
         result.Should().HaveCount(1);
@@ -297,7 +532,7 @@ public class MoneyFlowStatisticsTests
             TxRepo(transactions).Object, AccountRepo(account).Object, new TransferDetectionService(),
             CommitmentsReader("netflix"));
 
-        var result = await sut.GetMonthlyFlowAsync(UserId, 6);
+        var result = await sut.GetMonthlyFlowAsync(UserId, CounterpartyResults.None, 6);
 
         result.Should().HaveCount(1);
         result[0].OutflowUsd.Should().Be(100m);
@@ -323,7 +558,7 @@ public class MoneyFlowStatisticsTests
             TxRepo(transactions).Object, AccountRepo(account).Object, new TransferDetectionService(),
             CommitmentsReader("netflix"));
 
-        var result = await sut.GetMonthlyFlowAsync(UserId, 6);
+        var result = await sut.GetMonthlyFlowAsync(UserId, CounterpartyResults.None, 6);
 
         result[0].CommittedOutflowUsd.Should().Be(CurrencyConverter.ToUsd(333.33m, "UAH"));
         result[0].DiscretionaryOutflowUsd.Should().BeGreaterThan(0m);
@@ -352,7 +587,7 @@ public class MoneyFlowStatisticsTests
             new TransferDetectionService(),
             CommitmentsReader("kredobank", "netflix"));
 
-        var result = await sut.GetMonthlyFlowAsync(UserId, 6);
+        var result = await sut.GetMonthlyFlowAsync(UserId, CounterpartyResults.None, 6);
 
         var expectedUah = CurrencyConverter.ToUsd(14000m, "UAH");
         var expectedEur = CurrencyConverter.ToUsd(100m, "EUR");
@@ -386,7 +621,7 @@ public class MoneyFlowStatisticsTests
             TxRepo(transactions).Object, AccountRepo(account).Object, new TransferDetectionService(),
             CommitmentsReader("claude", "mobile top-up 0057"));
 
-        var result = await sut.GetMonthlyFlowAsync(UserId, 6);
+        var result = await sut.GetMonthlyFlowAsync(UserId, CounterpartyResults.None, 6);
 
         result[0].CommittedOutflowUsd.Should().Be(32m);
         result[0].DiscretionaryOutflowUsd.Should().Be(0m);
@@ -413,7 +648,7 @@ public class MoneyFlowStatisticsTests
             TxRepo(transactions).Object, AccountRepo(account).Object, new TransferDetectionService(),
             CommitmentsReader("netflix"));
 
-        var result = await sut.GetMonthlyFlowAsync(UserId, 6);
+        var result = await sut.GetMonthlyFlowAsync(UserId, CounterpartyResults.None, 6);
 
         result[0].OutflowUsd.Should().Be(15m);
         result[0].CommittedOutflowUsd.Should().Be(15m);
@@ -437,7 +672,7 @@ public class MoneyFlowStatisticsTests
             TxRepo(transactions).Object, AccountRepo(account).Object, new TransferDetectionService(),
             CommitmentsReader());
 
-        var result = await sut.GetMonthlyFlowAsync(UserId, 6);
+        var result = await sut.GetMonthlyFlowAsync(UserId, CounterpartyResults.None, 6);
 
         result[0].CommittedOutflowUsd.Should().Be(0m);
         result[0].DiscretionaryOutflowUsd.Should().Be(15m);
@@ -462,7 +697,7 @@ public class MoneyFlowStatisticsTests
             TxRepo(transactions).Object, AccountRepo(account).Object, new TransferDetectionService(),
             CommitmentsReader("installment:telemart:6500"));
 
-        var result = await sut.GetMonthlyFlowAsync(UserId, 6);
+        var result = await sut.GetMonthlyFlowAsync(UserId, CounterpartyResults.None, 6);
 
         result[0].CommittedOutflowUsd.Should().Be(CurrencyConverter.ToUsd(6499.84m, "UAH"));
         result[0].DiscretionaryOutflowUsd.Should().Be(CurrencyConverter.ToUsd(900m, "UAH"));
@@ -488,7 +723,7 @@ public class MoneyFlowStatisticsTests
             TxRepo(transactions).Object, AccountRepo(account).Object, new TransferDetectionService(),
             CommitmentsReader("installment:тов алло:2340"));
 
-        var result = await sut.GetMonthlyFlowAsync(UserId, 6);
+        var result = await sut.GetMonthlyFlowAsync(UserId, CounterpartyResults.None, 6);
 
         result[0].CommittedOutflowUsd.Should().Be(CurrencyConverter.ToUsd(2339.95m, "UAH"));
         result[0].DiscretionaryOutflowUsd.Should().Be(CurrencyConverter.ToUsd(2999.95m, "UAH"));
@@ -514,7 +749,7 @@ public class MoneyFlowStatisticsTests
             new TransferDetectionService(),
             CommitmentsReader("installment:telemart:6500", "installment:pandora:120"));
 
-        var result = await sut.GetMonthlyFlowAsync(UserId, 6);
+        var result = await sut.GetMonthlyFlowAsync(UserId, CounterpartyResults.None, 6);
 
         var expectedUah = CurrencyConverter.ToUsd(6499.84m, "UAH");
         var expectedEur = CurrencyConverter.ToUsd(120m, "EUR");
@@ -544,7 +779,7 @@ public class MoneyFlowStatisticsTests
             TxRepo(transactions).Object, AccountRepo(account).Object, new TransferDetectionService(),
             CommitmentsReader("installment:rozetkapay:2340"));
 
-        var result = await sut.GetMonthlyFlowAsync(UserId, 6);
+        var result = await sut.GetMonthlyFlowAsync(UserId, CounterpartyResults.None, 6);
 
         result[0].CommittedOutflowUsd.Should().Be(0m);
         result[0].DiscretionaryOutflowUsd.Should().Be(result[0].OutflowUsd);

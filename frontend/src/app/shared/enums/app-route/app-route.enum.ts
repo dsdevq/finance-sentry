@@ -15,4 +15,7 @@ export enum AppRoute {
   Alerts = '/alerts',
   Ledger = '/ledger',
   Settings = '/settings',
+  AssetDossier = '/assets',
 }
+
+export const ASSET_DOSSIER_SYMBOL_PARAM = 'symbol';

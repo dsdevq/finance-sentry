@@ -155,6 +155,42 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
             </div>
           </div>
 
+          @if (store.hasFlowBreakdown()) {
+            <div>
+              <div class="mb-cmn-3">
+                <span class="text-cmn-sm font-medium text-text-secondary"
+                  >Flow breakdown (MTD)</span
+                >
+              </div>
+              <div class="grid grid-cols-1 gap-cmn-4 sm:grid-cols-2 lg:grid-cols-4">
+                <cmn-stat-card
+                  [value]="store.monthlySpentFormatted()"
+                  [loading]="store.isLoading()"
+                  label="Spent"
+                  icon="ShoppingBag"
+                />
+                <cmn-stat-card
+                  [value]="store.monthlyFamilySupportFormatted()"
+                  [loading]="store.isLoading()"
+                  label="Supported family"
+                  icon="Heart"
+                />
+                <cmn-stat-card
+                  [value]="store.monthlyInvestedFormatted()"
+                  [loading]="store.isLoading()"
+                  label="Invested"
+                  icon="TrendingUp"
+                />
+                <cmn-stat-card
+                  [value]="store.monthlyKeptFormatted()"
+                  [loading]="store.isLoading()"
+                  label="Kept"
+                  icon="Banknote"
+                />
+              </div>
+            </div>
+          }
+
           <!--
             Projected from contributions, never from the net-worth line: most of the book is
             market-marked, so a trend fitted to that line would forecast the market and call it

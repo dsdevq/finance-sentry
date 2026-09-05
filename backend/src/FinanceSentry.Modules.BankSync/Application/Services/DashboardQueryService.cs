@@ -34,6 +34,7 @@ public class DashboardQueryService(
     IAggregationService aggregation,
     IMoneyFlowStatisticsService moneyFlow,
     IMerchantCategoryStatisticsService categories,
+    ICounterpartyClassificationService counterpartyClassification,
     ISyncJobRepository syncJobs,
     ICryptoHoldingsReader? cryptoHoldingsReader = null,
     IBrokerageHoldingsReader? brokerageHoldingsReader = null) : IDashboardQueryService
@@ -41,6 +42,7 @@ public class DashboardQueryService(
     private readonly IAggregationService _aggregation = aggregation ?? throw new ArgumentNullException(nameof(aggregation));
     private readonly IMoneyFlowStatisticsService _moneyFlow = moneyFlow ?? throw new ArgumentNullException(nameof(moneyFlow));
     private readonly IMerchantCategoryStatisticsService _categories = categories ?? throw new ArgumentNullException(nameof(categories));
+    private readonly ICounterpartyClassificationService _counterpartyClassification = counterpartyClassification ?? throw new ArgumentNullException(nameof(counterpartyClassification));
     private readonly ISyncJobRepository _syncJobs = syncJobs ?? throw new ArgumentNullException(nameof(syncJobs));
     private readonly ICryptoHoldingsReader? _cryptoHoldingsReader = cryptoHoldingsReader;
     private readonly IBrokerageHoldingsReader? _brokerageHoldingsReader = brokerageHoldingsReader;
@@ -58,9 +60,14 @@ public class DashboardQueryService(
         var balance = await _aggregation.GetAggregatedBalanceAsync(userId, ct);
         var bankTotalUsd = await _aggregation.GetTotalNetWorthUsdAsync(userId, ct);
         var byType = await _aggregation.GetAccountCountByTypeAsync(userId, ct);
-        var flow = await _moneyFlow.GetMonthlyFlowAsync(userId, months, ct);
+        // Counterparty classification runs ONCE and is handed to both readers. Cash flow (and
+        // therefore the savings rate) and top categories must agree on which movements were
+        // family support, which were investment routing, and which stayed transfers — classifying
+        // twice invites two answers for one month.
+        var counterparties = await _counterpartyClassification.ClassifyForWindowAsync(userId, months, ct);
+        var flow = await _moneyFlow.GetMonthlyFlowAsync(userId, counterparties, months, ct);
         // Same window as the money-flow charts so the dashboard tells one story.
-        var topCats = await _categories.GetTopCategoriesAsync(userId, limit: 10, months: months, ct);
+        var topCats = await _categories.GetTopCategoriesAsync(userId, counterparties, limit: 10, months: months, ct);
         var lastSync = await _syncJobs.GetLatestSuccessfulByUserIdAsync(userId, ct);
 
         var cryptoHoldings = _cryptoHoldingsReader is not null

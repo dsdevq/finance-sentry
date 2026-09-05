@@ -3,6 +3,7 @@ namespace FinanceSentry.Modules.BankSync.Application.Services;
 using FinanceSentry.Core.Domain;
 using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Core.Utils;
+using FinanceSentry.Modules.BankSync.Domain;
 using FinanceSentry.Modules.BankSync.Domain.Repositories;
 
 /// <summary>
@@ -15,6 +16,11 @@ using FinanceSentry.Modules.BankSync.Domain.Repositories;
 /// are split: the split exists to be aggregated across currencies, and a native
 /// committed total has no meaning once rows from a UAH and a EUR account sit side by side.
 /// </para>
+/// <para>
+/// <see cref="FamilySupportOutflowUsd"/> and <see cref="InvestedOutflowUsd"/> carry the
+/// counterparty breakdown (spec 044). They are only ever non-zero on the synthetic USD row
+/// that holds a month's counterparty adjustment — see <see cref="IMoneyFlowStatisticsService"/>.
+/// </para>
 /// </summary>
 public record MonthlyFlow(
     string Month,       // "2026-03"
@@ -26,7 +32,9 @@ public record MonthlyFlow(
     decimal OutflowUsd,
     decimal NetUsd,
     decimal CommittedOutflowUsd,
-    decimal DiscretionaryOutflowUsd);
+    decimal DiscretionaryOutflowUsd,
+    decimal FamilySupportOutflowUsd = 0m,
+    decimal InvestedOutflowUsd = 0m);
 
 /// <summary>
 /// Computes monthly money-flow statistics using an in-memory join of transactions and accounts.
@@ -54,9 +62,21 @@ public interface IMoneyFlowStatisticsService
     /// <c>Outflow</c> — so a mortgage repayment made as a transfer to a masked card is in no
     /// bucket and in no denominator.
     /// </para>
+    /// <para>
+    /// <b>Counterparty flows.</b> Counterparty transactions (e.g. family rent / support) are
+    /// classified per direction — gross, never netted against each other — and emitted as one
+    /// synthetic USD row per month (native amounts zero; the classification is already
+    /// currency-normalised), so per-currency rows never mix native sums with a USD adjustment.
+    /// The <paramref name="classification"/> is computed once per request by
+    /// <see cref="ICounterpartyClassificationService.ClassifyForWindowAsync"/> and shared with
+    /// the top-categories reader, so both tell the same story about the same movements.
+    /// </para>
     /// </summary>
     Task<IReadOnlyList<MonthlyFlow>> GetMonthlyFlowAsync(
-        Guid userId, int months = 6, CancellationToken ct = default);
+        Guid userId,
+        CounterpartyClassificationResult classification,
+        int months = 6,
+        CancellationToken ct = default);
 }
 
 /// <inheritdoc />
@@ -73,12 +93,14 @@ public class MoneyFlowStatisticsService(
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<MonthlyFlow>> GetMonthlyFlowAsync(
-          Guid userId, int months = 6, CancellationToken ct = default)
+          Guid userId,
+          CounterpartyClassificationResult classification,
+          int months = 6,
+          CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(classification);
+
         // Floor to the first day of the month so the oldest bucket is a WHOLE month.
-        // A raw UtcNow.AddMonths(-months) starts mid-month, leaving the leading bucket
-        // holding only a few days of transactions — it rendered as a near-zero bar and
-        // produced a savings rate computed from a single day.
         var since = MonthWindow.StartOfMonthsAgo(months);
 
         // 1. Build currency map from active accounts
@@ -88,21 +110,30 @@ public class MoneyFlowStatisticsService(
             .ToDictionary(a => a.Id, a => a.Currency);
 
         // 2. Fetch transactions in window
-        var txList = await _transactions.GetByUserIdSinceAsync(userId, since, ct);
+        var txList = (await _transactions.GetByUserIdSinceAsync(userId, since, ct)).ToList();
 
-        // 3. Detect internal transfer pairs so they don't inflate inflow / outflow.
-        // Currency map enables cross-currency pairing (e.g. Revolut EUR → Monobank UAH).
-        var transferIds = _transferDetection.DetectTransferTransactionIds(txList.ToList(), accountCurrencies);
+        // 3. Counterparty classification (computed once upstream): identifies transactions that
+        //    belong to known counterparties (e.g. family rent / support) and carries their gross
+        //    per-direction monthly flows. These are excluded from the normal transfer-detection
+        //    pass to avoid double-exclusion.
+        var matchedIds = classification.MatchedTransactionIds;
 
-        // 4. Merchant keys of the user's active commitments — the committed/discretionary
+        // 4. Detect internal transfer pairs among NON-counterparty transactions.
+        var nonCounterpartyTx = txList.Where(t => !matchedIds.Contains(t.Id)).ToList();
+        var transferIds = _transferDetection.DetectTransferTransactionIds(nonCounterpartyTx, accountCurrencies);
+
+        // 5. Merchant keys of the user's active commitments — the committed/discretionary
         // classifier. Read once for the whole window; the detector's status is point-in-time,
         // so a subscription cancelled today reclassifies its past charges too.
         var committedMerchantKeys = await _activeSubscriptions.GetActiveCommitmentMerchantKeysAsync(userId, ct);
 
-        // 5. Group by (currency, year-month) and sum inflow/outflow (pending included —
-        // a hold is committed money; see interface doc)
+        // 6. Normal flow: exclude counterparty-matched, transfer pairs, and TRANSFER category,
+        // then group by (currency, year-month) and sum inflow/outflow (pending included —
+        // a hold is committed money; see interface doc).
         var result = txList
-            .Where(t => t.IsActive && !transferIds.Contains(t.Id)
+            .Where(t => t.IsActive
+                        && !matchedIds.Contains(t.Id)
+                        && !transferIds.Contains(t.Id)
                         && !CategoryKeys.IsTransfer(t.MerchantCategory))
             .Select(t => new
             {
@@ -141,9 +172,53 @@ public class MoneyFlowStatisticsService(
                     committedUsd,
                     outflowUsd - committedUsd);
             })
-            .OrderByDescending(mf => mf.Month)
             .ToList();
 
-        return result;
+        // 7. Emit each month's counterparty flows as ONE synthetic USD row per month, native
+        //    amounts zero (the classification is already currency-normalised). It never rides
+        //    on a per-currency bucket: which bucket "comes first" is dictionary-iteration
+        //    order, and folding USD adjustments into a UAH row's USD figures made that row's
+        //    native and USD columns tell different stories.
+        //
+        //    Each direction lands on its own, ungrossed: rent arriving from a counterparty is
+        //    income for its full amount even in a month when support went back out to the same
+        //    counterparty, and that support is spending for its full amount. Netting the pair
+        //    reported neither, which is exactly the transfer-blind savings rate this reads
+        //    against.
+        //
+        //    The flow ROLE decides where each direction lands:
+        //      family_support — real spending, so outbound joins Outflow, inbound joins Inflow;
+        //      investment     — the money is still the user's, it only changed sleeve. Outbound
+        //                       stays OUT of Outflow and is reported separately; inbound is
+        //                       capital coming back, not income, so it is not Inflow either.
+        //                       Folding either into spend/income would misstate the savings rate
+        //                       by exactly the amount that was saved.
+        //
+        //    Counterparty spend has no commitment merchant key, so within the synthetic row the
+        //    whole outflow lands as discretionary — keeping the committed + discretionary
+        //    partition of OutflowUsd exact across every row.
+        var counterpartyRows = classification.MonthlyFlows
+            .GroupBy(f => f.Month)
+            .Select(g =>
+            {
+                var incomeUsd = g.Where(f => f.FlowRole != FlowRoles.Investment).Sum(f => f.InflowUsd);
+                var expenseUsd = g.Where(f => f.FlowRole != FlowRoles.Investment).Sum(f => f.OutflowUsd);
+                var familySupportUsd = g.Where(f => f.FlowRole == FlowRoles.FamilySupport).Sum(f => f.OutflowUsd);
+                var investedUsd = g.Where(f => f.FlowRole == FlowRoles.Investment).Sum(f => f.OutflowUsd);
+
+                return new MonthlyFlow(
+                    g.Key, "USD",
+                    0m, 0m, 0m,
+                    incomeUsd, expenseUsd, incomeUsd - expenseUsd,
+                    CommittedOutflowUsd: 0m,
+                    DiscretionaryOutflowUsd: expenseUsd,
+                    familySupportUsd, investedUsd);
+            });
+
+        result.AddRange(counterpartyRows);
+
+        return result
+            .OrderByDescending(mf => mf.Month)
+            .ToList();
     }
 }

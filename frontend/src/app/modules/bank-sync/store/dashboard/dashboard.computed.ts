@@ -119,6 +119,8 @@ function formatMonthKey(key: string): string {
 interface MonthTotals {
   inflow: number;
   outflow: number;
+  familySupportOutflow: number;
+  invested: number;
 }
 
 /**
@@ -156,9 +158,16 @@ function paceDelta(actual: number, baselines: number[]): number | null {
 function groupMonthly(rows: MonthlyFlow[]): [string, MonthTotals][] {
   const byMonth = new Map<string, MonthTotals>();
   for (const r of rows) {
-    const cur = byMonth.get(r.month) ?? {inflow: 0, outflow: 0};
+    const cur = byMonth.get(r.month) ?? {
+      inflow: 0,
+      outflow: 0,
+      familySupportOutflow: 0,
+      invested: 0,
+    };
     cur.inflow += r.inflowUsd;
     cur.outflow += r.outflowUsd;
+    cur.familySupportOutflow += r.familySupportOutflowUsd ?? 0;
+    cur.invested += r.investedOutflowUsd ?? 0;
     byMonth.set(r.month, cur);
   }
   return [...byMonth.entries()].sort(([a], [b]) => a.localeCompare(b));
@@ -171,8 +180,13 @@ function currentMonth(rows: MonthlyFlow[]): Nullable<MonthTotals> {
     return null;
   }
   return forMonth.reduce<MonthTotals>(
-    (acc, r) => ({inflow: acc.inflow + r.inflowUsd, outflow: acc.outflow + r.outflowUsd}),
-    {inflow: 0, outflow: 0}
+    (acc, r) => ({
+      inflow: acc.inflow + r.inflowUsd,
+      outflow: acc.outflow + r.outflowUsd,
+      familySupportOutflow: acc.familySupportOutflow + (r.familySupportOutflowUsd ?? 0),
+      invested: acc.invested + (r.investedOutflowUsd ?? 0),
+    }),
+    {inflow: 0, outflow: 0, familySupportOutflow: 0, invested: 0}
   );
 }
 
@@ -346,6 +360,51 @@ export function dashboardComputed(store: StateSignals) {
     monthlyInflowFormatted: computed(() => {
       const cur = monthToDate();
       return cur ? COMPACT_FORMATTER.format(cur.inflow) : '—';
+    }),
+
+    // Four-bucket breakdown of the month's income: Spent / Supported family / Invested / Kept.
+    // Spent and Supported family come out of outflow (both are real spending); Invested left
+    // the bank but not the user, so it is carved out of what remains rather than out of spend.
+    monthlySpentFormatted: computed(() => {
+      const cur = monthToDate();
+      if (!cur) {
+        return '—';
+      }
+      return COMPACT_FORMATTER.format(Math.max(0, cur.outflow - cur.familySupportOutflow));
+    }),
+
+    monthlyFamilySupportFormatted: computed(() => {
+      const cur = monthToDate();
+      if (!cur) {
+        return '—';
+      }
+      return COMPACT_FORMATTER.format(cur.familySupportOutflow);
+    }),
+
+    monthlyInvestedFormatted: computed(() => {
+      const cur = monthToDate();
+      if (!cur) {
+        return '—';
+      }
+      return COMPACT_FORMATTER.format(cur.invested);
+    }),
+
+    // What is left after spending AND after the part of the surplus that was put to work.
+    // Clamped at zero: a month that invested more than it saved would otherwise render a
+    // negative "Kept", which reads as debt rather than as an aggressive month.
+    monthlyKeptFormatted: computed(() => {
+      const cur = monthToDate();
+      if (!cur) {
+        return '—';
+      }
+      return COMPACT_FORMATTER.format(Math.max(0, cur.inflow - cur.outflow - cur.invested));
+    }),
+
+    // The breakdown only earns its space once something in it is non-zero; with no
+    // counterparty traffic at all it would just restate the tiles above it.
+    hasFlowBreakdown: computed(() => {
+      const cur = monthToDate();
+      return (cur?.familySupportOutflow ?? 0) > 0 || (cur?.invested ?? 0) > 0;
     }),
 
     savingsRateMonthToDateFormatted: computed(() => {
