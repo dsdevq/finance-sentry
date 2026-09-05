@@ -129,10 +129,13 @@ public class MonobankAdapter(MonobankHttpClient client, ICategoryResolver catego
         });
     }
 
-    // A directional-transfer description (savings-jar top-up "Поповнення «…»" / withdrawal
-    // "З банки «…»") is a stronger signal than the MCC: Monobank tags jar operations with the
-    // charity MCC 8398, which would otherwise land them in GOVERNMENT_AND_NON_PROFIT spend.
-    // Fall back to the MCC map for everything else.
+    // Precedence mirrors the TrueLayer description path: the runtime-editable keyword bridge
+    // first («Погашення …» installment charges carry the wire-transfer MCC 4829 and would
+    // otherwise vanish into TRANSFER_OUT), then the directional-transfer description
+    // (savings-jar "Поповнення «…»" / "З банки «…»" — Monobank tags jars with the charity
+    // MCC 8398), then the MCC map for everything else.
     private string ResolveCategory(MonobankTransaction t) =>
-        TransferDescriptionClassifier.Resolve(t.Description) ?? _categoryResolver.ResolveMcc(t.MCC);
+        _categoryResolver.TryResolveKeyword(t.Description)
+        ?? TransferDescriptionClassifier.Resolve(t.Description)
+        ?? _categoryResolver.ResolveMcc(t.MCC);
 }

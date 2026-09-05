@@ -21,14 +21,23 @@ internal sealed class StubCategoryResolver : ICategoryResolver
     // Minimal keyword set + transfer prefix so adapter/service tests can exercise the fallback.
     public string ResolveDescription(string? description)
     {
+        return TryResolveKeyword(description)
+            ?? TransferDescriptionClassifier.Resolve(description)
+            ?? CategoryKeys.Uncategorized;
+    }
+
+    public string? TryResolveKeyword(string? description)
+    {
         if (string.IsNullOrWhiteSpace(description))
-            return CategoryKeys.Uncategorized;
+            return null;
         var h = description.ToLowerInvariant();
         if (h.Contains("lidl") || h.Contains("tesco"))
             return CategoryKeys.FoodAndDrink;
         if (h.Contains("amazon"))
             return CategoryKeys.GeneralMerchandise;
-        return TransferDescriptionClassifier.Resolve(description) ?? CategoryKeys.Uncategorized;
+        if (h.Contains("погашення"))
+            return CategoryKeys.LoanPayments;
+        return null;
     }
 
     public void Refresh()
