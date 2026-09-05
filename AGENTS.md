@@ -7,8 +7,9 @@
 cd backend && dotnet restore FinanceSentry.sln
 dotnet build FinanceSentry.sln --no-restore -c Release
 
-# Run tests (excludes DB-dependent integration tests that need a live Postgres)
-dotnet test FinanceSentry.sln --no-build -c Release --filter "Category!=Integration"
+# Run tests — no filter. CI runs the full solution too (509); container-backed tests
+# report themselves as Skipped where no Docker daemon is reachable.
+dotnet test FinanceSentry.sln --no-build -c Release
 ```
 
 ### Frontend Playwright e2e (required when touching app-surface UI)
@@ -86,10 +87,12 @@ backend/
 ## Test strategy
 
 - **Unit tests** (`FinanceSentry.Tests.Unit`): pure, no DB. Always fast.
-- **Contract/integration tests** (`FinanceSentry.Tests.Integration`): use `WebApplicationFactory<Program>`, mock all external I/O (repos via Moq, DB contexts replaced with `UseInMemoryDatabase`). DB-heavy tests are tagged `[Trait("Category","Integration")]` and skipped with `--filter Category!=Integration`.
+- **Contract/integration tests** (`FinanceSentry.Tests.Integration`): use `WebApplicationFactory<Program>`, mock all external I/O (repos via Moq, DB contexts replaced with `UseInMemoryDatabase`). DB-heavy tests are tagged `[Trait("Category","Integration")]`; tests that need a container carry `[DockerRequiredFact]` (`Shared/DockerRequiredFactAttribute.cs`), which skips them at discovery time when no Docker daemon is reachable.
 - **MCP tests** (`FinanceSentry.Mcp.Tests`): contract + schema tests for MCP tools; all 43 run in <5 s with no DB.
 
-The mandatory filter for CI without a live Postgres: `--filter "Category!=Integration"`.
+CI (`backend-ci.yml`) runs the solution **unfiltered** against a `postgres:14-alpine` service
+container, so `--filter "Category!=Integration"` is a local convenience, not a gate requirement —
+never rely on it to keep a failing test out of CI.
 
 ## Key patterns
 
@@ -123,13 +126,25 @@ Deduplication:MasterKeyBase64 = "<base64-key>"
 
 ## MCP Verification
 
-Verified 2026-06-27 via `dotnet test FinanceSentry.sln --filter 'Category!=Integration' -c Release`.
+Verified 2026-09-03 via `dotnet test FinanceSentry.sln --no-build -c Release -m:1` (no filter;
+`-m:1` keeps the run inside a 2-CPU / 4 GB sandbox — the default parallel run gets OOM-killed).
 
-| Project | Passed | Failed |
-|---|---|---|
-| FinanceSentry.Tests.Unit | 223 | 0 |
-| FinanceSentry.Mcp.Tests | 43 | 0 |
-| FinanceSentry.Tests.Integration (Category!=Integration, 4 skipped) | 128 | 0 |
+| Project | Passed | Skipped | Failed |
+|---|---|---|---|
+| FinanceSentry.Tests.Unit | 541 | 0 | 0 |
+| FinanceSentry.Tests.Integration | 120 | 6 | 0 |
+| FinanceSentry.Mcp.Tests | 103 | 0 | 0 |
+| FinanceSentry.Modules.Research.Tests | 204 | 2 | 0 |
+| FinanceSentry.Modules.Radar.Tests | 80 | 0 | 0 |
+| FinanceSentry.Modules.Risk.Tests | 37 | 0 | 0 |
+| FinanceSentry.Modules.Retention.Tests | 37 | 0 | 0 |
+| FinanceSentry.Modules.Agent.Tests | 35 | 0 | 0 |
+| FinanceSentry.Modules.Analytics.Tests | 35 | 0 | 0 |
+| FinanceSentry.Modules.Companion.Tests | 24 | 0 | 0 |
+| FinanceSentry.Gateway.Tests | 6 | 0 | 0 |
+
+Skips are dependency-gated, not disabled tests: 2 Docker-gated (`[DockerRequiredFact]`) and 6
+needing a live Postgres or a live external page.
 
 ### Registered MCP tools (58 total)
 

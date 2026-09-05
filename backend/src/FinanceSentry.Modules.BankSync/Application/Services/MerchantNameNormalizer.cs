@@ -21,6 +21,36 @@ public static class MerchantNameNormalizer
         ("chatgpt", "openai"),
     ];
 
+    private static readonly Regex MobiTopUpPattern =
+        new(@"^\*?\s*mobi\s+top-?up\s+(\d{4,})$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+    /// <summary>
+    /// The merchant key recurring-charge detection groups by, and the key stored on
+    /// <c>DetectedSubscription.MerchantNameNormalized</c>. Anything that needs to ask "is this
+    /// transaction one of the user's detected commitments?" must derive its key here — a plain
+    /// <see cref="Normalize"/> of the merchant name would miss the description fallback and the
+    /// mobile top-up collapsing, and so would systematically under-match.
+    /// </summary>
+    public static string NormalizeDetectionKey(string? merchantName, string? description)
+    {
+        var raw = merchantName ?? description;
+        if (raw is not null)
+        {
+            // Mobile top-ups carry the phone number in the description
+            // ("*MOBI TOP-UP 0857860057"), which both fragments the merchant key and trips the
+            // generic top-up blocklist — collapse them to a stable per-number key instead so a
+            // monthly top-up is tracked like any other recurring cost.
+            var mobi = MobiTopUpPattern.Match(raw.Trim());
+            if (mobi.Success)
+            {
+                var number = mobi.Groups[1].Value;
+                return $"mobile top-up {number[^4..]}";
+            }
+        }
+
+        return Normalize(raw);
+    }
+
     public static string Normalize(string? input)
     {
         if (string.IsNullOrWhiteSpace(input))

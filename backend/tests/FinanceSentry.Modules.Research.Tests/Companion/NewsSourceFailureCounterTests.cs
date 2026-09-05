@@ -65,6 +65,37 @@ public sealed class NewsSourceFailureCounterTests
     }
 
     [Fact]
+    public void ClearFailures_revives_a_retired_source_without_faking_a_success()
+    {
+        var source = new NewsSource
+        {
+            Enabled = false,
+            ConsecutiveFailures = 17,
+            LastFailureReason = "TrendForce press-center article list not found",
+        };
+
+        NewsSourceHealthTracker.ClearFailures(source);
+
+        source.Enabled.Should().BeTrue();
+        source.ConsecutiveFailures.Should().Be(0);
+        source.LastFailureReason.Should().BeNull();
+        source.LastSuccessAt.Should().BeNull("nothing was actually fetched — only the history was voided");
+    }
+
+    [Fact]
+    public void Cleared_source_gets_a_full_run_of_attempts_before_retiring_again()
+    {
+        // The #318 trap: re-enabling a source stuck above the disable threshold without resetting the
+        // counter meant the very next failure retired it again, so it could never recover.
+        var source = new NewsSource { Enabled = false, ConsecutiveFailures = 17 };
+
+        NewsSourceHealthTracker.ClearFailures(source);
+
+        NewsSourceHealthTracker.RecordFailure(source, "one").Should().Be(NewsSourceFailureOutcome.None);
+        source.Enabled.Should().BeTrue();
+    }
+
+    [Fact]
     public void Success_between_failures_prevents_the_alert()
     {
         var source = new NewsSource();

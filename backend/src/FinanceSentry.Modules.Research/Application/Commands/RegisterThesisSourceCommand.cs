@@ -2,6 +2,7 @@ namespace FinanceSentry.Modules.Research.Application.Commands;
 
 using FinanceSentry.Core.Cqrs;
 using FinanceSentry.Modules.Research.API.Responses;
+using FinanceSentry.Modules.Research.Application.Services;
 using FinanceSentry.Modules.Research.Domain;
 using FinanceSentry.Modules.Research.Domain.Repositories;
 
@@ -51,7 +52,11 @@ public class RegisterThesisSourceCommandHandler(INewsSourceRepository repo)
             existing.Kind = kind;
             existing.Keywords = keywords;
             existing.ThesisId = cmd.ThesisId;
-            existing.Enabled = true;
+
+            // Re-registering is a deliberate "try this again", so the failure history goes with it.
+            // Leaving the counter alone meant a source past DisableThreshold was re-retired by its
+            // very first failure and could never actually come back (issue #318).
+            NewsSourceHealthTracker.ClearFailures(existing);
             await repo.UpdateAsync(existing, ct);
             return new RegisteredSourceDto(existing.Id, existing.Enabled);
         }
