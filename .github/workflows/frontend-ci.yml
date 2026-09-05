@@ -10,6 +10,8 @@ on:
   # (see backend-ci.yml for the rationale).
   pull_request:
     branches: [ main ]
+  # Dispatched by weekly-release.yml against the release-please branch (see backend-ci.yml).
+  workflow_dispatch:
 
 jobs:
   lint-build-test:

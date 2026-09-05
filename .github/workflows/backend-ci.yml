@@ -11,6 +11,9 @@ on:
   # Running on every PR also guarantees CI covered the exact head commit being merged.
   pull_request:
     branches: [ main ]
+  # Dispatched by weekly-release.yml against the release-please branch: its pushes use
+  # GITHUB_TOKEN, which fires no workflows, so the required checks must be run explicitly.
+  workflow_dispatch:
 
 jobs:
   build-and-test:
