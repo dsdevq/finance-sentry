@@ -4,6 +4,9 @@ using FinanceSentry.Core.Domain;
 using FinanceSentry.Core.Utils;
 using FinanceSentry.Modules.BankSync.Domain;
 
+/// <summary>A matched internal-transfer pair: the sending (debit) and receiving (credit) leg.</summary>
+public readonly record struct TransferPair(Transaction Debit, Transaction Credit);
+
 /// <summary>
 /// Detects likely internal transfers between two accounts of the same user.
 /// </summary>
@@ -14,8 +17,14 @@ public interface ITransferDetectionService
     /// Criteria: same absolute amount (±0.01), dates within 2 days, different accounts,
     /// and at least one is type "transfer" or the descriptions share similarity.
     /// Without currency information only same-currency (exact-amount) pairs can match.
+    /// <paramref name="crossCurrencyTolerance"/> overrides the default relative tolerance
+    /// applied when comparing USD-converted cross-currency amounts (the FX-spread sentinel
+    /// widens it — a conversion losing a large spread still has to pair).
     /// </summary>
-    bool IsLikelyTransfer(Transaction debit, Transaction credit, string? debitCurrency = null, string? creditCurrency = null);
+    bool IsLikelyTransfer(
+        Transaction debit, Transaction credit,
+        string? debitCurrency = null, string? creditCurrency = null,
+        decimal? crossCurrencyTolerance = null);
 
     /// <summary>
     /// Detects all likely internal transfers within a batch and returns the union of
@@ -31,6 +40,18 @@ public interface ITransferDetectionService
     HashSet<Guid> DetectTransferTransactionIds(
         IReadOnlyCollection<Transaction> transactions,
         IReadOnlyDictionary<Guid, string>? accountCurrencies = null);
+
+    /// <summary>
+    /// Same matching pipeline as <see cref="DetectTransferTransactionIds"/> but returns the
+    /// matched debit→credit pairs themselves, for callers that need per-pair figures (e.g.
+    /// the FX-spread sentinel computing an implied conversion rate per pair).
+    /// <paramref name="crossCurrencyTolerance"/> is passed through to
+    /// <see cref="IsLikelyTransfer"/>.
+    /// </summary>
+    IReadOnlyList<TransferPair> DetectTransferPairs(
+        IReadOnlyCollection<Transaction> transactions,
+        IReadOnlyDictionary<Guid, string>? accountCurrencies = null,
+        decimal? crossCurrencyTolerance = null);
 }
 
 /// <inheritdoc />
@@ -45,7 +66,10 @@ public class TransferDetectionService : ITransferDetectionService
     private const decimal CrossCurrencyRelativeTolerance = 0.05m;
 
     /// <inheritdoc />
-    public bool IsLikelyTransfer(Transaction debit, Transaction credit, string? debitCurrency = null, string? creditCurrency = null)
+    public bool IsLikelyTransfer(
+        Transaction debit, Transaction credit,
+        string? debitCurrency = null, string? creditCurrency = null,
+        decimal? crossCurrencyTolerance = null)
     {
         if (debit == null) throw new ArgumentNullException(nameof(debit));
         if (credit == null) throw new ArgumentNullException(nameof(credit));
@@ -66,7 +90,9 @@ public class TransferDetectionService : ITransferDetectionService
             if (Math.Abs(debit.Amount - credit.Amount) > AmountTolerance)
                 return false;
         }
-        else if (!AmountsMatchAcrossCurrencies(debit.Amount, debitCurrency!, credit.Amount, creditCurrency!))
+        else if (!AmountsMatchAcrossCurrencies(
+            debit.Amount, debitCurrency!, credit.Amount, creditCurrency!,
+            crossCurrencyTolerance ?? CrossCurrencyRelativeTolerance))
         {
             return false;
         }
@@ -105,11 +131,27 @@ public class TransferDetectionService : ITransferDetectionService
         IReadOnlyCollection<Transaction> transactions,
         IReadOnlyDictionary<Guid, string>? accountCurrencies = null)
     {
+        var matched = new HashSet<Guid>();
+        foreach (var pair in DetectTransferPairs(transactions, accountCurrencies))
+        {
+            matched.Add(pair.Debit.Id);
+            matched.Add(pair.Credit.Id);
+        }
+
+        return matched;
+    }
+
+    /// <inheritdoc />
+    public IReadOnlyList<TransferPair> DetectTransferPairs(
+        IReadOnlyCollection<Transaction> transactions,
+        IReadOnlyDictionary<Guid, string>? accountCurrencies = null,
+        decimal? crossCurrencyTolerance = null)
+    {
         if (transactions == null) throw new ArgumentNullException(nameof(transactions));
 
-        var matched = new HashSet<Guid>();
+        var pairs = new List<TransferPair>();
         if (transactions.Count == 0)
-            return matched;
+            return pairs;
 
         var debits = new List<Transaction>();
         var credits = new List<Transaction>();
@@ -122,7 +164,7 @@ public class TransferDetectionService : ITransferDetectionService
         }
 
         if (debits.Count == 0 || credits.Count == 0)
-            return matched;
+            return pairs;
 
         string? CurrencyOf(Transaction tx) =>
             accountCurrencies is not null && accountCurrencies.TryGetValue(tx.AccountId, out var currency)
@@ -135,16 +177,15 @@ public class TransferDetectionService : ITransferDetectionService
             foreach (var credit in credits)
             {
                 if (consumedCredits.Contains(credit.Id)) continue;
-                if (!IsLikelyTransfer(debit, credit, CurrencyOf(debit), CurrencyOf(credit))) continue;
+                if (!IsLikelyTransfer(debit, credit, CurrencyOf(debit), CurrencyOf(credit), crossCurrencyTolerance)) continue;
 
-                matched.Add(debit.Id);
-                matched.Add(credit.Id);
+                pairs.Add(new TransferPair(debit, credit));
                 consumedCredits.Add(credit.Id);
                 break;
             }
         }
 
-        return matched;
+        return pairs;
     }
 
     /// <summary>
@@ -153,7 +194,8 @@ public class TransferDetectionService : ITransferDetectionService
     /// to 1:1 for them, which would compare unrelated magnitudes as if equal.
     /// </summary>
     private static bool AmountsMatchAcrossCurrencies(
-        decimal debitAmount, string debitCurrency, decimal creditAmount, string creditCurrency)
+        decimal debitAmount, string debitCurrency, decimal creditAmount, string creditCurrency,
+        decimal relativeTolerance)
     {
         if (!CurrencyConverter.IsKnown(debitCurrency) || !CurrencyConverter.IsKnown(creditCurrency))
             return false;
@@ -164,7 +206,7 @@ public class TransferDetectionService : ITransferDetectionService
         if (larger <= 0)
             return false;
 
-        return Math.Abs(debitUsd - creditUsd) / larger <= CrossCurrencyRelativeTolerance;
+        return Math.Abs(debitUsd - creditUsd) / larger <= relativeTolerance;
     }
 
     private static bool HaveSimilarDescriptions(string a, string b)

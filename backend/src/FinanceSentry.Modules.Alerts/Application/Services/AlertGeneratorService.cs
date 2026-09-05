@@ -447,10 +447,13 @@ public class AlertGeneratorService(IAlertRepository alerts) : IAlertGeneratorSer
     }
 
     public async Task GenerateFxSpreadAlertAsync(
-        Guid userId, string fromCurrency, string toCurrency, decimal impliedRate, decimal marketRate,
-        CancellationToken ct = default)
+        Guid userId, Guid debitTransactionId, string fromCurrency, string toCurrency,
+        decimal impliedRate, decimal marketRate, CancellationToken ct = default)
     {
-        var referenceId = FxSpreadReferenceId(userId, fromCurrency, toCurrency);
+        // Dedup key per spec 044/US4: (UserId, debit transaction id) — the debit leg uniquely
+        // identifies one concrete conversion, so re-runs never re-alert on the same pair while
+        // a fresh costly conversion still gets its own alert.
+        var referenceId = debitTransactionId;
 
         var existing = await _alerts.FindActiveAsync(userId, AlertType.FxSpread, referenceId, ct);
         if (existing is not null) return;
@@ -516,13 +519,6 @@ public class AlertGeneratorService(IAlertRepository alerts) : IAlertGeneratorSer
     {
         var bytes = MD5.HashData(Encoding.UTF8.GetBytes(
             $"catspike:{userId:N}:{category.ToUpperInvariant()}"));
-        return new Guid(bytes);
-    }
-
-    private static Guid FxSpreadReferenceId(Guid userId, string fromCurrency, string toCurrency)
-    {
-        var bytes = MD5.HashData(Encoding.UTF8.GetBytes(
-            $"fxspread:{userId:N}:{fromCurrency.ToUpperInvariant()}:{toCurrency.ToUpperInvariant()}"));
         return new Guid(bytes);
     }
 

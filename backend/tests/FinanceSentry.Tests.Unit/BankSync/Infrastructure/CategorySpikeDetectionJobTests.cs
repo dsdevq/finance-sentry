@@ -256,4 +256,35 @@ public class CategorySpikeDetectionJobTests
             It.IsAny<CancellationToken>()),
             Times.Never);
     }
+
+    /// <summary>
+    /// Liveness policy shared by the 044 sentinels: a disconnected (inactive) account's
+    /// transactions must not raise new alerts.
+    /// </summary>
+    [Fact]
+    public async Task ExecuteAsync_NoAlert_WhenAccountIsInactive()
+    {
+        await using var db = NewDb();
+        var account = MakeAccount(Guid.NewGuid());
+        account.IsActive = false;
+        db.BankAccounts.Add(account);
+
+        var now = DateTime.UtcNow;
+        var currentMonthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        for (var i = 1; i <= 6; i++)
+        {
+            db.Transactions.Add(MakeTx(account, -100m, "FOOD_AND_DRINK",
+                currentMonthStart.AddMonths(-i).AddDays(5)));
+        }
+        db.Transactions.Add(MakeTx(account, -300m, "FOOD_AND_DRINK", currentMonthStart.AddDays(5)));
+        await db.SaveChangesAsync();
+
+        await MakeJob(db).ExecuteAsync();
+
+        _alerts.Verify(a => a.GenerateCategorySpikeAlertAsync(
+            It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<decimal>(), It.IsAny<decimal>(),
+            It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
 }

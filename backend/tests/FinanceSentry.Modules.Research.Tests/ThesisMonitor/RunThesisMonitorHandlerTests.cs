@@ -386,8 +386,8 @@ public class RunThesisMonitorHandlerTests
             => Task.CompletedTask;
 
         public Task GenerateFxSpreadAlertAsync(
-            Guid userId, string fromCurrency, string toCurrency, decimal impliedRate, decimal marketRate,
-            CancellationToken ct = default)
+            Guid userId, Guid debitTransactionId, string fromCurrency, string toCurrency,
+            decimal impliedRate, decimal marketRate, CancellationToken ct = default)
             => Task.CompletedTask;
 
         public Task GenerateRebalanceProposalAlertAsync(Guid userId, int orderCount, string orderSummary, CancellationToken ct = default)

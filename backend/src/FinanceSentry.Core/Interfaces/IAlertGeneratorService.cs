@@ -199,12 +199,14 @@ public interface IAlertGeneratorService
         CancellationToken ct = default);
 
     /// <summary>
-    /// Raises a Warning alert when a cross-currency routing pattern (e.g. EUR→UAH via white card)
-    /// is losing more than the configured percentage to the FX spread (044/US4). Deduped per
-    /// (userId, fromCurrency, toCurrency).
+    /// Raises a Warning alert when a specific cross-currency conversion (a matched debit+credit
+    /// transfer pair, e.g. EUR→UAH via white card) lost more than the configured percentage to
+    /// the FX spread (044/US4). Deduped per (userId, <paramref name="debitTransactionId"/>) —
+    /// each concrete conversion alerts at most once.
     /// </summary>
     Task GenerateFxSpreadAlertAsync(
         Guid userId,
+        Guid debitTransactionId,
         string fromCurrency,
         string toCurrency,
         decimal impliedRate,

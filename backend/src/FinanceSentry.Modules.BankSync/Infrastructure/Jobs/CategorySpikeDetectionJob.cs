@@ -35,19 +35,25 @@ public sealed class CategorySpikeDetectionJob(
         Dictionary<Guid, string> currencyByAccount;
         try
         {
+            // Liveness policy (aligned across all 044 sentinels): only transactions on active
+            // accounts participate — a disconnected account's history must not raise new alerts.
+            currencyByAccount = await db.BankAccounts
+                .AsNoTracking()
+                .Where(a => a.IsActive)
+                .Select(a => new { a.Id, a.Currency })
+                .ToDictionaryAsync(a => a.Id, a => a.Currency, ct);
+
+            var activeAccountIds = currencyByAccount.Keys.ToList();
+
             rows = await db.Transactions
                 .AsNoTracking()
                 .Where(t => t.MerchantCategory != null
                          && t.Amount < 0
                          && t.TransactionDate >= historyStart
-                         && t.IsActive)
+                         && t.IsActive
+                         && activeAccountIds.Contains(t.AccountId))
                 .Select(t => new SpendRow(t.UserId, t.AccountId, t.MerchantCategory!, t.TransactionDate, t.Amount))
                 .ToListAsync(ct);
-
-            currencyByAccount = await db.BankAccounts
-                .AsNoTracking()
-                .Select(a => new { a.Id, a.Currency })
-                .ToDictionaryAsync(a => a.Id, a => a.Currency, ct);
         }
         catch (Exception ex)
         {

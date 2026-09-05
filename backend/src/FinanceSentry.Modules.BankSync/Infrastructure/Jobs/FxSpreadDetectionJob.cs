@@ -2,23 +2,29 @@ namespace FinanceSentry.Modules.BankSync.Infrastructure.Jobs;
 
 using FinanceSentry.Core.Interfaces;
 using FinanceSentry.Core.Utils;
+using FinanceSentry.Modules.BankSync.Application.Services;
+using FinanceSentry.Modules.BankSync.Domain;
 using FinanceSentry.Modules.BankSync.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
-/// Daily sentinel (044/US4): fires an FxSpread alert when a user's cross-currency routing pattern
-/// (e.g. EUR→UAH) appears to lose more than the configured threshold to the FX spread.
+/// Daily sentinel (044/US4): fires an FxSpread alert when a specific cross-currency conversion
+/// between a user's own accounts loses more than the configured threshold to the FX spread.
 ///
-/// Detection strategy: for each user with accounts in 2+ currencies, match same-day outflows from
-/// currency-A accounts against inflows to currency-B accounts. Pairs whose implied A→B rate falls
-/// within 3× of the market rate are considered plausible conversions; their volume-weighted average
-/// implied rate is compared to the CurrencyConverter market rate. No external feed is required —
-/// rates come from the process-level rate table (refreshed by the FX job).
+/// Detection strategy: reuse BankSync's existing transfer matching
+/// (<see cref="ITransferDetectionService"/>) to pair individual debit and credit legs — amount
+/// proximity in USD, date proximity, and a transfer type/category/description signal — then
+/// compute the implied conversion rate per matched pair (credit amount ÷ debit amount) and
+/// compare it to the <see cref="CurrencyConverter"/> market rate. Unrelated same-day flows
+/// (a salary credit next to a rent debit) never pair because they carry no transfer signal.
+/// No external feed is required — rates come from the process-level rate table (refreshed by
+/// the FX job).
 /// </summary>
 public sealed class FxSpreadDetectionJob(
     BankSyncDbContext db,
+    ITransferDetectionService transferDetection,
     IAlertGeneratorService alerts,
     IConfiguration config,
     ILogger<FxSpreadDetectionJob> logger)
@@ -26,12 +32,21 @@ public sealed class FxSpreadDetectionJob(
     private const int DefaultLookbackDays = 3;
     private const decimal DefaultSpreadThreshold = 0.03m;
 
+    // The transfer matcher's default cross-currency tolerance (5%) exists to REJECT pairs that
+    // deviate from the market rate — but a costly conversion deviates by exactly the spread we
+    // are hunting. Widen the amount tolerance for this sentinel so a pair losing up to ~30% to
+    // FX still matches; the transfer type/category/description signal remains the gate that
+    // keeps unrelated flows from pairing.
+    private const decimal PairingAmountTolerance = 0.30m;
+
     public async Task ExecuteAsync(CancellationToken ct = default)
     {
         var lookbackDays = config.GetValue("HygieneSentinels:FxSpreadLookbackDays", DefaultLookbackDays);
         var threshold = config.GetValue("HygieneSentinels:FxSpreadThreshold", DefaultSpreadThreshold);
         var since = DateTime.UtcNow.AddDays(-lookbackDays);
 
+        // Liveness policy (aligned across all 044 sentinels): only transactions on active
+        // accounts participate — a disconnected account's history must not raise new alerts.
         IReadOnlyList<AccountInfo> allAccounts;
         try
         {
@@ -57,17 +72,17 @@ public sealed class FxSpreadDetectionJob(
         var relevantAccountIds = allAccounts
             .Where(a => multiCurrencyUsers.ContainsKey(a.UserId))
             .Select(a => a.AccountId)
-            .ToList();
+            .ToHashSet();
 
-        IReadOnlyList<TxRow> transactions;
+        IReadOnlyList<Transaction> transactions;
         try
         {
+            var accountIds = relevantAccountIds.ToList();
             transactions = await db.Transactions
                 .AsNoTracking()
-                .Where(t => relevantAccountIds.Contains(t.AccountId)
+                .Where(t => accountIds.Contains(t.AccountId)
                          && t.TransactionDate >= since
                          && t.IsActive)
-                .Select(t => new TxRow(t.AccountId, t.UserId, t.Amount, t.TransactionDate.Date))
                 .ToListAsync(ct);
         }
         catch (Exception ex)
@@ -76,84 +91,54 @@ public sealed class FxSpreadDetectionJob(
             return;
         }
 
-        var txByAccount = transactions.GroupBy(t => t.AccountId)
-            .ToDictionary(g => g.Key, g => g.ToList());
+        var txByUser = transactions
+            .GroupBy(t => t.UserId)
+            .ToDictionary(g => g.Key, g => (IReadOnlyCollection<Transaction>)g.ToList());
 
         foreach (var (userId, userAccounts) in multiCurrencyUsers)
         {
-            var currencies = userAccounts.Select(a => a.Currency).Distinct().ToList();
+            if (!txByUser.TryGetValue(userId, out var userTransactions)) continue;
 
-            foreach (var fromCurrency in currencies)
+            var currencyByAccount = userAccounts.ToDictionary(a => a.AccountId, a => a.Currency);
+
+            var pairs = transferDetection.DetectTransferPairs(
+                userTransactions, currencyByAccount, PairingAmountTolerance);
+
+            foreach (var (debit, credit) in pairs)
             {
-                foreach (var toCurrency in currencies.Where(c => c != fromCurrency))
+                if (!currencyByAccount.TryGetValue(debit.AccountId, out var fromCurrency)
+                    || !currencyByAccount.TryGetValue(credit.AccountId, out var toCurrency))
                 {
-                    var marketRate = ComputeMarketRate(fromCurrency, toCurrency);
-                    if (marketRate <= 0) continue;
+                    continue;
+                }
 
-                    var fromAccountIds = userAccounts
-                        .Where(a => a.Currency == fromCurrency)
-                        .Select(a => a.AccountId)
-                        .ToHashSet();
-                    var toAccountIds = userAccounts
-                        .Where(a => a.Currency == toCurrency)
-                        .Select(a => a.AccountId)
-                        .ToHashSet();
+                // Same-currency transfers carry no FX conversion — nothing to measure.
+                if (string.Equals(fromCurrency, toCurrency, StringComparison.OrdinalIgnoreCase)) continue;
 
-                    // Outflows from fromCurrency accounts (negative amounts), by day
-                    var outflowsByDay = fromAccountIds
-                        .SelectMany(id => txByAccount.TryGetValue(id, out var txs) ? txs : [])
-                        .Where(t => t.Amount < 0)
-                        .GroupBy(t => t.Date)
-                        .ToDictionary(g => g.Key, g => g.Sum(t => Math.Abs(t.Amount)));
+                var marketRate = ComputeMarketRate(fromCurrency, toCurrency);
+                if (marketRate <= 0) continue;
 
-                    // Inflows to toCurrency accounts (positive amounts), by day
-                    var inflowsByDay = toAccountIds
-                        .SelectMany(id => txByAccount.TryGetValue(id, out var txs) ? txs : [])
-                        .Where(t => t.Amount > 0)
-                        .GroupBy(t => t.Date)
-                        .ToDictionary(g => g.Key, g => g.Sum(t => t.Amount));
+                // Implied rate is a ratio of the two NATIVE leg amounts of ONE conversion —
+                // this is a rate, not a cross-currency sum, so no USD normalisation applies.
+                var debitAmount = Math.Abs(debit.Amount);
+                if (debitAmount == 0) continue;
+                var impliedRate = Math.Abs(credit.Amount) / debitAmount;
 
-                    if (outflowsByDay.Count == 0 || inflowsByDay.Count == 0) continue;
+                var spread = (marketRate - impliedRate) / marketRate;
+                if (spread <= threshold) continue;
 
-                    // Match same-day EUR outflows to UAH inflows; filter to plausible conversions.
-                    // Same-day matching avoids double-counting (a ±1-day window would cause each
-                    // outflow day to grab adjacent inflow days already claimed by the neighbour).
-                    var matchedPairs = new List<(decimal FromOut, decimal ToIn)>();
-                    foreach (var (day, fromOut) in outflowsByDay)
-                    {
-                        if (!inflowsByDay.TryGetValue(day, out var toIn) || toIn <= 0) continue;
-
-                        var implied = toIn / fromOut;
-                        // Only accept pairs whose implied rate is within 3× of market — filters random co-incident flows
-                        if (implied < marketRate / 3m || implied > marketRate * 3m) continue;
-
-                        matchedPairs.Add((fromOut, toIn));
-                    }
-
-                    if (matchedPairs.Count == 0) continue;
-
-                    var totalFrom = matchedPairs.Sum(p => p.FromOut);
-                    var totalTo = matchedPairs.Sum(p => p.ToIn);
-                    var avgImplied = totalTo / totalFrom;
-                    var spread = (marketRate - avgImplied) / marketRate;
-
-                    if (spread <= threshold) continue;
-
-                    try
-                    {
-                        // Dedup key is (UserId, fromCurrency, toCurrency) rather than per debit-transaction-id.
-                        // This is deliberate: the aggregation-based matching combines daily outflows across
-                        // multiple transactions into a single implied rate — there is no single "debit transaction id"
-                        // to attach. Currency-pair-level dedup prevents re-alerting while the routing pattern persists.
-                        await alerts.GenerateFxSpreadAlertAsync(
-                            userId, fromCurrency, toCurrency, avgImplied, marketRate, ct);
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogWarning(ex,
-                            "FxSpreadDetectionJob: alert failed for user {UserId} pair {From}→{To}",
-                            userId, fromCurrency, toCurrency);
-                    }
+                try
+                {
+                    // Dedup per (UserId, debit transaction id) — each concrete conversion can
+                    // alert exactly once; a new costly conversion is a new alert.
+                    await alerts.GenerateFxSpreadAlertAsync(
+                        userId, debit.Id, fromCurrency, toCurrency, impliedRate, marketRate, ct);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex,
+                        "FxSpreadDetectionJob: alert failed for user {UserId} pair {From}→{To} (debit {DebitId})",
+                        userId, fromCurrency, toCurrency, debit.Id);
                 }
             }
         }
@@ -174,5 +159,4 @@ public sealed class FxSpreadDetectionJob(
     }
 
     private sealed record AccountInfo(Guid AccountId, Guid UserId, string Currency);
-    private sealed record TxRow(Guid AccountId, Guid UserId, decimal Amount, DateTime Date);
 }
