@@ -401,7 +401,7 @@ export class DashboardComponent {
     {label: 'Supported family', icon: 'Heart', value: this.store.monthlyFamilySupportFormatted},
     {label: 'Invested', icon: 'TrendingUp', value: this.store.monthlyInvestedFormatted},
     {label: 'Kept', icon: 'Banknote', value: this.store.monthlyKeptFormatted},
-  ];
+  ] as const;
 
   public goToAccounts(): void {
     void this.router.navigateByUrl(AppRoute.AccountsList);
