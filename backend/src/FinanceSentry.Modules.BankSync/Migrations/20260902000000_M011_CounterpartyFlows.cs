@@ -80,15 +80,16 @@ namespace FinanceSentry.Modules.BankSync.Migrations
                 table: "counterparty_rules",
                 column: "CounterpartyId");
 
-            // Seed FAMILY_SUPPORT into the categories reference table. The table is not
-            // mapped by BankSyncDbContext, so column types must be explicit — without them
-            // EF cannot generate the SQL and the whole migration fails at apply time.
-            migrationBuilder.InsertData(
-                schema: "bank_sync",
-                table: "categories",
-                columns: ["Key", "Label", "SortOrder"],
-                columnTypes: ["character varying", "character varying", "integer"],
-                values: new object[] { "FAMILY_SUPPORT", "Family Support", 135 });
+            // Seed FAMILY_SUPPORT into the categories reference table. Raw SQL rather than
+            // InsertData: the row may already exist (production got it during the 2026-08
+            // family-flows recategorization) and InsertData cannot express ON CONFLICT — a
+            // duplicate key would roll back the entire migration on every startup.
+            migrationBuilder.Sql(
+                """
+                INSERT INTO bank_sync.categories ("Key", "Label", "SortOrder")
+                VALUES ('FAMILY_SUPPORT', 'Family Support', 135)
+                ON CONFLICT ("Key") DO NOTHING;
+                """);
 
             // Seed system-default counterparties (UserId = Guid.Empty applies to all users).
             migrationBuilder.InsertData(
