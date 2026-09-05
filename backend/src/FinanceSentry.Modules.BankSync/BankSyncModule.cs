@@ -152,6 +152,7 @@ public static class BankSyncModule
         services.AddScoped<IMoneyFlowStatisticsService, MoneyFlowStatisticsService>();
         services.AddScoped<IMerchantCategoryStatisticsService, MerchantCategoryStatisticsService>();
         services.AddScoped<IDashboardQueryService, DashboardQueryService>();
+        services.AddScoped<IFlowBreakdownService, FlowBreakdownService>();
         services.AddScoped<ITransferDetectionService, TransferDetectionService>();
 
         services.AddScoped<ICounterpartyRepository, CounterpartyRepository>();

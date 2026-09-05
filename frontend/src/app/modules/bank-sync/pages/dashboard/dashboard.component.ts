@@ -144,14 +144,21 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
                   icon="TrendingDown"
                 />
               </button>
-              <cmn-stat-card
-                [value]="store.savingsRateMonthToDateFormatted()"
-                [delta]="store.savingsRatePaceDelta()"
-                [deltaLabel]="store.savingsRatePaceLabel()"
-                [loading]="store.isLoading()"
-                label="Savings rate (MTD)"
-                icon="PiggyBank"
-              />
+              <button
+                (click)="goToBreakdown()"
+                type="button"
+                class="w-full cursor-pointer text-left transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-default focus-visible:ring-offset-2"
+                aria-label="View the transactions behind this month's savings"
+              >
+                <cmn-stat-card
+                  [value]="store.savingsRateMonthToDateFormatted()"
+                  [delta]="store.savingsRatePaceDelta()"
+                  [deltaLabel]="store.savingsRatePaceLabel()"
+                  [loading]="store.isLoading()"
+                  label="Savings rate (MTD)"
+                  icon="PiggyBank"
+                />
+              </button>
             </div>
           </div>
 
@@ -163,30 +170,21 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
                 >
               </div>
               <div class="grid grid-cols-1 gap-cmn-4 sm:grid-cols-2 lg:grid-cols-4">
-                <cmn-stat-card
-                  [value]="store.monthlySpentFormatted()"
-                  [loading]="store.isLoading()"
-                  label="Spent"
-                  icon="ShoppingBag"
-                />
-                <cmn-stat-card
-                  [value]="store.monthlyFamilySupportFormatted()"
-                  [loading]="store.isLoading()"
-                  label="Supported family"
-                  icon="Heart"
-                />
-                <cmn-stat-card
-                  [value]="store.monthlyInvestedFormatted()"
-                  [loading]="store.isLoading()"
-                  label="Invested"
-                  icon="TrendingUp"
-                />
-                <cmn-stat-card
-                  [value]="store.monthlyKeptFormatted()"
-                  [loading]="store.isLoading()"
-                  label="Kept"
-                  icon="Banknote"
-                />
+                @for (tile of flowBreakdownTiles; track tile.label) {
+                  <button
+                    [attr.aria-label]="'View the transactions behind ' + tile.label"
+                    (click)="goToBreakdown()"
+                    type="button"
+                    class="w-full cursor-pointer text-left transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-default focus-visible:ring-offset-2"
+                  >
+                    <cmn-stat-card
+                      [value]="tile.value()"
+                      [loading]="store.isLoading()"
+                      [label]="tile.label"
+                      [icon]="tile.icon"
+                    />
+                  </button>
+                }
               </div>
             </div>
           }
@@ -230,7 +228,12 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
                       {{ store.projectionAssumptionLabel() }}
                     </p>
                   </div>
-                  <div class="space-y-cmn-1">
+                  <button
+                    (click)="goToBreakdown()"
+                    type="button"
+                    class="cursor-pointer space-y-cmn-1 text-left transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-default focus-visible:ring-offset-2"
+                    aria-label="View the transactions behind the median monthly savings"
+                  >
                     <p class="text-cmn-xs text-text-secondary">Median monthly savings</p>
                     <p class="font-headline text-2xl font-bold text-text-primary">
                       {{ store.medianMonthlySavingsFormatted() }}
@@ -238,7 +241,7 @@ const HISTORY_RANGES: {label: string; value: HistoryRange}[] = [
                     <p class="text-cmn-xs text-text-disabled">
                       {{ store.projectionBasisLabel() }}
                     </p>
-                  </div>
+                  </button>
                 </div>
 
                 <!--
@@ -391,6 +394,14 @@ export class DashboardComponent {
   public readonly topCategoriesLabel = computed(
     () => `Top Spending Categories (${HISTORY_RANGE_LABELS[this.store.historyRange()]})`
   );
+  // One tile per flow figure, all opening the same audit view — the breakdown page shows
+  // every bucket at once, so the tiles need no individual destinations.
+  public readonly flowBreakdownTiles = [
+    {label: 'Spent', icon: 'ShoppingBag', value: this.store.monthlySpentFormatted},
+    {label: 'Supported family', icon: 'Heart', value: this.store.monthlyFamilySupportFormatted},
+    {label: 'Invested', icon: 'TrendingUp', value: this.store.monthlyInvestedFormatted},
+    {label: 'Kept', icon: 'Banknote', value: this.store.monthlyKeptFormatted},
+  ] as const;
 
   public goToAccounts(): void {
     void this.router.navigateByUrl(AppRoute.AccountsList);
@@ -398,6 +409,10 @@ export class DashboardComponent {
 
   public goToIncome(): void {
     void this.router.navigate([AppRoute.Transactions], {queryParams: {type: 'credit'}});
+  }
+
+  public goToBreakdown(): void {
+    void this.router.navigateByUrl(AppRoute.FlowBreakdown);
   }
 
   public goToSpending(): void {
