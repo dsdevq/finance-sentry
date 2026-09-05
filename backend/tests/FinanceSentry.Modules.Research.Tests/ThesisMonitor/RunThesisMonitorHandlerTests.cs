@@ -370,6 +370,26 @@ public class RunThesisMonitorHandlerTests
         public Task ResolveCashShortfallAlertAsync(Guid userId, Guid accountId, CancellationToken ct = default)
             => Task.CompletedTask;
 
+        public Task GeneratePriceHikeAlertAsync(
+            Guid userId, Guid subscriptionId, string merchantName,
+            decimal baselineAmount, decimal currentAmount, string currency, CancellationToken ct = default)
+            => Task.CompletedTask;
+
+        public Task GenerateDuplicateChargeAlertAsync(
+            Guid userId, Guid accountId, string merchantName, decimal chargeAmount, string currency,
+            int chargeCount, CancellationToken ct = default)
+            => Task.CompletedTask;
+
+        public Task GenerateCategorySpikeAlertAsync(
+            Guid userId, string category, decimal currentMonthSpend, decimal baselineSpend,
+            CancellationToken ct = default)
+            => Task.CompletedTask;
+
+        public Task GenerateFxSpreadAlertAsync(
+            Guid userId, Guid debitTransactionId, string fromCurrency, string toCurrency,
+            decimal impliedRate, decimal marketRate, CancellationToken ct = default)
+            => Task.CompletedTask;
+
         public Task GenerateRebalanceProposalAlertAsync(Guid userId, int orderCount, string orderSummary, CancellationToken ct = default)
             => Task.CompletedTask;
 

@@ -61,6 +61,23 @@ public static class BankSyncModule
                 job => job.ExecuteAsync(CancellationToken.None),
                 Cron.Daily());
 
+            mgr.AddOrUpdate<PriceHikeDetectionJob>(
+                "price-hike-detection",
+                job => job.ExecuteAsync(CancellationToken.None),
+                Cron.Daily());
+            mgr.AddOrUpdate<DuplicateChargeDetectionJob>(
+                "duplicate-charge-detection",
+                job => job.ExecuteAsync(CancellationToken.None),
+                Cron.Daily());
+            mgr.AddOrUpdate<CategorySpikeDetectionJob>(
+                "category-spike-detection",
+                job => job.ExecuteAsync(CancellationToken.None),
+                Cron.Daily());
+            mgr.AddOrUpdate<FxSpreadDetectionJob>(
+                "fx-spread-detection",
+                job => job.ExecuteAsync(CancellationToken.None),
+                Cron.Daily());
+
             mgr.AddOrUpdate<StaleSyncReaperJob>(
                 "stale-sync-reaper",
                 job => job.ReapAsync(),
@@ -153,6 +170,10 @@ public static class BankSyncModule
         services.AddScoped<SubscriptionDetectionJob>();
         services.AddScoped<StaleSyncReaperJob>();
         services.AddScoped<ConsentExpiryReminderJob>();
+        services.AddScoped<PriceHikeDetectionJob>();
+        services.AddScoped<DuplicateChargeDetectionJob>();
+        services.AddScoped<CategorySpikeDetectionJob>();
+        services.AddScoped<FxSpreadDetectionJob>();
 
         services.AddSingleton<IFeatureFlagService, FeatureFlagService>();
         services.AddSingleton<IAuditLogService, AuditLogService>();
