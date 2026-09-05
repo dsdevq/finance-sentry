@@ -137,6 +137,9 @@ public static class BankSyncModule
         services.AddScoped<IDashboardQueryService, DashboardQueryService>();
         services.AddScoped<ITransferDetectionService, TransferDetectionService>();
 
+        services.AddScoped<ICounterpartyRepository, CounterpartyRepository>();
+        services.AddScoped<ICounterpartyClassificationService, CounterpartyClassificationService>();
+
         services.AddScoped<IBankingAccountsReader, BankingAccountsReader>();
         services.AddScoped<IBankingTransactionReader, BankingTransactionReader>();
         services.AddScoped<IBankingTotalsReader, BankingTotalsReader>();

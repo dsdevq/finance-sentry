@@ -12,13 +12,20 @@ public record GetMoneyFlowStatisticsQuery(Guid UserId, int Months = 6) : IQuery<
 
 // ── Handler ────────────────────────────────────────────────────────────────────
 
-public class GetMoneyFlowStatisticsQueryHandler(IMoneyFlowStatisticsService service) : IQueryHandler<GetMoneyFlowStatisticsQuery, IReadOnlyList<MonthlyFlow>>
+public class GetMoneyFlowStatisticsQueryHandler(
+    IMoneyFlowStatisticsService service,
+    ICounterpartyClassificationService classification) : IQueryHandler<GetMoneyFlowStatisticsQuery, IReadOnlyList<MonthlyFlow>>
 {
     private readonly IMoneyFlowStatisticsService _service = service;
+    private readonly ICounterpartyClassificationService _classification = classification;
 
     public async Task<IReadOnlyList<MonthlyFlow>> Handle(
           GetMoneyFlowStatisticsQuery request, CancellationToken cancellationToken)
     {
-        return await _service.GetMonthlyFlowAsync(request.UserId, request.Months, cancellationToken);
+        var counterparties = await _classification.ClassifyForWindowAsync(
+            request.UserId, request.Months, cancellationToken);
+
+        return await _service.GetMonthlyFlowAsync(
+            request.UserId, counterparties, request.Months, cancellationToken);
     }
 }

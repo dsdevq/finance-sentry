@@ -14,6 +14,8 @@ public class BankSyncDbContext(DbContextOptions<BankSyncDbContext> options) : Db
     public DbSet<Category> Categories { get; set; } = null!;
     public DbSet<MccCategory> MccCategories { get; set; } = null!;
     public DbSet<MerchantKeyword> MerchantKeywords { get; set; } = null!;
+    public DbSet<Counterparty> Counterparties { get; set; } = null!;
+    public DbSet<CounterpartyRule> CounterpartyRules { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -112,6 +114,23 @@ public class BankSyncDbContext(DbContextOptions<BankSyncDbContext> options) : Db
         mkb.HasIndex(mk => mk.Keyword).IsUnique().HasDatabaseName("idx_merchant_keyword_keyword_unique");
         mkb.HasIndex(mk => mk.CategoryKey).HasDatabaseName("idx_merchant_keyword_category_key");
         mkb.HasOne<Category>().WithMany().HasForeignKey(mk => mk.CategoryKey).OnDelete(DeleteBehavior.Restrict);
+
+        var cpb = modelBuilder.Entity<Counterparty>();
+        cpb.ToTable("counterparties");
+        cpb.HasKey(cp => cp.Id);
+        cpb.Property(cp => cp.Name).IsRequired().HasMaxLength(255);
+        cpb.Property(cp => cp.FlowRole).IsRequired().HasMaxLength(50);
+        cpb.Property(cp => cp.UserId).IsRequired();
+        cpb.HasIndex(cp => cp.UserId).HasDatabaseName("idx_counterparty_user_id");
+        cpb.HasMany(cp => cp.Rules).WithOne(r => r.Counterparty).HasForeignKey(r => r.CounterpartyId).OnDelete(DeleteBehavior.Cascade);
+
+        var crb = modelBuilder.Entity<CounterpartyRule>();
+        crb.ToTable("counterparty_rules");
+        crb.HasKey(r => r.Id);
+        crb.Property(r => r.CounterpartyId).IsRequired();
+        crb.Property(r => r.MatchType).IsRequired().HasMaxLength(50);
+        crb.Property(r => r.Pattern).IsRequired().HasMaxLength(255);
+        crb.HasIndex(r => r.CounterpartyId).HasDatabaseName("idx_counterparty_rule_counterparty_id");
 
         var sjb = modelBuilder.Entity<SyncJob>();
         sjb.HasKey(sj => sj.Id);

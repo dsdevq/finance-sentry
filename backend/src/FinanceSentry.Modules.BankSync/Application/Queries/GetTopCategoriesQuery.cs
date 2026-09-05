@@ -13,13 +13,20 @@ public record GetTopCategoriesQuery(Guid UserId, int Limit = 10, int Months = 6)
 
 // ── Handler ────────────────────────────────────────────────────────────────────
 
-public class GetTopCategoriesQueryHandler(IMerchantCategoryStatisticsService service) : IQueryHandler<GetTopCategoriesQuery, IReadOnlyList<CategoryStat>>
+public class GetTopCategoriesQueryHandler(
+    IMerchantCategoryStatisticsService service,
+    ICounterpartyClassificationService classification) : IQueryHandler<GetTopCategoriesQuery, IReadOnlyList<CategoryStat>>
 {
     private readonly IMerchantCategoryStatisticsService _service = service;
+    private readonly ICounterpartyClassificationService _classification = classification;
 
     public async Task<IReadOnlyList<CategoryStat>> Handle(
           GetTopCategoriesQuery request, CancellationToken cancellationToken)
     {
-        return await _service.GetTopCategoriesAsync(request.UserId, request.Limit, request.Months, cancellationToken);
+        var counterparties = await _classification.ClassifyForWindowAsync(
+            request.UserId, request.Months, cancellationToken);
+
+        return await _service.GetTopCategoriesAsync(
+            request.UserId, counterparties, request.Limit, request.Months, cancellationToken);
     }
 }
