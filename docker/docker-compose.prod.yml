@@ -62,6 +62,8 @@ services:
       PublicApiBaseUrl: ${PUBLIC_API_BASE_URL:-http://localhost:5001}
       TrueLayer__Scopes: "info accounts balance transactions cards offline_access"
       # Ship structured logs to Loki (fire-and-forget); empty disables the sink.
+      # Loki lives in lifekit-stack's compose project since 2026-09-06; the
+      # service name still resolves over the shared `openclaw` bridge.
       Observability__Loki__Url: ${OBSERVABILITY_LOKI_URL:-http://loki:3100}
     # No host port — reachable only via the gateway (025 cutover, 2026-08-12).
     depends_on:
@@ -199,73 +201,24 @@ services:
       driver: json-file
       options: { max-size: "10m", max-file: "3" }
 
-  # --- Observability stack (023) — bound to loopback; fronted by Tailscale Serve --------------------
-  loki:
-    image: grafana/loki:3.1.1
-    container_name: finance-sentry-loki
-    restart: unless-stopped
-    command: -config.file=/etc/loki/loki-config.yml
-    ports:
-      - "127.0.0.1:${LOKI_PORT:-3100}:3100"
-    volumes:
-      - ./observability/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
-      - loki_data:/loki
-    networks:
-      - finance-sentry
-    logging:
-      driver: json-file
-      options: { max-size: "10m", max-file: "3" }
-
-  prometheus:
-    image: prom/prometheus:v2.54.1
-    container_name: finance-sentry-prometheus
-    restart: unless-stopped
-    command:
-      - --config.file=/etc/prometheus/prometheus.yml
-      - --storage.tsdb.retention.time=30d
-      - --storage.tsdb.retention.size=5GB
-    ports:
-      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
-    volumes:
-      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus_data:/prometheus
-    depends_on:
-      - api
-    networks:
-      - finance-sentry
-    logging:
-      driver: json-file
-      options: { max-size: "10m", max-file: "3" }
-
-  grafana:
-    image: grafana/grafana:11.2.0
-    container_name: finance-sentry-grafana
-    restart: unless-stopped
-    environment:
-      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
-      GF_USERS_ALLOW_SIGN_UP: "false"
-      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-}
-    ports:
-      - "127.0.0.1:${GRAFANA_PORT:-3000}:3000"
-    volumes:
-      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
-      - grafana_data:/var/lib/grafana
-    depends_on:
-      - prometheus
-      - loki
-    networks:
-      - finance-sentry
-    logging:
-      driver: json-file
-      options: { max-size: "10m", max-file: "3" }
+  # --- Observability ------------------------------------------------------------------------------
+  # The loki / prometheus / grafana trio MOVED to lifekit-stack's compose project
+  # on 2026-09-06 (lifekit-hq/lifekit-stack#133). It was box infrastructure living
+  # in one product's compose file, on this product's private network — which is why
+  # Prometheus could only ever see one target and nothing else on the box had
+  # alerting at all. It now scrapes devclaw too and carries the alert rules.
+  #
+  # What stays this repo's job: the API's /metrics endpoint, the Loki sink below,
+  # and the dashboards under observability/grafana/dashboards/ — deploy.sh
+  # publishes those to the directory lifekit-stack's Grafana provisions from, so
+  # each dashboard still has exactly one home, here.
+  #
+  # api reaches the moved Loki unchanged: it is on the `openclaw` bridge
+  # (compose_default), where lifekit-stack's `loki` service name resolves.
 
 volumes:
   postgres_data:
   api_logs:
-  loki_data:
-  prometheus_data:
-  grafana_data:
   gateway_acme:   # ACME cert + data-protection key cache (025) — only used when TLS/ACME is enabled
 
 networks:
