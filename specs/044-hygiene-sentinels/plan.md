@@ -20,6 +20,52 @@ New alert types (`PriceHike`, `DuplicateCharge`, `CategorySpike`, `FxSpread`) ar
 
 This follows the same pattern as `IActiveSubscriptionsReader` / `ActiveSubscriptionsReader`.
 
+## The hike baseline (US1)
+
+Reading recurrence from `detected_subscriptions` rather than re-deriving it means the sentinel
+can only see what detection chose to record — and detection recorded no evidence a price had
+ever changed. `SubscriptionDetectionJob` keeps only the amount cluster holding the most recent
+charge, and the cluster tolerance (15%) equals the sentinel threshold (15%), so the two gates
+excluded each other: a hike large enough to fire split the new price into a cluster of one,
+which failed the three-occurrence gate and dropped the subscription off the list entirely; a
+hike small enough to stay clustered was diluted by its own charge in the average it was being
+compared against (a 15% step over two prior charges measures 9.5%). No charge series could
+produce an alert.
+
+Decision: detection reports the displaced cluster's price as `PreviousAmount` while the new
+price is still new — that is, until the current cluster has `MinOccurrences` charges of its
+own — and the sentinel measures against `SubscriptionHygieneSummary.HikeBaseline`
+(`PreviousAmount ?? AverageAmount`). The displaced cluster also counts toward the occurrence
+gate, which is what keeps a repriced subscription on the list at all.
+
+Why not simply lower the threshold: it would only ever catch hikes small enough to survive
+clustering, leaving the large ones — the ones worth alerting on — permanently invisible.
+
+A displaced cluster is a repricing, and not two different things, only when all of:
+- the merchant billed exactly two prices — a third cluster is an outlier or a third plan, and
+  taking the nearest of several would let one stray charge shadow the price really replaced;
+- those two form a clean chronological step — concurrent plans interleave in time;
+- the step is within `MaxPriceStepRatio` (2×, so Claude Pro €22 → Max €110 stays a plan switch);
+- the old price has at least `MinBaselineCharges` (2) charges — a prorated or promotional first
+  month is one charge with zero variance, and would otherwise alert on the merchant's own
+  onboarding;
+- the old price was itself stable under the CV gate.
+
+Each guard fails closed: no baseline, and the row behaves exactly as it did before this change.
+
+Tying the baseline's lifetime to `MinOccurrences` rather than to a time window bounds
+re-alerting to one further monthly cycle past the 30-day alert silence — the baseline clears on
+the third charge at the new price.
+
+Known limits, both consequences of reading detection's output rather than the raw series:
+- `AmountClusterTolerance` sets the floor on what a hike can be. A step under 15% never leaves
+  its cluster, so it has no baseline and is still measured against a diluted average; lowering
+  `HygieneSentinels:PriceHikeThreshold` below 15% buys less than it appears to.
+- An annual subscription cannot produce a baseline: two prior charges at the old price do not
+  fit the 13-month detection lookback. Annual repricing stays invisible to this sentinel.
+- `OccurrenceCount` counts the displaced charges too, so it rises while a step is live and
+  returns to the current-cluster count once the price settles.
+
 ## [US1] Price hike — files touched
 - NEW `backend/src/FinanceSentry.Core/Interfaces/ISubscriptionHygieneSummaryReader.cs`
 - NEW `backend/src/FinanceSentry.Modules.Subscriptions/Application/Services/SubscriptionHygieneSummaryReader.cs`
@@ -32,6 +78,14 @@ This follows the same pattern as `IActiveSubscriptionsReader` / `ActiveSubscript
 - NEW `backend/src/FinanceSentry.Modules.BankSync/Infrastructure/Jobs/PriceHikeDetectionJob.cs`
 - EDIT `backend/src/FinanceSentry.Modules.BankSync/BankSyncModule.cs` — register + schedule daily
 - NEW `backend/tests/FinanceSentry.Tests.Unit/BankSync/Infrastructure/PriceHikeDetectionJobTests.cs`
+
+### Baseline follow-up (the hike a merchant actually charges)
+- EDIT `backend/src/FinanceSentry.Modules.BankSync/Infrastructure/Jobs/SubscriptionDetectionJob.cs` — `SplitAtPriceStep` / `PriceSeries`
+- EDIT `backend/src/FinanceSentry.Core/Interfaces/ISubscriptionDetectionResultService.cs` — `DetectedSubscriptionData.PreviousAmount`
+- EDIT `backend/src/FinanceSentry.Modules.Subscriptions/Domain/DetectedSubscription.cs` + `SubscriptionsDbContext.cs` — persist it
+- NEW `backend/src/FinanceSentry.Modules.Subscriptions/Migrations/20260906000000_M006_AddPreviousAmount.cs` (+ Designer, snapshot)
+- EDIT `ISubscriptionHygieneSummaryReader.cs` — `PreviousAmount` + `HikeBaseline`; reader projects it
+- NEW `backend/tests/FinanceSentry.Tests.Unit/BankSync/Infrastructure/PriceHikeSentinelPipelineTests.cs` — detect → persist → read → alert
 
 ## [US2] Duplicate charge — files touched
 - EDIT `backend/src/FinanceSentry.Modules.Alerts/Domain/AlertType.cs` — add `DuplicateCharge`
