@@ -28,6 +28,30 @@ echo "[deploy] decrypt docker/.env.sops"
 SOPS_AGE_KEY_FILE="$KEYFILE" sops --decrypt --input-type dotenv --output-type dotenv docker/.env.sops > docker/.env
 chmod 600 docker/.env
 
+# --- Publish dashboards to the box's Grafana (lifekit-stack#133) ---------------
+# The BOX's Grafana moved to lifekit-stack's compose project, but the dashboards
+# stay this repo's: one home per dashboard, versioned next to the code they
+# describe, and the same files the dev-compose Grafana provisions. lifekit-stack's
+# Grafana reads them from a host directory, which this fills.
+#
+# Copy first, prune second, so a dashboard renamed or deleted here disappears
+# there instead of double-listing forever — and so a failed copy never leaves
+# the box with no dashboards at all.
+#
+# Best-effort on purpose: a dashboard that fails to copy must never fail a
+# deploy of the application itself.
+DASHBOARD_SRC="docker/observability/grafana/provisioning/dashboards"
+DASHBOARD_DIR="${FINANCE_SENTRY_DASHBOARD_DIR:-/srv/finance-sentry/grafana-dashboards}"
+echo "[deploy] publish Grafana dashboards -> $DASHBOARD_DIR"
+if mkdir -p "$DASHBOARD_DIR" 2>/dev/null && cp "$DASHBOARD_SRC"/*.json "$DASHBOARD_DIR/"; then
+  chmod 644 "$DASHBOARD_DIR"/*.json
+  for published in "$DASHBOARD_DIR"/*.json; do
+    [[ -e "$DASHBOARD_SRC/$(basename "$published")" ]] || rm -f "$published"
+  done
+else
+  echo "[deploy] warn: cannot write $DASHBOARD_DIR — dashboards not refreshed" >&2
+fi
+
 echo "[deploy] docker compose build + up"
 docker compose -f docker/docker-compose.prod.yml --env-file docker/.env up -d --build --remove-orphans
 

@@ -45,9 +45,9 @@ Startup order enforced by health checks: `postgres → api → frontend`.
 | http://localhost:5001/metrics | Prometheus exposition (scrape-only) |
 | http://localhost:5001/swagger | Swagger UI |
 | http://localhost:5001/hangfire | Hangfire dashboard |
-| http://localhost:3000 | Grafana (dashboards) |
-| http://localhost:9090 | Prometheus |
-| http://localhost:3100 | Loki (log store) |
+| http://localhost:3000 | Grafana (dashboards) — **dev compose only**; on the VPS it lives in lifekit-stack |
+| http://localhost:9090 | Prometheus — dev compose only (same) |
+| http://localhost:3100 | Loki (log store) — dev compose only (same) |
 
 ### Run everything
 
@@ -105,8 +105,15 @@ docker compose -f docker-compose.dev.yml down -v              # also drop postgr
 
 ## Observability (feature 023)
 
-The dev/prod compose stacks run **Prometheus + Grafana + Loki** alongside the app so failures announce
+The **dev** compose stack runs **Prometheus + Grafana + Loki** alongside the app so failures announce
 themselves instead of being found days later via `ssh`+`grep`.
+
+On the VPS that trio moved out of this repo on 2026-09-06
+([lifekit-stack#133](https://github.com/lifekit-hq/lifekit-stack/pull/133)): it was box infrastructure
+living in one product's compose file, on this product's private network, which is why Prometheus could
+only ever see one target and nothing else on the box had alerting at all. It now scrapes devclaw too and
+carries the box's alert rules. What stays this repo's job is unchanged — the `/metrics` endpoint, the
+Loki sink, and the dashboards below.
 
 - **Metrics** — the API is instrumented with OpenTelemetry and exposes Prometheus exposition at `/metrics`
   (ASP.NET Core request rate/latency/errors, .NET runtime, and custom `finance_jobs_*` per-job counters).
@@ -114,9 +121,11 @@ themselves instead of being found days later via `ssh`+`grep`.
 - **Logs** — Serilog ships structured logs to Loki (fire-and-forget; a shipping outage never affects
   requests). EF Core SQL is suppressed to `Warning` by default (raise via
   `Serilog:MinimumLevel:Override` in config). Retention ~14d, size-capped.
-- **Dashboards** — provisioned as code under `docker/observability/grafana/provisioning/`. The main
-  dashboard ("Health at a glance") answers *is it healthy now, did last night's jobs run?* at a glance;
-  the availability panel turns red within ~60s of an API outage.
+- **Dashboards** — provisioned as code under `docker/observability/grafana/provisioning/`, one home for
+  both Grafanas: the dev compose mounts the directory, and `deploy.sh` publishes the same JSON to the
+  host directory lifekit-stack's Grafana provisions from. The main dashboard ("Health at a glance")
+  answers *is it healthy now, did last night's jobs run?* at a glance; the availability panel turns red
+  within ~60s of an API outage.
 - **Jobs** — Hangfire storage moved to PostgreSQL (`hangfire` schema) so job history/schedule survive
   restarts. The Hangfire dashboard at `/hangfire` is loopback/Tailscale-only outside Development.
 
@@ -130,10 +139,12 @@ curl -s http://localhost:5001/api/v1/health/ready                 # {"status":"H
 ```
 
 **Production notes** — Grafana + Hangfire dashboards are reachable only over Tailscale serve (not the
-public funnel); `/metrics` is scrape-only. Set `GRAFANA_ADMIN_USER` / `GRAFANA_ADMIN_PASSWORD` and
-`Observability__Loki__Url` via env/secrets. Grafana metric-threshold alert rules are deferred until
-baselines exist — job silent-failure alerting (US4, N consecutive failures → Telegram) is the app-side
-slice that closes the urgent gap.
+public funnel); `/metrics` is scrape-only. `GRAFANA_ADMIN_USER` / `GRAFANA_ADMIN_PASSWORD` /
+`GRAFANA_ROOT_URL` now belong to **lifekit-stack's** env file, not this repo's `.env.sops`;
+`Observability__Loki__Url` stays here (it defaults to `http://loki:3100`, which still resolves — the api
+is on the shared `openclaw` bridge where lifekit-stack's Loki lives). Alert rules are no longer deferred
+and no longer this repo's: they are provisioned files in lifekit-stack. Job silent-failure alerting (US4,
+N consecutive failures → Telegram) remains the app-side slice.
 
 ## Running Tests
 
