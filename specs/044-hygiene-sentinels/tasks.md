@@ -22,6 +22,8 @@
 - [x] Add `CategorySpike` to `CompanionEventKind` + `MaterialityPolicy`
 - [x] Implement `CategorySpikeDetectionJob` + register + schedule in BankSyncModule
 - [x] Write unit tests for `CategorySpikeDetectionJob`
+- [x] Select debits by direction, not sign — `t.Amount < 0` matched nothing in production
+- [x] Exclude pending rows so a charge is not counted twice alongside its posted twin
 
 ## [US4] FX spread detection
 
